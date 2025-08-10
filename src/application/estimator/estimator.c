@@ -370,6 +370,14 @@ void estimator_task(void *argument) {
     }
     g_estimator_ctx.t = init_time_ms / 1000.0f; // convert ms to seconds
 
+    // initialize ctx to reasonable values in case pad filter never runs
+    g_estimator_ctx.x.attitude.w = 1.0;
+    g_estimator_ctx.x.attitude.x = 0.0;
+    g_estimator_ctx.x.attitude.y = 0.0;
+    g_estimator_ctx.x.attitude.z = 0.0;
+    g_estimator_ctx.x.altitude = 420;
+    g_estimator_ctx.x.CL = 3;
+
     log_text(10, "EstimatorTask", "Estimator task started.");
 
     while (true) {

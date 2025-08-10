@@ -37,14 +37,7 @@ static const matrix3d_t g_movella_upd_mat = {
 };
 // S2 (pololu)
 static const matrix3d_t g_pololu_upd_mat = {
-    .array =
-        {{0, 0, -1.00000000},
-         {-1.00000000000, 0, 0},
-         {
-             0,
-             1.00000000000,
-             0,
-         }}
+    .array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}
 };
 
 // Module state tracking
