@@ -66,6 +66,7 @@ static w_status_t can_encoder_msg_callback(const can_msg_t *msg) {
 w_status_t estimator_init(void) {
     // register the callback for the encoder can msgs
     if (W_SUCCESS != can_handler_register_callback(MSG_SENSOR_ANALOG, can_encoder_msg_callback)) {
+        log_text(1, "adc", "initfailenc");
         return W_FAILURE;
     }
 
@@ -76,6 +77,7 @@ w_status_t estimator_init(void) {
 
     if ((NULL == imu_data_queue) || (NULL == encoder_data_queue_rad) ||
         (NULL == controller_cmd_queue)) {
+        log_text(1, "adc", "initfailq");
         return W_FAILURE;
     }
 

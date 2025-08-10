@@ -86,6 +86,7 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
     bus_queue_tx = xQueueCreate(BUS_QUEUE_LENGTH, sizeof(can_msg_t));
 
     if ((NULL == bus_queue_tx) || (NULL == bus_queue_rx)) {
+        log_text(1, "can", "initfailq");
         return W_FAILURE;
     }
 
@@ -204,13 +205,19 @@ void proc_handle_fatal_error(const char *errorMsg) {
             can_send(&msg);
         }
 
-        // delay for ~1sec
+        // scream a few times then attempt to reset.
+        // delay for ~1sec without using systick-based delays (no hal_delay)
         volatile int dummy;
-        for (int i = 0; i < 50000000; i++) {
-            dummy++;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 50000000; j++) {
+                dummy++;
+            }
         }
 
         dummy++;
+
+        // resetting is always a safe state even in midflight, as flightphase starts IDLE
+        NVIC_SystemReset();
     }
 }
 

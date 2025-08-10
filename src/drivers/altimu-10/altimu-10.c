@@ -1,4 +1,5 @@
 #include "drivers/altimu-10/altimu-10.h"
+#include "application/logger/log.h"
 #include "drivers/altimu-10/LIS3MDL_regmap.h"
 #include "drivers/altimu-10/LPS_regmap.h"
 #include "drivers/altimu-10/LSM6DSO_regmap.h"
@@ -126,6 +127,10 @@ w_status_t altimu_init() {
     // BDU enable
     status |= write_1_byte(LPS22DF_ADDR, LPS22DF_CTRL_REG2, 0x18);
 
+    if (status != W_SUCCESS) {
+        log_text(1, "altimu", "initfail");
+    }
+
     return status;
 }
 
@@ -177,8 +182,11 @@ w_status_t altimu_get_gyro_acc_data(
     vector3d_t *acc_data, vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_acc,
     altimu_raw_imu_data_t *raw_gyro
 ) {
+    // Drive addr sel pin HIGH to use each device's "default" i2c addr
+    w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
+
     uint8_t raw_bytes[12];
-    w_status_t status = i2c_read_reg(I2C_BUS_4, LSM6DSO_ADDR, OUTX_L_G, raw_bytes, 12);
+    status |= i2c_read_reg(I2C_BUS_4, LSM6DSO_ADDR, OUTX_L_G, raw_bytes, 12);
     if (W_SUCCESS == status) {
         // Parse gyroscope raw data (first 6 bytes)
         raw_gyro->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
@@ -213,8 +221,11 @@ w_status_t altimu_get_gyro_acc_data(
  * @return Magnetometer data (gauss)
  */
 w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data) {
+    // Drive addr sel pin HIGH to use each device's "default" i2c addr
+    w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
+
     uint8_t raw_bytes[6];
-    w_status_t status = i2c_read_reg(I2C_BUS_4, LIS3MDL_ADDR, LIS3_OUT_X_L, raw_bytes, 6);
+    status |= i2c_read_reg(I2C_BUS_4, LIS3MDL_ADDR, LIS3_OUT_X_L, raw_bytes, 6);
     if (W_SUCCESS == status) {
         raw_data->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
         raw_data->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
@@ -237,8 +248,11 @@ w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data
  * @return Barometer data (pascal, celsius)
  */
 w_status_t altimu_get_baro_data(altimu_barometer_data_t *data, altimu_raw_baro_data_t *raw_data) {
+    // Drive addr sel pin HIGH to use each device's "default" i2c addr
+    w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
+
     uint8_t raw_bytes[5];
-    w_status_t status = i2c_read_reg(I2C_BUS_4, LPS22DF_ADDR, LPS_PRESS_OUT_XL, raw_bytes, 5);
+    status |= i2c_read_reg(I2C_BUS_4, LPS22DF_ADDR, LPS_PRESS_OUT_XL, raw_bytes, 5);
     if (W_SUCCESS == status) {
         raw_data->pressure = (uint32_t)(((uint32_t)raw_bytes[2] << 16) |
                                         ((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);

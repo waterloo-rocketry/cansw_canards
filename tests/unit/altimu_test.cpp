@@ -3,6 +3,7 @@
 
 extern "C" {
 #include "FreeRTOS.h"
+#include "application/logger/log.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
@@ -15,6 +16,8 @@ FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *
 
 // w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout);
 FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t);
+
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 
 #define LSM6DSO_ADDR 0x6B // default (addr sel pin vdd) IMU
 #define LIS3MDL_ADDR 0x1E // default (addr sel pin vdd) Mag
