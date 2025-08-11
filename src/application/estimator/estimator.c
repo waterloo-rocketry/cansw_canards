@@ -52,8 +52,9 @@ static w_status_t can_encoder_msg_callback(const can_msg_t *msg) {
     }
 
     if (SENSOR_CANARD_ENCODER_1 == sensor_id) {
-        // shift back to signed and convert from mdeg to radians
-        float encoder_val_rad = ((int16_t)raw_data - 32768) * (RAD_PER_DEG) / 1000.0f;
+        // shift to [-10000, 10000] mdeg then convert to radians. raw is centered at 32768
+        int16_t angle_mdeg = (int16_t)(raw_data - 32768);
+        float encoder_val_rad = ((int32_t)angle_mdeg * (RAD_PER_DEG) / 1000.0f);
 
         // send to internal data queue
         xQueueOverwrite(encoder_data_queue_rad, &encoder_val_rad);
