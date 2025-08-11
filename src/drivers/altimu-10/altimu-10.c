@@ -14,14 +14,18 @@
 #define LPS22DF_ADDR 0x5D // addr sel pin HIGH Baro
 
 // sensor ranges. these must be selected using the i2c init regs
-static const double ALTIMU_ACC_MAX = 16.0; // g
-static const double ALTIMU_GYRO_MAX = 2000.0; // dps
-static const double ALTIMU_MAG_MAX = 16.0; // gauss
+static const double ALTIMU_ACC_RANGE = 16.0; // g
+static const double ALTIMU_GYRO_RANGE = 2000.0; // dps
+static const double ALTIMU_MAG_RANGE = 16.0; // Gauss
+// lps22df baro range is actually smaller than this, but we deemed better to "extend" the range and
+// gamble on possible undefined values, as thats better than saturating for estimator
+static const double ALTIMU_BARO_MAX = 110000; // conservative max Pa at sea level
+static const double ALTIMU_BARO_MIN = 6000; // min Pa we can possibly reach (60000 ft apogee)
 
 // AltIMU conversion factors - based on config settings below
-static const double ACC_FS = ALTIMU_ACC_MAX / INT16_MAX; // g / LSB
-static const double GYRO_FS = ALTIMU_GYRO_MAX / INT16_MAX; // dps / LSB
-static const double MAG_FS = ALTIMU_MAG_MAX / INT16_MAX; // gauss / LSB
+static const double ACC_FS = ALTIMU_ACC_RANGE / INT16_MAX; // g / LSB
+static const double GYRO_FS = ALTIMU_GYRO_RANGE / INT16_MAX; // dps / LSB
+static const double MAG_FS = ALTIMU_MAG_RANGE / INT16_MAX; // gauss / LSB
 static const double BARO_FS = 100.0 / 4096.0; // fixed scale: 100 Pa / 4096 LSB
 static const double TEMP_FS = 1.0 / 100.0; // fixed scale: 1 deg C / 100 LSB
 
@@ -208,10 +212,24 @@ w_status_t altimu_get_gyro_acc_data(
         acc_data->z = (int16_t)raw_acc->z * ACC_FS;
     }
 
-    // lsm6dso gyro range: +- 2000 dps. accel range: +- 16g
-    if (fabs(gyro_data->x) > 2000.0 || fabs(gyro_data->y) > 2000.0 || fabs(gyro_data->z) > 2000.0 ||
-        fabs(acc_data->x) > 16.0 || fabs(acc_data->y) > 16.0 || fabs(acc_data->z) > 16.0) {
-        status = W_IO_ERROR;
+    // if saturated, return min/max vals instead of failing
+    if (fabs(gyro_data->x) > ALTIMU_GYRO_RANGE) {
+        gyro_data->x = (gyro_data->x > 0) ? ALTIMU_GYRO_RANGE : -ALTIMU_GYRO_RANGE;
+    }
+    if (fabs(gyro_data->y) > ALTIMU_GYRO_RANGE) {
+        gyro_data->y = (gyro_data->y > 0) ? ALTIMU_GYRO_RANGE : -ALTIMU_GYRO_RANGE;
+    }
+    if (fabs(gyro_data->z) > ALTIMU_GYRO_RANGE) {
+        gyro_data->z = (gyro_data->z > 0) ? ALTIMU_GYRO_RANGE : -ALTIMU_GYRO_RANGE;
+    }
+    if (fabs(acc_data->x) > ALTIMU_ACC_RANGE) {
+        acc_data->x = (acc_data->x > 0) ? ALTIMU_ACC_RANGE : -ALTIMU_ACC_RANGE;
+    }
+    if (fabs(acc_data->y) > ALTIMU_ACC_RANGE) {
+        acc_data->y = (acc_data->y > 0) ? ALTIMU_ACC_RANGE : -ALTIMU_ACC_RANGE;
+    }
+    if (fabs(acc_data->z) > ALTIMU_ACC_RANGE) {
+        acc_data->z = (acc_data->z > 0) ? ALTIMU_ACC_RANGE : -ALTIMU_ACC_RANGE;
     }
     return status;
 }
@@ -235,10 +253,15 @@ w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data
         data->z = (int16_t)raw_data->z * MAG_FS;
     }
 
-    // lis3mdl mag range: +- 16 gauss
-    if (fabs(data->x) > ALTIMU_MAG_MAX || fabs(data->y) > ALTIMU_MAG_MAX ||
-        fabs(data->z) > ALTIMU_MAG_MAX) {
-        status = W_IO_ERROR;
+    // if saturated, set val to min/max instead of fail. prefer saturated values over nothing
+    if (fabs(data->x) > ALTIMU_MAG_RANGE) {
+        data->x = (data->x > 0) ? ALTIMU_MAG_RANGE : -ALTIMU_MAG_RANGE;
+    }
+    if (fabs(data->y) > ALTIMU_MAG_RANGE) {
+        data->y = (data->y > 0) ? ALTIMU_MAG_RANGE : -ALTIMU_MAG_RANGE;
+    }
+    if (fabs(data->z) > ALTIMU_MAG_RANGE) {
+        data->z = (data->z > 0) ? ALTIMU_MAG_RANGE : -ALTIMU_MAG_RANGE;
     }
     return status;
 }
@@ -260,5 +283,14 @@ w_status_t altimu_get_baro_data(altimu_barometer_data_t *data, altimu_raw_baro_d
         data->pressure = (int32_t)raw_data->pressure * BARO_FS;
         data->temperature = (int16_t)raw_data->temperature * TEMP_FS;
     }
+
+    // if saturated, set val to min/max instead of fail. prefer saturated values over nothing
+    if (data->pressure > ALTIMU_BARO_MAX) {
+        data->pressure = ALTIMU_BARO_MAX;
+    }
+    if (data->pressure < ALTIMU_BARO_MIN) {
+        data->pressure = ALTIMU_BARO_MIN;
+    }
+
     return status;
 }
