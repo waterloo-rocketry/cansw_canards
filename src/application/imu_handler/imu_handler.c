@@ -15,8 +15,8 @@
 #include "canlib.h"
 
 // Period of IMU sampling in milliseconds
-// TODO: sample slightly faster than 200hz to avoid estimator stuck?
-#define IMU_SAMPLING_PERIOD_MS 5
+// slightly slower than 200 hz to always receive encoder which can be >5ms
+#define IMU_SAMPLING_PERIOD_MS 6
 
 // Timeout values for freshness check (in milliseconds)
 #define GYRO_FRESHNESS_TIMEOUT_MS 5

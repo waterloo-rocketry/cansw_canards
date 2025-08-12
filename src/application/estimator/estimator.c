@@ -131,8 +131,8 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
         .barometer = latest_imu_data.pololu.barometer
     };
 
-    // get the latest encoder reading. should be populating at 200Hz so 0ms wait
-    if (xQueueReceive(encoder_data_queue_rad, &latest_encoder_rad, 0) == pdTRUE) {
+    // get the latest encoder reading. wait very briefly in case mcb is a bit imperfect timing
+    if (xQueueReceive(encoder_data_queue_rad, &latest_encoder_rad, pdMS_TO_TICKS(4)) == pdTRUE) {
         // log received encoder val (radians)
         log_data_container_t log_payload = {0};
         log_payload.encoder.angle_rad = latest_encoder_rad;
