@@ -277,11 +277,14 @@ w_status_t altimu_get_baro_data(altimu_barometer_data_t *data, altimu_raw_baro_d
     uint8_t raw_bytes[5];
     status |= i2c_read_reg(I2C_BUS_4, LPS22DF_ADDR, LPS_PRESS_OUT_XL, raw_bytes, 5);
     if (W_SUCCESS == status) {
-        raw_data->pressure = (uint32_t)(((uint32_t)raw_bytes[2] << 16) |
-                                        ((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
-        raw_data->temperature = (uint16_t)(((uint16_t)raw_bytes[4] << 8) | raw_bytes[3]);
-        data->pressure = (int32_t)raw_data->pressure * BARO_FS;
-        data->temperature = (int16_t)raw_data->temperature * TEMP_FS;
+        raw_data->pressure = (int32_t)((((uint32_t)raw_bytes[2] << 16) |
+                                        ((uint32_t)raw_bytes[1] << 8) | (uint32_t)raw_bytes[0])
+                                       << 8) >>
+                             8;
+
+        raw_data->temperature = (int16_t)((raw_bytes[4] << 8) | raw_bytes[3]);
+        data->pressure = raw_data->pressure * BARO_FS;
+        data->temperature = raw_data->temperature * TEMP_FS;
     }
 
     // if saturated, set val to min/max instead of fail. prefer saturated values over nothing
