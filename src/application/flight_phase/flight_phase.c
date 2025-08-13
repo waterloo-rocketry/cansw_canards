@@ -34,10 +34,6 @@ typedef struct {
         uint32_t reset;
     } event_counts;
 
-    // Timer statistics
-    bool act_delay_timer_active;
-    bool flight_timer_active;
-
     // Queue statistics
     uint32_t event_queue_full_count;
 } flight_phase_status_t;
@@ -65,8 +61,6 @@ static flight_phase_status_t flight_phase_status = {
     .state_transitions = 0,
     .invalid_events = 0,
     .event_counts = {0},
-    .act_delay_timer_active = false,
-    .flight_timer_active = false,
     .event_queue_full_count = 0,
 };
 
@@ -77,7 +71,8 @@ static flight_phase_status_t flight_phase_status = {
  */
 w_status_t flight_phase_init(void) {
     state_mailbox = xQueueCreate(1, sizeof(flight_phase_state_t));
-    event_queue = xQueueCreate(1, sizeof(flight_phase_event_t));
+    // larger size in case of burst events like multiple inj valve opens
+    event_queue = xQueueCreate(3, sizeof(flight_phase_event_t));
     act_delay_timer = xTimerCreate(
         "act delay", pdMS_TO_TICKS(ACT_DELAY_MS), pdFALSE, NULL, act_delay_timer_callback
     );
@@ -157,7 +152,6 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
  */
 static void act_delay_timer_callback(TimerHandle_t xTimer) {
     (void)xTimer;
-    flight_phase_status.act_delay_timer_active = false;
     flight_phase_send_event(EVENT_ACT_DELAY_ELAPSED);
 }
 
@@ -166,7 +160,6 @@ static void act_delay_timer_callback(TimerHandle_t xTimer) {
  */
 static void flight_timer_callback(TimerHandle_t xTimer) {
     (void)xTimer;
-    flight_phase_status.flight_timer_active = false;
     flight_phase_send_event(EVENT_FLIGHT_ELAPSED);
 }
 
@@ -248,38 +241,26 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
                 // allowed to skip pad filter state in case it was forgotten or failed etc.
                 // not ideal but would rather run without pad filter than not fly at all
                 *state = STATE_BOOST;
-                flight_phase_status.act_delay_timer_active = true;
-                flight_phase_status.flight_timer_active = true;
+                // flight starts now
                 xTimerReset(act_delay_timer, 0);
                 xTimerReset(flight_timer, 0);
-                // record timestamp of launch
                 timer_get_ms(&launch_timestamp_ms);
-            } else if (EVENT_RESET == event) {
-                *state = STATE_IDLE;
             } else {
                 // Ignore redundant PAD events or other unexpected events
-                log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, STATE_IDLE);
+                log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
             }
             break;
 
         case STATE_SE_INIT:
             if (EVENT_INJ_OPEN == event) {
                 *state = STATE_BOOST;
-                flight_phase_status.act_delay_timer_active = true;
-                flight_phase_status.flight_timer_active = true;
+                // flight starts now
                 xTimerReset(act_delay_timer, 0);
                 xTimerReset(flight_timer, 0);
-                // record timestamp of launch
                 timer_get_ms(&launch_timestamp_ms);
-            } else if (EVENT_RESET == event) {
-                *state = STATE_IDLE;
-            } else if (EVENT_ESTIMATOR_INIT == event) {
-                // Ignore redundant init event
-                log_text(5, "FlightPhase", "Redundant event %d in state %d", event, STATE_SE_INIT);
             } else {
-                *state = STATE_ERROR;
-                flight_phase_status.invalid_events++;
-                log_text(1, "FlightPhase", "Invalid event %d in state %d", event, STATE_SE_INIT);
+                // Ignore redundant or unexpected events - this is a known safe state
+                log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
             }
             break;
 
@@ -290,53 +271,28 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
                 timer_get_ms(&act_allowed_timestamp_ms);
             } else if (EVENT_FLIGHT_ELAPSED == event) {
                 xTimerStop(act_delay_timer, 0);
-                flight_phase_status.act_delay_timer_active = false;
                 *state = STATE_RECOVERY;
-            } else if (EVENT_RESET == event) {
-                *state = STATE_IDLE;
-            } else if (EVENT_INJ_OPEN == event) {
-                // allow redundant injector open msgs (RLCS DOES send multiple so this is necessary)
-                log_text(
-                    5, "FlightPhase", "Redundant event %d received in state %d", event, STATE_BOOST
-                );
             } else {
-                *state = STATE_ERROR;
-                flight_phase_status.invalid_events++;
-                log_text(
-                    1, "FlightPhase", "Invalid event %d received in state %d", event, STATE_BOOST
-                );
+                // Ignore redundant or unexpected events - this is a known safe state
+                log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
             }
             break;
 
         case STATE_ACT_ALLOWED:
             if (EVENT_FLIGHT_ELAPSED == event) {
                 *state = STATE_RECOVERY;
-            } else if (EVENT_RESET == event) {
-                *state = STATE_IDLE;
-            } else if (EVENT_ACT_DELAY_ELAPSED == event) {
-                // Ignore redundant actuation delay elapsed event
-                log_text(
-                    5, "FlightPhase", "Redundant event %d in state %d", event, STATE_ACT_ALLOWED
-                );
             } else {
-                *state = STATE_ERROR;
-                flight_phase_status.invalid_events++;
-                log_text(
-                    1, "FlightPhase", "Invalid event %d in state %d", event, STATE_ACT_ALLOWED
-                );
+                // Ignore redundant or unexpected events - already in flight
+                log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
             }
             break;
 
         case STATE_RECOVERY:
             if (EVENT_RESET == event) {
                 *state = STATE_IDLE;
-            } else if (EVENT_FLIGHT_ELAPSED == event) {
-                // Ignore redundant flight elapsed event
-                log_text(5, "FlightPhase", "Redundant event %d in state %d", event, STATE_RECOVERY);
             } else {
-                *state = STATE_ERROR;
-                flight_phase_status.invalid_events++;
-                log_text(1, "FlightPhase", "Invalid event %d in state %d", event, STATE_RECOVERY);
+                // Ignore redundant or unexpected events - already in flight
+                log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
             }
             break;
         case STATE_ERROR:
@@ -399,13 +355,11 @@ uint32_t flight_phase_get_status(void) {
     log_text(
         0,
         "flight_phase",
-        "%s %s (%d) q full: %lu act delay: %s flight: %s",
+        "%s %s (%d) q full: %lu",
         flight_phase_status.initialized ? "INIT" : "NOT INIT",
         (current_state <= STATE_ERROR) ? state_strings[current_state] : "???",
         current_state,
-        flight_phase_status.event_queue_full_count,
-        flight_phase_status.act_delay_timer_active ? "ACTIVE" : "INACTIVE",
-        flight_phase_status.flight_timer_active ? "ACTIVE" : "INACTIVE"
+        flight_phase_status.event_queue_full_count
     );
 
     return status_bitfield;

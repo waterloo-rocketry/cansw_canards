@@ -43,6 +43,8 @@ xQueuePeek_state_pad(QueueHandle_t xQueue, void *const pvBuffer, TickType_t xTic
 class FlightPhaseTest : public ::testing::Test {
 protected:
     void SetUp() override {
+        RESET_FAKE(xQueueSend);
+        RESET_FAKE(xQueuePeek);
         RESET_FAKE(xQueueCreate);
         RESET_FAKE(xTimerCreate);
         RESET_FAKE(xQueueOverwrite);
@@ -165,7 +167,7 @@ TEST_F(FlightPhaseTest, ResetSendsResetEvent) {
     EXPECT_EQ(status, W_SUCCESS);
 }
 
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState1) {
+TEST_F(FlightPhaseTest, IdleToPadfilter) {
     // Arrange
     flight_phase_state_t state = STATE_IDLE;
 
@@ -177,7 +179,31 @@ TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState1) {
     EXPECT_EQ(status, W_SUCCESS);
 }
 
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState2) {
+TEST_F(FlightPhaseTest, IdleToBoost) {
+    // Arrange
+    flight_phase_state_t state = STATE_IDLE;
+
+    // Act
+    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &state);
+
+    // Assert
+    EXPECT_EQ(state, STATE_BOOST);
+    EXPECT_EQ(status, W_SUCCESS);
+}
+
+TEST_F(FlightPhaseTest, IdleToIdle) {
+    // Arrange
+    flight_phase_state_t state = STATE_IDLE;
+
+    // Act
+    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &state);
+
+    // Assert
+    EXPECT_EQ(state, STATE_IDLE);
+    EXPECT_EQ(status, W_SUCCESS);
+}
+
+TEST_F(FlightPhaseTest, PadfilterToBoost) {
     // Arrange
     flight_phase_state_t state = STATE_SE_INIT;
 
@@ -189,7 +215,31 @@ TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState2) {
     EXPECT_EQ(status, W_SUCCESS);
 }
 
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState3) {
+TEST_F(FlightPhaseTest, PadfilterToPadfilter) {
+    // Arrange
+    flight_phase_state_t state = STATE_SE_INIT;
+
+    // Act
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &state);
+
+    // Assert
+    EXPECT_EQ(state, STATE_SE_INIT);
+    EXPECT_EQ(status, W_SUCCESS);
+}
+
+TEST_F(FlightPhaseTest, PadfilterToPadfilter2) {
+    // Arrange
+    flight_phase_state_t state = STATE_SE_INIT;
+
+    // Act
+    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &state);
+
+    // Assert
+    EXPECT_EQ(state, STATE_SE_INIT);
+    EXPECT_EQ(status, W_SUCCESS);
+}
+
+TEST_F(FlightPhaseTest, BoostToActAllowed) {
     // Arrange
     flight_phase_state_t state = STATE_BOOST;
 
@@ -201,7 +251,7 @@ TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState3) {
     EXPECT_EQ(status, W_SUCCESS);
 }
 
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState4) {
+TEST_F(FlightPhaseTest, BoostToRecovery) {
     // Arrange
     flight_phase_state_t state = STATE_BOOST;
 
@@ -213,93 +263,9 @@ TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState4) {
     EXPECT_EQ(status, W_SUCCESS);
 }
 
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState5) {
-    // Arrange
-    flight_phase_state_t state = STATE_ACT_ALLOWED;
-
-    // Act
-    w_status_t status = flight_phase_update_state(EVENT_FLIGHT_ELAPSED, &state);
-
-    // Assert
-    EXPECT_EQ(state, STATE_RECOVERY);
-    EXPECT_EQ(status, W_SUCCESS);
-}
-
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState6) {
-    // Arrange
-    flight_phase_state_t state = STATE_IDLE;
-
-    // Act
-    w_status_t status = flight_phase_update_state(EVENT_RESET, &state);
-
-    // Assert
-    EXPECT_EQ(state, STATE_IDLE);
-    EXPECT_EQ(status, W_SUCCESS);
-}
-
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState7) {
-    // Arrange
-    flight_phase_state_t state = STATE_SE_INIT;
-
-    // Act
-    w_status_t status = flight_phase_update_state(EVENT_RESET, &state);
-
-    // Assert
-    EXPECT_EQ(state, STATE_IDLE);
-    EXPECT_EQ(status, W_SUCCESS);
-}
-
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState8) {
+TEST_F(FlightPhaseTest, BoostToBoost) {
     // Arrange
     flight_phase_state_t state = STATE_BOOST;
-
-    // Act
-    w_status_t status = flight_phase_update_state(EVENT_RESET, &state);
-
-    // Assert
-    EXPECT_EQ(state, STATE_IDLE);
-    EXPECT_EQ(status, W_SUCCESS);
-}
-
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState9) {
-    // Arrange
-    flight_phase_state_t state = STATE_ACT_ALLOWED;
-
-    // Act
-    w_status_t status = flight_phase_update_state(EVENT_RESET, &state);
-
-    // Assert
-    EXPECT_EQ(state, STATE_IDLE);
-    EXPECT_EQ(status, W_SUCCESS);
-}
-
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState10) {
-    // Arrange
-    flight_phase_state_t state = STATE_RECOVERY;
-
-    // Act
-    w_status_t status = flight_phase_update_state(EVENT_RESET, &state);
-
-    // Assert
-    EXPECT_EQ(state, STATE_IDLE);
-    EXPECT_EQ(status, W_SUCCESS);
-}
-
-TEST_F(FlightPhaseTest, UpdateStateReturnsCorrectState11) {
-    // Arrange
-    flight_phase_state_t state = STATE_ERROR;
-
-    // Act
-    w_status_t status = flight_phase_update_state(EVENT_RESET, &state);
-
-    // Assert
-    EXPECT_EQ(state, STATE_IDLE);
-    EXPECT_EQ(status, W_SUCCESS);
-}
-
-TEST_F(FlightPhaseTest, AllowSkipPadFilterToFlight) {
-    // Arrange
-    flight_phase_state_t state = STATE_IDLE;
 
     // Act
     w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &state);
@@ -309,19 +275,7 @@ TEST_F(FlightPhaseTest, AllowSkipPadFilterToFlight) {
     EXPECT_EQ(status, W_SUCCESS);
 }
 
-TEST_F(FlightPhaseTest, UpdateStateInvalidEventCausesError2) {
-    // Arrange
-    flight_phase_state_t state = STATE_SE_INIT;
-
-    // Act
-    w_status_t status = flight_phase_update_state(EVENT_FLIGHT_ELAPSED, &state);
-
-    // Assert
-    EXPECT_EQ(state, STATE_ERROR);
-    EXPECT_EQ(status, W_SUCCESS);
-}
-
-TEST_F(FlightPhaseTest, UpdateStateInvalidEventCausesError3) {
+TEST_F(FlightPhaseTest, BoostToBoost2) {
     // Arrange
     flight_phase_state_t state = STATE_BOOST;
 
@@ -329,11 +283,35 @@ TEST_F(FlightPhaseTest, UpdateStateInvalidEventCausesError3) {
     w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &state);
 
     // Assert
-    EXPECT_EQ(state, STATE_ERROR);
+    EXPECT_EQ(state, STATE_BOOST);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
-TEST_F(FlightPhaseTest, UpdateStateInvalidEventCausesError4) {
+TEST_F(FlightPhaseTest, ActAllowedToRecovery) {
+    // Arrange
+    flight_phase_state_t state = STATE_ACT_ALLOWED;
+
+    // Act
+    w_status_t status = flight_phase_update_state(EVENT_FLIGHT_ELAPSED, &state);
+
+    // Assert
+    EXPECT_EQ(state, STATE_RECOVERY);
+    EXPECT_EQ(status, W_SUCCESS);
+}
+
+TEST_F(FlightPhaseTest, ActAllowedToActAllowed) {
+    // Arrange
+    flight_phase_state_t state = STATE_ACT_ALLOWED;
+
+    // Act
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &state);
+
+    // Assert
+    EXPECT_EQ(state, STATE_ACT_ALLOWED);
+    EXPECT_EQ(status, W_SUCCESS);
+}
+
+TEST_F(FlightPhaseTest, ActAllowedToActAllowed2) {
     // Arrange
     flight_phase_state_t state = STATE_ACT_ALLOWED;
 
@@ -341,31 +319,30 @@ TEST_F(FlightPhaseTest, UpdateStateInvalidEventCausesError4) {
     w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &state);
 
     // Assert
-    EXPECT_EQ(state, STATE_ERROR);
+    EXPECT_EQ(state, STATE_ACT_ALLOWED);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
-TEST_F(FlightPhaseTest, UpdateStateInvalidEventCausesError5) {
+TEST_F(FlightPhaseTest, RecoveryToRecovery) {
     // Arrange
     flight_phase_state_t state = STATE_RECOVERY;
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &state);
+    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &state);
 
     // Assert
-    EXPECT_EQ(state, STATE_ERROR);
+    EXPECT_EQ(state, STATE_RECOVERY);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
-TEST_F(FlightPhaseTest, UpdateStateInvalidEventCausesError6) {
+TEST_F(FlightPhaseTest, RecoveryToRecovery2) {
     // Arrange
-    flight_phase_state_t state = STATE_ERROR;
+    flight_phase_state_t state = STATE_RECOVERY;
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &state);
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &state);
 
     // Assert
-    EXPECT_EQ(state, STATE_ERROR);
+    EXPECT_EQ(state, STATE_RECOVERY);
     EXPECT_EQ(status, W_SUCCESS);
 }
-
