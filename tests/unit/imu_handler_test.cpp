@@ -404,7 +404,7 @@ TEST_F(ImuHandlerTest, RunWithEstimatorFailure) {
 // Test CAN logging respects rate limit
 TEST_F(ImuHandlerTest, ImuHandlerRunLoop_CanRateLimit) {
     // Arrange
-    const uint32_t can_tx_rate = 20; // Requirement is 20 (10Hz)
+    const uint32_t can_tx_rate = 16; // period is now 6 ms, so 100/6=16
     const uint32_t num_loops = 120; // Run for enough loops to cover multiple send cycles
     uint32_t expected_log_loops = 0;
 
@@ -440,7 +440,7 @@ TEST_F(ImuHandlerTest, ImuHandlerRunLoop_CanRateLimit) {
 
 TEST_F(ImuHandlerTest, ImuHandlerRun_CanLogNominal) {
     // Arrange
-    const uint32_t loop_count = 20; // Trigger CAN logging at this loop count
+    const uint32_t loop_count = 16; // Trigger CAN logging at this loop count
     timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
 
     // Set up mocks for successful readings

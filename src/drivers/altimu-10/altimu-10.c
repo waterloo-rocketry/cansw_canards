@@ -210,6 +210,8 @@ w_status_t altimu_get_gyro_acc_data(
         acc_data->x = (int16_t)raw_acc->x * ACC_FS;
         acc_data->y = (int16_t)raw_acc->y * ACC_FS;
         acc_data->z = (int16_t)raw_acc->z * ACC_FS;
+    } else {
+        return W_IO_ERROR;
     }
 
     // if saturated, return min/max vals instead of failing
@@ -251,6 +253,8 @@ w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data
         data->x = (int16_t)raw_data->x * MAG_FS;
         data->y = (int16_t)raw_data->y * MAG_FS;
         data->z = (int16_t)raw_data->z * MAG_FS;
+    } else {
+        return W_IO_ERROR;
     }
 
     // if saturated, set val to min/max instead of fail. prefer saturated values over nothing
@@ -285,6 +289,8 @@ w_status_t altimu_get_baro_data(altimu_barometer_data_t *data, altimu_raw_baro_d
         raw_data->temperature = (int16_t)((raw_bytes[4] << 8) | raw_bytes[3]);
         data->pressure = raw_data->pressure * BARO_FS;
         data->temperature = raw_data->temperature * TEMP_FS;
+    } else {
+        return W_IO_ERROR;
     }
 
     // if saturated, set val to min/max instead of fail. prefer saturated values over nothing
