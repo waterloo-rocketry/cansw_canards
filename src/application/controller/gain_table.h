@@ -1,12 +1,12 @@
 #ifndef GAIN_TABLE_H_
 #define GAIN_TABLE_H_
 
-// from simulink-canards commit 2c8c534
+// from simulink-canrds v2.2.3
 
 /**
  * Controller gains
 
- * Conversion from flight conditions to 0-indexed coordinates:
+ * Conversion from flight conditions to natural table coordinates:
  * float x_nat = (x_fc - x_OFFSET) / x_SCALE;
 
  * Array creation order:
@@ -22,12 +22,12 @@
 #define GAIN_P_SIZE 200
 #define GAIN_C_SIZE 30
 
-#define PRESSURE_DYNAMIC_SCALE 2.4929E+03
-#define CANARD_COEFF_SCALE 6.2069E-01
+#define PRESSURE_DYNAMIC_SCALE 3.0766E+03
+#define CANARD_COEFF_SCALE 1.0345E+00
 
-#define PRESSURE_DYNAMIC_OFFSET 2.000000000E+01
-#define CANARD_COEFF_OFFSET -6.0000E+00
+#define PRESSURE_DYNAMIC_OFFSET 2.5000E+02
+#define CANARD_COEFF_OFFSET -1.5000E+01
 
-extern const float gain_table[GAIN_NUM][GAIN_P_SIZE * GAIN_C_SIZE]; // 200 x 30
+extern const float gain_table[GAIN_NUM][GAIN_P_SIZE * GAIN_C_SIZE];
 
 #endif // GAIN_TABLE_H_

@@ -9,37 +9,30 @@
 #include "application/estimator/model/quaternion.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
+#include <math.h>
 
-static const double low_pass_alpha = 0.005; // low pass time constant
-static const double launch_elevation = 250; // 250m above sea level
+static const double low_pass_alpha = 0.0002; // low pass time constant
+static const double launch_elevation = 420.0; // 420m above sea level
 
 // set constant initials - knowing that the rocket is stationary on the rail
 static const vector3d_t w = {{0.0}}; // stationary on rail
 static const vector3d_t v = {{0.0}}; // stationary on rail
 
-w_status_t pad_filter_init(
-    pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2, const bool is_dead_1,
-    const bool is_dead_2
-) {
+w_status_t pad_filter_init(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2) {
     if (ctx->is_initialized) {
         return W_FAILURE; // should not initialize more than once!
     }
 
-    // select which IMUs are used based on current deadness
-    const bool IMU_select[2] = {!is_dead_1, !is_dead_2};
+    // check that IMU_1 and IMU_2 are not NULL
+    if ((NULL == IMU_1) || (NULL == IMU_2)) {
+        return W_INVALID_PARAM;
+    }
+
+    // PRE: neither imu is dead. (or if one is dead, its last previous alive value is passed in)
 
     // Initialization - only run 1 time in the whole program
-    if (IMU_select[0]) { // if IMU_i alive
-        memcpy(&ctx->filtered_1, IMU_1, sizeof(y_imu_t));
-    } else {
-        memset(&ctx->filtered_1, 0, sizeof(y_imu_t));
-    }
-
-    if (IMU_select[1]) { // if IMU_i alive
-        memcpy(&ctx->filtered_2, IMU_2, sizeof(y_imu_t));
-    } else {
-        memset(&ctx->filtered_2, 0, sizeof(y_imu_t));
-    }
+    memcpy(&ctx->filtered_1, IMU_1, sizeof(y_imu_t));
+    memcpy(&ctx->filtered_2, IMU_2, sizeof(y_imu_t));
 
     ctx->is_initialized = true;
     return W_SUCCESS;
@@ -52,7 +45,7 @@ w_status_t pad_filter(
     pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2, const bool is_dead_1,
     const bool is_dead_2, x_state_t *x_init, y_imu_t *bias_1, y_imu_t *bias_2
 ) {
-    const double canard_sweep_cot = cot(canard_sweep);
+    const double canard_sweep_cot = cot(canard_sweep_angle);
     const double Cl = 2 * M_PI * canard_sweep_cot;
     const double delta = 0;
 
@@ -109,25 +102,33 @@ w_status_t pad_filter(
         a = math_vector3d_add(&a, &ctx->filtered_2.accelerometer);
     }
 
-    // Normalize the acceleration by the number of alive IMUs
+    // % divide by number of alive IMUs
     a = math_vector3d_scale(1.0 / (double)num_alive_imus, &a);
 
-    if (float_equal(a.x, 0.0) || float_equal(a.y, 0.0)) {
-        return W_FAILURE; // avoid division by zero
+    // % unit vector of gravity direction
+    double a_norm = math_vector3d_norm(&a);
+    // check if norm is ~0 before dividing by it
+    if (a_norm < 1e-8) {
+        // all accel components are 0. must be wrong
+        return W_MATH_ERROR;
+    } else {
+        a = math_vector3d_scale(1.0 / a_norm, &a);
     }
 
-    // Gravity vector in body-fixed frame
-    double psi = atan2(-a.y, a.x);
-    double theta = atan2(a.z, a.x);
+    // determine initial orientation quaternion
+    double qw = sqrt(0.5 + 0.5 * a.x);
+    double qx = 0;
+    double qy = 0;
+    double qz = 0;
 
-    // compute launch attitude quaternion
-
-    quaternion_t q = {
-        {cos(psi / 2.0) * cos(theta / 2.0),
-         -sin(psi / 2.0) * sin(theta / 2.0),
-         cos(psi / 2.0) * sin(theta / 2.0),
-         sin(psi / 2.0) * cos(theta / 2.0)}
-    };
+    if (float_equal(qw, 0.0)) {
+        qy = 1;
+        qz = 0;
+    } else {
+        qy = 0.5 * a.z / qw;
+        qz = -0.5 * a.y / qw;
+    }
+    const quaternion_t q = {.array = {qw, qx, qy, qz}};
 
     // known launch altitude
     const double alt = launch_elevation;

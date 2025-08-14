@@ -1,4 +1,5 @@
 #include "drivers/altimu-10/altimu-10.h"
+#include "application/logger/log.h"
 #include "drivers/altimu-10/LIS3MDL_regmap.h"
 #include "drivers/altimu-10/LPS_regmap.h"
 #include "drivers/altimu-10/LSM6DSO_regmap.h"
@@ -12,11 +13,19 @@
 #define LIS3MDL_ADDR 0x1E // addr sel pin HIGH Mag
 #define LPS22DF_ADDR 0x5D // addr sel pin HIGH Baro
 
+// sensor ranges. these must be selected using the i2c init regs
+static const double ALTIMU_ACC_RANGE = 16.0; // g
+static const double ALTIMU_GYRO_RANGE = 2000.0; // dps
+static const double ALTIMU_MAG_RANGE = 16.0; // Gauss
+// lps22df baro range is actually smaller than this, but we deemed better to "extend" the range and
+// gamble on possible undefined values, as thats better than saturating for estimator
+static const double ALTIMU_BARO_MAX = 110000; // conservative max Pa at sea level
+static const double ALTIMU_BARO_MIN = 6000; // min Pa we can possibly reach (60000 ft apogee)
+
 // AltIMU conversion factors - based on config settings below
-// TODO: verify against parameters tracking sheet
-static const double ACC_FS = 16.0 / INT16_MAX; // g / LSB
-static const double GYRO_FS = 2000.0 / INT16_MAX; // dps / LSB
-static const double MAG_FS = 16.0 / INT16_MAX; // gauss / LSB
+static const double ACC_FS = ALTIMU_ACC_RANGE / INT16_MAX; // g / LSB
+static const double GYRO_FS = ALTIMU_GYRO_RANGE / INT16_MAX; // dps / LSB
+static const double MAG_FS = ALTIMU_MAG_RANGE / INT16_MAX; // gauss / LSB
 static const double BARO_FS = 100.0 / 4096.0; // fixed scale: 100 Pa / 4096 LSB
 static const double TEMP_FS = 1.0 / 100.0; // fixed scale: 1 deg C / 100 LSB
 
@@ -122,6 +131,10 @@ w_status_t altimu_init() {
     // BDU enable
     status |= write_1_byte(LPS22DF_ADDR, LPS22DF_CTRL_REG2, 0x18);
 
+    if (status != W_SUCCESS) {
+        log_text(1, "altimu", "initfail");
+    }
+
     return status;
 }
 
@@ -173,8 +186,11 @@ w_status_t altimu_get_gyro_acc_data(
     vector3d_t *acc_data, vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_acc,
     altimu_raw_imu_data_t *raw_gyro
 ) {
+    // Drive addr sel pin HIGH to use each device's "default" i2c addr
+    w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
+
     uint8_t raw_bytes[12];
-    w_status_t status = i2c_read_reg(I2C_BUS_4, LSM6DSO_ADDR, OUTX_L_G, raw_bytes, 12);
+    status |= i2c_read_reg(I2C_BUS_4, LSM6DSO_ADDR, OUTX_L_G, raw_bytes, 12);
     if (W_SUCCESS == status) {
         // Parse gyroscope raw data (first 6 bytes)
         raw_gyro->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
@@ -194,6 +210,28 @@ w_status_t altimu_get_gyro_acc_data(
         acc_data->x = (int16_t)raw_acc->x * ACC_FS;
         acc_data->y = (int16_t)raw_acc->y * ACC_FS;
         acc_data->z = (int16_t)raw_acc->z * ACC_FS;
+    } else {
+        return W_IO_ERROR;
+    }
+
+    // if saturated, return min/max vals instead of failing
+    if (fabs(gyro_data->x) > ALTIMU_GYRO_RANGE) {
+        gyro_data->x = (gyro_data->x > 0) ? ALTIMU_GYRO_RANGE : -ALTIMU_GYRO_RANGE;
+    }
+    if (fabs(gyro_data->y) > ALTIMU_GYRO_RANGE) {
+        gyro_data->y = (gyro_data->y > 0) ? ALTIMU_GYRO_RANGE : -ALTIMU_GYRO_RANGE;
+    }
+    if (fabs(gyro_data->z) > ALTIMU_GYRO_RANGE) {
+        gyro_data->z = (gyro_data->z > 0) ? ALTIMU_GYRO_RANGE : -ALTIMU_GYRO_RANGE;
+    }
+    if (fabs(acc_data->x) > ALTIMU_ACC_RANGE) {
+        acc_data->x = (acc_data->x > 0) ? ALTIMU_ACC_RANGE : -ALTIMU_ACC_RANGE;
+    }
+    if (fabs(acc_data->y) > ALTIMU_ACC_RANGE) {
+        acc_data->y = (acc_data->y > 0) ? ALTIMU_ACC_RANGE : -ALTIMU_ACC_RANGE;
+    }
+    if (fabs(acc_data->z) > ALTIMU_ACC_RANGE) {
+        acc_data->z = (acc_data->z > 0) ? ALTIMU_ACC_RANGE : -ALTIMU_ACC_RANGE;
     }
     return status;
 }
@@ -203,8 +241,11 @@ w_status_t altimu_get_gyro_acc_data(
  * @return Magnetometer data (gauss)
  */
 w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data) {
+    // Drive addr sel pin HIGH to use each device's "default" i2c addr
+    w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
+
     uint8_t raw_bytes[6];
-    w_status_t status = i2c_read_reg(I2C_BUS_4, LIS3MDL_ADDR, LIS3_OUT_X_L, raw_bytes, 6);
+    status |= i2c_read_reg(I2C_BUS_4, LIS3MDL_ADDR, LIS3_OUT_X_L, raw_bytes, 6);
     if (W_SUCCESS == status) {
         raw_data->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
         raw_data->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
@@ -212,6 +253,19 @@ w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data
         data->x = (int16_t)raw_data->x * MAG_FS;
         data->y = (int16_t)raw_data->y * MAG_FS;
         data->z = (int16_t)raw_data->z * MAG_FS;
+    } else {
+        return W_IO_ERROR;
+    }
+
+    // if saturated, set val to min/max instead of fail. prefer saturated values over nothing
+    if (fabs(data->x) > ALTIMU_MAG_RANGE) {
+        data->x = (data->x > 0) ? ALTIMU_MAG_RANGE : -ALTIMU_MAG_RANGE;
+    }
+    if (fabs(data->y) > ALTIMU_MAG_RANGE) {
+        data->y = (data->y > 0) ? ALTIMU_MAG_RANGE : -ALTIMU_MAG_RANGE;
+    }
+    if (fabs(data->z) > ALTIMU_MAG_RANGE) {
+        data->z = (data->z > 0) ? ALTIMU_MAG_RANGE : -ALTIMU_MAG_RANGE;
     }
     return status;
 }
@@ -221,14 +275,31 @@ w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data
  * @return Barometer data (pascal, celsius)
  */
 w_status_t altimu_get_baro_data(altimu_barometer_data_t *data, altimu_raw_baro_data_t *raw_data) {
+    // Drive addr sel pin HIGH to use each device's "default" i2c addr
+    w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
+
     uint8_t raw_bytes[5];
-    w_status_t status = i2c_read_reg(I2C_BUS_4, LPS22DF_ADDR, LPS_PRESS_OUT_XL, raw_bytes, 5);
+    status |= i2c_read_reg(I2C_BUS_4, LPS22DF_ADDR, LPS_PRESS_OUT_XL, raw_bytes, 5);
     if (W_SUCCESS == status) {
-        raw_data->pressure = (uint32_t)(((uint32_t)raw_bytes[2] << 16) |
-                                        ((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
-        raw_data->temperature = (uint16_t)(((uint16_t)raw_bytes[4] << 8) | raw_bytes[3]);
-        data->pressure = (int32_t)raw_data->pressure * BARO_FS;
-        data->temperature = (int16_t)raw_data->temperature * TEMP_FS;
+        raw_data->pressure = (int32_t)((((uint32_t)raw_bytes[2] << 16) |
+                                        ((uint32_t)raw_bytes[1] << 8) | (uint32_t)raw_bytes[0])
+                                       << 8) >>
+                             8;
+
+        raw_data->temperature = (int16_t)((raw_bytes[4] << 8) | raw_bytes[3]);
+        data->pressure = raw_data->pressure * BARO_FS;
+        data->temperature = raw_data->temperature * TEMP_FS;
+    } else {
+        return W_IO_ERROR;
     }
+
+    // if saturated, set val to min/max instead of fail. prefer saturated values over nothing
+    if (data->pressure > ALTIMU_BARO_MAX) {
+        data->pressure = ALTIMU_BARO_MAX;
+    }
+    if (data->pressure < ALTIMU_BARO_MIN) {
+        data->pressure = ALTIMU_BARO_MIN;
+    }
+
     return status;
 }

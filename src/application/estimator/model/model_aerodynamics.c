@@ -8,14 +8,14 @@
  * constants
  */
 // airfoil
-static const double cn_alpha = 50.0; // pitch forcing coeff
+static const double cn_alpha = 10.0; // pitch forcing coeff
 static const double area_canard = (2.0 * 0.102 * 0.0508) / 2.0;
 static const double length_canard = (0.203 / 2.0) + (0.0508 / 3.0);
 static const double c_canard = area_canard * length_canard;
 
 // aerodynamics
 static const double length_cg = 0; // center of gravity
-static const double length_cp = -0.6; // center of pressure
+static const double length_cp = -0.5; // center of pressure
 static const double area_reference =
     M_PI * ((0.203 / 2) * (0.203 / 2)); // cross section of body tube
 static const double c_aero = area_reference * (length_cp - length_cg);
@@ -43,7 +43,7 @@ void aerodynamics(const x_state_t *state, const estimator_airdata_t *airdata, ve
 double airfoil(double mach_num) {
     // the cot() thingy makes this line stays here fkdurskjrgs
     const double Cl_alpha =
-        2 * M_PI * cot(canard_sweep); // estimated coefficient of lift, const with Ma
+        2 * M_PI * cot(canard_sweep_angle); // estimated coefficient of lift, const with Ma
 
     double Cl_theory = 0;
 
@@ -51,13 +51,13 @@ double airfoil(double mach_num) {
         Cl_theory = Cl_alpha;
     } else {
         const double cone = acos(1 / mach_num);
-        if (cone > canard_sweep) {
+        if (cone > canard_sweep_angle) {
             Cl_theory = 4 / sqrt(pow(mach_num, 2) - 1); // 4 / sqrt(mach_num^2 - 1)
         } else {
-            const double m = cot(canard_sweep) / cot(cone);
+            const double m = cot(canard_sweep_angle) / cot(cone);
             const double a = m * (0.38 + 2.26 * m - 0.86 * m * m); // m*(0.38+2.26*m-0.86*m^2)
-            Cl_theory = 2 * M_PI * M_PI * cot(canard_sweep) /
-                        (M_PI + a); // 2*pi^2*cot(param.canard_sweep) / (pi + a)
+            Cl_theory = 2 * M_PI * M_PI * cot(canard_sweep_angle) /
+                        (M_PI + a); // 2*pi^2*cot(param.canard_sweep_angle) / (pi + a)
         }
     }
 

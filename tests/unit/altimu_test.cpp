@@ -3,6 +3,7 @@
 
 extern "C" {
 #include "FreeRTOS.h"
+#include "application/logger/log.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
@@ -15,6 +16,8 @@ FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *
 
 // w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout);
 FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t);
+
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 
 #define LSM6DSO_ADDR 0x6B // default (addr sel pin vdd) IMU
 #define LIS3MDL_ADDR 0x1E // default (addr sel pin vdd) Mag
@@ -100,12 +103,42 @@ static w_status_t i2c_read_reg_custom_fake6(
 static w_status_t i2c_read_reg_custom_fake7(
     i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data, uint8_t len
 ) {
-    // 420 Pa, 69 deg C
-    data[0] = 0x33; // Pres low byte
-    data[1] = 0x43; // Pres mid myte
-    data[2] = 0x00; // Pres high byte
-    data[3] = 0xF4; // Temp low byte
-    data[4] = 0x1A; // Temp high byte
+    // Pressure: 420 Pa
+    // Datasheet: 1 LSB = 1/4096 hPa = 0.0244140625 Pa
+    // Raw value = 420 / 0.0244140625 ≈ 17184 counts
+    int32_t pres_raw = 17184;
+    data[0] = (uint8_t)(pres_raw & 0xFF); // XL
+    data[1] = (uint8_t)((pres_raw >> 8) & 0xFF); // L
+    data[2] = (uint8_t)((pres_raw >> 16) & 0xFF); // H
+
+    // Temperature: 69 C
+    // Datasheet: 1 LSB = 1/100 C
+    int16_t temp_raw = (int16_t)(69 * 100);
+    data[3] = (uint8_t)(temp_raw & 0xFF); // L
+    data[4] = (uint8_t)((temp_raw >> 8) & 0xFF); // H
+
+    return W_SUCCESS;
+}
+
+static w_status_t i2c_read_reg_custom_fake8(
+    i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data, uint8_t len
+) {
+    // Pressure: 100000 Pa
+    // Datasheet: 1 LSB = 1/4096 hPa = 0.0244140625 Pa
+    // Raw value = 100000 / 0.0244140625 ≈ 4096000 counts
+    int32_t pres_raw = 4096000;
+
+    data[0] = (uint8_t)(pres_raw & 0xFF); // XL
+    data[1] = (uint8_t)((pres_raw >> 8) & 0xFF); // L
+    data[2] = (uint8_t)((pres_raw >> 16) & 0xFF); // H
+
+    // Temperature: 25 C
+    // Datasheet: 1 LSB = 1/100 C
+    int16_t temp_raw = (int16_t)(25 * 100);
+
+    data[3] = (uint8_t)(temp_raw & 0xFF); // L
+    data[4] = (uint8_t)((temp_raw >> 8) & 0xFF); // H
+
     return W_SUCCESS;
 }
 }
@@ -115,6 +148,7 @@ protected:
     void SetUp() override {
         RESET_FAKE(i2c_write_reg);
         RESET_FAKE(i2c_read_reg);
+        RESET_FAKE(gpio_write);
         FFF_RESET_HISTORY();
     }
 
@@ -239,7 +273,7 @@ TEST_F(AltimuTest, GetMagDataFailsIfI2CFails) {
     w_status_t status = altimu_get_mag_data(&data, &raw_data);
 
     // Assert
-    EXPECT_EQ(status, W_FAILURE);
+    EXPECT_EQ(status, W_IO_ERROR);
 }
 
 TEST_F(AltimuTest, GetBaroDataFailsIfI2CFails) {
@@ -252,7 +286,7 @@ TEST_F(AltimuTest, GetBaroDataFailsIfI2CFails) {
     w_status_t status = altimu_get_baro_data(&data, &raw_data);
 
     // Assert
-    EXPECT_EQ(status, W_FAILURE);
+    EXPECT_EQ(status, W_IO_ERROR);
 }
 
 // Data read conversion
@@ -324,7 +358,27 @@ TEST_F(AltimuTest, GetMagDataConversion) {
     EXPECT_EQ(raw_data.z, 0xD000); // Z-axis raw value
 }
 
-TEST_F(AltimuTest, GetBaroDataConversion) {
+TEST_F(AltimuTest, GetBaroDataConversionInRange) {
+    // Arrange
+    i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake8;
+
+    // Act
+    altimu_barometer_data_t data;
+    altimu_raw_baro_data_t raw_data;
+    w_status_t status = altimu_get_baro_data(&data, &raw_data);
+
+    // Assert
+    EXPECT_EQ(status, W_SUCCESS);
+    EXPECT_NEAR(data.pressure, 100000, 0.0244140625);
+    // tolerance -> 0.01
+    EXPECT_NEAR(data.temperature, 25, 0.01);
+
+    // Check raw data
+    EXPECT_EQ(raw_data.pressure, 4096000); // Pressure raw value
+    EXPECT_EQ(raw_data.temperature, (int16_t)(25 * 100)); // Temperature raw value
+}
+
+TEST_F(AltimuTest, GetBaroDataConversionSaturateLow) {
     // Arrange
     i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake7;
 
@@ -335,12 +389,12 @@ TEST_F(AltimuTest, GetBaroDataConversion) {
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
-    // tolerance -> 0.0244140625
-    EXPECT_NEAR(data.pressure, 420.0f, 0.0244140625);
+    // expect saturate to mininum 6000 Pa
+    EXPECT_NEAR(data.pressure, 6000, 0.0244140625);
     // tolerance -> 0.01
     EXPECT_NEAR(data.temperature, 69.0f, 0.01);
 
     // Check raw data
-    EXPECT_EQ(raw_data.pressure, 0x004333); // Pressure raw value
+    EXPECT_EQ(raw_data.pressure, 0x004320); // Pressure raw value
     EXPECT_EQ(raw_data.temperature, 0x1AF4); // Temperature raw value
 }

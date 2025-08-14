@@ -15,8 +15,8 @@ typedef struct {
  * raw data from barometer registers
  */
 typedef struct __attribute__((packed)) {
-    uint32_t pressure;
-    uint16_t temperature;
+    int32_t pressure;
+    int16_t temperature;
 } altimu_raw_baro_data_t;
 
 /**

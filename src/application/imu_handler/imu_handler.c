@@ -15,8 +15,8 @@
 #include "canlib.h"
 
 // Period of IMU sampling in milliseconds
-// TODO: sample slightly faster than 200hz to avoid estimator stuck?
-#define IMU_SAMPLING_PERIOD_MS 5
+// slightly slower than 200 hz to always receive encoder which can be >5ms
+#define IMU_SAMPLING_PERIOD_MS 6
 
 // Timeout values for freshness check (in milliseconds)
 #define GYRO_FRESHNESS_TIMEOUT_MS 5
@@ -37,14 +37,7 @@ static const matrix3d_t g_movella_upd_mat = {
 };
 // S2 (pololu)
 static const matrix3d_t g_pololu_upd_mat = {
-    .array =
-        {{0, 0, -1.00000000},
-         {-1.00000000000, 0, 0},
-         {
-             0,
-             1.00000000000,
-             0,
-         }}
+    .array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}
 };
 
 // Module state tracking
@@ -215,7 +208,7 @@ static w_status_t read_movella_imu(estimator_imu_measurement_t *imu_data) {
         imu_data->magnetometer = math_vector3d_rotate(&g_movella_upd_mat, &movella_data.mag);
 
         imu_data->barometer = movella_data.pres;
-        imu_data->is_dead = false;
+        imu_data->is_dead = movella_data.is_dead;
         imu_handler_state.movella_stats.success_count++;
     } else {
         // Set is_dead flag to indicate IMU failure

@@ -72,4 +72,9 @@ uint32_t flight_phase_get_status(void);
  */
 w_status_t flight_phase_get_flight_ms(uint32_t *flight_ms);
 
+/**
+ * return time (ms) elapsed since the moment actuation-allowed started
+ */
+w_status_t flight_phase_get_act_allowed_ms(uint32_t *act_allowed_ms);
+
 #endif

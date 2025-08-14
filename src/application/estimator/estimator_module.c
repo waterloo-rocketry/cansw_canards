@@ -14,6 +14,18 @@ w_status_t estimator_module(
     // record current time
     ctx->t = input->timestamp;
 
+    // store persistent alive values in case an imu happens to die the moment pad_filter_init
+    // runs, it can still use the older value. better than init to 0.
+    static y_imu_t last_movella = {0};
+    static y_imu_t last_pololu = {0};
+
+    if (!input->pololu_is_dead) {
+        last_pololu = input->pololu;
+    }
+    if (!input->movella_is_dead) {
+        last_movella = input->movella;
+    }
+
     switch (flight_phase) {
         // ------- if idle state: do nothing -------
         case STATE_IDLE:
@@ -24,13 +36,7 @@ w_status_t estimator_module(
         case STATE_SE_INIT:
             // initialize the pad filter if it hasn't been done yet
             if (false == ctx->pad_filter_ctx.is_initialized) {
-                status |= pad_filter_init(
-                    &ctx->pad_filter_ctx,
-                    &input->movella,
-                    &input->pololu,
-                    input->movella_is_dead,
-                    input->pololu_is_dead
-                );
+                status |= pad_filter_init(&ctx->pad_filter_ctx, &last_movella, &last_pololu);
 
                 if (W_SUCCESS == status) {
                     log_text(5, "Estimator", "Pad filter init!");

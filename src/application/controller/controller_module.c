@@ -2,12 +2,15 @@
 #include "application/logger/log.h"
 #include "common/math/math.h"
 
-// roll program steps. ms from launch time (launch is 0ms)
-#define STEP_1_START_MS 10000
-#define STEP_2_START_MS 15000
-#define STEP_3_START_MS 22000
-#define STEP_4_START_MS 36000
+// roll program steps. ms from act-allowed timestamp (ie end of boost phase is 0ms)
+#define STEP_0_START_MS 0
+#define STEP_1_START_MS 7000
+#define STEP_2_START_MS 12000
+#define STEP_3_START_MS 17000
+#define STEP_4_START_MS 24000
 
+// reference signals corresponding to the step start times
+static const float STEP_0_ANGLE_DEG = 0.0f;
 static const float STEP_1_ANGLE_DEG = 0.5f;
 static const float STEP_2_ANGLE_DEG = -0.5f;
 static const float STEP_3_ANGLE_DEG = 0.5f;
@@ -72,7 +75,7 @@ get_commanded_angle(controller_gain_t gain, roll_state_t roll_state, float ref_s
 }
 
 w_status_t controller_module(
-    controller_input_t input, uint32_t flight_ms, double *output_angle, float *ref_signal
+    controller_input_t input, uint32_t act_allowed_ms, double *output_angle, float *ref_signal
 ) {
     // ref_signal
     float r = 0.0f;
@@ -87,16 +90,19 @@ w_status_t controller_module(
     // %% Reference signal
     // % Generates reference signal for roll program
     // % includes multiple roll angle steps. Reference r [rad].
-    if (flight_ms >= STEP_1_START_MS && flight_ms < STEP_2_START_MS) {
+    if (act_allowed_ms >= STEP_0_START_MS && act_allowed_ms < STEP_1_START_MS) {
+        r = STEP_0_ANGLE_DEG;
+    } else if (act_allowed_ms >= STEP_1_START_MS && act_allowed_ms < STEP_2_START_MS) {
         r = STEP_1_ANGLE_DEG;
-    } else if (flight_ms >= STEP_2_START_MS && flight_ms < STEP_3_START_MS) {
+    } else if (act_allowed_ms >= STEP_2_START_MS && act_allowed_ms < STEP_3_START_MS) {
         r = STEP_2_ANGLE_DEG;
-    } else if (flight_ms >= STEP_3_START_MS && flight_ms < STEP_4_START_MS) {
+    } else if (act_allowed_ms >= STEP_3_START_MS && act_allowed_ms < STEP_4_START_MS) {
         r = STEP_3_ANGLE_DEG;
-    } else if (flight_ms >= STEP_4_START_MS) {
+    } else if (act_allowed_ms >= STEP_4_START_MS) {
         r = STEP_4_ANGLE_DEG;
     } else {
-        log_text(10, "cntlmodule", "invalid flight ms %d", flight_ms);
+        // this case should never occur unless timer gone wrong somehow. it must be an err
+        log_text(10, "cntlmodule", "invalid flight ms %d", act_allowed_ms);
         return W_FAILURE;
     }
 
@@ -108,7 +114,7 @@ w_status_t controller_module(
     // %%% Gain scheduling
     if (interpolate_gain(input.pressure_dynamic, input.canard_coeff, &controller_gain) !=
         W_SUCCESS) {
-        log_text(10, "cntlmodule", "gain interp fail");
+        log_text(10, "cntlmodule", "interp fail");
         return W_FAILURE;
     }
 

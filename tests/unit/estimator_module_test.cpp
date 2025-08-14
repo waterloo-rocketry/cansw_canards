@@ -1,5 +1,5 @@
 /**
- * test outputs from simulink-canards commit 2c8c534
+ * test outputs from simulink-canards v2.2.3
  */
 
 #include "fff.h"
@@ -42,11 +42,8 @@ protected:
 clear estimator_module;
 clear pad_filter;
 % pad filter phase
-flight_phase = 1;
 
-% --- Global IMU selection flag (used inside estimator_module) ---
-global IMU_select;
-IMU_select = [1 1];
+IMU_select = [1 1 1];
 
 % --- Non-zero test inputs (example from your data) ---
 timestamp = 0.005;
@@ -54,46 +51,24 @@ IMU_1 = [0.01; 0.02; -9.81; 0.001; -0.002; 0.0005; 0.3; 0.0; 0.4; 1013.25];
 IMU_2 = [-0.02; 0.01; -9.78; 0.0005; 0.001; -0.001; 0.31; -0.01; 0.39; 1013.30];
 cmd = [0; 0.005; 0; 0];   % Commanded angle and dummy timestamp
 encoder = 0.03;             % radians
-AHRS = [];                  % unused
 
-% --- Call estimator_module ---
 [xhat, Phat, controller_input, bias_1, bias_2] = estimator_module( ...
-    timestamp, IMU_1, IMU_2, cmd, encoder, AHRS);
-
-% --- Display the outputs in C-style formatting ---
-fprintf('\n--- C-Style Outputs for Unit Tests ---\n');
+    timestamp, IMU_1, IMU_2, cmd, encoder, IMU_select);
 
 % xhat
-fprintf('\nxhat[] = {');
-fprintf('%.6f, ', xhat(1:end-1));
-fprintf('%.6f};\n', xhat(end));
-
-% controller_input
-fprintf('\ncontroller_input[] = {');
-fprintf('%.6f, ', controller_input(1:end-1));
-fprintf('%.6f};\n', controller_input(end));
+fprintf('{');
+fprintf('%.9f, ', xhat(1:end-1));
+fprintf('%.9f}\n', xhat(end));
 
 % bias_1
-fprintf('\nbias_1[] = {');
-fprintf('%.6f, ', bias_1(1:end-1));
-fprintf('%.6f};\n', bias_1(end));
+fprintf('{');
+fprintf('%.9f, ', bias_1(1:end-1));
+fprintf('%.9f}\n', bias_1(end));
 
 % bias_2
-fprintf('\nbias_2[] = {');
-fprintf('%.6f, ', bias_2(1:end-1));
-fprintf('%.6f};\n', bias_2(end));
-
-% Phat (flattened row-major)
-fprintf('\nPhat[] = {');
-for i = 1:size(Phat, 1)
-    for j = 1:size(Phat, 2)
-        fprintf('%.6f', Phat(i, j));
-        if ~(i == size(Phat, 1) && j == size(Phat, 2))
-            fprintf(', ');
-        end
-    end
-end
-fprintf('};\n');
+fprintf('{');
+fprintf('%.9f, ', bias_2(1:end-1));
+fprintf('%.9f}\n', bias_2(end));
  */
 // clang-format on
 TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseOnce) {
@@ -122,50 +97,50 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseOnce) {
     // Expected output values for x_state_t
     x_state_t expect_x_init = {
         .array = {
-            0.413347,
-            -0.573781,
-            -0.413558,
-            -0.573488,
-            0.000000,
-            0.000000,
-            0.000000,
-            0.000000,
-            0.000000,
-            0.000000,
-            250.000000,
-            3.482826,
-            0.000000
+            0.706926282,
+            0.000000000,
+            -0.707286405,
+            -0.001083134,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            420.000000000,
+            3.482826488,
+            0.000000000
         }
     };
 
     // Expected biases for Movella and Pololu IMUs
     y_imu_t expect_bias_1 = {
         .array = {
-            0.010000,
-            0.020000,
-            -9.810000,
-            0.001000,
-            -0.002000,
-            0.000500,
-            0.126540,
-            0.379619,
-            0.299796,
-            -97343.221211
+            0.010000000,
+            0.020000000,
+            -9.810000000,
+            0.001000000,
+            -0.002000000,
+            0.000500000,
+            -0.400152618,
+            0.000153451,
+            0.299796362,
+            -95365.025888203
         }
     };
 
     y_imu_t expect_bias_2 = {
         .array = {
-            -0.020000,
-            0.010000,
-            -9.780000,
-            0.000500,
-            0.001000,
-            -0.001000,
-            0.113892,
-            0.373299,
-            0.309801,
-            -97343.171211
+            -0.020000000,
+            0.010000000,
+            -9.780000000,
+            0.000500000,
+            0.001000000,
+            -0.001000000,
+            -0.390173050,
+            -0.009877161,
+            0.309786109,
+            -95364.975888203
         }
     };
 
@@ -192,8 +167,8 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseOnce) {
         );
     }
 
-    // Optionally, check Phat
-    double expected_Phat[169] = {0}; // Set the expected values for P matrix if necessary
+    // Optionally, check Phat shouldnt change from 0
+    double expected_Phat[169] = {0};
     for (int i = 0; i < 169; ++i) {
         EXPECT_NEAR(ctx.P_flat[i], expected_Phat[i], 1e-5); // Adjust tolerance if needed
     }
@@ -205,12 +180,7 @@ clear all;
 clear pad_filter; clear estimator_module;
 format long g
 
-% pad filter phase
-flight_phase = 1;
-
-% --- Global IMU selection flag (used inside estimator_module) ---
-global IMU_select;
-IMU_select = [1 1];
+IMU_select = [1 1 1];
 
 % --- Non-zero test inputs (example from your data) ---
 timestamp = 0.005;
@@ -218,11 +188,10 @@ IMU_1 = [0.01; 0.02; -9.81; 0.001; -0.002; 0.0005; 0.3; 0.0; 0.4; 1013.25];
 IMU_2 = [-0.02; 0.01; -9.78; 0.0005; 0.001; -0.001; 0.31; -0.01; 0.39; 1013.30];
 cmd = [0; 0.005; 0; 0];   % Commanded angle and dummy timestamp
 encoder = 0.03;             % radians
-AHRS = [];                  % unused
 
 % --- Call estimator_module ---
 estimator_module( ...
-    timestamp, IMU_1, IMU_2, cmd, encoder, AHRS);
+    timestamp, IMU_1, IMU_2, cmd, encoder, IMU_select);
 
 % call again
 timestamp = 0.01
@@ -230,42 +199,22 @@ cmd = [0; 0.1; 0; 0];   % Commanded angle and dummy timestamp
 IMU_1 = [0.06; 0.1; -9.99; 0.001; -0.002; 0.0005; 0.5; 0.4; 0.4; 1010.25];
 IMU_2 = [-0.03; 0.08; -9.1; 0.005; 0.01; -0.001; 0.31; -0.01; 0.99; 1014.30];
 [xhat, Phat, controller_input, bias_1, bias_2] = estimator_module( ...
-    timestamp, IMU_1, IMU_2, cmd, encoder, AHRS);
-
-% --- Display the outputs in C-style formatting ---
-fprintf('\n--- C-Style Outputs for Unit Tests ---\n');
+    timestamp, IMU_1, IMU_2, cmd, encoder, IMU_select);
 
 % xhat
-fprintf('\nxhat[] = {');
-fprintf('%.6f, ', xhat(1:end-1));
-fprintf('%.6f};\n', xhat(end));
-
-% controller_input
-fprintf('\ncontroller_input[] = {');
-fprintf('%.6f, ', controller_input(1:end-1));
-fprintf('%.6f};\n', controller_input(end));
+fprintf('{');
+fprintf('%.9f, ', xhat(1:end-1));
+fprintf('%.9f}\n', xhat(end));
 
 % bias_1
-fprintf('\nbias_1[] = {');
-fprintf('%.6f, ', bias_1(1:end-1));
-fprintf('%.6f};\n', bias_1(end));
+fprintf('{');
+fprintf('%.9f, ', bias_1(1:end-1));
+fprintf('%.9f}\n', bias_1(end));
 
 % bias_2
-fprintf('\nbias_2[] = {');
-fprintf('%.6f, ', bias_2(1:end-1));
-fprintf('%.6f};\n', bias_2(end));
-
-% Phat (flattened row-major)
-fprintf('\nPhat[] = {');
-for i = 1:size(Phat, 1)
-    for j = 1:size(Phat, 2)
-        fprintf('%.6f', Phat(i, j));
-        if ~(i == size(Phat, 1) && j == size(Phat, 2))
-            fprintf(', ');
-        end
-    end
-end
-fprintf('};\n');
+fprintf('{');
+fprintf('%.9f, ', bias_2(1:end-1));
+fprintf('%.9f}\n', bias_2(end));
  */
 // clang-format on
 TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
@@ -370,49 +319,49 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
     // --- Expected outputs from second iteration ---
     x_state_t expect_x_2 = {
         .array = {
-            0.417133,
-            -0.571031,
-            -0.417342,
-            -0.570745,
-            0.000000,
-            0.000000,
-            0.000000,
-            0.000000,
-            0.000000,
-            0.000000,
-            250.000000,
-            3.482826,
-            0.000000
+            0.706926425,
+            0.000000000,
+            -0.707286260,
+            -0.001084222,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            420.000000000,
+            3.482826488,
+            0.000000000
         }
     };
 
     y_imu_t expect_bias_1_2 = {
         .array = {
-            0.010250,
-            0.020400,
-            -9.810900,
-            0.001000,
-            -0.002000,
-            0.000500,
-            0.123412,
-            0.380649,
-            0.300800,
-            -97343.236211
+            0.010010000,
+            0.020016000,
+            -9.810036000,
+            0.001000000,
+            -0.002000000,
+            0.000500000,
+            -0.400152393,
+            0.000233544,
+            0.299836648,
+            -95365.026488203
         }
     };
 
     y_imu_t expect_bias_2_2 = {
         .array = {
-            -0.020050,
-            0.010350,
-            -9.776600,
-            0.000522,
-            0.001045,
-            -0.001000,
-            0.109854,
-            0.377628,
-            0.309803,
-            -97343.166211
+            -0.020002000,
+            0.010014000,
+            -9.779864000,
+            0.000500900,
+            0.001001800,
+            -0.001000000,
+            -0.390292938,
+            -0.009876854,
+            0.309786192,
+            -95364.975688203
         }
     };
 
@@ -441,48 +390,44 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
     }
 }
 
-// clang-format off
 /** NOTE: to run this script, edit matlab estimator_module to replace the `persistent` variables
- * with `global` variables. Ie, delete 'persistent' and write 'global' in its place.
-clear all;
+ * with `global` variables. Ie, delete 'persistent' and write 'global' in its place. ALSO, delete
+the flight_phase calc in matlab and force it to be in flight
+ // clang-format off
+ clear all;
 clear pad_filter; clear estimator_module;
 format long g
+global x
     global P
-    global b; % remembers g_x, g_P, g_t from last iteration
-    global IMU_select 
-    global flight_phase
-    global x
     global t
+    global b; % remembers g_x, g_P, g_t from last iteration
+    global flight_phase
 
 P = zeros(13);
 b.bias_1 = zeros(10, 1);
 b.bias_2 = zeros(10, 1);
 t = 0.005;
 
-global IMU_select;
-IMU_select = [1 1];
+IMU_select = [1 1 1];
 
 % --- Non-zero test inputs (example from your data) ---
 IMU_1 = [0.01; 0.02; -9.81; 0.001; -0.002; 0.0005; 0.3; 0.0; 0.4; 1013.25];
 IMU_2 = [-0.02; 0.01; -9.78; 0.0005; 0.001; -0.001; 0.31; -0.01; 0.39; 1013.30];
 cmd = 0.1;   % Commanded angle and dummy timestamp
 encoder = 0.03;             % radians
-AHRS = [];                  % unused
-
-% in flight now
 flight_phase = 0;
 
 timestamp = 0.1;
 cmd = 0.1;
 x = [...
-	0.573781;
+    0.573781;
          -0.413347;
          0.573488;
          0.413558;
          0.000000;
          0.000000;
          0.000000;
-         0.000000;
+         6.000000;
          0.000000;
          0.000000;
          25762.842421;
@@ -490,42 +435,32 @@ x = [...
          0.000000]
 
 [xhat, Phat, controller_input, bias_1, bias_2] = estimator_module( ...
-   timestamp, IMU_1, IMU_2, cmd, encoder, AHRS);
-
-% --- Display the outputs in C-style formatting ---
-fprintf('\n--- C-Style Outputs for Unit Tests ---\n');
+   timestamp, IMU_1, IMU_2, cmd, encoder, IMU_select);
 
 % xhat
-fprintf('\nxhat[] = {');
-fprintf('%.6f, ', xhat(1:end-1));
-fprintf('%.6f};\n', xhat(end));
+fprintf('{');
+fprintf('%.9f, ', xhat(1:end-1));
+fprintf('%.9f}\n', xhat(end));
 
 % controller_input
-fprintf('\ncontroller_input[] = {');
-fprintf('%.6f, ', controller_input(1:end-1));
-fprintf('%.6f};\n', controller_input(end));
+fprintf('{');
+fprintf('%.9f, ', controller_input(1:end-1));
+fprintf('%.9f}\n', controller_input(end));
 
 % bias_1
-fprintf('\nbias_1[] = {');
-fprintf('%.6f, ', bias_1(1:end-1));
-fprintf('%.6f};\n', bias_1(end));
+fprintf('{');
+fprintf('%.9f, ', bias_1(1:end-1));
+fprintf('%.9f}\n', bias_1(end));
 
 % bias_2
-fprintf('\nbias_2[] = {');
-fprintf('%.6f, ', bias_2(1:end-1));
-fprintf('%.6f};\n', bias_2(end));
+fprintf('{');
+fprintf('%.9f, ', bias_2(1:end-1));
+fprintf('%.9f}\n', bias_2(end));
 
-% Phat (flattened row-major)
-fprintf('\nPhat[] = {');
-for i = 1:size(Phat, 1)
-    for j = 1:size(Phat, 2)
-        fprintf('%.6f', Phat(i, j));
-        if ~(i == size(Phat, 1) && j == size(Phat, 2))
-            fprintf(', ');
-        end
-    end
-end
-fprintf('};\n');
+P_c = reshape(Phat.', 1, []);  % Transpose for row-major C-style output
+fprintf('{ ');
+fprintf('%.9f, ', P_c(1:end-1));
+fprintf('%.9f };\n', P_c(end));
  */
 // clang-format on
 TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
@@ -553,7 +488,7 @@ TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
                   0.000000,
                   0.000000,
                   0.000000,
-                  0.000000,
+                  6.000000,
                   0.000000,
                   0.000000,
                   25762.842421,
@@ -569,19 +504,21 @@ TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
     // Expected x_state
 
     x_state_t expect_x_init = {
-        {0.573781,
-         -0.413347,
-         0.573488,
-         0.413558,
-         0.000857013982,
-         -0.001143,
-         0.00007141783,
-         -0.00062567116,
-         0.885550,
-         -1.225233,
-         25762.845607,
-         3.626911,
-         0.033586}
+        .array = {
+            0.573781263,
+            -0.413347189,
+            0.573488263,
+            0.413558189,
+            0.000749625,
+            -0.000499975,
+            -0.000249988,
+            5.999374329,
+            0.885550498,
+            -1.225233134,
+            25763.647233782,
+            3.627323932,
+            0.032838284
+        }
     };
 
     y_imu_t expect_bias_1 = {
@@ -611,25 +548,31 @@ TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
     };
 
     double expected_Phat[169] = {
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000095,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000095, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000095, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000095, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 2.850000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000,
-        0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, 0.001919
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000500, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000500, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000500, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000001000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000001000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000001000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000999769, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.300000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000, 0.000000000,
+        0.000990099
     };
 
     // Assert: xhat
@@ -659,7 +602,9 @@ TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
 
     // Expected controller input
     // TODO: use array. this is just conveniently copied as an array from matlab output vector
-    double expected_controller_input[5] = {-0.000410, 0.000857, 0.033586, 0.039296, 3.626911};
+    double expected_controller_input[5] = {
+        -0.000410096, 0.000749625, 0.032838284, 0.658087240, 3.627323932
+    };
 
     // Assert: controller_input values
     EXPECT_NEAR(

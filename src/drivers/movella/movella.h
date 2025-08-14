@@ -13,6 +13,7 @@ typedef struct {
     vector3d_t mag; // (x, y, z) "arbitrary units" - estimator doesnt need conversion so leave this
     float pres; // Pa
     float temp; // °c
+    bool is_dead; // true if detected dead - ie, no uart comms within UART_RX_TIMEOUT_MS
 } movella_data_t;
 
 // Initialize the xsens interface, pass the configuration to the sensor

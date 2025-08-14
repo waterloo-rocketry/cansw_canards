@@ -27,25 +27,24 @@ protected:
 };
 
 /**
-clear global
-global IMU_select;
-IMU_select = [1 1];
+clc;
+clear pad_filter;
+IMU_select = [1 1 1];
 IMU_1 = [0.01; 0.02; -9.81; 0.001; -0.002; 0.0005; 0.3; 0.0; 0.4; 1013.25];
 IMU_2 = [-0.02; 0.01; -9.78; 0.0005; 0.001; -0.001; 0.31; -0.01; 0.39; 1013.30];
-[x_init, bias_1, bias_2] = pad_filter(IMU_1, IMU_2);
-c_array_str = @(v) ['{', sprintf('%.6f, ', v(1:end-1)), sprintf('%.6f', v(end)), '}'];
 
-fprintf(c_array_str(x_init));
-printf("\n");
-fprintf(c_array_str(bias_1));
-printf("\n");
-fprintf(c_array_str(bias_2));
+% Call filter
+[x_init, bias_1, bias_2] = pad_filter(IMU_1, IMU_2, IMU_select);
 
-x_init[] = {0.813804, 0.185759, 0.403873, -0.374304, 0.000000, 0.000000, 0.000000, 0.000000,
-0.000000, 0.000000, 35009.193288, 5.000000, 0.000000, }; bias_1[] = {0.000000, 0.000000,
-0.000000, 3.960110, 4.950105, 5.940155, 13.362314, -3.419518, -0.130656, 0.000000, }; bias_2[] =
-{0.000000, 0.000000, 0.000000, 13.860355, 14.850385, 15.840390, 29.906717, -7.509157, -2.028143,
-0.000000, };
+% C-style output helper
+c_array_str = @(v) ['{', sprintf('%.9f, ', v(1:end-1)), sprintf('%.9f', v(end)), '}'];
+
+% Print results in C-style format
+fprintf("x_init  = %s\n", c_array_str(x_init));
+fprintf("bias_1  = %s\n", c_array_str(bias_1));
+fprintf("bias_2  = %s\n", c_array_str(bias_2));
+
+
  */
 TEST(PadFilterTest, NewContextOneIteration) {
     // Arrange
@@ -57,76 +56,68 @@ TEST(PadFilterTest, NewContextOneIteration) {
         .array = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30}
     };
 
-    bool actual_is_dead_1 = false;
-    bool actual_is_dead_2 = false;
     y_imu_t actual_bias_1 = {0};
     y_imu_t actual_bias_2 = {0};
     x_state_t actual_x_init = {0};
 
     // Initialize pad filter
-    EXPECT_EQ(
-        pad_filter_init(&test_ctx, &imu1, &imu2, actual_is_dead_1, actual_is_dead_2), W_SUCCESS
-    );
+    EXPECT_EQ(pad_filter_init(&test_ctx, &imu1, &imu2), W_SUCCESS);
 
     // Act
     pad_filter(
-        &test_ctx,
-        &imu1,
-        &imu2,
-        actual_is_dead_1,
-        actual_is_dead_2,
-        &actual_x_init,
-        &actual_bias_1,
-        &actual_bias_2
+        &test_ctx, &imu1, &imu2, false, false, &actual_x_init, &actual_bias_1, &actual_bias_2
     );
 
     // Assert
     x_state_t expect_x_init = {
         .array = {
-            0.413347,
-            -0.573781,
-            -0.413558,
-            -0.573488,
-            0.000000,
-            0.000000,
-            0.000000,
-            0.000000,
-            0.000000,
-            0.000000,
-            250.000000,
-            3.482826,
-            0.000000
+            0.706926282,
+            0.000000000,
+            -0.707286405,
+            -0.001083134,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            0.000000000,
+            420.000000000,
+            3.482826488,
+            0.000000000
         }
+
     };
 
     y_imu_t expect_bias_1 = {
         .array = {
-            0.010000,
-            0.020000,
-            -9.810000,
-            0.001000,
-            -0.002000,
-            0.000500,
-            0.126540,
-            0.379619,
-            0.299796,
-            -97343.221211
+            0.010000000,
+            0.020000000,
+            -9.810000000,
+            0.001000000,
+            -0.002000000,
+            0.000500000,
+            -0.400152618,
+            0.000153451,
+            0.299796362,
+            -95365.025888203
         }
+
     };
 
     y_imu_t expect_bias_2 = {
         .array = {
-            -0.020000,
-            0.010000,
-            -9.780000,
-            0.000500,
-            0.001000,
-            -0.001000,
-            0.113892,
-            0.373299,
-            0.309801,
-            -97343.171211
+            -0.020000000,
+            0.010000000,
+            -9.780000000,
+            0.000500000,
+            0.001000000,
+            -0.001000000,
+            -0.390173050,
+            -0.009877161,
+            0.309786109,
+            -95364.975888203
         }
+
     };
 
     // tolerance = 0.001% of the actual value
@@ -158,36 +149,37 @@ TEST(PadFilterTest, InitFailsOnSecondAttempt) {
         .array = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30}
     };
 
-    bool is_dead_1 = false;
-    bool is_dead_2 = false;
-
     // Act & Assert
-    ASSERT_EQ(pad_filter_init(&test_ctx, &imu1, &imu2, is_dead_1, is_dead_2), W_SUCCESS);
-    ASSERT_EQ(pad_filter_init(&test_ctx, &imu1, &imu2, is_dead_1, is_dead_2), W_FAILURE);
+    ASSERT_EQ(pad_filter_init(&test_ctx, &imu1, &imu2), W_SUCCESS);
+    ASSERT_EQ(pad_filter_init(&test_ctx, &imu1, &imu2), W_FAILURE);
 }
 
 // clang-format off
 /**
- clear all;
-global IMU_select;
-IMU_select = [1 1];
+IMU_select = [1 1 1];
+clear pad_filter;
+c_array_str = @(v) ['{', sprintf('%.9f, ', v(1:end-1)), sprintf('%.9f', v(end)), '}'];
 
 % --- Iteration 1 ---
 IMU_1 = [0.01; 0.02; -9.81; 0.001; -0.002; 0.0005; 0.3; 0.0; 0.4; 1013.25];
 IMU_2 = [-0.02; 0.01; -9.78; 0.0005; 0.001; -0.001; 0.31; -0.01; 0.39; 1013.30];
-[x_init, bias_1, bias_2] = pad_filter(IMU_1, IMU_2);
+[x_init, bias_1, bias_2] = pad_filter(IMU_1, IMU_2, IMU_select);
 
-% --- Iteration 2 (from C test) ---
+% --- Iteration 2 ---
 IMU_1 = [0.010628; 0.021093; -9.808891; 0.000136; -0.001923; -0.000714; 0.298886; -0.000007; 0.401533; 1013.249230];
 IMU_2 = [-0.019629; 0.009774; -9.778883; -0.000589; 0.001033; -0.000447; 0.311101; -0.008456; 0.390086; 1013.298508];
-[x_init, bias_1, bias_2] = pad_filter(IMU_1, IMU_2);
+[x_init, bias_1, bias_2] = pad_filter(IMU_1, IMU_2, IMU_select);
 
-% --- Iteration 3 (from C test) ---
+% --- Iteration 3 ---
 IMU_1 = [0.009258; 0.018938; -9.807650; 0.000384; -0.001252; 0.000308; 0.300889; -0.000765; 0.398598; 1013.248578];
 IMU_2 = [-0.019512; 0.009823; -9.780196; 0.001919; 0.001292; -0.000802; 0.311588; -0.010804; 0.390697; 1013.300835];
-[x_init, bias_1, bias_2] = pad_filter(IMU_1, IMU_2);
+[x_init, bias_1, bias_2] = pad_filter(IMU_1, IMU_2, IMU_select);
+fprintf("x_init  = %s\n", c_array_str(x_init));
+fprintf("bias_1  = %s\n", c_array_str(bias_1));
+fprintf("bias_2  = %s\n", c_array_str(bias_2));
+
  */
-// clang-format off
+// clang-format on
 TEST(PadFilterTest, RunsThreeSequentialIterationsCorrectly) {
     // Arrange
     pad_filter_ctx_t test_ctx = {0};
@@ -197,30 +189,14 @@ TEST(PadFilterTest, RunsThreeSequentialIterationsCorrectly) {
     // --- Iteration 1 ---
     {
         y_imu_t imu1 = {
-            .array = {
-                0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25
-            }
+            .array = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25}
         };
         y_imu_t imu2 = {
             .array = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30}
         };
 
         x_state_t expect_x = {
-            .array = {
-                0.576728,
-                -0.409241,
-                0.576403,
-                0.409472,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                25762.842145,
-                3.62759872846844,
-                0.0
-            }
+            .array = {0.70692628, 0, -0.7072864, -0.001083, 0, 0, 0, 0, 0, 0, 420, 3.482826, 0}
         };
         y_imu_t expect_bias_1 = {
             .array = {
@@ -238,27 +214,12 @@ TEST(PadFilterTest, RunsThreeSequentialIterationsCorrectly) {
         y_imu_t actual_bias_2 = {0};
 
         // Initialize pad filter on first iteration
-        ASSERT_EQ(pad_filter_init(&test_ctx, &imu1, &imu2, false, false), W_SUCCESS);
+        ASSERT_EQ(pad_filter_init(&test_ctx, &imu1, &imu2), W_SUCCESS);
 
         pad_filter(
             &test_ctx, &imu1, &imu2, false, false, &actual_x, &actual_bias_1, &actual_bias_2
         );
-        // only compare final result for now
-    //     for (int i = 0; i < 13; ++i) {
-    //         EXPECT_NEAR(actual_x.array[i], expect_x.array[i], abs(expect_x.array[i] * tolerance));
-    //     }
-    //     for (int i = 0; i < 10; ++i) {
-    //         EXPECT_NEAR(
-    //             actual_bias_1.array[i],
-    //             expect_bias_1.array[i],
-    //             abs(expect_bias_1.array[i] * tolerance)
-    //         );
-    //         EXPECT_NEAR(
-    //             actual_bias_2.array[i],
-    //             expect_bias_2.array[i],
-    //             abs(expect_bias_2.array[i] * tolerance)
-    //         );
-    //     }
+        // only compare final result, dont check values between iterations
     }
 
     // --- Iteration 2 ---
@@ -327,22 +288,6 @@ TEST(PadFilterTest, RunsThreeSequentialIterationsCorrectly) {
         pad_filter(
             &test_ctx, &imu1, &imu2, false, false, &actual_x, &actual_bias_1, &actual_bias_2
         );
-
-        // for (int i = 0; i < 13; ++i) {
-        //     EXPECT_NEAR(actual_x.array[i], expect_x.array[i], abs(expect_x.array[i] * tolerance));
-        // }
-        // for (int i = 0; i < 10; ++i) {
-        //     EXPECT_NEAR(
-        //         actual_bias_1.array[i],
-        //         expect_bias_1.array[i],
-        //         abs(expect_bias_1.array[i] * tolerance)
-        //     );
-        //     EXPECT_NEAR(
-        //         actual_bias_2.array[i],
-        //         expect_bias_2.array[i],
-        //         abs(expect_bias_2.array[i] * tolerance)
-        //     );
-        // }
     }
 
     // --- Iteration 3 ---
@@ -378,47 +323,47 @@ TEST(PadFilterTest, RunsThreeSequentialIterationsCorrectly) {
 
         x_state_t expect_x = {
             .array = {
-         0.413373541614123,
-        -0.573762123638439,
-        -0.413584530119265,
-        -0.573469421170242,
-                         0,
-                         0,
-                         0,
-                         0,
-                         0,
-                         0,
-                       250,
-          3.48282648772469,
-                         0
+                0.706926285,
+                0.000000000,
+                -0.707286402,
+                -0.001083131,
+                0.000000000,
+                0.000000000,
+                0.000000000,
+                0.000000000,
+                0.000000000,
+                0.000000000,
+                420.000000000,
+                3.482826488,
+                0.000000000
             }
         };
         y_imu_t expect_bias_1 = {
             .array = {
-              0.0099994143,
-            0.020000127675,
-           -9.809982732725,
-              0.0009926216,
-           -0.001995876925,
-             0.00049300035,
-         0.126501033340102,
-         0.379631966111436,
-         0.299794753017351,
-         -97343.2212224229
+                0.009999977,
+                0.020000006,
+                -9.809999308,
+                0.000999704,
+                -0.001999835,
+                0.000499719,
+                -0.400152642,
+                0.000153297,
+                0.299796320,
+                -95365.025888641
             }
         };
         y_imu_t expect_bias_2 = {
             .array = {
-           -0.019995714275,
-             0.00999799065,
-           -9.779995422925,
-            0.000501677225,
-            0.001001624175,
-           -0.000996258825,
-         0.113862299305529,
-         0.373311843338002,
-         0.309814367418114,
-         -97343.1712147298
+                -0.019999828,
+                0.009999919,
+                -9.779999816,
+                0.000500066,
+                0.001000065,
+                -0.000999850,
+                -0.390173204,
+                -0.009877014,
+                0.309786649,
+                -95364.975888334
             }
         };
 

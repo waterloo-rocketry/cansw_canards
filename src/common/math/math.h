@@ -22,6 +22,9 @@ static inline bool float_equal(double a, double b) {
 
 #define MS_PER_SEC 1000
 
+// use for checking float equality
+#define EQ_EPSILON 1e-8
+
 /**
  * 3D double vector.
  */

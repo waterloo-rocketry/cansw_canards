@@ -21,13 +21,11 @@ typedef struct {
  * @brief Initialize the pad filter. must only run once in the whole program
  * @param IMU_1 input to init with
  * @param IMU_2 input to init with
- * @param is_dead_1 input - true means dead
- * @param is_dead_2 input - true means dead
+ * @note both imu values must be the last ALIVE values, even if its slightly stale. pad_filter_init
+ * cannot handle dead imus, because it needs to init the filtered arrays with actual imu values. if
+ * an imu is actually permanently dead, it will be all 0s anyway for the rest of the program
  */
-w_status_t pad_filter_init(
-    pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2, const bool is_dead_1,
-    const bool is_dead_2
-);
+w_status_t pad_filter_init(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2);
 
 /**
  * @param ctx input - object containing the persistent data for this instance of pad_filter

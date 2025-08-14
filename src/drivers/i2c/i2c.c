@@ -115,12 +115,13 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
 
     // Validate input parameters
     if (bus >= I2C_BUS_COUNT || !hal_handle) {
+        log_text(10, "i2c", "initbusfail %d", bus);
         return W_INVALID_PARAM;
     }
 
     // Check if already initialized
     if (i2c_buses[bus].initialized) {
-        return W_FAILURE;
+        return W_SUCCESS;
     }
 
     // Get handle reference for cleaner code
@@ -146,6 +147,7 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
         if (handle->transfer_sem) {
             vSemaphoreDelete(handle->transfer_sem);
         }
+        log_text(10, "i2c", "initmtx %d", bus);
         return W_FAILURE;
     }
 

@@ -52,8 +52,9 @@ static w_status_t can_encoder_msg_callback(const can_msg_t *msg) {
     }
 
     if (SENSOR_CANARD_ENCODER_1 == sensor_id) {
-        // shift back to signed and convert from mdeg to radians
-        float encoder_val_rad = ((int16_t)raw_data - 32768) * (RAD_PER_DEG) / 1000.0f;
+        // shift to [-10000, 10000] mdeg then convert to radians. raw is centered at 32768
+        int16_t angle_mdeg = (int16_t)(raw_data - 32768);
+        float encoder_val_rad = ((int32_t)angle_mdeg * (RAD_PER_DEG) / 1000.0f);
 
         // send to internal data queue
         xQueueOverwrite(encoder_data_queue_rad, &encoder_val_rad);
@@ -66,6 +67,7 @@ static w_status_t can_encoder_msg_callback(const can_msg_t *msg) {
 w_status_t estimator_init(void) {
     // register the callback for the encoder can msgs
     if (W_SUCCESS != can_handler_register_callback(MSG_SENSOR_ANALOG, can_encoder_msg_callback)) {
+        log_text(1, "adc", "initfailenc");
         return W_FAILURE;
     }
 
@@ -76,6 +78,7 @@ w_status_t estimator_init(void) {
 
     if ((NULL == imu_data_queue) || (NULL == encoder_data_queue_rad) ||
         (NULL == controller_cmd_queue)) {
+        log_text(1, "adc", "initfailq");
         return W_FAILURE;
     }
 
@@ -128,8 +131,8 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
         .barometer = latest_imu_data.pololu.barometer
     };
 
-    // get the latest encoder reading. should be populating at 200Hz so 0ms wait
-    if (xQueueReceive(encoder_data_queue_rad, &latest_encoder_rad, 0) == pdTRUE) {
+    // get the latest encoder reading. wait very briefly in case mcb is a bit imperfect timing
+    if (xQueueReceive(encoder_data_queue_rad, &latest_encoder_rad, pdMS_TO_TICKS(4)) == pdTRUE) {
         // log received encoder val (radians)
         log_data_container_t log_payload = {0};
         log_payload.encoder.angle_rad = latest_encoder_rad;
@@ -146,9 +149,8 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
         log_data(1, LOG_TYPE_ENCODER, &log_payload);
     }
 
-    // get the latest controller cmd, only during flight
-    // for testflight, boost state is also allowed
-    if ((STATE_BOOST == curr_flight_phase) || (STATE_ACT_ALLOWED == curr_flight_phase)) {
+    // get the latest controller cmd, only while controller is active (act-allowed or recovery)
+    if ((STATE_RECOVERY == curr_flight_phase) || (STATE_ACT_ALLOWED == curr_flight_phase)) {
         if (controller_get_latest_output(&latest_controller_cmd) != W_SUCCESS) {
             log_text(10, "Estimator", "controller_get_latest_output fail");
             estimator_error_stats.controller_data_fails++;
@@ -191,8 +193,9 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
     }
 
     // send controller cmd, only during flight, and if all data collected successfully
+    // continue actuating after recovery too to avoid timer lockout issues
     if (W_SUCCESS == status) {
-        if ((STATE_BOOST == curr_flight_phase) || (STATE_ACT_ALLOWED == curr_flight_phase)) {
+        if ((STATE_RECOVERY == curr_flight_phase) || (STATE_ACT_ALLOWED == curr_flight_phase)) {
             if (controller_update_inputs(&output_to_controller) != W_SUCCESS) {
                 log_text(10, "Estimator", "failed to update controller inputs.");
                 estimator_error_stats.controller_data_fails++;
@@ -250,6 +253,44 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
             if (estimator_log_state_to_can(&ctx->x) != W_SUCCESS) {
                 log_text(0, "Estimator", "Failed to log state data to CAN");
                 status = W_FAILURE; // mark failure but keep try to log other states
+            }
+        }
+
+        // log the end of pad filter one time only
+        static bool pad_filter_end_logged = false;
+        if (curr_flight_phase > STATE_SE_INIT) {
+            if (!pad_filter_end_logged) {
+                log_text(
+                    1,
+                    "Estimator",
+                    "biasM %f %f %f %f %f %f %f %f %f %f",
+                    ctx->bias_movella.accelerometer.x,
+                    ctx->bias_movella.accelerometer.y,
+                    ctx->bias_movella.accelerometer.z,
+                    ctx->bias_movella.gyroscope.x,
+                    ctx->bias_movella.gyroscope.y,
+                    ctx->bias_movella.gyroscope.z,
+                    ctx->bias_movella.magnetometer.x,
+                    ctx->bias_movella.magnetometer.y,
+                    ctx->bias_movella.magnetometer.z,
+                    ctx->bias_movella.barometer
+                );
+                log_text(
+                    1,
+                    "Estimator",
+                    "biasP %f %f %f %f %f %f %f %f %f %f",
+                    ctx->bias_pololu.accelerometer.x,
+                    ctx->bias_pololu.accelerometer.y,
+                    ctx->bias_pololu.accelerometer.z,
+                    ctx->bias_pololu.gyroscope.x,
+                    ctx->bias_pololu.gyroscope.y,
+                    ctx->bias_pololu.gyroscope.z,
+                    ctx->bias_pololu.magnetometer.x,
+                    ctx->bias_pololu.magnetometer.y,
+                    ctx->bias_pololu.magnetometer.z,
+                    ctx->bias_pololu.barometer
+                );
+                pad_filter_end_logged = true;
             }
         }
     }
@@ -331,6 +372,14 @@ void estimator_task(void *argument) {
         proc_handle_fatal_error("estini");
     }
     g_estimator_ctx.t = init_time_ms / 1000.0f; // convert ms to seconds
+
+    // initialize ctx to reasonable values in case pad filter never runs
+    g_estimator_ctx.x.attitude.w = 1.0;
+    g_estimator_ctx.x.attitude.x = 0.0;
+    g_estimator_ctx.x.attitude.y = 0.0;
+    g_estimator_ctx.x.attitude.z = 0.0;
+    g_estimator_ctx.x.altitude = 420;
+    g_estimator_ctx.x.CL = 3;
 
     log_text(10, "EstimatorTask", "Estimator task started.");
 

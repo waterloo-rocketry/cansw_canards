@@ -48,7 +48,7 @@ canard_coeff = 0.55234;
 
 input = [roll_angle; roll_rate; canard_angle; pressure_dynamic; canard_coeff];
 
-timestamp = 37.02; % sec
+timestamp = 10+12.5; % sec
 
 [u, r] = controller_module(timestamp, input);
 
@@ -65,15 +65,15 @@ TEST_F(ControllerTest, Step1) {
     input.canard_coeff = 0.55234;
     input.pressure_dynamic = 12093;
 
-    uint32_t flight_ms = 11000; // step 1
+    uint32_t act_allowed_ms = 7005; // step 1
     double output_angle = 0.0;
     float ref_signal = 0.0;
 
     // Act
-    w_status_t status = controller_module(input, flight_ms, &output_angle, &ref_signal);
+    w_status_t status = controller_module(input, act_allowed_ms, &output_angle, &ref_signal);
 
     // Assert
-    double expect_output_angle = 0.01381245;
+    double expect_output_angle = 0.02005049;
     float expect_ref_signal = 0.5f;
 
     EXPECT_EQ(status, W_SUCCESS);
@@ -90,15 +90,15 @@ TEST_F(ControllerTest, Step2) {
     input.canard_coeff = 0.55234;
     input.pressure_dynamic = 12093;
 
-    uint32_t flight_ms = 15034; // step 2
+    uint32_t act_allowed_ms = 12034; // step 2
     double output_angle = 0.0;
     float ref_signal = 0.0;
 
     // Act
-    w_status_t status = controller_module(input, flight_ms, &output_angle, &ref_signal);
+    w_status_t status = controller_module(input, act_allowed_ms, &output_angle, &ref_signal);
 
     // Assert
-    double expect_output_angle = -0.14978713;
+    double expect_output_angle = -0.14380301;
     float expect_ref_signal = -0.5f;
 
     EXPECT_EQ(status, W_SUCCESS);
@@ -115,15 +115,15 @@ TEST_F(ControllerTest, Step3) {
     input.canard_coeff = 0.55234;
     input.pressure_dynamic = 12093;
 
-    uint32_t flight_ms = 23098; // step 3
+    uint32_t act_allowed_ms = 17098; // step 3
     double output_angle = 0.0;
     float ref_signal = 0.0;
 
     // Act
-    w_status_t status = controller_module(input, flight_ms, &output_angle, &ref_signal);
+    w_status_t status = controller_module(input, act_allowed_ms, &output_angle, &ref_signal);
 
     // Assert
-    double expect_output_angle = 0.01381245;
+    double expect_output_angle = 0.02005049;
     float expect_ref_signal = 0.5f;
 
     EXPECT_EQ(status, W_SUCCESS);
@@ -140,41 +140,20 @@ TEST_F(ControllerTest, Step4) {
     input.canard_coeff = 0.55234;
     input.pressure_dynamic = 12093;
 
-    uint32_t flight_ms = 37098; // step 4
+    uint32_t act_allowed_ms = 24098; // step 4
     double output_angle = 0.0;
     float ref_signal = 0.0;
 
     // Act
-    w_status_t status = controller_module(input, flight_ms, &output_angle, &ref_signal);
+    w_status_t status = controller_module(input, act_allowed_ms, &output_angle, &ref_signal);
 
     // Assert
-    double expect_output_angle = -0.06798734;
+    double expect_output_angle = -0.06187626;
     float expect_ref_signal = 0.0f;
 
     EXPECT_EQ(status, W_SUCCESS);
     EXPECT_NEAR(ref_signal, expect_ref_signal, fabs(expect_ref_signal * TOL));
     EXPECT_NEAR(output_angle, expect_output_angle, fabs(expect_output_angle * TOL));
-}
-
-// test invalid time (before actuation allowed)
-TEST_F(ControllerTest, TooEarly) {
-    // Arrange
-    controller_input_t input = {0};
-    input.roll_state.roll_angle = 0.16345;
-    input.roll_state.roll_rate = 0.154534;
-    input.roll_state.canard_angle = 0.000134;
-    input.canard_coeff = 0.55234;
-    input.pressure_dynamic = 12093;
-
-    uint32_t flight_ms = 2000; // too early
-    double output_angle = 0.0;
-    float ref_signal = 0.0;
-
-    // Act
-    w_status_t status = controller_module(input, flight_ms, &output_angle, &ref_signal);
-
-    // Assert
-    EXPECT_EQ(status, W_FAILURE); // should fail
 }
 
 // test various flight conditions
@@ -189,7 +168,7 @@ canard_coeff = 0.85234;
 
 input = [roll_angle; roll_rate; canard_angle; pressure_dynamic; canard_coeff];
 
-timestamp = 15.034; % sec
+timestamp = 10+15.034; % sec
 
 [u, r] = controller_module(timestamp, input);
 
@@ -205,20 +184,21 @@ TEST_F(ControllerTest, Step2MoreConds) {
     input.pressure_dynamic = 82093;
     input.canard_coeff = 0.85234;
 
-    uint32_t flight_ms = 15034; // step 2
+    uint32_t act_allowed_ms = 15034; // step 2
     double output_angle = 0.0;
     float ref_signal = 0.0;
 
     // Act
-    w_status_t status = controller_module(input, flight_ms, &output_angle, &ref_signal);
+    w_status_t status = controller_module(input, act_allowed_ms, &output_angle, &ref_signal);
 
     // Assert
-    double expect_output_angle = 0.17453293;
+    double expect_output_angle = -0.08977158;
     float expect_ref_signal = -0.5f;
 
     EXPECT_EQ(status, W_SUCCESS);
     EXPECT_NEAR(ref_signal, expect_ref_signal, fabs(expect_ref_signal * TOL));
-    EXPECT_NEAR(output_angle, expect_output_angle, fabs(expect_output_angle * TOL));
+    // TOL 0.001 is ok. interpolation is slightly inaccurate to an acceptable degree (src: finn)
+    EXPECT_NEAR(output_angle, expect_output_angle, fabs(expect_output_angle * 0.001));
 }
 
 TEST_F(ControllerTest, CondsOutOfBounds) {
@@ -230,12 +210,12 @@ TEST_F(ControllerTest, CondsOutOfBounds) {
     input.pressure_dynamic = 820093;
     input.canard_coeff = 0.85234;
 
-    uint32_t flight_ms = 15034; // step 2
+    uint32_t act_allowed_ms = 15034; // step 2
     double output_angle = 0.0;
     float ref_signal = 0.0;
 
     // Act
-    w_status_t status = controller_module(input, flight_ms, &output_angle, &ref_signal);
+    w_status_t status = controller_module(input, act_allowed_ms, &output_angle, &ref_signal);
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);

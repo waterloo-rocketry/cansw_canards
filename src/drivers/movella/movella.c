@@ -15,6 +15,15 @@
 #define UART_RX_TIMEOUT_MS 10
 #define XSENS_ARR_ELEM 7
 
+// sensor ranges. these must be selected using the i2c init regs
+static const double MOVELLA_ACC_RANGE = 10.0 * 9.81; // m/s^2
+static const double MOVELLA_GYRO_RANGE = 2000.0 * DEG_PER_RAD; // rad/s
+static const double MOVELLA_MAG_RANGE = 1.0; // "arbitrary units" normalized to 1, so shouldnt be >1
+// mti-630 baro range is actually smaller than this, but we deemed better to "extend" the range and
+// gamble on possible undefined values, as thats better than saturating for estimator
+static const double MOVELLA_BARO_MAX = 110000; // conservative max Pa at sea level
+static const double MOVELLA_BARO_MIN = 6000; // min Pa we can possibly reach (60000 ft apogee)
+
 typedef struct {
     xsens_interface_t xsens_interface;
     SemaphoreHandle_t data_mutex;
@@ -116,6 +125,50 @@ w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
         return W_FAILURE;
     }
 
+    // if saturated, set val to min/max instead of fail. prefer saturated values over nothing
+    if (fabs(s_movella.latest_data.acc.x) > MOVELLA_ACC_RANGE) {
+        s_movella.latest_data.acc.x =
+            (s_movella.latest_data.acc.x > 0) ? MOVELLA_ACC_RANGE : -MOVELLA_ACC_RANGE;
+    }
+    if (fabs(s_movella.latest_data.acc.y) > MOVELLA_ACC_RANGE) {
+        s_movella.latest_data.acc.y =
+            (s_movella.latest_data.acc.y > 0) ? MOVELLA_ACC_RANGE : -MOVELLA_ACC_RANGE;
+    }
+    if (fabs(s_movella.latest_data.acc.z) > MOVELLA_ACC_RANGE) {
+        s_movella.latest_data.acc.z =
+            (s_movella.latest_data.acc.z > 0) ? MOVELLA_ACC_RANGE : -MOVELLA_ACC_RANGE;
+    }
+    if (fabs(s_movella.latest_data.gyr.x) > MOVELLA_GYRO_RANGE) {
+        s_movella.latest_data.gyr.x =
+            (s_movella.latest_data.gyr.x > 0) ? MOVELLA_GYRO_RANGE : -MOVELLA_GYRO_RANGE;
+    }
+    if (fabs(s_movella.latest_data.gyr.y) > MOVELLA_GYRO_RANGE) {
+        s_movella.latest_data.gyr.y =
+            (s_movella.latest_data.gyr.y > 0) ? MOVELLA_GYRO_RANGE : -MOVELLA_GYRO_RANGE;
+    }
+    if (fabs(s_movella.latest_data.gyr.z) > MOVELLA_GYRO_RANGE) {
+        s_movella.latest_data.gyr.z =
+            (s_movella.latest_data.gyr.z > 0) ? MOVELLA_GYRO_RANGE : -MOVELLA_GYRO_RANGE;
+    }
+    if (fabs(s_movella.latest_data.mag.x) > MOVELLA_MAG_RANGE) {
+        s_movella.latest_data.mag.x =
+            (s_movella.latest_data.mag.x > 0) ? MOVELLA_MAG_RANGE : -MOVELLA_MAG_RANGE;
+    }
+    if (fabs(s_movella.latest_data.mag.y) > MOVELLA_MAG_RANGE) {
+        s_movella.latest_data.mag.y =
+            (s_movella.latest_data.mag.y > 0) ? MOVELLA_MAG_RANGE : -MOVELLA_MAG_RANGE;
+    }
+    if (fabs(s_movella.latest_data.mag.z) > MOVELLA_MAG_RANGE) {
+        s_movella.latest_data.mag.z =
+            (s_movella.latest_data.mag.z > 0) ? MOVELLA_MAG_RANGE : -MOVELLA_MAG_RANGE;
+    }
+    if (s_movella.latest_data.pres > MOVELLA_BARO_MAX) {
+        s_movella.latest_data.pres = MOVELLA_BARO_MAX;
+    }
+    if (s_movella.latest_data.pres < MOVELLA_BARO_MIN) {
+        s_movella.latest_data.pres = MOVELLA_BARO_MIN;
+    }
+
     if (pdTRUE == xSemaphoreTake(s_movella.data_mutex, pdMS_TO_TICKS(timeout_ms))) {
         *out_data = s_movella.latest_data;
         xSemaphoreGive(s_movella.data_mutex);
@@ -160,8 +213,15 @@ void movella_task(void *parameters) {
         w_status_t status =
             uart_read(UART_MOVELLA, movella_rx_buffer, &rx_length, UART_RX_TIMEOUT_MS);
 
-        if ((W_SUCCESS == status) && (rx_length > 0)) {
+        // TODO: avoid race condition on s_movella.latest_data.is_dead cuz it could be read by
+        // imu handler while this is in progress? idt it matters in practice much cuz its a bool
+        // and should rarely change values so its fine to keep this sus for now. doesn't affect
+        // functionality that we need
+        if ((W_SUCCESS == status) && (rx_length > 0) && (rx_length < UART_MAX_LEN)) {
             xsens_mti_parse_buffer(&s_movella.xsens_interface, movella_rx_buffer, rx_length);
+            s_movella.latest_data.is_dead = false;
+        } else {
+            s_movella.latest_data.is_dead = true;
         }
     }
 }

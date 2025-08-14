@@ -65,6 +65,7 @@ w_status_t gpio_init() {
         gpio_map[i].access_mutex = xSemaphoreCreateMutex();
         if (gpio_map[i].access_mutex == NULL) {
             gpio_status.err = true;
+            log_text(10, "gpio", "initfail %d", i);
             status = W_FAILURE;
         }
     }

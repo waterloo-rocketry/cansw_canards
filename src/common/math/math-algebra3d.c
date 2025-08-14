@@ -18,11 +18,8 @@ vector3d_t math_vector3d_scale(double scalar, const vector3d_t *vector) {
 
 // ||vector|| // norm of a vector
 double math_vector3d_norm(const vector3d_t *vector) {
-    if (((vector->x * vector->x) + (vector->y * vector->y) + (vector->z * vector->z)) < 0.0) {
-        return 0;
-    }
-    double norm = sqrt((vector->x * vector->x) + (vector->y * vector->y) + (vector->z * vector->z));
-    return norm;
+    // use math.h hypot cuz it handles overflow better than raw sqrt
+    return hypot(hypot(vector->x, vector->y), vector->z);
 }
 
 // vector + vector // vector addition

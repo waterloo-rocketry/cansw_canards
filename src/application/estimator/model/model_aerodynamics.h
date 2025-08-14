@@ -4,7 +4,7 @@
 #include "application/estimator/model/model_airdata.h"
 #include "third_party/rocketlib/include/common.h"
 
-#define canard_sweep (61 * RAD_PER_DEG)
+static const double canard_sweep_angle = (61 * RAD_PER_DEG);
 
 /**
  * @brief Computes the aerodynamic forces and torque
