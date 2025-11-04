@@ -275,8 +275,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
 
     // TODO: i have no idea if this is necessary or helpful or harmful? ??
     // Trigger context switch if necessary ( PendSV is set in hil_increment_tick if needed )
-    portYIELD_FROM_ISR(
-        higher_priority_task_woken
+    portYIELD_FROM_ISR(higher_priority_task_woken
     ); // Although HIL now handles tick/PendSV, this is harmless
 }
 

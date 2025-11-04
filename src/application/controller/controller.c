@@ -14,6 +14,8 @@
 
 #include "task.h"
 
+#include "application/estimator/estimator_module.h"
+
 static QueueHandle_t internal_state_queue;
 static QueueHandle_t output_queue;
 
@@ -24,6 +26,8 @@ static QueueHandle_t output_queue;
 
 static controller_t controller_state = {0};
 static controller_error_data_t controller_error_stats = {0};
+
+extern estimator_module_ctx_t g_estimator_ctx;
 
 /**
  * @brief Sends the canard angle command via CAN.
@@ -44,8 +48,27 @@ static w_status_t controller_send_can(float canard_angle) {
     uint32_t timeout_ms = 10; // Add a timeout for the UART write
 
     // Packet structure: Header (4 bytes) + Payload + Footer (1 byte)
-    uint8_t packet_buffer[4 + sizeof(double) + 1];
+    uint8_t packet_buffer[4 + 14 * sizeof(double) + 1];
     const uint16_t packet_size = sizeof(packet_buffer);
+
+    double attitude_w = (double)g_estimator_ctx.x.attitude.w;
+    double attitude_x = (double)g_estimator_ctx.x.attitude.x;
+    double attitude_y = (double)g_estimator_ctx.x.attitude.y;
+    double attitude_z = (double)g_estimator_ctx.x.attitude.z;
+
+    double rates_x = (double)g_estimator_ctx.x.rates.x;
+    double rates_y = (double)g_estimator_ctx.x.rates.y;
+    double rates_z = (double)g_estimator_ctx.x.rates.z;
+
+    double velocity_x = (double)g_estimator_ctx.x.velocity.x;
+    double velocity_y = (double)g_estimator_ctx.x.velocity.y;
+    double velocity_z = (double)g_estimator_ctx.x.velocity.z;
+
+    double altitude = (double)g_estimator_ctx.x.altitude;
+    double cl = (double)g_estimator_ctx.x.CL;
+    double delta = (double)g_estimator_ctx.x.delta;
+
+    double canard_angle_double = (double)canard_angle;
 
     // Set header
     packet_buffer[0] = 'o';
@@ -53,10 +76,30 @@ static w_status_t controller_send_can(float canard_angle) {
     packet_buffer[2] = 'z';
     packet_buffer[3] = '!';
 
+    memcpy(&packet_buffer[4], &attitude_w, sizeof(double));
+    memcpy(&packet_buffer[12], &attitude_x, sizeof(double));
+    memcpy(&packet_buffer[20], &attitude_y, sizeof(double));
+    memcpy(&packet_buffer[28], &attitude_z, sizeof(double));
+    memcpy(&packet_buffer[36], &rates_x, sizeof(double));
+    memcpy(&packet_buffer[44], &rates_y, sizeof(double));
+    memcpy(&packet_buffer[52], &rates_z, sizeof(double));
+
+    memcpy(&packet_buffer[60], &velocity_x, sizeof(double));
+    memcpy(&packet_buffer[68], &velocity_y, sizeof(double));
+    memcpy(&packet_buffer[76], &velocity_z, sizeof(double));
+
+    memcpy(&packet_buffer[84], &altitude, sizeof(double));
+    memcpy(&packet_buffer[92], &cl, sizeof(double));
+    memcpy(&packet_buffer[100], &delta, sizeof(double));
+    memcpy(&packet_buffer[108], &canard_angle_double, sizeof(double));
+
+    // OLD CODE
     // hil takes a double
-    double canard_angle_double = (double)canard_angle;
+    // double canard_angle_double = (double)canard_angle;
+
     // Copy float payload (ensure correct byte order - assuming little-endian)
-    memcpy(&packet_buffer[4], &canard_angle_double, sizeof(double));
+    // memcpy(&packet_buffer[4], &canard_angle_float, sizeof(double));
+    // OLD CODE
 
     // Set footer (last byte of packet)
     packet_buffer[packet_size - 1] = HIL_UART_FOOTER_CHAR;

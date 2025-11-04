@@ -359,7 +359,7 @@ uint32_t estimator_get_status(void) {
     return status_bitfield;
 }
 
-static estimator_module_ctx_t g_estimator_ctx = {0};
+estimator_module_ctx_t g_estimator_ctx = {0};
 
 void estimator_task(void *argument) {
     (void)argument;
