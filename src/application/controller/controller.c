@@ -76,22 +76,22 @@ static w_status_t controller_send_can(float canard_angle) {
     packet_buffer[2] = 'z';
     packet_buffer[3] = '!';
 
-    memcpy(&packet_buffer[4], &attitude_w, sizeof(double));
-    memcpy(&packet_buffer[12], &attitude_x, sizeof(double));
-    memcpy(&packet_buffer[20], &attitude_y, sizeof(double));
-    memcpy(&packet_buffer[28], &attitude_z, sizeof(double));
-    memcpy(&packet_buffer[36], &rates_x, sizeof(double));
-    memcpy(&packet_buffer[44], &rates_y, sizeof(double));
-    memcpy(&packet_buffer[52], &rates_z, sizeof(double));
+    memcpy(&packet_buffer[4], &canard_angle_double, sizeof(double));
+    memcpy(&packet_buffer[12], &attitude_w, sizeof(double));
+    memcpy(&packet_buffer[20], &attitude_x, sizeof(double));
+    memcpy(&packet_buffer[28], &attitude_y, sizeof(double));
+    memcpy(&packet_buffer[36], &attitude_z, sizeof(double));
+    memcpy(&packet_buffer[44], &rates_x, sizeof(double));
+    memcpy(&packet_buffer[52], &rates_y, sizeof(double));
+    memcpy(&packet_buffer[60], &rates_z, sizeof(double));
 
-    memcpy(&packet_buffer[60], &velocity_x, sizeof(double));
-    memcpy(&packet_buffer[68], &velocity_y, sizeof(double));
-    memcpy(&packet_buffer[76], &velocity_z, sizeof(double));
+    memcpy(&packet_buffer[68], &velocity_x, sizeof(double));
+    memcpy(&packet_buffer[76], &velocity_y, sizeof(double));
+    memcpy(&packet_buffer[84], &velocity_z, sizeof(double));
 
-    memcpy(&packet_buffer[84], &altitude, sizeof(double));
-    memcpy(&packet_buffer[92], &cl, sizeof(double));
-    memcpy(&packet_buffer[100], &delta, sizeof(double));
-    memcpy(&packet_buffer[108], &canard_angle_double, sizeof(double));
+    memcpy(&packet_buffer[92], &altitude, sizeof(double));
+    memcpy(&packet_buffer[100], &cl, sizeof(double));
+    memcpy(&packet_buffer[108], &delta, sizeof(double));
 
     // OLD CODE
     // hil takes a double
