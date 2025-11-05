@@ -6,6 +6,7 @@
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
+#include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "message_types.h"
@@ -156,9 +157,9 @@ static void log_reset_buffer(log_buffer_t *buffer) {
 }
 
 w_status_t log_init(void) {
-    // Don't init more than once
+    // alr init so its good to go
     if (logger_health.is_init) {
-        return W_FAILURE;
+        return W_SUCCESS;
     }
 
     full_buffers_queue =
@@ -417,10 +418,15 @@ void log_task(void *argument) {
             // try several times to buffer to SD card
             uint32_t size = 0;
             for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
+                gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
+
                 if (sd_card_file_write(
                         filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size
                     ) == W_SUCCESS) {
+                    gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
                     break; // Successfully wrote the buffer
+                } else {
+                    gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
                 }
                 if ((LOG_WRITE_TRY_COUNT - 1) == i) {
                     logger_health.buffer_flush_fails++;

@@ -15,7 +15,7 @@ static double Q_arr[SIZE_STATE * SIZE_STATE] = {0};
 static double R_MTI_arr[SIZE_IMU_MEAS * SIZE_IMU_MEAS] = {0};
 static double R_ALTIMU_arr[SIZE_IMU_MEAS * SIZE_IMU_MEAS] = {0};
 
-static arm_matrix_instance_f64 Q = {.numCols = SIZE_STATE, .numRows = SIZE_STATE, .pData = Q_arr};
+static arm_matrix_instance_f64 Q = {.numRows = SIZE_STATE, .numCols = SIZE_STATE, .pData = Q_arr};
 static arm_matrix_instance_f64 R_MTI = {
     .numRows = SIZE_IMU_MEAS, .numCols = SIZE_IMU_MEAS, .pData = R_MTI_arr
 };

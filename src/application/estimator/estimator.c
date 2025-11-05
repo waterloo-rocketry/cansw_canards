@@ -54,8 +54,9 @@ static w_status_t can_encoder_msg_callback(const can_msg_t *msg) {
     }
 
     if (SENSOR_CANARD_ENCODER_1 == sensor_id) {
-        // shift back to signed and convert from mdeg to radians
-        float encoder_val_rad = ((int16_t)raw_data - 32768) * (RAD_PER_DEG) / 1000.0f;
+        // shift to [-10000, 10000] mdeg then convert to radians. raw is centered at 32768
+        int16_t angle_mdeg = (int16_t)(raw_data - 32768);
+        float encoder_val_rad = ((int32_t)angle_mdeg * (RAD_PER_DEG) / 1000.0f);
 
         // send to internal data queue
         xQueueOverwrite(encoder_data_queue_rad, &encoder_val_rad);
@@ -68,6 +69,7 @@ static w_status_t can_encoder_msg_callback(const can_msg_t *msg) {
 w_status_t estimator_init(void) {
     // register the callback for the encoder can msgs
     if (W_SUCCESS != can_handler_register_callback(MSG_SENSOR_ANALOG, can_encoder_msg_callback)) {
+        log_text(1, "adc", "initfailenc");
         return W_FAILURE;
     }
 
@@ -78,6 +80,7 @@ w_status_t estimator_init(void) {
 
     if ((NULL == imu_data_queue) || (NULL == encoder_data_queue_rad) ||
         (NULL == controller_cmd_queue)) {
+        log_text(1, "adc", "initfailq");
         return W_FAILURE;
     }
 
@@ -135,8 +138,8 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
         .barometer = latest_imu_data.pololu.barometer
     };
 
-    // get the latest encoder reading. should be populating at 200Hz so 0ms wait
-    if (xQueueReceive(encoder_data_queue_rad, &latest_encoder_rad, 0) == pdTRUE) {
+    // get the latest encoder reading. wait very briefly in case mcb is a bit imperfect timing
+    if (xQueueReceive(encoder_data_queue_rad, &latest_encoder_rad, pdMS_TO_TICKS(4)) == pdTRUE) {
         // log received encoder val (radians)
         log_data_container_t log_payload = {0};
         log_payload.encoder.angle_rad = latest_encoder_rad;
@@ -377,6 +380,14 @@ void estimator_task(void *argument) {
         proc_handle_fatal_error("estini");
     }
     g_estimator_ctx.t = init_time_ms / 1000.0f; // convert ms to seconds
+
+    // initialize ctx to reasonable values in case pad filter never runs
+    g_estimator_ctx.x.attitude.w = 1.0;
+    g_estimator_ctx.x.attitude.x = 0.0;
+    g_estimator_ctx.x.attitude.y = 0.0;
+    g_estimator_ctx.x.attitude.z = 0.0;
+    g_estimator_ctx.x.altitude = 420;
+    g_estimator_ctx.x.CL = 3;
 
     log_text(10, "EstimatorTask", "Estimator task started.");
 

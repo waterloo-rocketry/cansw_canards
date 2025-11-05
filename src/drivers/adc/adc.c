@@ -35,6 +35,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc) {
         if (adc_conversion_semaphore) {
             vSemaphoreDelete(adc_conversion_semaphore);
         }
+        log_text(1, "adc", "initfailmtx");
         return W_FAILURE;
     }
 
@@ -43,6 +44,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc) {
                   )) {
         vSemaphoreDelete(adc_mutex);
         vSemaphoreDelete(adc_conversion_semaphore);
+        log_text(1, "adc", "initfailcb");
         return W_FAILURE;
     }
 
@@ -50,6 +52,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc) {
     if (HAL_OK != HAL_ADCEx_Calibration_Start(adc_handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED)) {
         vSemaphoreDelete(adc_mutex);
         vSemaphoreDelete(adc_conversion_semaphore);
+        log_text(1, "adc", "initfailcal");
         return W_FAILURE;
     }
 

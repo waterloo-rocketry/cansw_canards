@@ -102,7 +102,7 @@ x_state_t model_dynamics_update(const x_state_t *state, const u_dynamics_t *inpu
     }
     const double mach_num =
         math_vector3d_norm(&state->velocity) / airdata.mach_local; // norm(v) / mach_local
-    const double sign_v_x = (v_new.x >= 0) ? 1.0 : -1.0; // sign of v.x
+    const double sign_v_x = (state->velocity.x >= 0) ? 1.0 : -1.0; // sign of v.x
 
     // %%% * sign(v(1)) for easy flying backwards under chute
     const double Cl_theory = airfoil(mach_num) * sign_v_x;
@@ -155,10 +155,10 @@ void model_dynamics_jacobian(
     }; // dt * param.Jinv
 
     const matrix3d_t J_inv_torque =
-        math_matrix3d_mult(&J_inv_scaled, &J_w_tilde); // dt * param.Jinv * (- param.J*tilde(w))
+        math_matrix3d_mult(&J_inv_scaled, &J_w_tilde); // dt * param.Jinv * tilde(param.J*w)
     const matrix3d_t idn = {.array = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}; // identity matrix
     const matrix3d_t w_w =
-        math_matrix3d_add(&idn, &J_inv_torque); // eye(3) + dt * param.Jinv * (- param.J*tilde(w))
+        math_matrix3d_add(&idn, &J_inv_torque); // eye(3) + dt * param.Jinv * tilde(param.J*w)
 
     const matrix3d_t w_v =
         math_matrix3d_mult(&J_inv_scaled, &torque_v); // dt * param.Jinv * torque_v

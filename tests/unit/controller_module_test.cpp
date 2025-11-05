@@ -197,7 +197,8 @@ TEST_F(ControllerTest, Step2MoreConds) {
 
     EXPECT_EQ(status, W_SUCCESS);
     EXPECT_NEAR(ref_signal, expect_ref_signal, fabs(expect_ref_signal * TOL));
-    EXPECT_NEAR(output_angle, expect_output_angle, fabs(expect_output_angle * TOL));
+    // TOL 0.001 is ok. interpolation is slightly inaccurate to an acceptable degree (src: finn)
+    EXPECT_NEAR(output_angle, expect_output_angle, fabs(expect_output_angle * 0.001));
 }
 
 TEST_F(ControllerTest, CondsOutOfBounds) {

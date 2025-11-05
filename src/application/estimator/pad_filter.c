@@ -11,8 +11,8 @@
 #include "common/math/math.h"
 #include <math.h>
 
-static const double low_pass_alpha = 0.001; // low pass time constant
-static const double launch_elevation = 420.0; // 422m above sea level
+static const double low_pass_alpha = 0.0002; // low pass time constant
+static const double launch_elevation = 420.0; // 420m above sea level
 
 // set constant initials - knowing that the rocket is stationary on the rail
 static const vector3d_t w = {{0.0}}; // stationary on rail

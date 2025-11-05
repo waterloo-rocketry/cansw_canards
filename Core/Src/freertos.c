@@ -205,7 +205,6 @@ void StartDefaultTask(void *argument) {
         // Toggle all 3 leds
         status |= gpio_toggle(GPIO_PIN_RED_LED, 0);
         status |= gpio_toggle(GPIO_PIN_GREEN_LED, 0);
-        status |= gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 
         if (status != W_SUCCESS) {
             // TODO: handle failure

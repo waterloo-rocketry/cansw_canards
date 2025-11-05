@@ -103,6 +103,14 @@ w_status_t system_init(void) {
     // probably because movella triggers before its ready
     // vTaskDelay(500);
 
+    // INIT NON-CRITICAL MODULES; try to do logger first
+    w_status_t non_crit_status = sd_card_init();
+    non_crit_status |= log_init();
+    if (non_crit_status != W_SUCCESS) {
+        // Log non-critical initialization failure
+        log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
+    }
+
     w_status_t status = W_SUCCESS;
 
     // INIT REQUIRED MODULES
@@ -133,14 +141,6 @@ w_status_t system_init(void) {
     //     );
     //     return status;
     // }
-
-    // INIT NON-CRITICAL MODULES
-    w_status_t non_crit_status = sd_card_init();
-    non_crit_status |= log_init();
-    if (non_crit_status != W_SUCCESS) {
-        // Log non-critical initialization failure
-        log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
-    }
 
     // Create FreeRTOS tasks
     BaseType_t task_status = pdTRUE;
@@ -207,7 +207,7 @@ w_status_t system_init(void) {
     if (task_status != pdTRUE) {
         // Log critical task creation failure
         log_text(10, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
-        return W_FAILURE;
+        return W_OVERFLOW;
     }
     log_text(10, "SystemInit", "All tasks created successfully.");
     return W_SUCCESS;

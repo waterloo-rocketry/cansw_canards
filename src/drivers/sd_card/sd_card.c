@@ -13,9 +13,9 @@ sd_card_health_t sd_card_health = {0};
 SemaphoreHandle_t sd_mutex = NULL;
 
 w_status_t sd_card_init(void) {
-    // attempting to init the module >1 time is an error
+    // attempting to init the module >1 time is fine
     if (sd_card_health.is_init) {
-        return W_FAILURE;
+        return W_SUCCESS;
     }
     /*
      * Mount the filesystem.
