@@ -53,7 +53,7 @@ typedef struct __attribute__((packed)) {
 
 // time simulink spends in idle before "launch" starts. time_launch = 5; % pad delay time
 // actually the real time is 5sec, but qd would happen a moment before, so make this 4sec (4000ms)
-#define HIL_LAUNCH_TIMESTAMP_MS 500
+#define HIL_LAUNCH_TIMESTAMP_MS 4000
 
 extern uint8_t hil_uart_rx_data[HIL_UART_FRAME_SIZE]; // Buffer for HIL UART data
 // Counter for received packages so we can skip some (only process every 5th packet)
