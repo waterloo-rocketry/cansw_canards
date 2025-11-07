@@ -392,6 +392,11 @@ void estimator_task(void *argument) {
     log_text(10, "EstimatorTask", "Estimator task started.");
 
     while (true) {
+        // dont run on the 0th tick
+        if (xTaskGetTickCount() == 0) {
+            continue;
+        }
+
         w_status_t run_status = estimator_run_loop(&g_estimator_ctx, estimator_loop_counter);
 
         if (run_status != W_SUCCESS) {

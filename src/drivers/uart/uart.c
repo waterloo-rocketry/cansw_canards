@@ -256,8 +256,9 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
         (local_hil_uart_rx_data[1] == 'r') && (local_hil_uart_rx_data[2] == 'z') &&
         (local_hil_uart_rx_data[3] == '!') &&
         (local_hil_uart_rx_data[size - 1] == HIL_UART_FOOTER_CHAR)) {
-        // only process every 5 packets to emulate the 5ms control loop we want
-        if ((package_counter % 5) == 0) {
+        // only process every 5 packets to emulate the 5ms control loop we want.
+        // IMPORTANT: ignore first packet because matlab starts with an empty packet?
+        if ((package_counter % 5) == 0 && package_counter != 0) {
             // copy data over to shared buffer
             memcpy(hil_uart_rx_data, local_hil_uart_rx_data, HIL_UART_FRAME_SIZE);
             // signal to imu handler new imu data is ready
@@ -281,7 +282,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
 
     // TODO: i have no idea if this is necessary or helpful or harmful? ??
     // Trigger context switch if necessary ( PendSV is set in hil_increment_tick if needed )
-    portYIELD_FROM_ISR(higher_priority_task_woken
+    portYIELD_FROM_ISR(
+        higher_priority_task_woken
     ); // Although HIL now handles tick/PendSV, this is harmless
 }
 
