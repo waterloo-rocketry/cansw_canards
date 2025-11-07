@@ -3,6 +3,7 @@
 #include "application/logger/log.h"
 #include "drivers/timer/timer.h"
 
+#include "application/hil/hil.h"
 #include "canlib.h"
 
 #include "FreeRTOS.h"
@@ -46,10 +47,11 @@ static QueueHandle_t event_queue = NULL;
 static TimerHandle_t act_delay_timer = NULL;
 static TimerHandle_t flight_timer = NULL;
 
+// HIL MODIFICATION: hardcode pad time to 5sec, boost time to 10 sec
 // timestamp of the moment of launch
-static float launch_timestamp_ms = 0;
+static float launch_timestamp_ms = HIL_LAUNCH_TIMESTAMP_MS;
 // timestamp of the moment actuation allowed started
-static float act_allowed_timestamp_ms = 0;
+static float act_allowed_timestamp_ms = HIL_LAUNCH_TIMESTAMP_MS + ACT_DELAY_MS;
 
 static void act_delay_timer_callback(TimerHandle_t xTimer);
 static void flight_timer_callback(TimerHandle_t xTimer);
@@ -101,12 +103,23 @@ w_status_t flight_phase_init(void) {
  */
 flight_phase_state_t flight_phase_get_state() {
     flight_phase_state_t state = STATE_ERROR;
-    // Use a timeout of 0 to prevent blocking
-    if (xQueuePeek(state_mailbox, &state, 0) != pdPASS) {
-        // Log error if peek fails - this indicates a potentially serious issue
-        log_text(1, "FlightPhase", "ERROR: Failed to peek state mailbox.");
-        return STATE_ERROR;
+    //  HIL MODIFICATION: FLIGHT PHASE - make pad filter run for the first 5 seconds
+    // then boost phase for the next 10 sec, then act-allowed for the rest
+    uint32_t tickcount = xTaskGetTickCount();
+    if (tickcount < HIL_LAUNCH_TIMESTAMP_MS) {
+        state = STATE_SE_INIT;
+    } else if (tickcount < ACT_DELAY_MS + HIL_LAUNCH_TIMESTAMP_MS) {
+        state = STATE_BOOST;
+    } else {
+        state = STATE_ACT_ALLOWED;
     }
+
+    // Use a timeout of 0 to prevent blocking
+    // if (xQueuePeek(state_mailbox, &state, 0) != pdPASS) {
+    //     // Log error if peek fails - this indicates a potentially serious issue
+    //     log_text(1, "FlightPhase", "ERROR: Failed to peek state mailbox.");
+    //     return STATE_ERROR;
+    // }
     return state;
 }
 
@@ -191,7 +204,7 @@ w_status_t flight_phase_get_flight_ms(uint32_t *flight_ms) {
     }
 
     // elapsed time is 0 if we havent launched yet
-    if (curr_state < STATE_BOOST) {
+    if (flight_phase_get_state() < STATE_BOOST) {
         *flight_ms = 0;
         return W_SUCCESS;
     } else {
@@ -211,7 +224,7 @@ w_status_t flight_phase_get_act_allowed_ms(uint32_t *act_allowed_ms) {
     }
 
     // elapsed time is 0 if we havent reached act-allowed yet
-    if (curr_state < STATE_ACT_ALLOWED) {
+    if (flight_phase_get_state() < STATE_ACT_ALLOWED) {
         *act_allowed_ms = 0;
         return W_SUCCESS;
     } else {

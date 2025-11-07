@@ -5,6 +5,7 @@
 
 #include "application/can_handler/can_handler.h"
 #include "application/estimator/estimator.h"
+#include "application/hil/hil.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
 #include "common/math/math-algebra3d.h"
@@ -36,9 +37,7 @@ static const matrix3d_t g_movella_upd_mat = {
     .array = {{0, 0, 1.000000000}, {1.0000000, 0, 0}, {0, 1.0000000000, 0}}
 };
 // S2 (pololu)
-static const matrix3d_t g_pololu_upd_mat = {
-    .array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}
-};
+static const matrix3d_t g_pololu_upd_mat = {.array = {{0, 0, -1.0}, {-1.0, 0, 0}, {0, 1.0, 0}}};
 
 // Module state tracking
 typedef struct {
@@ -150,25 +149,50 @@ read_pololu_imu(estimator_imu_measurement_t *imu_data, raw_pololu_data_t *raw_da
     // Read accelerometer, gyro, and magnetometer data
     // status |= altimu_get_acc_data(&imu_data->accelerometer, &raw_data->raw_acc);
     // status |= altimu_get_gyro_data(&imu_data->gyroscope, &raw_data->raw_gyro);
-    status |= altimu_get_gyro_acc_data(
-        &imu_data->accelerometer, &imu_data->gyroscope, &raw_data->raw_acc, &raw_data->raw_gyro
-    );
-    status |= altimu_get_mag_data(&imu_data->magnetometer, &raw_data->raw_mag);
+    // status |= altimu_get_gyro_acc_data(
+    //     &imu_data->accelerometer, &imu_data->gyroscope, &raw_data->raw_acc, &raw_data->raw_gyro
+    // );
+    // status |= altimu_get_mag_data(&imu_data->magnetometer, &raw_data->raw_mag);
 
-    // Read barometer data
+    // // Read barometer data
     altimu_barometer_data_t baro_data;
-    status |= altimu_get_baro_data(&baro_data, &raw_data->raw_baro);
+    // status |= altimu_get_baro_data(&baro_data, &raw_data->raw_baro);
+
+    // HIL MODIFICATION: read from the hil packet instead
+    if (atomic_load(&hil_imu_inputs_ready)) {
+        // payload starts after the 4-byte header
+        uint8_t *payload = &(hil_uart_rx_data[4]);
+        // Read pololu IMU data (starting from offset 40)
+        imu_data->accelerometer.x = *((float *)(payload + 44));
+        imu_data->accelerometer.y = *((float *)(payload + 48));
+        imu_data->accelerometer.z = *((float *)(payload + 52));
+        imu_data->gyroscope.x = *((float *)(payload + 56));
+        imu_data->gyroscope.y = *((float *)(payload + 60));
+        imu_data->gyroscope.z = *((float *)(payload + 64));
+        imu_data->magnetometer.x = *((float *)(payload + 68));
+        imu_data->magnetometer.y = *((float *)(payload + 72));
+        imu_data->magnetometer.z = *((float *)(payload + 76));
+        baro_data.pressure = *((float *)(payload + 80));
+        // hil doesnt send temperature reading
+        baro_data.temperature = 0;
+
+        imu_data->is_dead = false;
+    } else {
+        imu_data->is_dead = true;
+        // no new data, skip this iteration
+        return W_FAILURE;
+    }
 
     if (W_SUCCESS == status) {
         // convert gyro from dps to rad/sec
-        imu_data->gyroscope.x = imu_data->gyroscope.x * RAD_PER_DEG;
-        imu_data->gyroscope.y = imu_data->gyroscope.y * RAD_PER_DEG;
-        imu_data->gyroscope.z = imu_data->gyroscope.z * RAD_PER_DEG;
+        // imu_data->gyroscope.x = imu_data->gyroscope.x * RAD_PER_DEG;
+        // imu_data->gyroscope.y = imu_data->gyroscope.y * RAD_PER_DEG;
+        // imu_data->gyroscope.z = imu_data->gyroscope.z * RAD_PER_DEG;
 
-        // convert accel from g to m/s^2
-        imu_data->accelerometer.x = imu_data->accelerometer.x * 9.81;
-        imu_data->accelerometer.y = imu_data->accelerometer.y * 9.81;
-        imu_data->accelerometer.z = imu_data->accelerometer.z * 9.81;
+        // // convert accel from g to m/s^2
+        // imu_data->accelerometer.x = imu_data->accelerometer.x * 9.81;
+        // imu_data->accelerometer.y = imu_data->accelerometer.y * 9.81;
+        // imu_data->accelerometer.z = imu_data->accelerometer.z * 9.81;
 
         // Apply orientation correction
         imu_data->accelerometer =
@@ -194,11 +218,33 @@ read_pololu_imu(estimator_imu_measurement_t *imu_data, raw_pololu_data_t *raw_da
  * @return Status of the read operation
  */
 static w_status_t read_movella_imu(estimator_imu_measurement_t *imu_data) {
-    w_status_t status;
+    w_status_t status = W_SUCCESS;
 
     // Read all data from Movella in one call
     movella_data_t movella_data = {0}; // Initialize to zero
-    status = movella_get_data(&movella_data, 1);
+    // status = movella_get_data(&movella_data, 1);
+
+    // HIL MODIFICATION: read from the hil packet instead
+    if (atomic_load(&hil_imu_inputs_ready)) { // payload starts after the 4-byte header
+        uint8_t *payload = &(hil_uart_rx_data[4]);
+
+        movella_data.acc.x = *((float *)(payload + 4));
+        movella_data.acc.y = *((float *)(payload + 8));
+        movella_data.acc.z = *((float *)(payload + 12));
+        movella_data.gyr.x = *((float *)(payload + 16));
+        movella_data.gyr.y = *((float *)(payload + 20));
+        movella_data.gyr.z = *((float *)(payload + 24));
+        movella_data.mag.x = *((float *)(payload + 28));
+        movella_data.mag.y = *((float *)(payload + 32));
+        movella_data.mag.z = *((float *)(payload + 36));
+        movella_data.pres = *((float *)(payload + 40));
+
+        movella_data.is_dead = false;
+    } else {
+        movella_data.is_dead = true;
+        // no new data, skip this iteration
+        return W_FAILURE;
+    }
 
     if (W_SUCCESS == status) {
         // Copy data from Movella
@@ -263,6 +309,15 @@ w_status_t imu_handler_run(uint32_t loop_count) {
     // Read from all IMUs, including orientation correction
     w_status_t pololu_status = read_pololu_imu(&imu_data.pololu, &raw_pololu_data);
     w_status_t movella_status = read_movella_imu(&imu_data.movella);
+    // HIL MODIFICATION: also do encoder here
+    if (atomic_load(&hil_imu_inputs_ready)) {
+        // payload starts after the 4-byte header
+        uint8_t *payload = &(hil_uart_rx_data[4]);
+        imu_data.encoder_angle_rad = *((float *)(payload + 0));
+    } else {
+        imu_data.encoder_angle_rad = 0.0f;
+    }
+    atomic_store(&hil_imu_inputs_ready, false); // reset flag after reading all imu data
 
     // If both IMUs fail, consider it a system-level failure
     if ((W_FAILURE == pololu_status) && (W_FAILURE == movella_status)) {

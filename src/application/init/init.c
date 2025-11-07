@@ -93,12 +93,15 @@ w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *param) {
     return W_FAILURE;
 }
 
+#define TESTSIZE 8192
+char testbuf[TESTSIZE] = {0};
+
 // Main initialization function
 w_status_t system_init(void) {
     // hotfix: allow time for .... stuff ?? ... before init.
     // without this, the uart DMA change made proc freeze upon power cycle.
     // probably because movella triggers before its ready
-    vTaskDelay(500);
+    // vTaskDelay(500);
 
     // INIT NON-CRITICAL MODULES; try to do logger first
     w_status_t non_crit_status = sd_card_init();
@@ -115,11 +118,12 @@ w_status_t system_init(void) {
     status |= i2c_init(I2C_BUS_2, &hi2c2, 0);
     status |= i2c_init(I2C_BUS_4, &hi2c4, 0);
     status |= uart_init(UART_DEBUG_SERIAL, &huart4, 100);
-    status |= uart_init(UART_MOVELLA, &huart8, 100);
+    // ignore movella uart for HIL to avoid polluting the uart rx isr
+    // status |= uart_init(UART_MOVELLA, &huart8, 100);
     status |= adc_init(&hadc1);
     status |= estimator_init();
     status |= health_check_init();
-    status |= init_with_retry(altimu_init);
+    // status |= init_with_retry(altimu_init);
     status |= init_with_retry(movella_init);
     status |= init_with_retry(flight_phase_init);
     status |= init_with_retry(imu_handler_init);
@@ -127,12 +131,16 @@ w_status_t system_init(void) {
     status |= init_with_retry(controller_init);
     status |= init_with_retry(ekf_init);
 
-    // cannot continue if any of the above fail
-    if (status != W_SUCCESS) {
-        // Log critical initialization failure - specific modules should have logged details
-        log_text(10, "init", "crit init fail (status: 0x%lx).", status);
-        return status;
-    }
+    // if (status != W_SUCCESS) {
+    //     // Log critical initialization failure - specific modules should have logged details
+    //     log_text(
+    //         10,
+    //         "SystemInit",
+    //         "CRITICAL: One or more peripheral/module initializations failed (status: 0x%lx).",
+    //         status
+    //     );
+    //     return status;
+    // }
 
     // Create FreeRTOS tasks
     BaseType_t task_status = pdTRUE;
@@ -182,9 +190,9 @@ w_status_t system_init(void) {
         &can_handler_handle_tx
     );
 
-    task_status &= xTaskCreate(
-        movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle
-    );
+    // task_status &= xTaskCreate(
+    //     movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle
+    // );
 
     task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 

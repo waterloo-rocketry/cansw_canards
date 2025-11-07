@@ -487,22 +487,31 @@ void xPortPendSVHandler( void )
 
 void xPortSysTickHandler( void )
 {
-	/* The SysTick runs at the lowest interrupt priority, so when this interrupt
-	executes all interrupts must be unmasked.  There is therefore no need to
-	save and then restore the interrupt mask value as its value is already
-	known. */
-	portDISABLE_INTERRUPTS();
-	{
-		/* Increment the RTOS tick. */
-		if( xTaskIncrementTick() != pdFALSE )
-		{
-			/* A context switch is required.  Context switching is performed in
-			the PendSV interrupt.  Pend the PendSV interrupt. */
-			portNVIC_INT_CTRL_REG = portNVIC_PENDSVSET_BIT;
-		}
-	}
-	portENABLE_INTERRUPTS();
+    /* Modify SysTick handler for HIL */
+#if !defined(HIL_ENABLED) || (HIL_ENABLED == 0)
+    /* --- Standard FreeRTOS Tick Logic --- */
+    /* The SysTick runs at the lowest interrupt priority, so when this interrupt
+    executes all interrupts must be unmasked.  There is therefore no need to
+    save and then restore the interrupt mask value as its value is already
+    known. */
+    portDISABLE_INTERRUPTS();
+    {
+        /* Increment the RTOS tick. */
+        if( xTaskIncrementTick() != pdFALSE )
+        {
+            /* A context switch is required.  Context switching is performed in
+            the PendSV interrupt.  Pend the PendSV interrupt. */
+            portNVIC_INT_CTRL_REG = portNVIC_PENDSVSET_BIT;
+        }
+    }
+    portENABLE_INTERRUPTS();
+    /* --- End Standard FreeRTOS Tick Logic --- */
+#else
+    /* HIL Enabled: SysTick does nothing for the RTOS tick. */
+    /* The RTOS tick is manually incremented by hil_increment_tick() in hil.c */
+#endif /* !defined(HIL_ENABLED) || (HIL_ENABLED == 0) */
 }
+
 /*-----------------------------------------------------------*/
 
 #if( configUSE_TICKLESS_IDLE == 1 )

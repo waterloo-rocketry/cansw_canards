@@ -16,6 +16,8 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "common/math/math-algebra3d.h"
+#include "common/math/math.h"
 #include "drivers/timer/timer.h"
 
 // ---------- private variables ----------
@@ -95,10 +97,14 @@ w_status_t estimator_init(void) {
 }
 
 w_status_t estimator_update_imu_data(estimator_all_imus_input_t *data) {
-    if (NULL == data) {
-        return W_FAILURE;
-    }
-    xQueueOverwrite(imu_data_queue, data);
+    // if (NULL == data) {
+    //     return W_FAILURE;
+    // }
+    // HIL MODIFICATION: currently the hil harness calls this from uart isr, so use FromISR
+    xQueueOverwriteFromISR(imu_data_queue, data, pdFALSE);
+    // HIL MODIFICATION: also send encoder here
+    xQueueOverwriteFromISR(encoder_data_queue_rad, &data->encoder_angle_rad, pdFALSE);
+
     return W_SUCCESS;
 }
 
@@ -118,6 +124,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
         estimator_error_stats.imu_data_timeouts++;
         return W_FAILURE;
     }
+
     y_imu_t movella = {
         .accelerometer = latest_imu_data.movella.accelerometer,
         .gyroscope = latest_imu_data.movella.gyroscope,
@@ -355,6 +362,8 @@ uint32_t estimator_get_status(void) {
     return status_bitfield;
 }
 
+estimator_module_ctx_t g_estimator_ctx = {0};
+
 void estimator_task(void *argument) {
     (void)argument;
     // TickType_t last_wake_time;
@@ -364,7 +373,6 @@ void estimator_task(void *argument) {
     uint32_t estimator_loop_counter = 0;
 
     // estimator_module persistent ctx for the whole program
-    estimator_module_ctx_t g_estimator_ctx = {0};
 
     // initialize ctx timestamp to current time
     float init_time_ms = 0.0f;
@@ -384,6 +392,11 @@ void estimator_task(void *argument) {
     log_text(10, "EstimatorTask", "Estimator task started.");
 
     while (true) {
+        // dont run on the 0th tick
+        if (xTaskGetTickCount() == 0) {
+            continue;
+        }
+
         w_status_t run_status = estimator_run_loop(&g_estimator_ctx, estimator_loop_counter);
 
         if (run_status != W_SUCCESS) {

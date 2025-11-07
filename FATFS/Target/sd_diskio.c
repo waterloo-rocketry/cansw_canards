@@ -221,7 +221,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
       timeout = HAL_GetTick();
       while((ReadStatus == 0) && ((HAL_GetTick() - timeout) < SD_TIMEOUT))
       {
-        vTaskDelay(pdMS_TO_TICKS(3));
+        // vTaskDelay(pdMS_TO_TICKS(3));
       }
       /* in case of a timeout return error */
       if (ReadStatus == 0)
@@ -233,7 +233,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
         ReadStatus = 0;
         timeout = HAL_GetTick();
 
-        while((HAL_GetTick() - timeout) < SD_TIMEOUT)
+        // while((HAL_GetTick() - timeout) < SD_TIMEOUT)
         {
           if (BSP_SD_GetCardState() == SD_TRANSFER_OK)
           {
@@ -246,11 +246,11 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
             alignedAddr = (uint32_t)buff & ~0x1F;
             SCB_InvalidateDCache_by_Addr((uint32_t*)alignedAddr, count*BLOCKSIZE + ((uint32_t)buff - alignedAddr));
 #endif
-            break;
+            // break;
           }
           else
           {
-            vTaskDelay(pdMS_TO_TICKS(3));
+            // vTaskDelay(pdMS_TO_TICKS(3));
           }
         }
       }
@@ -318,7 +318,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
 DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
 {
   DRESULT res = RES_ERROR;
-  uint32_t timeout;
+//   uint32_t timeout;
 #if defined(ENABLE_SCRATCH_BUFFER)
   uint8_t ret;
   int i;
@@ -354,10 +354,10 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
     {
       /* Wait that writing process is completed or a timeout occurs */
 
-      timeout = HAL_GetTick();
-      while((WriteStatus == 0) && ((HAL_GetTick() - timeout) < SD_TIMEOUT))
+    //   timeout = HAL_GetTick();
+    //   while((WriteStatus == 0) && ((HAL_GetTick() - timeout) < SD_TIMEOUT))
       {
-        vTaskDelay(pdMS_TO_TICKS(3));
+        // vTaskDelay(pdMS_TO_TICKS(3));
       }
       /* in case of a timeout return error */
       if (WriteStatus == 0)
@@ -367,18 +367,18 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
       else
       {
         WriteStatus = 0;
-        timeout = HAL_GetTick();
+        // timeout = HAL_GetTick();
 
-        while((HAL_GetTick() - timeout) < SD_TIMEOUT)
+        // while((HAL_GetTick() - timeout) < SD_TIMEOUT)
         {
           if (BSP_SD_GetCardState() == SD_TRANSFER_OK)
           {
             res = RES_OK;
-            break;
+            // break;
           }
           else
           {
-            vTaskDelay(pdMS_TO_TICKS(3));
+            // vTaskDelay(pdMS_TO_TICKS(3));
           }
         }
       }
