@@ -22,7 +22,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 # this is required to make the debug info in the elf file point to the correct source files
 # instead of the absolute path in the build directory. this makes gdb search relative to the
 # root of the project instead of the build directory
-# add_compile_options(-fdebug-prefix-map=${CMAKE_SOURCE_DIR}=../..)
 add_compile_options(-fdebug-prefix-map=${CMAKE_SOURCE_DIR}=.)
 
 # Custom target to run clang-format. The cmakepreset adds this to the main build
