@@ -13,10 +13,10 @@
 #define LIS3MDL_ADDR 0x1E // addr sel pin HIGH Mag
 #define LPS22DF_ADDR 0x5D // addr sel pin HIGH Baro
 
-// sensor ranges. these must be selected using the i2c init regs
-static const double ALTIMU_ACC_RANGE = 16.0; // g
-static const double ALTIMU_GYRO_RANGE = 2000.0; // dps
-static const double ALTIMU_MAG_RANGE = 16.0; // Gauss
+// sensor ranges. these must be selected using the i2c init regs. Use #define to allow use in the consts below
+#define ALTIMU_ACC_RANGE 16.0 // g
+#define ALTIMU_GYRO_RANGE 2000.0 // dps
+#define ALTIMU_MAG_RANGE 16.0 // Gauss
 // lps22df baro range is actually smaller than this, but we deemed better to "extend" the range and
 // gamble on possible undefined values, as thats better than saturating for estimator
 static const double ALTIMU_BARO_MAX = 110000; // conservative max Pa at sea level
@@ -142,7 +142,7 @@ w_status_t altimu_init() {
  * @brief Retrieves accelerometer data.
  * @return Accelerometer data (gravities)
  */
-w_status_t altimu_get_acc_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data) {
+w_status_t altimu_get_acc_data(vector3d_t* data, altimu_raw_imu_data_t* raw_data) {
     uint8_t raw_bytes[6];
     w_status_t status = i2c_read_reg(I2C_BUS_4, LSM6DSO_ADDR, OUTX_L_A, raw_bytes, 6);
     if (W_SUCCESS == status) {
@@ -160,7 +160,7 @@ w_status_t altimu_get_acc_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data
  * @brief Retrieves gyroscope data.
  * @return Gyroscope data (deg/s)
  */
-w_status_t altimu_get_gyro_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data) {
+w_status_t altimu_get_gyro_data(vector3d_t* data, altimu_raw_imu_data_t* raw_data) {
     uint8_t raw_bytes[6];
     w_status_t status = i2c_read_reg(I2C_BUS_4, LSM6DSO_ADDR, OUTX_L_G, raw_bytes, 6);
     if (W_SUCCESS == status) {
@@ -183,8 +183,8 @@ w_status_t altimu_get_gyro_data(vector3d_t *data, altimu_raw_imu_data_t *raw_dat
  * @return Status of I2C read
  */
 w_status_t altimu_get_gyro_acc_data(
-    vector3d_t *acc_data, vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_acc,
-    altimu_raw_imu_data_t *raw_gyro
+    vector3d_t* acc_data, vector3d_t* gyro_data, altimu_raw_imu_data_t* raw_acc,
+    altimu_raw_imu_data_t* raw_gyro
 ) {
     // Drive addr sel pin HIGH to use each device's "default" i2c addr
     w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
@@ -240,7 +240,7 @@ w_status_t altimu_get_gyro_acc_data(
  * @brief Retrieves magnetometer data.
  * @return Magnetometer data (gauss)
  */
-w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data) {
+w_status_t altimu_get_mag_data(vector3d_t* data, altimu_raw_imu_data_t* raw_data) {
     // Drive addr sel pin HIGH to use each device's "default" i2c addr
     w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
 
@@ -274,7 +274,7 @@ w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data
  * @brief Retrieves barometer data.
  * @return Barometer data (pascal, celsius)
  */
-w_status_t altimu_get_baro_data(altimu_barometer_data_t *data, altimu_raw_baro_data_t *raw_data) {
+w_status_t altimu_get_baro_data(altimu_barometer_data_t* data, altimu_raw_baro_data_t* raw_data) {
     // Drive addr sel pin HIGH to use each device's "default" i2c addr
     w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
 
@@ -282,9 +282,9 @@ w_status_t altimu_get_baro_data(altimu_barometer_data_t *data, altimu_raw_baro_d
     status |= i2c_read_reg(I2C_BUS_4, LPS22DF_ADDR, LPS_PRESS_OUT_XL, raw_bytes, 5);
     if (W_SUCCESS == status) {
         raw_data->pressure = (int32_t)((((uint32_t)raw_bytes[2] << 16) |
-                                        ((uint32_t)raw_bytes[1] << 8) | (uint32_t)raw_bytes[0])
-                                       << 8) >>
-                             8;
+            ((uint32_t)raw_bytes[1] << 8) | (uint32_t)raw_bytes[0])
+            << 8) >>
+            8;
 
         raw_data->temperature = (int16_t)((raw_bytes[4] << 8) | raw_bytes[3]);
         data->pressure = raw_data->pressure * BARO_FS;

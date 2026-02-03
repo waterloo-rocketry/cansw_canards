@@ -52,7 +52,7 @@ const uint32_t log_task_priority = 15;
 const uint32_t health_checks_task_priority = 10;
 
 // Initialize a function with retry logic
-w_status_t init_with_retry(w_status_t (*init_fn)(void)) {
+w_status_t init_with_retry(w_status_t(*init_fn)(void)) {
     w_status_t status;
     uint32_t retry_count = 0;
 
@@ -73,7 +73,7 @@ w_status_t init_with_retry(w_status_t (*init_fn)(void)) {
 }
 
 // Initialize a function with retry logic and parameter
-w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *param) {
+w_status_t init_with_retry_param(w_status_t(*init_fn)(void*), void* param) {
     w_status_t status;
     uint32_t retry_count = 0;
 
@@ -123,7 +123,7 @@ w_status_t system_init(void) {
     status |= init_with_retry(movella_init);
     status |= init_with_retry(flight_phase_init);
     status |= init_with_retry(imu_handler_init);
-    status |= init_with_retry_param((w_status_t(*)(void *))can_handler_init, &hfdcan1);
+    status |= init_with_retry_param((w_status_t(*)(void*))can_handler_init, &hfdcan1);
     status |= init_with_retry(controller_init);
     status |= init_with_retry(ekf_init);
 
@@ -131,7 +131,7 @@ w_status_t system_init(void) {
     if (status != W_SUCCESS) {
         // Log critical initialization failure - specific modules should have logged details
         log_text(10, "init", "crit init fail (status: 0x%lx).", status);
-        return status;
+        // return status;
     }
 
     // Create FreeRTOS tasks
