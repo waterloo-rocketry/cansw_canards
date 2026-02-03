@@ -19,10 +19,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Include the appropriate subdirectory based on BUILD_TARGET.
-if(BUILD_TARGET STREQUAL "firmware")
-    message(STATUS "Configuring firmware build")
-    add_subdirectory(src)
-elseif(BUILD_TARGET STREQUAL "test")
+if(BUILD_TARGET STREQUAL "test")
     message(STATUS "Configuring unit test build")
     # need to enable_testing before adding the tests subdir
     enable_testing()
