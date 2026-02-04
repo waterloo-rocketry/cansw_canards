@@ -18,13 +18,24 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update \
-          && sudo apt install --no-install-recommends -y xz-utils cmake ninja-build lcov gcc g++ make libc6-dev python3 python3-venv
+          && sudo apt install --no-install-recommends -y xz-utils cmake ninja-build lcov gcc g++ make libc6-dev
           wget https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz -O /tmp/arm-gcc.tar.xz
           tar -xf /tmp/arm-gcc.tar.xz -C /opt
           echo "/opt/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi/bin" >> $GITHUB_PATH
-          python3 -m venv platformio_test
-          source platformio_test/bin/activate
-          pip install -U platformio
+      
+      
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
           
           
       - name: Build firmware binary debug
