@@ -7,7 +7,7 @@ ROOT_DIR=$(dirname "$(dirname "$(realpath "$0" || echo "$(pwd)/$0")")")
 BUILD_ROOT="${ROOT_DIR}/build"
 
 # Functions to map a target to the preset names defined in cmakepresets.json
-get_build_preset() {
+cmake_get_build_preset() {
   case "$1" in
     debug)
       echo "firmware-debug"
@@ -17,6 +17,20 @@ get_build_preset() {
       ;;
     test|tests)
       echo "test"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+platformio_get_build_preset() {
+  case "$1" in
+    debug)
+      echo "debug"
+      ;;
+    release)
+      echo "release"
       ;;
     *)
       echo ""
@@ -50,21 +64,22 @@ case "$COMMAND" in
       echo "Please specify a target: debug, release, or test"
       exit 1
     fi
-    BUILD_PRESET=$(get_build_preset "$TARGET")
+    BUILD_PRESET=$(platformio_get_build_preset "$TARGET")
     if [ -z "$BUILD_PRESET" ]; then
       echo "Unknown target: $TARGET"
       exit 1
     fi
     echo "Building target '$TARGET' using preset '$BUILD_PRESET'..."
     # This call will configure (if needed) and then build the project.
-    cmake --preset "$BUILD_PRESET"
-    cmake --build --preset "${BUILD_PRESET}-no-format"
+    # PLATFORMIO NEW
+    pio run -e $BUILD_PRESET
+    
     echo "Build completed."
     ;;
   test)
     # For testing, we use the test preset.
     echo "Building and running tests..."
-    BUILD_PRESET=$(get_build_preset test)
+    BUILD_PRESET=$(cmake_get_build_preset test)
     TEST_PRESET="test"
     if [ -z "$BUILD_PRESET" ] || [ -z "$TEST_PRESET" ]; then
       echo "Error: Missing presets for test target."
