@@ -18,10 +18,14 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update \
-          && sudo apt install --no-install-recommends -y xz-utils cmake ninja-build lcov gcc g++ make libc6-dev
+          && sudo apt install --no-install-recommends -y xz-utils cmake ninja-build lcov gcc g++ make libc6-dev python3 python3-venv
           wget https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz -O /tmp/arm-gcc.tar.xz
           tar -xf /tmp/arm-gcc.tar.xz -C /opt
           echo "/opt/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi/bin" >> $GITHUB_PATH
+          python3 -m venv platformio_test
+          source platformio_test/bin/activate
+          pip install -U platformio
+          
           
       - name: Build firmware binary debug
         run: ./scripts/run.sh build debug
