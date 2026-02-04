@@ -131,7 +131,7 @@ w_status_t system_init(void) {
     if (status != W_SUCCESS) {
         // Log critical initialization failure - specific modules should have logged details
         log_text(10, "init", "crit init fail (status: 0x%lx).", status);
-        // return status;
+        return status;
     }
 
     // Create FreeRTOS tasks

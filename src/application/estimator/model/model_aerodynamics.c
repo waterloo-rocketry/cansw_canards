@@ -9,16 +9,16 @@
  */
  // airfoil
  // make these #defines so they can be used in static const expressions
-#define area_canard (2.0f * 0.102f * 0.0508f) / 2.0f
-#define length_canard (0.203f / 2.0f) + (0.0508f / 3.0f)
+#define area_canard ((2.0 * 0.102 * 0.0508) / 2.0)
+#define length_canard ((0.203 / 2.0) + (0.0508 / 3.0))
 static const double cn_alpha = 10.0; // pitch forcing coeff
-static const double c_canard = area_canard * length_canard;
+static const double c_canard = (area_canard) * (length_canard);
 
 // aerodynamics
-#define length_cg 0.0f // center of gravity
-#define length_cp -0.5f // center of pressure
-#define area_reference (M_PI * ((0.203f / 2.0f)* (0.203f / 2.0f))) // cross section of body tube
-static const double c_aero = area_reference * (length_cp - length_cg);
+#define length_cg (0.0) // center of gravity
+#define length_cp (-0.5) // center of pressure
+#define area_reference (M_PI * ((0.203 / 2.0)* (0.203 / 2.0))) // cross section of body tube
+static const double c_aero = (area_reference) * ((length_cp)-(length_cg));
 
 void aerodynamics(const x_state_t* state, const estimator_airdata_t* airdata, vector3d_t* torque) {
     const double p_dyn = airdata->density / 2.0 * pow(math_vector3d_norm(&(state->velocity)), 2);
