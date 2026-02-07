@@ -8,6 +8,10 @@ import ssl
 import certifi
 import subprocess
 
+
+flags = env.ParseFlags()  # {'CCFLAGS': [...], 'LINKFLAGS': [...]}
+print(flags)
+
 # set configuration
 CLANG_FORMAT_VERSION = "21"
 DOWNLOAD_DIR = Dir('#/scripts').abspath
@@ -111,7 +115,7 @@ def get_clang_format():
 
     return file_path
 
-def run_formatter(target, source, env):
+def run_formatter(source, target, env):
     clang_format_name = get_clang_format()
 
     if clang_format_name: 
@@ -129,5 +133,30 @@ def run_formatter(target, source, env):
 
 
 
-format_alias = env.Alias("format", [], run_formatter)
-env.AlwaysBuild(format_alias)
+env.AddCustomTarget(
+    "Format",
+    None,
+    run_formatter,  # or any shell/callback
+    title="Format",
+    description="Run Clang-Format"
+)
+
+
+
+env.AddCustomTarget(
+    "Build and Format",
+    None,
+    f"pio run",  # or any shell/callback
+    title="Build and Format",
+    description="Run Clang-Format and build"
+)
+
+env.AddPreAction("Build and Format", run_formatter)
+
+
+env.AppendUnique(
+    CCFLAGS=['-mfloat-abi=hard', '-mfpu=fpv5-d16'],
+    LINKFLAGS=['-mfloat-abi=hard','-mfpu=fpv5-d16']
+)
+
+print(env.Dump())
