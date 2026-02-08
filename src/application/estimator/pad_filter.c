@@ -134,8 +134,9 @@ w_status_t pad_filter(
     const double alt = launch_elevation;
 
     // concoct state vector. use compound literal syntax for convenience
-    *x_init = (x_state_t
-    ){.attitude = q, .rates = w, .velocity = v, .altitude = alt, .CL = Cl, .delta = delta};
+    *x_init = (x_state_t){
+        .attitude = q, .rates = w, .velocity = v, .altitude = alt, .CL = Cl, .delta = delta
+    };
 
     // Bias determination
 

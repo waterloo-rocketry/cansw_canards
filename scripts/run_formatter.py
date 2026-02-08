@@ -4,9 +4,9 @@ import os
 import platform
 import urllib.request
 import stat
-import ssl
 import certifi
 import subprocess
+import glob
 
 
 flags = env.ParseFlags()  # {'CCFLAGS': [...], 'LINKFLAGS': [...]}
@@ -116,21 +116,28 @@ def get_clang_format():
     return file_path
 
 def run_formatter(source, target, env):
-    clang_format_name = get_clang_format()
+    clang_format = get_clang_format()
+    if not clang_format:
+        print("clang-format not found or failed to install.")
+        return
 
-    if clang_format_name: 
+    # collect the .c and .h files from our source directories (ignore auto-gen and 3rd party stuff)
+    dirs = ["src/application", "src/drivers", "src/common"]
+    files = []
+    for d in dirs:
+        files += glob.glob(os.path.join(SOURCE_DIR, d, "*", "*.c"))
+        files += glob.glob(os.path.join(SOURCE_DIR, d, "*", "*.h"))
 
-        print("running clang-format")
-        exit_code = env.Execute(f"""{clang_format_name} -i --style='file:{SOURCE_DIR}/src/third_party/rocketlib/.clang-format' \
-        {SOURCE_DIR}/src/application/*/*.c {SOURCE_DIR}/src/application/*/*.h \
-        {SOURCE_DIR}/src/drivers/*/*.c {SOURCE_DIR}/src/drivers/*/*.h \
-        {SOURCE_DIR}/src/common/*/*.c {SOURCE_DIR}/src/common/*/*.h""")
+    if not files:
+        print("No source files found to format.")
+        return
 
-        print(f"Clang-Format exited with {exit_code}")
+    # build command with quoted paths. This handles path formatting for mac/linux/windows
+    style_file = os.path.join(SOURCE_DIR, "src/third_party/rocketlib/.clang-format")
+    files_str = " ".join(f'"{os.path.normpath(f)}"' for f in files)
+    cmd = f'"{clang_format}" -i --style="file:{style_file}" {files_str}'
 
-
-
-
+    env.Execute(cmd)
 
 
 env.AddCustomTarget(
@@ -141,8 +148,6 @@ env.AddCustomTarget(
     description="Run Clang-Format"
 )
 
-
-
 env.AddCustomTarget(
     "Build and Format",
     None,
@@ -152,11 +157,3 @@ env.AddCustomTarget(
 )
 
 env.AddPreAction("Build and Format", run_formatter)
-
-
-env.AppendUnique(
-    CCFLAGS=['-mfloat-abi=hard', '-mfpu=fpv5-d16'],
-    LINKFLAGS=['-mfloat-abi=hard','-mfpu=fpv5-d16']
-)
-
-print(env.Dump())
