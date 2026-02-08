@@ -13,14 +13,15 @@ jobs:
       - name: Checkout this repo
         uses: actions/checkout@v4
         with:
-          submodules: true
-      
+          submodules: recursive
+          submodules-depth: 1 # shallow clone everything
+          fetch-depth: 1      
+
       - name: Install dependencies
         run: |
           sudo apt update \
           && sudo apt install --no-install-recommends -y xz-utils cmake ninja-build lcov gcc g++ make libc6-dev
       
-      - uses: actions/checkout@v4
       - uses: actions/cache@v4
         with:
           path: |
