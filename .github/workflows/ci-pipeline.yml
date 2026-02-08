@@ -37,6 +37,7 @@ jobs:
           
       - name: Build and run unit tests
         run: |
+          pio run -e release
           chmod +x ./scripts/run_unit_tests.sh
           ./scripts/run_unit_tests.sh cleanall
           ./scripts/run_unit_tests.sh test
