@@ -16,3 +16,6 @@
 [submodule "src/third_party/CMSIS-DSP"]
 	path = src/third_party/CMSIS-DSP
 	url = https://github.com/ARM-software/CMSIS-DSP
+[submodule "tests/external/closedrocket"]
+	path = tests/external/closedrocket
+	url = https://github.com/waterloo-rocketry/closedrocket.git
