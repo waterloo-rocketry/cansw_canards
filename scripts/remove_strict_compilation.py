@@ -1,4 +1,17 @@
-# pre-compiling script to remove strict compilcation flags from lib files we have no control over
-# TODO...
+# pre-compiling script to remove strict compilcation flags from thirdparty files we have no control over
 
-# use env.AddBuildMiddleware() ...
+Import("env")
+
+def middleware(node):
+    p = str(node).replace("\\", "/")
+
+    if "/third_party/" in p:
+        new_flags = env.get("CCFLAGS", []) + ["-w"]
+        return env.Object(
+            node,
+            CCFLAGS=new_flags
+        )
+
+    return None
+
+env.AddBuildMiddleware(middleware)

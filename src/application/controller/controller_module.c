@@ -90,7 +90,7 @@ w_status_t controller_module(
     // %% Reference signal
     // % Generates reference signal for roll program
     // % includes multiple roll angle steps. Reference r [rad].
-    if (act_allowed_ms >= STEP_0_START_MS && act_allowed_ms < STEP_1_START_MS) {
+    if (act_allowed_ms < STEP_1_START_MS) {
         r = STEP_0_ANGLE_DEG;
     } else if (act_allowed_ms >= STEP_1_START_MS && act_allowed_ms < STEP_2_START_MS) {
         r = STEP_1_ANGLE_DEG;

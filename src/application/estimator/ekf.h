@@ -50,12 +50,11 @@ void ekf_algorithm(
  * @param x_state state pointer to new state to be altered
  * @param P_flat P pointer to store new covariance
  * @param u_input input imu inputs
- * @param Q covariance matrix
  * @param dt time step
  */
 void ekf_matrix_predict(
     x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE], const u_dynamics_t *u_input,
-    double Q[SIZE_STATE * SIZE_STATE], double dt
+    double dt
 );
 
 /**

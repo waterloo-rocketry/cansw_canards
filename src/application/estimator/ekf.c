@@ -86,7 +86,7 @@ w_status_t ekf_init(void) {
 
 void ekf_matrix_predict(
     x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE], const u_dynamics_t *u_input,
-    double Q_arr[SIZE_STATE * SIZE_STATE], double dt
+    double dt
 ) {
     x_state_t state_new = {0};
 
@@ -99,7 +99,7 @@ void ekf_matrix_predict(
     // discrete jacobian: F = df/dx
     static double F_flat[SIZE_STATE * SIZE_STATE] = {0};
     reset_temp_matrix(F_flat, SIZE_STATE * SIZE_STATE);
-    model_dynamics_jacobian(F_flat, x_state, u_input, dt);
+    model_dynamics_jacobian(F_flat, x_state, dt);
     arm_matrix_instance_f64 F = {.numRows = SIZE_STATE, .numCols = SIZE_STATE, .pData = F_flat};
 
     // DISCRETE COVARIANCE
@@ -494,7 +494,7 @@ void ekf_algorithm(
     u_input.cmd = cmd;
 
     // Predict
-    ekf_matrix_predict(x_state, P_flat, &u_input, Q.pData, dt);
+    ekf_matrix_predict(x_state, P_flat, &u_input, dt);
 
     // %% Correction step(s), sequential for each IMU
     // %%% R is a square matrix (size depending on amount of sensors), tuning for measurement
