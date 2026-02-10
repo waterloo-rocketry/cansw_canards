@@ -10,15 +10,15 @@
  * @brief Structure to track CAN handler stats, errors and status
  */
 typedef struct {
-    bool initialized; /**< Initialization status flag */
-    uint32_t dropped_rx_counter; /**< Number of dropped RX messages from rx isr */
-    uint32_t dropped_tx_counter; /**< Number of dropped TX messages from tx queue */
-    uint32_t tx_failures; /**< Number of transmission failures */
-    uint32_t rx_callback_errors; /**< Number of RX callback execution errors */
-    uint32_t rx_timeouts; /**< Number of RX queue timeouts */
-    uint32_t tx_timeouts; /**< Number of TX queue timeouts */
-    uint32_t messages_sent; /**< Number of messages successfully sent */
-    uint32_t messages_received; /**< Number of messages successfully received */
+	bool initialized; /**< Initialization status flag */
+	uint32_t dropped_rx_counter; /**< Number of dropped RX messages from rx isr */
+	uint32_t dropped_tx_counter; /**< Number of dropped TX messages from tx queue */
+	uint32_t tx_failures; /**< Number of transmission failures */
+	uint32_t rx_callback_errors; /**< Number of RX callback execution errors */
+	uint32_t rx_timeouts; /**< Number of RX queue timeouts */
+	uint32_t tx_timeouts; /**< Number of TX queue timeouts */
+	uint32_t messages_sent; /**< Number of messages successfully sent */
+	uint32_t messages_received; /**< Number of messages successfully received */
 } can_handler_status_t;
 
 // Signature for rx callback functions

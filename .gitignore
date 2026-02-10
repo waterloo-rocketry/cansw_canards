@@ -11,3 +11,6 @@ Release
 build
 .mxproject
 mx.scratch
+scripts/clang-format-21_macosx-amd64
+scripts/clang-format-21_linux-amd64
+scripts/clang-format-21_windows-amd64.exe

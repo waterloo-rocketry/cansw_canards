@@ -13,47 +13,48 @@
 
 /* Enums/Types */
 typedef union {
-    double roll_state_arr[ROLL_STATE_NUM];
-    struct {
-        double roll_angle;
-        double roll_rate;
-        double canard_angle;
-    };
+	double roll_state_arr[ROLL_STATE_NUM];
+
+	struct {
+		double roll_angle;
+		double roll_rate;
+		double canard_angle;
+	};
 } roll_state_t;
 
 // input from state estimation module
 typedef struct {
-    // Roll state
-    roll_state_t roll_state;
-    // Scheduling variables (flight condition)
-    double pressure_dynamic;
-    double canard_coeff;
+	// Roll state
+	roll_state_t roll_state;
+	// Scheduling variables (flight condition)
+	double pressure_dynamic;
+	double canard_coeff;
 } controller_input_t;
 
 // Output of controller: latest commanded canard angle
 typedef struct {
-    double commanded_angle; // radians
-    uint32_t timestamp; // ms
+	double commanded_angle; // radians
+	uint32_t timestamp; // ms
 } controller_output_t;
 
 // main controller state using in task
 typedef struct {
-    uint32_t last_ms; // currently unused...
-    uint32_t can_send_errors;
-    uint32_t data_miss_counter;
+	uint32_t last_ms; // currently unused...
+	uint32_t can_send_errors;
+	uint32_t data_miss_counter;
 } controller_t;
 
 /**
  * @brief Structure to track controller errors and status
  */
 typedef struct {
-    bool is_init; /**< Initialization status flag */
-    uint32_t can_send_errors; /**< Number of CAN send failures */
-    uint32_t data_miss_counter; /**< Number of missed data updates from estimator */
-    uint32_t timestamp_errors; /**< Number of timer/timestamp retrieval failures */
-    uint32_t gain_interpolation_errors; /**< Number of gain interpolation failures */
-    uint32_t angle_calculation_errors; /**< Number of commanded angle calculation failures */
-    uint32_t log_errors; /**< Number of logging failures */
+	bool is_init; /**< Initialization status flag */
+	uint32_t can_send_errors; /**< Number of CAN send failures */
+	uint32_t data_miss_counter; /**< Number of missed data updates from estimator */
+	uint32_t timestamp_errors; /**< Number of timer/timestamp retrieval failures */
+	uint32_t gain_interpolation_errors; /**< Number of gain interpolation failures */
+	uint32_t angle_calculation_errors; /**< Number of commanded angle calculation failures */
+	uint32_t log_errors; /**< Number of logging failures */
 } controller_error_data_t;
 
 /**

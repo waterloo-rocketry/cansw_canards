@@ -9,23 +9,23 @@
  * Enum representing phase of flight (state machine state)
  */
 typedef enum {
-    STATE_IDLE,
-    STATE_SE_INIT,
-    STATE_BOOST,
-    STATE_ACT_ALLOWED,
-    STATE_RECOVERY,
-    STATE_ERROR
+	STATE_IDLE,
+	STATE_SE_INIT,
+	STATE_BOOST,
+	STATE_ACT_ALLOWED,
+	STATE_RECOVERY,
+	STATE_ERROR
 } flight_phase_state_t;
 
 /**
  * Enum representing a state transition event
  */
 typedef enum {
-    EVENT_ESTIMATOR_INIT,
-    EVENT_INJ_OPEN,
-    EVENT_ACT_DELAY_ELAPSED,
-    EVENT_FLIGHT_ELAPSED,
-    EVENT_RESET
+	EVENT_ESTIMATOR_INIT,
+	EVENT_INJ_OPEN,
+	EVENT_ACT_DELAY_ELAPSED,
+	EVENT_FLIGHT_ELAPSED,
+	EVENT_RESET
 } flight_phase_event_t;
 
 /**

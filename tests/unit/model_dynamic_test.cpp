@@ -15,8 +15,8 @@ extern "C" {
 
 #define TOLERANCE 0.000001
 
-FAKE_VALUE_FUNC(w_status_t, log_text, uint32_t, const char *, const char *);
-FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float *);
+    FAKE_VALUE_FUNC(w_status_t, log_text, uint32_t, const char*, const char*);
+    FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float*);
 }
 
 DEFINE_FFF_GLOBALS;
@@ -44,7 +44,7 @@ u.accel = [5;77;9;];
  [x_new] = model_dynamics(dt, x, u);
  disp(x_new);
  */
-// clang-format on
+ // clang-format on
 TEST_F(ModelDynamicTest, DynamicNominalCheck) {
     // Arrange
     const double x_expected[13] = {
@@ -64,8 +64,8 @@ TEST_F(ModelDynamicTest, DynamicNominalCheck) {
     };
 
     double dt = 0.32;
-    x_state_t estimator_state = {.array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}};
-    u_dynamics_t estimator_input = {.cmd = 8.0f, .acceleration = {5.0f, 77.0f, 9.0f}};
+    x_state_t estimator_state = { .array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13} };
+    u_dynamics_t estimator_input = { .cmd = 8.0f, .acceleration = {5.0f, 77.0f, 9.0f} };
 
     // Act
     x_state_t actual_state = model_dynamics_update(&estimator_state, &estimator_input, dt);
@@ -104,7 +104,7 @@ fprintf('%.9f, ', J_c(1:end-1));  % Print all except the last element
 fprintf('%.9f };\n', J_c(end));   % Print the last element and close the array
 
  */
-// clang-format on
+ // clang-format on
 TEST_F(ModelDynamicTest, DynamicJacobiansCheck) {
     // Arrange
     x_state_t estimator_state = {
@@ -124,7 +124,7 @@ TEST_F(ModelDynamicTest, DynamicJacobiansCheck) {
             12.136415198359735
         }
     };
-    u_dynamics_t estimator_input = {.cmd = 3.2, .acceleration = {10, 22, 31}};
+    u_dynamics_t estimator_input = { .cmd = 3.2, .acceleration = {10, 22, 31} };
     double dt = 0.55;
 
     const double expected_flat[SIZE_STATE * SIZE_STATE] = {
@@ -161,7 +161,7 @@ TEST_F(ModelDynamicTest, DynamicJacobiansCheck) {
 
     // Act
     double actual_res[169] = {};
-    model_dynamics_jacobian(actual_res, &estimator_state, &estimator_input, dt);
+    model_dynamics_jacobian(actual_res, &estimator_state, dt);
 
     // Assert
 
@@ -217,7 +217,7 @@ TEST_F(ModelDynamicTest, DynamicJacobiansBetterCheck) {
             11.448848435840942,
         }
     };
-    u_dynamics_t estimator_input = {.cmd = 2.4, .acceleration = {3.2, 18.6, 1.5}};
+    u_dynamics_t estimator_input = { .cmd = 2.4, .acceleration = {3.2, 18.6, 1.5} };
     double dt = 0.43;
 
     const double expected_flat[SIZE_STATE * SIZE_STATE] = {
@@ -254,7 +254,7 @@ TEST_F(ModelDynamicTest, DynamicJacobiansBetterCheck) {
 
     // Act
     double actual_res[169] = {};
-    model_dynamics_jacobian(actual_res, &estimator_state, &estimator_input, dt);
+    model_dynamics_jacobian(actual_res, &estimator_state, dt);
 
     // Assert
 

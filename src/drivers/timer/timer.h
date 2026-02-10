@@ -3,14 +3,15 @@
 
 #include "rocketlib/include/common.h"
 #include <stdint.h>
+
 /**
  * @brief Timer module health stats
  */
 typedef struct {
-    uint32_t valid_calls; /**< Count of successful calls to timer_get_ms */
-    uint32_t invalid_param; /**< Count of calls with NULL parameter */
-    uint32_t timer_stopped; /**< Count of calls when timer was stopped */
-    uint32_t timer_invalid; /**< Count of calls when timer was invalid */
+	uint32_t valid_calls; /**< Count of successful calls to timer_get_ms */
+	uint32_t invalid_param; /**< Count of calls with NULL parameter */
+	uint32_t timer_stopped; /**< Count of calls when timer was stopped */
+	uint32_t timer_invalid; /**< Count of calls when timer was invalid */
 } timer_health_t;
 
 // tracks system time since program startup

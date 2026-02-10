@@ -18,38 +18,40 @@
  */
 
 typedef union {
-    double array[SIZE_STATE];
-    struct {
-        quaternion_t attitude;
-        vector3d_t rates;
-        vector3d_t velocity;
-        double altitude;
-        double CL;
-        double delta;
-    };
+	double array[SIZE_STATE];
+
+	struct {
+		quaternion_t attitude;
+		vector3d_t rates;
+		vector3d_t velocity;
+		double altitude;
+		double CL;
+		double delta;
+	};
 } x_state_t;
 
 /*
  * Float state
  */
 typedef union {
-    float array[SIZE_STATE];
-    struct {
-        quaternion_f32_t attitude;
-        vector3d_f32_t rates;
-        vector3d_f32_t velocity;
-        float altitude;
-        float CL;
-        float delta;
-    };
+	float array[SIZE_STATE];
+
+	struct {
+		quaternion_f32_t attitude;
+		vector3d_f32_t rates;
+		vector3d_f32_t velocity;
+		float altitude;
+		float CL;
+		float delta;
+	};
 } x_state_f32_t;
 
 /*
  * Input signal
  */
 typedef struct {
-    double cmd;
-    vector3d_t acceleration;
+	double cmd;
+	vector3d_t acceleration;
 } u_dynamics_t;
 
 /*
@@ -60,13 +62,14 @@ typedef struct {
 // EKF: bias_i, y_i, and h_x_i are of this type
 // IMU measurement model: the return is of this type
 typedef union {
-    double array[SIZE_IMU_ALL];
-    struct {
-        vector3d_t accelerometer;
-        vector3d_t gyroscope;
-        vector3d_t magnetometer;
-        double barometer;
-    };
+	double array[SIZE_IMU_ALL];
+
+	struct {
+		vector3d_t accelerometer;
+		vector3d_t gyroscope;
+		vector3d_t magnetometer;
+		double barometer;
+	};
 } y_imu_t;
 
 #endif

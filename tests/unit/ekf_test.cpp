@@ -8,8 +8,8 @@ extern "C" {
 #include "common/math/math-algebra3d.h"
 #include "third_party/rocketlib/include/common.h"
 
-DEFINE_FFF_GLOBALS;
-FAKE_VALUE_FUNC(w_status_t, log_text, const char *, const char *);
+    DEFINE_FFF_GLOBALS;
+    FAKE_VALUE_FUNC(w_status_t, log_text, const char*, const char*);
 }
 
 class EstimatorEKFTest : public ::testing::Test {
@@ -58,7 +58,7 @@ fprintf('%.9f, ', P_c(1:end-1));
 fprintf('%.9f };\n', P_c(end));
 
  */
-// clang-format on
+ // clang-format on
 TEST_F(EstimatorEKFTest, EKFPredictNominalCheckWithAllZerosP) {
     // Arrange
     x_state_t state = {
@@ -78,7 +78,7 @@ TEST_F(EstimatorEKFTest, EKFPredictNominalCheckWithAllZerosP) {
             0.957166948242946
         }
     };
-    double P_flat[SIZE_STATE * SIZE_STATE] = {0};
+    double P_flat[SIZE_STATE * SIZE_STATE] = { 0 };
     const u_dynamics_t input = {
         .cmd = 4.217612826262750,
         .acceleration = {.array = {1.456126946168524, 2.400841406666400, 0.425659015881646}}
@@ -89,8 +89,8 @@ TEST_F(EstimatorEKFTest, EKFPredictNominalCheckWithAllZerosP) {
     static const double Q_diag[SIZE_STATE] = {
         1e-10, 1e-10, 1e-10, 1e-10, 0.001, 0.01, 0.01, 1e-6, 1e-6, 1e-6, 0.001, 0.3, 0.1
     };
-    double Q_arr[SIZE_STATE * SIZE_STATE] = {0};
-    arm_matrix_instance_f64 Q = {.numRows = SIZE_STATE, .numCols = SIZE_STATE, .pData = Q_arr};
+    double Q_arr[SIZE_STATE * SIZE_STATE] = { 0 };
+    arm_matrix_instance_f64 Q = { .numRows = SIZE_STATE, .numCols = SIZE_STATE, .pData = Q_arr };
     math_init_matrix_diag(&Q, (uint16_t)SIZE_STATE, Q_diag);
 
     x_state_t expected_state = {
@@ -141,7 +141,7 @@ TEST_F(EstimatorEKFTest, EKFPredictNominalCheckWithAllZerosP) {
     };
 
     // Act
-    ekf_matrix_predict(&state, P_flat, &input, Q.pData, dt);
+    ekf_matrix_predict(&state, P_flat, &input, dt);
 
     // Assert
     double tolerance = 1e-6;
@@ -259,8 +259,8 @@ TEST_F(EstimatorEKFTest, EKFPredictNominalCheckWithNoneAllZerosP) {
     static double Q_diag[SIZE_STATE] = {
         1e-10, 1e-10, 1e-10, 1e-10, 0.001, 0.01, 0.01, 1e-6, 1e-6, 1e-6, 0.001, 0.3, 0.1
     };
-    double Q_arr[SIZE_STATE * SIZE_STATE] = {0};
-    arm_matrix_instance_f64 Q = {.numRows = SIZE_STATE, .numCols = SIZE_STATE, .pData = Q_arr};
+    double Q_arr[SIZE_STATE * SIZE_STATE] = { 0 };
+    arm_matrix_instance_f64 Q = { .numRows = SIZE_STATE, .numCols = SIZE_STATE, .pData = Q_arr };
     math_init_matrix_diag(&Q, (uint16_t)SIZE_STATE, Q_diag);
 
     const x_state_t expected_state = {
@@ -314,7 +314,7 @@ TEST_F(EstimatorEKFTest, EKFPredictNominalCheckWithNoneAllZerosP) {
     };
 
     // Act
-    ekf_matrix_predict(&state, P_flat, &input, Q.pData, dt);
+    ekf_matrix_predict(&state, P_flat, &input, dt);
 
     // Assert
     double tolerance = 1e-6;
@@ -325,7 +325,7 @@ TEST_F(EstimatorEKFTest, EKFPredictNominalCheckWithNoneAllZerosP) {
     }
 
     // check P
-    for (int i = 0; i < SIZE_STATE * SIZE_STATE; i++) {
+    for (int i = 0; i < SIZE_STATE* SIZE_STATE; i++) {
         double P_tolerance = expected_P_flat[i] > 90 ? expected_P_flat[i] * tolerance : tolerance;
         EXPECT_NEAR(P_flat[i], expected_P_flat[i], P_tolerance);
     }
@@ -388,7 +388,7 @@ TEST_F(EstimatorEKFTest, EKFPredictNominalCheckWithNoneAllZerosP) {
     };
 
     // Act
-    ekf_matrix_predict(&state2, P_flat2, &input, Q.pData, dt);
+    ekf_matrix_predict(&state2, P_flat2, &input, dt);
 
     // Assert
     // check x
@@ -397,7 +397,7 @@ TEST_F(EstimatorEKFTest, EKFPredictNominalCheckWithNoneAllZerosP) {
     }
 
     // check P
-    for (int i = 0; i < SIZE_STATE * SIZE_STATE; i++) {
+    for (int i = 0; i < SIZE_STATE* SIZE_STATE; i++) {
         double P_tolerance = expected_P_flat[i] > 90 ? expected_P_flat[i] * tolerance : tolerance;
         EXPECT_NEAR(P_flat[i], expected_P_flat[i], P_tolerance);
     }
@@ -627,7 +627,7 @@ TEST_F(EstimatorEKFTest, EKFCorrectIMUNominalCheck) {
     static arm_matrix_instance_f64 R_MTI = {
         .numRows = SIZE_IMU_MEAS, .numCols = SIZE_IMU_MEAS, .pData = R_MTI_arr
     };
-    static const double R_MTI_diag[SIZE_IMU_MEAS] = {1e-6, 1e-6, 1e-6, 0.01, 0.01, 0.01, 1};
+    static const double R_MTI_diag[SIZE_IMU_MEAS] = { 1e-6, 1e-6, 1e-6, 0.01, 0.01, 0.01, 1 };
     math_init_matrix_diag(&R_MTI, (uint16_t)SIZE_IMU_MEAS, R_MTI_diag);
 
     // Expected corrected state (xhat) and covariance (Phat)
@@ -1121,12 +1121,12 @@ TEST_F(EstimatorEKFTest, EKFAlgorithmSelectIMU1) {
     // Check state (x)
     for (int i = 0; i < SIZE_STATE; i++) {
         double tol = abs(expected_state.array[i]) > 90 ? abs(tolerance * expected_state.array[i])
-                                                       : tolerance;
+            : tolerance;
         EXPECT_NEAR(state.array[i], expected_state.array[i], tol);
     }
 
     // Check covariance (P)
-    for (int i = 0; i < SIZE_STATE * SIZE_STATE; i++) {
+    for (int i = 0; i < SIZE_STATE* SIZE_STATE; i++) {
         double tol = expected_state.array[i] > 90 ? tolerance * expected_state.array[i] : tolerance;
         EXPECT_NEAR(P_flat[i], expected_P_flat[i], tol);
     }
@@ -1332,12 +1332,12 @@ TEST_F(EstimatorEKFTest, EKFAlgorithmSelectIMU2) {
     // Check state (x)
     for (int i = 0; i < SIZE_STATE; i++) {
         double tol = abs(expected_state.array[i]) > 90 ? abs(tolerance * expected_state.array[i])
-                                                       : tolerance;
+            : tolerance;
         EXPECT_NEAR(state.array[i], expected_state.array[i], tol);
     }
 
     // Check covariance (P)
-    for (int i = 0; i < SIZE_STATE * SIZE_STATE; i++) {
+    for (int i = 0; i < SIZE_STATE* SIZE_STATE; i++) {
         double tol = expected_state.array[i] > 90 ? tolerance * expected_state.array[i] : tolerance;
         EXPECT_NEAR(P_flat[i], expected_P_flat[i], tol);
     }

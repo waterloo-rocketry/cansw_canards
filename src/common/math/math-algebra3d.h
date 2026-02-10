@@ -51,9 +51,8 @@ void math_init_matrix_identity(arm_matrix_instance_f64 *I, const uint16_t size);
  * @param size side length of square matrix
  * @param vector pointer to array of entries on main diagonal
  */
-void math_init_matrix_diag(
-    arm_matrix_instance_f64 *matrix, const uint16_t size, const double *vector
-);
+void math_init_matrix_diag(arm_matrix_instance_f64 *matrix, const uint16_t size,
+						   const double *vector);
 
 // matrix addition
 matrix3d_t math_matrix3d_add(const matrix3d_t *a, const matrix3d_t *b);

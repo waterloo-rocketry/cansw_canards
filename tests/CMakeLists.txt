@@ -166,7 +166,7 @@ add_library(CMSISDSP STATIC
 target_include_directories(CMSISDSP PUBLIC "${CMSISDSP_DIR}/Include")
 target_include_directories(CMSISDSP PUBLIC "${CMSISDSP_DIR}/PrivateInclude")
 # cmsis-dsp also requires the core cmsis files. use the cmsis folder provided by cubemx
-target_include_directories(CMSISDSP PUBLIC "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include")
+target_include_directories(CMSISDSP PUBLIC "${PROC_SRC_DIR}/third_party/cubemx_autogen/Drivers/CMSIS/Include")
 
 
 # define the common include paths that all tests may use

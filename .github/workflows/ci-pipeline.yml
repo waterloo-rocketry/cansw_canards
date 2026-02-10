@@ -13,26 +13,33 @@ jobs:
       - name: Checkout this repo
         uses: actions/checkout@v4
         with:
-          submodules: true
-      
+          submodules: recursive
+          fetch-depth: 1      
+
       - name: Install dependencies
         run: |
           sudo apt update \
           && sudo apt install --no-install-recommends -y xz-utils cmake ninja-build lcov gcc g++ make libc6-dev
-          wget https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz -O /tmp/arm-gcc.tar.xz
-          tar -xf /tmp/arm-gcc.tar.xz -C /opt
-          echo "/opt/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi/bin" >> $GITHUB_PATH
+      
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+            ~/.platformio/packages
+          key: ${{ runner.os }}-pio
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
           
-      - name: Build firmware binary debug
-        run: ./scripts/run.sh build debug
-        
-      - name: Build firmware binary release
-        run: ./scripts/run.sh build release
-
       - name: Build and run unit tests
         run: |
-          ./scripts/run.sh cleanall
-          ./scripts/run.sh test
+          pio run -e release
+          chmod +x ./scripts/run_unit_tests.sh
+          ./scripts/run_unit_tests.sh cleanall
+          ./scripts/run_unit_tests.sh test
 
       - name: Run formatting check
         uses: waterloo-rocketry/actions/clang-format-check@main

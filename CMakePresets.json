@@ -7,30 +7,6 @@
     },
     "configurePresets": [
         {
-            "name": "firmware-debug",
-            "displayName": "FOR DEV - Firmware Debug",
-            "description": "Configure the firmware binary build in Debug mode.",
-            "generator": "Ninja",
-            "toolchainFile": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
-            "binaryDir": "${sourceDir}/build/firmware-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "BUILD_TARGET": "firmware"
-            }
-        },
-        {
-            "name": "firmware-release",
-            "displayName": "FOR FLIGHT - Firmware Release",
-            "description": "Configure the firmware binary build in Release mode.",
-            "generator": "Ninja",
-            "toolchainFile": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
-            "binaryDir": "${sourceDir}/build/firmware-release",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "BUILD_TARGET": "firmware"
-            }
-        },
-        {
             "name": "test",
             "displayName": "Unit Tests preset",
             "description": "Configure the unit tests build in Debug mode.",
@@ -43,40 +19,6 @@
         }
     ],
     "buildPresets": [
-        {
-            "name": "firmware-debug",
-            "displayName": "Build Firmware (Debug) preset",
-            "configurePreset": "firmware-debug",
-            "targets": [
-                "proc_binary",
-                "format"
-            ]
-        },
-        {
-            "name": "firmware-release",
-            "displayName": "Build Firmware (Release) preset",
-            "configurePreset": "firmware-release",
-            "targets": [
-                "proc_binary",
-                "format"
-            ]
-        },
-        {
-            "name": "firmware-release-no-format",
-            "displayName": "only the github pipeline needs this",
-            "configurePreset": "firmware-release",
-            "targets": [
-                "proc_binary"
-            ]
-        },
-        {
-            "name": "firmware-debug-no-format",
-            "displayName": "only the github pipeline needs this",
-            "configurePreset": "firmware-debug",
-            "targets": [
-                "proc_binary"
-            ]
-        },
         {
             "name": "test",
             "displayName": "Build Unit Tests With Coverage preset",

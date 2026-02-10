@@ -13,21 +13,21 @@
  * Enum representing GPIO pin level
  */
 typedef enum {
-    GPIO_LEVEL_LOW,
-    GPIO_LEVEL_HIGH
+	GPIO_LEVEL_LOW,
+	GPIO_LEVEL_HIGH
 } gpio_level_t;
 
 /**
  * Enum representing a connected GPIO pin
  */
 typedef enum {
-    GPIO_PIN_RED_LED,
-    GPIO_PIN_GREEN_LED,
-    GPIO_PIN_BLUE_LED,
-    GPIO_PIN_LSM6DSV32X_CS,
-    GPIO_PIN_LSM6DSV32X_SA0,
-    GPIO_PIN_ALTIMU_SA0,
-    GPIO_PIN_COUNT // Enum max value
+	GPIO_PIN_RED_LED,
+	GPIO_PIN_GREEN_LED,
+	GPIO_PIN_BLUE_LED,
+	GPIO_PIN_LSM6DSV32X_CS,
+	GPIO_PIN_LSM6DSV32X_SA0,
+	GPIO_PIN_ALTIMU_SA0,
+	GPIO_PIN_COUNT // Enum max value
 } gpio_pin_t;
 
 /**

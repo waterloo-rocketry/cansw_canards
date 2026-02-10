@@ -7,25 +7,25 @@
 #include "rocketlib/include/common.h"
 
 typedef struct {
-    float pressure; // pascal
-    float temperature; // celsius
+	float pressure; // pascal
+	float temperature; // celsius
 } altimu_barometer_data_t;
 
 /**
  * raw data from barometer registers
  */
 typedef struct __attribute__((packed)) {
-    int32_t pressure;
-    int16_t temperature;
+	int32_t pressure;
+	int16_t temperature;
 } altimu_raw_baro_data_t;
 
 /**
  * raw data from imu/mag registers
  */
 typedef struct __attribute__((packed)) {
-    uint16_t x;
-    uint16_t y;
-    uint16_t z;
+	uint16_t x;
+	uint16_t y;
+	uint16_t z;
 } altimu_raw_imu_data_t;
 
 // Function prototypes
@@ -45,10 +45,9 @@ w_status_t altimu_init();
  * @param[out] raw_gyro    Raw gyroscope data
  * @return Status of I2C read
  */
-w_status_t altimu_get_gyro_acc_data(
-    vector3d_t *acc_data, vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_acc,
-    altimu_raw_imu_data_t *raw_gyro
-);
+w_status_t altimu_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
+									altimu_raw_imu_data_t *raw_acc,
+									altimu_raw_imu_data_t *raw_gyro);
 
 /**
  * @brief Retrieves accelerometer data.
