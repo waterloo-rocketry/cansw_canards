@@ -93,19 +93,6 @@ def get_clang_format():
             if system != 'Windows':    
                 st = os.stat(file_path)
                 os.chmod(file_path, st.st_mode | stat.S_IEXEC)
-
-            if is_apple_silicon():
-                # renaming /usr/local/opt/zstd/lib/libzstd.1.dylib to match the correct path for more cases
-                try:
-                    brew_prefix = subprocess.check_output(["brew", "--prefix", "zstd"]).decode().strip()
-                except subprocess.CalledProcessError:
-                    # Fallback/Error if brew is not installed
-                    print("Error: brew not found. Please install zstd first.")
-                    Exit(1)
-                print("change name")
-                lib_path = f"{brew_prefix}/lib/libzstd.1.dylib"
-                env.Execute(f'install_name_tool -change /usr/local/opt/zstd/lib/libzstd.1.dylib "{lib_path}" {file_path}')
-                print("change name exit")
           
 
         except Exception as e:
