@@ -12,9 +12,9 @@
  * this holds persistent data for 1 instance of a pad_filter (ie, its context)
  */
 typedef struct {
-    y_imu_t filtered_1;
-    y_imu_t filtered_2;
-    bool is_initialized;
+	y_imu_t filtered_1;
+	y_imu_t filtered_2;
+	bool is_initialized;
 } pad_filter_ctx_t;
 
 /**
@@ -36,8 +36,7 @@ w_status_t pad_filter_init(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_
  * @param x_init output
  * @param bias output
  */
-w_status_t pad_filter(
-    pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2, const bool is_dead_1,
-    const bool is_dead_2, x_state_t *x_init, y_imu_t *bias_1, y_imu_t *bias_2
-);
+w_status_t pad_filter(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2,
+					  const bool is_dead_1, const bool is_dead_2, x_state_t *x_init,
+					  y_imu_t *bias_1, y_imu_t *bias_2);
 #endif

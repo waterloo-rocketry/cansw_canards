@@ -34,12 +34,10 @@ w_status_t ekf_init(void);
  * @param is_dead_MTI true if movella is dead
  * @param is_dead_ALTIMU true if pololu is dead
  */
-void ekf_algorithm(
-    x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE], const y_imu_t *imu_mti,
-    const y_imu_t *bias_mti, const y_imu_t *imu_altimu, const y_imu_t *bias_altimu, double cmd,
-    double encoder, double dt, const bool is_dead_MTI, const bool is_dead_ALTIMU,
-    bool is_dead_encoder
-);
+void ekf_algorithm(x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE],
+				   const y_imu_t *imu_mti, const y_imu_t *bias_mti, const y_imu_t *imu_altimu,
+				   const y_imu_t *bias_altimu, double cmd, double encoder, double dt,
+				   const bool is_dead_MTI, const bool is_dead_ALTIMU, bool is_dead_encoder);
 
 // EKF PREDICTION STEP FUNC
 
@@ -52,10 +50,8 @@ void ekf_algorithm(
  * @param u_input input imu inputs
  * @param dt time step
  */
-void ekf_matrix_predict(
-    x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE], const u_dynamics_t *u_input,
-    double dt
-);
+void ekf_matrix_predict(x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE],
+						const u_dynamics_t *u_input, double dt);
 
 /**
  * @brief computes a-posteriori state and covariance estimates
@@ -69,10 +65,9 @@ void ekf_matrix_predict(
  *
  * for now, hard-coded to do imu bias (no encoder allowed)
  */
-void ekf_matrix_correct_imu(
-    x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE], const arm_matrix_instance_f64 *R,
-    const y_imu_t *y_meas_full, const y_imu_t *bias
-);
+void ekf_matrix_correct_imu(x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE],
+							const arm_matrix_instance_f64 *R, const y_imu_t *y_meas_full,
+							const y_imu_t *bias);
 
 /**
  * @brief encoder correction step
@@ -84,8 +79,7 @@ void ekf_matrix_correct_imu(
  * @param encoder encoder measurement
  *
  */
-void ekf_matrix_correct_encoder(
-    x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE], const double R, double encoder
-);
+void ekf_matrix_correct_encoder(x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE],
+								const double R, double encoder);
 
 #endif

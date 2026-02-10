@@ -25,9 +25,9 @@
  * @brief Available UART channels in the system
  */
 typedef enum {
-    UART_MOVELLA, // Movella IMU
-    UART_DEBUG_SERIAL, // debugger serial
-    UART_CHANNEL_COUNT // Number of UART channels
+	UART_MOVELLA, // Movella IMU
+	UART_DEBUG_SERIAL, // debugger serial
+	UART_CHANNEL_COUNT // Number of UART channels
 } uart_channel_t;
 
 /**
@@ -35,9 +35,9 @@ typedef enum {
  * @details Uses pointer to static buffer to avoid copying large messages
  */
 typedef struct {
-    uint8_t *data; /**< Pointer to data in static buffer pool */
-    uint32_t len; /**< Message length in bytes */
-    bool busy; /**< Buffer busy flag for double buffering */
+	uint8_t *data; /**< Pointer to data in static buffer pool */
+	uint32_t len; /**< Message length in bytes */
+	bool busy; /**< Buffer busy flag for double buffering */
 } uart_msg_t;
 
 /**
@@ -65,8 +65,8 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
  * @retval W_IO_TIMEOUT No message received within timeout
  * @note Message length will be truncated to UART_MAX_LEN if overflow occurs
  */
-w_status_t
-uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length, uint32_t timeout_ms);
+w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
+					 uint32_t timeout_ms);
 
 /**
  * @brief Write message to UART with timeout
@@ -82,8 +82,8 @@ uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length, uint32_t ti
  * @retval W_IO_ERROR Call to HAL_UART_Transmit_IT failed
  * @note Message length will be truncated to UART_MAX_LEN if overflow occurs
  */
-w_status_t
-uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length, uint32_t timeout_ms);
+w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
+					  uint32_t timeout_ms);
 
 /**
  * @brief Gets the current status of all UART channels

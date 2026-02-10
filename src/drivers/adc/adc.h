@@ -9,19 +9,19 @@
 #define ADC_MAX_COUNTS 0xFFFF // 16 bit full scale, configured in ioc
 
 typedef enum {
-    PROCESSOR_BOARD_VOLTAGE = 0,
-    ADC_CHANNEL_COUNT
+	PROCESSOR_BOARD_VOLTAGE = 0,
+	ADC_CHANNEL_COUNT
 } adc_channel_t;
 
 /**
  * @brief Structure to track ADC errors and status
  */
 typedef struct {
-    bool is_init; /**< Initialization status flag */
-    uint32_t conversion_timeouts; /**< Count of ADC conversion timeouts */
-    uint32_t mutex_timeouts; /**< Count of mutex acquisition timeouts */
-    uint32_t invalid_channels; /**< Count of attempts to read invalid channels */
-    uint32_t overflow_errors; /**< Count of ADC value overflow errors */
+	bool is_init; /**< Initialization status flag */
+	uint32_t conversion_timeouts; /**< Count of ADC conversion timeouts */
+	uint32_t mutex_timeouts; /**< Count of mutex acquisition timeouts */
+	uint32_t invalid_channels; /**< Count of attempts to read invalid channels */
+	uint32_t overflow_errors; /**< Count of ADC value overflow errors */
 } adc_error_data_t;
 
 /**

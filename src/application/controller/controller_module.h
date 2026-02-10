@@ -12,8 +12,7 @@
  * @param ref_signal pointer to store output reference signal (rad)
  * @return W_SUCCESS if successful
  */
-w_status_t controller_module(
-    controller_input_t input, uint32_t act_allowed_ms, double *output_angle, float *ref_signal
-);
+w_status_t controller_module(controller_input_t input, uint32_t act_allowed_ms,
+							 double *output_angle, float *ref_signal);
 
 #endif // CONTROLLER_MODULE_H
