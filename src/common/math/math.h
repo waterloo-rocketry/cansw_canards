@@ -9,7 +9,9 @@
 
 #include <stdbool.h>
 
+#ifndef M_PI
 #define M_PI 3.14159265
+#endif
 
 static inline bool float_equal(double a, double b) {
     return fabs(a - b) < 0.00001;
