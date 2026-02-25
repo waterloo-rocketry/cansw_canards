@@ -1,5 +1,6 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/can_handler/can_handler.h"
+#include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
 #include "drivers/timer/timer.h"
 
@@ -16,6 +17,9 @@
 
 #define TASK_TIMEOUT_MS 1000
 
+#define ACCEL_THRESHOLD_LAUNCH 20 // mimimum acceleration in m/s^2 for a launch to be detected 
+#define NUM_CONSEC_THRESHOLD 20 // number of consecutive detection beyond threshold to satisfy for condition
+
 /**
  * module health status trackers
  */
@@ -29,6 +33,7 @@ typedef struct {
 	struct {
 		uint32_t estimator_init;
 		uint32_t inj_open;
+		uint32_t launch_accel;
 		uint32_t act_delay_elapsed;
 		uint32_t flight_elapsed;
 		uint32_t reset;
@@ -63,6 +68,9 @@ static flight_phase_status_t flight_phase_status = {
 	.event_counts = {0},
 	.event_queue_full_count = 0,
 };
+
+// number of valid sensor detection that would cause a state change
+static int consec_num_detecion = 0;
 
 /**
  * Intialize flight phase module.
@@ -120,6 +128,9 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 			break;
 		case EVENT_INJ_OPEN:
 			flight_phase_status.event_counts.inj_open++;
+			break;
+		case EVENT_LAUNCH_ACCEL:
+			flight_phase_status.event_counts.launch_accel++;
 			break;
 		case EVENT_ACT_DELAY_ELAPSED:
 			flight_phase_status.event_counts.act_delay_elapsed++;
@@ -231,18 +242,12 @@ w_status_t flight_phase_get_act_allowed_ms(uint32_t *act_allowed_ms) {
 w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_state_t *state) {
 	flight_phase_state_t previous_state = *state;
 
+	consec_num_detecion = 0;
+
 	switch (*state) {
 		case STATE_IDLE:
 			if (EVENT_ESTIMATOR_INIT == event) {
 				*state = STATE_SE_INIT;
-			} else if (EVENT_INJ_OPEN == event) {
-				// allowed to skip pad filter state in case it was forgotten or failed etc.
-				// not ideal but would rather run without pad filter than not fly at all
-				*state = STATE_BOOST;
-				// flight starts now
-				xTimerReset(act_delay_timer, 0);
-				xTimerReset(flight_timer, 0);
-				timer_get_ms(&launch_timestamp_ms);
 			} else {
 				// Ignore redundant PAD events or other unexpected events
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -250,13 +255,16 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 			break;
 
 		case STATE_SE_INIT:
-			if (EVENT_INJ_OPEN == event) {
+			if ((EVENT_INJ_OPEN == event) || (EVENT_LAUNCH_ACCEL == event))
+			{
 				*state = STATE_BOOST;
 				// flight starts now
 				xTimerReset(act_delay_timer, 0);
 				xTimerReset(flight_timer, 0);
 				timer_get_ms(&launch_timestamp_ms);
-			} else {
+			}
+			else 
+			{
 				// Ignore redundant or unexpected events - this is a known safe state
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
 			}
@@ -318,11 +326,14 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 
 /**
  * Task to execute the state machine itself. Consumes events and transitions the state
+ * Perform checks to determine if a sensor based transition is nesscary
  */
 void flight_phase_task(void *args) {
 	(void)args;
 	flight_phase_event_t event;
 	while (1) {
+		flight_phase_sensor_detection(&curr_state);
+		
 		if (pdPASS == xQueueReceive(event_queue, &event, pdMS_TO_TICKS(TASK_TIMEOUT_MS))) {
 			log_text(10, "flight_phase", "transition\nentry-state:%d\nevent:%d", curr_state, event);
 
@@ -359,4 +370,44 @@ uint32_t flight_phase_get_status(void) {
 			 flight_phase_status.event_queue_full_count);
 
 	return status_bitfield;
+}
+
+
+/**
+ * @brief would complete sensor-based detection of state change for flight phase
+ * @param state is a pointer to the present state
+ * @return the status of if the function completed properly
+ */
+w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state){
+	bool threshold_detection = false;
+	flight_phase_event_t trigger_event = NULL;
+
+
+	switch (*state)
+	{
+		case STATE_SE_INIT:
+			trigger_event = EVENT_LAUNCH_ACCEL;
+
+			if (ACCEL_THRESHOLD_LAUNCH < imu_handler_get_acceleration(POLOLU_IMU)) {
+				threshold_detection = true;
+			}
+			break;
+
+		default:
+			// TODO
+			break;
+	}
+
+	if (threshold_detection)
+	{
+		consec_num_detecion++;
+
+		if (NUM_CONSEC_THRESHOLD < consec_num_detecion)
+		{
+			flight_phase_send_event(trigger_event);
+			consec_num_detecion = 0;
+		}
+	}
+
+	return W_SUCCESS;
 }
