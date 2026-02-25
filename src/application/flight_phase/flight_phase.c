@@ -242,8 +242,6 @@ w_status_t flight_phase_get_act_allowed_ms(uint32_t *act_allowed_ms) {
 w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_state_t *state) {
 	flight_phase_state_t previous_state = *state;
 
-	consec_num_detecion = 0;
-
 	switch (*state) {
 		case STATE_IDLE:
 			if (EVENT_ESTIMATOR_INIT == event) {
@@ -319,6 +317,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 	// Only count as a transition if the state actually changed
 	if (previous_state != *state) {
 		flight_phase_status.state_transitions++;
+		consec_num_detecion = 0;
 	}
 
 	return W_SUCCESS;
@@ -332,7 +331,7 @@ void flight_phase_task(void *args) {
 	(void)args;
 	flight_phase_event_t event;
 	while (1) {
-		flight_phase_sensor_detection(&curr_state);
+		flight_phase_sensor_detection(&curr_state, &consec_num_detecion);
 		
 		if (pdPASS == xQueueReceive(event_queue, &event, pdMS_TO_TICKS(TASK_TIMEOUT_MS))) {
 			log_text(10, "flight_phase", "transition\nentry-state:%d\nevent:%d", curr_state, event);
@@ -376,19 +375,24 @@ uint32_t flight_phase_get_status(void) {
 /**
  * @brief would complete sensor-based detection of state change for flight phase
  * @param state is a pointer to the present state
+ * @param num_consec_detection is a pointer to the number of consecutive detection made in this particular flight phase
  * @return the status of if the function completed properly
  */
-w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state){
+w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state, int *num_consec_detection) 
+{
 	bool threshold_detection = false;
 	flight_phase_event_t trigger_event = NULL;
 
+	estimator_all_imus_input_t all_imu_data = imu_handler_get_data();
+	double acceleration_magnitude = math_vector3d_norm(all_imu_data.pololu.accelerometer); // TO BE CAHNGED to ST IMU 
 
 	switch (*state)
 	{
 		case STATE_SE_INIT:
 			trigger_event = EVENT_LAUNCH_ACCEL;
 
-			if (ACCEL_THRESHOLD_LAUNCH < imu_handler_get_acceleration(POLOLU_IMU)) {
+			if (ACCEL_THRESHOLD_LAUNCH < acceleration_magnitude)
+			{
 				threshold_detection = true;
 			}
 			break;
@@ -400,12 +404,12 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state){
 
 	if (threshold_detection)
 	{
-		consec_num_detecion++;
+		(*num_consec_detection)++;
 
-		if (NUM_CONSEC_THRESHOLD < consec_num_detecion)
+		if (NUM_CONSEC_THRESHOLD < *num_consec_detection)
 		{
 			flight_phase_send_event(trigger_event);
-			consec_num_detecion = 0;
+			*num_consec_detection = 0;
 		}
 	}
 

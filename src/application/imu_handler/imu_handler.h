@@ -41,6 +41,6 @@ uint32_t imu_handler_get_status(void);
  * @brief Reports all IMU data based on request from outside tasks
  * @return all IMU data
  */
-estimator_all_imus_input_t imu_handler_get_data();
+estimator_all_imus_input_t imu_handler_get_data(void);
 
 #endif // IMU_HANDLER_H
