@@ -14,15 +14,6 @@ typedef struct __attribute__((packed)) {
 	altimu_raw_baro_data_t raw_baro;
 } raw_pololu_data_t;
 
-/**
- * Enum representing an identifier for each imu
- */
-typedef enum {
-	MOVELLA_IMU,
-	POLOLU_IMU,
-	ST_IMU
-} imu_identifier_t;
-
 
 /**
  * @brief Initialize the IMU handler module
@@ -47,11 +38,9 @@ void imu_handler_task(void *argument);
 uint32_t imu_handler_get_status(void);
 
 /**
- * @brief Reports the magnitude of the acceleration depending on the specified type of IMU
- * @param imu_type defines the type of IMU used
- * @return magnitude of acceleration as a double
- * @details accessor for the acceleration based on request
+ * @brief Reports all IMU data based on request from outside tasks
+ * @return all IMU data
  */
-double imu_handler_get_acceleration(imu_identifier_t imu_type);
+estimator_all_imus_input_t imu_handler_get_data();
 
 #endif // IMU_HANDLER_H
