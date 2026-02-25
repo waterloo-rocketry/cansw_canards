@@ -15,6 +15,16 @@ typedef struct __attribute__((packed)) {
 } raw_pololu_data_t;
 
 /**
+ * Enum representing an identifier for each imu
+ */
+typedef enum {
+	MOVELLA_IMU,
+	POLOLU_IMU,
+	ST_IMU
+} imu_identifier_t;
+
+
+/**
  * @brief Initialize the IMU handler module
  * Must be called before scheduler starts
  * @return Status of initialization
@@ -35,5 +45,13 @@ void imu_handler_task(void *argument);
  * for both IMUs being managed by the handler
  */
 uint32_t imu_handler_get_status(void);
+
+/**
+ * @brief Reports the magnitude of the acceleration depending on the specified type of IMU
+ * @param imu_type defines the type of IMU used
+ * @return magnitude of acceleration as a double
+ * @details accessor for the acceleration based on request
+ */
+double imu_handler_get_acceleration(imu_identifier_t imu_type);
 
 #endif // IMU_HANDLER_H
