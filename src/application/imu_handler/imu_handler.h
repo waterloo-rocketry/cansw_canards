@@ -3,6 +3,7 @@
 
 #include "drivers/altimu-10/altimu-10.h"
 #include "rocketlib/include/common.h"
+#include "application/estimator/estimator.h"
 
 /**
  * raw data read from pololu device registers
