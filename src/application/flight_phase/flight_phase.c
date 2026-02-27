@@ -1,6 +1,8 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/can_handler/can_handler.h"
 #include "application/imu_handler/imu_handler.h"
+#include "application/estimator/estimator.h"
+#include "common/math/math-algebra3d.h"
 #include "application/logger/log.h"
 #include "drivers/timer/timer.h"
 
@@ -323,6 +325,62 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 	return W_SUCCESS;
 }
 
+
+/**
+ * @brief would complete sensor-based detection of state change for flight phase
+ * @param state is a pointer to the present state
+ * @param num_consec_detection is a pointer to the number of consecutive detection made in this particular flight phase
+ * @return the status of if the function completed properly
+ */
+w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state, int *num_consec_detection) 
+{
+	bool threshold_detection = false;
+	flight_phase_event_t trigger_event = EVENT_ESTIMATOR_INIT; // Temporary
+
+	estimator_all_imus_input_t all_imu_data = imu_handler_get_data();
+
+	if (true == all_imu_data.pololu.is_dead) 
+	{
+		// TODO: Logging
+		return W_FAILURE;
+	}
+	
+	double acceleration_magnitude = math_vector3d_norm(&all_imu_data.pololu.accelerometer); // TO BE CAHNGED to ST IMU 
+
+	switch (*state)
+	{
+		case STATE_SE_INIT:
+			trigger_event = EVENT_LAUNCH_ACCEL;
+
+			if (ACCEL_THRESHOLD_LAUNCH <= acceleration_magnitude)
+			{
+				threshold_detection = true;
+			}
+			break;
+
+		default:
+			// TODO
+			return W_FAILURE;
+			break;
+	}
+
+	if (threshold_detection)
+	{
+		(*num_consec_detection)++;
+
+		if (NUM_CONSEC_THRESHOLD <= *num_consec_detection)
+		{
+			if (W_SUCCESS != flight_phase_send_event(trigger_event)) {
+				// TODO: Logging
+			}
+			*num_consec_detection = 0;
+		}
+	}
+	
+
+	return W_SUCCESS;
+}
+
 /**
  * Task to execute the state machine itself. Consumes events and transitions the state
  * Perform checks to determine if a sensor based transition is nesscary
@@ -369,49 +427,4 @@ uint32_t flight_phase_get_status(void) {
 			 flight_phase_status.event_queue_full_count);
 
 	return status_bitfield;
-}
-
-
-/**
- * @brief would complete sensor-based detection of state change for flight phase
- * @param state is a pointer to the present state
- * @param num_consec_detection is a pointer to the number of consecutive detection made in this particular flight phase
- * @return the status of if the function completed properly
- */
-w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state, int *num_consec_detection) 
-{
-	bool threshold_detection = false;
-	flight_phase_event_t trigger_event = NULL;
-
-	estimator_all_imus_input_t all_imu_data = imu_handler_get_data();
-	double acceleration_magnitude = math_vector3d_norm(all_imu_data.pololu.accelerometer); // TO BE CAHNGED to ST IMU 
-
-	switch (*state)
-	{
-		case STATE_SE_INIT:
-			trigger_event = EVENT_LAUNCH_ACCEL;
-
-			if (ACCEL_THRESHOLD_LAUNCH < acceleration_magnitude)
-			{
-				threshold_detection = true;
-			}
-			break;
-
-		default:
-			// TODO
-			break;
-	}
-
-	if (threshold_detection)
-	{
-		(*num_consec_detection)++;
-
-		if (NUM_CONSEC_THRESHOLD < *num_consec_detection)
-		{
-			flight_phase_send_event(trigger_event);
-			*num_consec_detection = 0;
-		}
-	}
-
-	return W_SUCCESS;
 }
