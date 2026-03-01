@@ -19,8 +19,8 @@
 
 #define TASK_TIMEOUT_MS 1000
 
-#define ACCEL_THRESHOLD_LAUNCH 20 // mimimum acceleration in m/s^2 for a launch to be detected 
-#define NUM_CONSEC_THRESHOLD 20 // number of consecutive detection beyond threshold to satisfy for condition
+static const float32_t ACCEL_THRESHOLD_LAUNCH  = 20; // mimimum acceleration in m/s^2 for a launch to be detected 
+static const float32_t NUM_CONSEC_THRESHOLD = 20; // number of consecutive detection beyond threshold to satisfy for condition
 
 /**
  * module health status trackers
@@ -247,14 +247,14 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 	switch (*state) {
 		case STATE_IDLE:
 			if (EVENT_ESTIMATOR_INIT == event) {
-				*state = STATE_SE_INIT;
+				*state = STATE_PAD_FILTER;
 			} else {
 				// Ignore redundant PAD events or other unexpected events
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
 			}
 			break;
 
-		case STATE_SE_INIT:
+		case STATE_PAD_FILTER:
 			if ((EVENT_INJ_OPEN == event) || (EVENT_LAUNCH_ACCEL == event))
 			{
 				*state = STATE_BOOST;
@@ -329,27 +329,28 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 /**
  * @brief would complete sensor-based detection of state change for flight phase
  * @param state is a pointer to the present state
+ * @param all_imu_data is a pointer to the current the imu data
  * @param num_consec_detection is a pointer to the number of consecutive detection made in this particular flight phase
+ * @param sensor_event a pointer to return the event the sensor triggers (default returns EVENT_NULL)
  * @return the status of if the function completed properly
  */
-w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state, int *num_consec_detection) 
+w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state, const estimator_all_imus_input_t *all_imu_data, int *num_consec_detection, flight_phase_event_t *sensor_event) 
 {
+	*sensor_event = EVENT_NULL;
 	bool threshold_detection = false;
-	flight_phase_event_t trigger_event = EVENT_ESTIMATOR_INIT; // Temporary
+	flight_phase_event_t trigger_event = EVENT_NULL; // Temporary
 
-	estimator_all_imus_input_t all_imu_data = imu_handler_get_data();
-
-	if (true == all_imu_data.pololu.is_dead) 
+	if (true == all_imu_data->pololu.is_dead) 
 	{
 		// TODO: Logging
 		return W_FAILURE;
 	}
 	
-	double acceleration_magnitude = math_vector3d_norm(&all_imu_data.pololu.accelerometer); // TO BE CAHNGED to ST IMU 
+	double acceleration_magnitude = math_vector3d_norm(&(all_imu_data->pololu.accelerometer)); // TO BE CAHNGED to ST IMU 
 
 	switch (*state)
 	{
-		case STATE_SE_INIT:
+		case STATE_PAD_FILTER:
 			trigger_event = EVENT_LAUNCH_ACCEL;
 
 			if (ACCEL_THRESHOLD_LAUNCH <= acceleration_magnitude)
@@ -370,9 +371,7 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state, int 
 
 		if (NUM_CONSEC_THRESHOLD <= *num_consec_detection)
 		{
-			if (W_SUCCESS != flight_phase_send_event(trigger_event)) {
-				// TODO: Logging
-			}
+			*sensor_event = trigger_event;
 			*num_consec_detection = 0;
 		}
 	}
@@ -388,8 +387,40 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state, int 
 void flight_phase_task(void *args) {
 	(void)args;
 	flight_phase_event_t event;
+	flight_phase_event_t sensor_event;
+	estimator_all_imus_input_t imu_data;
+	bool sucessful_data_collection;
+
 	while (1) {
-		flight_phase_sensor_detection(&curr_state, &consec_num_detecion);
+		sucessful_data_collection = W_SUCCESS;
+		sensor_event = EVENT_NULL;
+
+		sucessful_data_collection |= imu_handler_get_data(&imu_data);
+		// TO DO ADD Estimator data collection call
+
+		if (W_SUCCESS == sucessful_data_collection) 
+		{
+			if (flight_phase_sensor_detection(&curr_state, &imu_data, &consec_num_detecion, &sensor_event) != W_SUCCESS)
+			{
+				// TO DO LOGGING
+			}
+			else 
+			{
+				if (EVENT_NULL != sensor_event)
+				{
+					// TO DO LOGGING for sensor triggered event
+
+					if (flight_phase_send_event(sensor_event) != W_SUCCESS)
+					{
+						// TO DO LOGGING
+					}
+				}
+			}
+		} 
+		else 
+		{
+			// TO DO LOGGING
+		}
 		
 		if (pdPASS == xQueueReceive(event_queue, &event, pdMS_TO_TICKS(TASK_TIMEOUT_MS))) {
 			log_text(10, "flight_phase", "transition\nentry-state:%d\nevent:%d", curr_state, event);
