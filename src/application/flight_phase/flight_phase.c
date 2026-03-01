@@ -1,9 +1,9 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/can_handler/can_handler.h"
-#include "application/imu_handler/imu_handler.h"
 #include "application/estimator/estimator.h"
-#include "common/math/math-algebra3d.h"
+#include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "common/math/math-algebra3d.h"
 #include "drivers/timer/timer.h"
 
 #include "canlib.h"
@@ -14,13 +14,17 @@
 
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these
-static const float32_t ACT_DELAY_MS  = 11000; // Q - the minimum time after launch before allowing canards to actuate
-static const float32_t FLIGHT_TIMEOUT_MS = 49000; // K - the approximate time between launch and apogee
+static const float32_t ACT_DELAY_MS =
+	11000; // Q - the minimum time after launch before allowing canards to actuate
+static const float32_t FLIGHT_TIMEOUT_MS =
+	49000; // K - the approximate time between launch and apogee
 
 static const float32_t TASK_TIMEOUT_MS = 1000;
 
-static const float32_t ACCEL_THRESHOLD_LAUNCH  = 20; // mimimum acceleration in m/s^2 for a launch to be detected 
-static const float32_t NUM_CONSEC_THRESHOLD = 20; // number of consecutive detection beyond threshold to satisfy for condition
+static const float32_t ACCEL_THRESHOLD_LAUNCH =
+	20; // mimimum acceleration in m/s^2 for a launch to be detected
+static const float32_t NUM_CONSEC_THRESHOLD =
+	20; // number of consecutive detection beyond threshold to satisfy for condition
 
 /**
  * module health status trackers
@@ -255,16 +259,13 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 			break;
 
 		case STATE_PAD_FILTER:
-			if ((EVENT_INJ_OPEN == event) || (EVENT_LAUNCH_ACCEL == event))
-			{
+			if ((EVENT_INJ_OPEN == event) || (EVENT_LAUNCH_ACCEL == event)) {
 				*state = STATE_BOOST;
 				// flight starts now
 				xTimerReset(act_delay_timer, 0);
 				xTimerReset(flight_timer, 0);
 				timer_get_ms(&launch_timestamp_ms);
-			}
-			else 
-			{
+			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
 			}
@@ -325,36 +326,37 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 	return W_SUCCESS;
 }
 
-
 /**
  * @brief would complete sensor-based detection of state change for flight phase
  * @param state is a pointer to the present state
  * @param all_imu_data is a pointer to the current the imu data
- * @param num_consec_detection is a pointer to the number of consecutive detection made in this particular flight phase
- * @param sensor_event a pointer to return the event the sensor triggers (default returns EVENT_NULL)
+ * @param num_consec_detection is a pointer to the number of consecutive detection made in this
+ * particular flight phase
+ * @param sensor_event a pointer to return the event the sensor triggers (default returns
+ * EVENT_NULL)
  * @return the status of if the function completed properly
  */
-w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state, const estimator_all_imus_input_t *all_imu_data, int *num_consec_detection, flight_phase_event_t *sensor_event) 
-{
+w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
+										 const estimator_all_imus_input_t *all_imu_data,
+										 int *num_consec_detection,
+										 flight_phase_event_t *sensor_event) {
 	*sensor_event = EVENT_NULL;
 	bool threshold_detection = false;
 	flight_phase_event_t trigger_event = EVENT_NULL; // Temporary
 
-	if (true == all_imu_data->pololu.is_dead) 
-	{
+	if (true == all_imu_data->pololu.is_dead) {
 		// TODO: Logging
 		return W_FAILURE;
 	}
-	
-	double acceleration_magnitude = math_vector3d_norm(&(all_imu_data->pololu.accelerometer)); // TO BE CAHNGED to ST IMU 
 
-	switch (*state)
-	{
+	double acceleration_magnitude =
+		math_vector3d_norm(&(all_imu_data->pololu.accelerometer)); // TO BE CAHNGED to ST IMU
+
+	switch (*state) {
 		case STATE_PAD_FILTER:
 			trigger_event = EVENT_LAUNCH_ACCEL;
 
-			if (ACCEL_THRESHOLD_LAUNCH <= acceleration_magnitude)
-			{
+			if (ACCEL_THRESHOLD_LAUNCH <= acceleration_magnitude) {
 				threshold_detection = true;
 			}
 			break;
@@ -365,17 +367,14 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state, cons
 			break;
 	}
 
-	if (threshold_detection)
-	{
+	if (threshold_detection) {
 		(*num_consec_detection)++;
 
-		if (NUM_CONSEC_THRESHOLD <= *num_consec_detection)
-		{
+		if (NUM_CONSEC_THRESHOLD <= *num_consec_detection) {
 			*sensor_event = trigger_event;
 			*num_consec_detection = 0;
 		}
 	}
-	
 
 	return W_SUCCESS;
 }
@@ -398,30 +397,23 @@ void flight_phase_task(void *args) {
 		sucessful_data_collection |= imu_handler_get_data(&imu_data);
 		// TO DO ADD Estimator data collection call
 
-		if (W_SUCCESS == sucessful_data_collection) 
-		{
-			if (flight_phase_sensor_detection(&curr_state, &imu_data, &consec_num_detecion, &sensor_event) != W_SUCCESS)
-			{
+		if (W_SUCCESS == sucessful_data_collection) {
+			if (flight_phase_sensor_detection(
+					&curr_state, &imu_data, &consec_num_detecion, &sensor_event) != W_SUCCESS) {
 				// TO DO LOGGING
-			}
-			else 
-			{
-				if (EVENT_NULL != sensor_event)
-				{
+			} else {
+				if (EVENT_NULL != sensor_event) {
 					// TO DO LOGGING for sensor triggered event
 
-					if (flight_phase_send_event(sensor_event) != W_SUCCESS)
-					{
+					if (flight_phase_send_event(sensor_event) != W_SUCCESS) {
 						// TO DO LOGGING
 					}
 				}
 			}
-		} 
-		else 
-		{
+		} else {
 			// TO DO LOGGING
 		}
-		
+
 		if (pdPASS == xQueueReceive(event_queue, &event, pdMS_TO_TICKS(TASK_TIMEOUT_MS))) {
 			log_text(10, "flight_phase", "transition\nentry-state:%d\nevent:%d", curr_state, event);
 
