@@ -21,7 +21,7 @@ typedef enum {
  * Enum representing a state transition event
  */
 typedef enum {
-	EVENT_NULL = 0, 
+	EVENT_NULL = 0,
 	EVENT_ESTIMATOR_INIT,
 	EVENT_INJ_OPEN,
 	EVENT_LAUNCH_ACCEL,
