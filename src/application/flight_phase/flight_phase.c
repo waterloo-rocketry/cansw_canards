@@ -14,10 +14,10 @@
 
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these
-#define ACT_DELAY_MS 11000 // Q - the minimum time after launch before allowing canards to actuate
-#define FLIGHT_TIMEOUT_MS 49000 // K - the approximate time between launch and apogee
+static const float32_t ACT_DELAY_MS  = 11000; // Q - the minimum time after launch before allowing canards to actuate
+static const float32_t FLIGHT_TIMEOUT_MS = 49000; // K - the approximate time between launch and apogee
 
-#define TASK_TIMEOUT_MS 1000
+static const float32_t TASK_TIMEOUT_MS = 1000;
 
 static const float32_t ACCEL_THRESHOLD_LAUNCH  = 20; // mimimum acceleration in m/s^2 for a launch to be detected 
 static const float32_t NUM_CONSEC_THRESHOLD = 20; // number of consecutive detection beyond threshold to satisfy for condition
