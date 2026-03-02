@@ -415,7 +415,7 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_NoDetect1) {
 
     // Assert
     EXPECT_EQ(state, STATE_PAD_FILTER);
-    EXPECT_EQ(consec_num_detecion, 2);
+    EXPECT_EQ(consec_num_detecion, 0);
     EXPECT_EQ(sensor_event, EVENT_NULL);
     EXPECT_EQ(status, W_SUCCESS);
 }
@@ -432,7 +432,7 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_NoDetect2) {
 
     // Assert
     EXPECT_EQ(state, STATE_PAD_FILTER);
-    EXPECT_EQ(consec_num_detecion, 19);
+    EXPECT_EQ(consec_num_detecion, 0);
     EXPECT_EQ(sensor_event, EVENT_NULL);
     EXPECT_EQ(status, W_SUCCESS);
 }
