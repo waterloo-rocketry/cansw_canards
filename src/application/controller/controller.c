@@ -3,10 +3,10 @@
 #include "application/controller/controller_module.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
+#include "canlib/message/msg_actuator.h"
 #include "drivers/timer/timer.h"
 #include "queue.h"
 #include "task.h"
-#include "third_party/canlib/message/msg_actuator.h"
 #include <math.h>
 
 static QueueHandle_t internal_state_queue;

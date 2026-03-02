@@ -37,6 +37,7 @@ set(FFF_DIR ${MOCKS_DIR}/fff)
 set(UNIT_TESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/unit)
 # Full path to the file
 set(PROC_SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+set(LIB_DIR "${CMAKE_SOURCE_DIR}/lib")
 
 # add ctest
 include(CTest)
@@ -154,7 +155,7 @@ add_custom_target(clean_coverage
 
 # add cmsis dsp library. Do this manually instead of using the cmsis-dsp
 # CMakeLists.txt to avoid building unused cmsisdsp modules which would be slow and fat (derogatory)
-set(CMSISDSP_DIR ${PROC_SRC_DIR}/third_party/CMSIS-DSP)
+set(CMSISDSP_DIR ${LIB_DIR}/third_party/CMSIS-DSP)
 add_library(CMSISDSP STATIC
     ${CMSISDSP_DIR}/Source/BasicMathFunctions/BasicMathFunctions.c 
     ${CMSISDSP_DIR}/Source/InterpolationFunctions/InterpolationFunctions.c 
@@ -166,7 +167,7 @@ add_library(CMSISDSP STATIC
 target_include_directories(CMSISDSP PUBLIC "${CMSISDSP_DIR}/Include")
 target_include_directories(CMSISDSP PUBLIC "${CMSISDSP_DIR}/PrivateInclude")
 # cmsis-dsp also requires the core cmsis files. use the cmsis folder provided by cubemx
-target_include_directories(CMSISDSP PUBLIC "${PROC_SRC_DIR}/third_party/cubemx_autogen/Drivers/CMSIS/Include")
+target_include_directories(CMSISDSP PUBLIC "${LIB_DIR}/third_party/cubemx_autogen/Drivers/CMSIS/Include")
 
 
 # define the common include paths that all tests may use
@@ -174,8 +175,9 @@ set(TEST_COMMON_INCS
     ${MOCKS_DIR}
     ${FFF_DIR}
     ${PROC_SRC_DIR}
-    ${PROC_SRC_DIR}/third_party
-    ${PROC_SRC_DIR}/third_party/canlib
+    ${LIB_DIR}
+    ${LIB_DIR}/third_party
+    ${LIB_DIR}/third_party/canlib
 )
 
 # Add FFF as a header-only library

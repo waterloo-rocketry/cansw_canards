@@ -9,10 +9,10 @@
 #include "drivers/timer/timer.h"
 
 // Include necessary headers for fatal error handler
+#include "canlib/can.h" // For can_msg_t, can_send
+#include "canlib/message/msg_general.h" // For build_debug_raw_msg
+#include "canlib/message_types.h" // For MSG_DEBUG_RAW, PRIO_HIGH, etc.
 #include "stm32h7xx_hal.h" // For __disable_irq, __NOP
-#include "third_party/canlib/can.h" // For can_msg_t, can_send
-#include "third_party/canlib/message/msg_general.h" // For build_debug_raw_msg
-#include "third_party/canlib/message_types.h" // For MSG_DEBUG_RAW, PRIO_HIGH, etc.
 #include <stdint.h>
 #include <string.h>
 
@@ -32,6 +32,12 @@ static w_status_t can_reset_callback(const can_msg_t *msg) {
 		return W_FAILURE; // Should never reach here
 	}
 	return W_SUCCESS;
+}
+
+void testttt() {
+	volatile int dummy = 0;
+	dummy++;
+	return;
 }
 
 static w_status_t can_led_on_callback(const can_msg_t *msg) {

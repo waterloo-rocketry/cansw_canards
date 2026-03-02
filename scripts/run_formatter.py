@@ -120,7 +120,7 @@ def run_formatter(source, target, env):
         return
 
     # build command with quoted paths. This handles path formatting for mac/linux/windows
-    style_file = os.path.join(SOURCE_DIR, "src/third_party/rocketlib/.clang-format")
+    style_file = os.path.join(SOURCE_DIR, "lib/third_party/rocketlib/.clang-format")
     files_str = " ".join(f'"{os.path.normpath(f)}"' for f in files)
     cmd = f'"{clang_format}" -i --style="file:{style_file}" {files_str}'
 

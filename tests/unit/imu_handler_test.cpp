@@ -19,74 +19,74 @@ extern "C" {
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 #include "task.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 
-// Forward declare imu_handler_run
-extern w_status_t imu_handler_run(uint32_t loop_count);
+    // Forward declare imu_handler_run
+    extern w_status_t imu_handler_run(uint32_t loop_count);
 
-// Define all fake functions for IMUs using FFF
-FAKE_VALUE_FUNC(w_status_t, altimu_init);
-// FAKE_VALUE_FUNC(w_status_t, altimu_get_acc_data, vector3d_t *, altimu_raw_imu_data_t *);
-// FAKE_VALUE_FUNC(w_status_t, altimu_get_gyro_data, vector3d_t *, altimu_raw_imu_data_t *);
-FAKE_VALUE_FUNC(
-    w_status_t, altimu_get_gyro_acc_data, vector3d_t *, vector3d_t *, altimu_raw_imu_data_t *,
-    altimu_raw_imu_data_t *
-);
-FAKE_VALUE_FUNC(w_status_t, altimu_get_mag_data, vector3d_t *, altimu_raw_imu_data_t *);
-FAKE_VALUE_FUNC(
-    w_status_t, altimu_get_baro_data, altimu_barometer_data_t *, altimu_raw_baro_data_t *
-);
-FAKE_VALUE_FUNC(w_status_t, altimu_check_sanity);
+    // Define all fake functions for IMUs using FFF
+    FAKE_VALUE_FUNC(w_status_t, altimu_init);
+    // FAKE_VALUE_FUNC(w_status_t, altimu_get_acc_data, vector3d_t *, altimu_raw_imu_data_t *);
+    // FAKE_VALUE_FUNC(w_status_t, altimu_get_gyro_data, vector3d_t *, altimu_raw_imu_data_t *);
+    FAKE_VALUE_FUNC(
+        w_status_t, altimu_get_gyro_acc_data, vector3d_t*, vector3d_t*, altimu_raw_imu_data_t*,
+        altimu_raw_imu_data_t*
+    );
+    FAKE_VALUE_FUNC(w_status_t, altimu_get_mag_data, vector3d_t*, altimu_raw_imu_data_t*);
+    FAKE_VALUE_FUNC(
+        w_status_t, altimu_get_baro_data, altimu_barometer_data_t*, altimu_raw_baro_data_t*
+    );
+    FAKE_VALUE_FUNC(w_status_t, altimu_check_sanity);
 
-FAKE_VALUE_FUNC(w_status_t, movella_init);
-FAKE_VALUE_FUNC(w_status_t, movella_get_data, movella_data_t *, uint32_t);
+    FAKE_VALUE_FUNC(w_status_t, movella_init);
+    FAKE_VALUE_FUNC(w_status_t, movella_get_data, movella_data_t*, uint32_t);
 
-FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float *);
-FAKE_VALUE_FUNC(w_status_t, estimator_init);
-FAKE_VALUE_FUNC(w_status_t, estimator_update_imu_data, estimator_all_imus_input_t *);
+    FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float*);
+    FAKE_VALUE_FUNC(w_status_t, estimator_init);
+    FAKE_VALUE_FUNC(w_status_t, estimator_update_imu_data, estimator_all_imus_input_t*);
 
-// Fakes for logging
-FAKE_VALUE_FUNC(w_status_t, log_init);
-FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
-FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t *);
-FAKE_VOID_FUNC(log_task, void *);
+    // Fakes for logging
+    FAKE_VALUE_FUNC(w_status_t, log_init);
+    FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char*, const char*, ...);
+    FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t*);
+    FAKE_VOID_FUNC(log_task, void*);
 
-// fake can stuff
-// w_status_t can_handler_transmit(const can_msg_t *msg);
-FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, const can_msg_t *);
-FAKE_VALUE_FUNC(
-    bool, build_baro_data_msg, can_msg_prio_t, uint16_t, can_imu_id_t, uint32_t, uint16_t,
-    can_msg_t *
-);
-FAKE_VALUE_FUNC(
-    bool, build_imu_data_msg, can_msg_prio_t, uint16_t, char, can_imu_id_t, uint16_t, uint16_t,
-    can_msg_t *
-);
-FAKE_VALUE_FUNC(
-    bool, build_mag_data_msg, can_msg_prio_t, uint16_t, char, can_imu_id_t, uint16_t, can_msg_t *
-);
+    // fake can stuff
+    // w_status_t can_handler_transmit(const can_msg_t *msg);
+    FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, const can_msg_t*);
+    FAKE_VALUE_FUNC(
+        bool, build_baro_data_msg, can_msg_prio_t, uint16_t, can_imu_id_t, uint32_t, uint16_t,
+        can_msg_t*
+    );
+    FAKE_VALUE_FUNC(
+        bool, build_imu_data_msg, can_msg_prio_t, uint16_t, char, can_imu_id_t, uint16_t, uint16_t,
+        can_msg_t*
+    );
+    FAKE_VALUE_FUNC(
+        bool, build_mag_data_msg, can_msg_prio_t, uint16_t, char, can_imu_id_t, uint16_t, can_msg_t*
+    );
 
-// Static buffer for IMU data capture in tests
-static estimator_all_imus_input_t captured_data;
+    // Static buffer for IMU data capture in tests
+    static estimator_all_imus_input_t captured_data;
 }
 
 // Define input IMU vectors (ACC, GYRO, MAG)
-static const vector3d_t INPUT_ACC = {1.0, 2.0, 3.0};
-static const vector3d_t INPUT_GYRO = {4.0, 5.0, 6.0};
-static const vector3d_t INPUT_MAG = {7.0, 8.0, 9.0};
-static const vector3d_t INPUT_EULER = {10.0, 20.0, 30.0};
+static const vector3d_t INPUT_ACC = { 1.0, 2.0, 3.0 };
+static const vector3d_t INPUT_GYRO = { 4.0, 5.0, 6.0 };
+static const vector3d_t INPUT_MAG = { 7.0, 8.0, 9.0 };
+static const vector3d_t INPUT_EULER = { 10.0, 20.0, 30.0 };
 static const double INPUT_BARO = 101325.0; // Standard atmospheric pressure in Pa
 
-static const vector3d_t EXPECTED_ACC_MOVELLA = {3.0, 1.0, 2.0};
+static const vector3d_t EXPECTED_ACC_MOVELLA = { 3.0, 1.0, 2.0 };
 // expect imu handler convert pololu from g to m/s^2 before orientation correction
-static const vector3d_t EXPECTED_ACC_POLOLU = {-3.0 * 9.81f, -1.0 * 9.81f, 2.0 * 9.81f};
+static const vector3d_t EXPECTED_ACC_POLOLU = { -3.0 * 9.81f, -1.0 * 9.81f, 2.0 * 9.81f };
 // expect imu handler converts pololu from deg to rad before orientation correction
-static const vector3d_t EXPECTED_GYRO_MOVELLA = {6.0, 4.0, 5.0};
+static const vector3d_t EXPECTED_GYRO_MOVELLA = { 6.0, 4.0, 5.0 };
 static const vector3d_t EXPECTED_GYRO_POLOLU = {
     -6.0 * M_PI / 180, -4.0 * M_PI / 180, 5.0 * M_PI / 180
 };
-static const vector3d_t EXPECTED_MAG_MOVELLA = {9.0, 7.0, 8.0};
-static const vector3d_t EXPECTED_MAG_POLOLU = {-9.0, -7.0, 8.0};
+static const vector3d_t EXPECTED_MAG_MOVELLA = { 9.0, 7.0, 8.0 };
+static const vector3d_t EXPECTED_MAG_POLOLU = { -9.0, -7.0, 8.0 };
 // static const vector3d_t EXPECTED_EULER = {10.0, 20.0, 30.0}; // ahrs not used rn
 static const double EXPECTED_BARO = 101325.0; // Standard atmospheric pressure in Pa
 
@@ -94,12 +94,12 @@ static const double EXPECTED_BARO = 101325.0; // Standard atmospheric pressure i
 static const double tolerance = 0.00005;
 
 // Helper functions for setting up test data
-static w_status_t timer_get_ms_custom_fake(float *time_ms) {
+static w_status_t timer_get_ms_custom_fake(float* time_ms) {
     *time_ms = 1000.0;
     return W_SUCCESS;
 }
 
-static w_status_t altimu_get_acc_data_success(vector3d_t *acc, altimu_raw_imu_data_t *raw_acc) {
+static w_status_t altimu_get_acc_data_success(vector3d_t* acc, altimu_raw_imu_data_t* raw_acc) {
     *acc = INPUT_ACC;
     raw_acc->x = 100;
     raw_acc->y = 200;
@@ -107,7 +107,7 @@ static w_status_t altimu_get_acc_data_success(vector3d_t *acc, altimu_raw_imu_da
     return W_SUCCESS;
 }
 
-static w_status_t altimu_get_gyro_data_success(vector3d_t *gyro, altimu_raw_imu_data_t *raw_gyro) {
+static w_status_t altimu_get_gyro_data_success(vector3d_t* gyro, altimu_raw_imu_data_t* raw_gyro) {
     *gyro = INPUT_GYRO;
     raw_gyro->x = 400;
     raw_gyro->y = 500;
@@ -115,7 +115,7 @@ static w_status_t altimu_get_gyro_data_success(vector3d_t *gyro, altimu_raw_imu_
     return W_SUCCESS;
 }
 
-static w_status_t altimu_get_mag_data_success(vector3d_t *mag, altimu_raw_imu_data_t *raw_mag) {
+static w_status_t altimu_get_mag_data_success(vector3d_t* mag, altimu_raw_imu_data_t* raw_mag) {
     *mag = INPUT_MAG;
     raw_mag->x = 700;
     raw_mag->y = 800;
@@ -124,8 +124,8 @@ static w_status_t altimu_get_mag_data_success(vector3d_t *mag, altimu_raw_imu_da
 }
 
 static w_status_t altimu_get_gyro_acc_data_success(
-    vector3d_t *acc_data, vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_acc,
-    altimu_raw_imu_data_t *raw_gyro
+    vector3d_t* acc_data, vector3d_t* gyro_data, altimu_raw_imu_data_t* raw_acc,
+    altimu_raw_imu_data_t* raw_gyro
 ) {
     *acc_data = INPUT_ACC;
     *gyro_data = INPUT_GYRO;
@@ -139,7 +139,7 @@ static w_status_t altimu_get_gyro_acc_data_success(
 }
 
 static w_status_t
-altimu_get_baro_data_success(altimu_barometer_data_t *baro, altimu_raw_baro_data_t *raw_baro) {
+altimu_get_baro_data_success(altimu_barometer_data_t* baro, altimu_raw_baro_data_t* raw_baro) {
     baro->pressure = INPUT_BARO;
     baro->temperature = 25.0;
     raw_baro->pressure = 101325;
@@ -147,7 +147,7 @@ altimu_get_baro_data_success(altimu_barometer_data_t *baro, altimu_raw_baro_data
     return W_SUCCESS;
 }
 
-static w_status_t movella_get_data_success(movella_data_t *data, uint32_t timeout_ms) {
+static w_status_t movella_get_data_success(movella_data_t* data, uint32_t timeout_ms) {
     data->acc = INPUT_ACC;
     data->gyr = INPUT_GYRO;
     data->mag = INPUT_MAG;
@@ -157,7 +157,7 @@ static w_status_t movella_get_data_success(movella_data_t *data, uint32_t timeou
     return W_SUCCESS;
 }
 
-static w_status_t estimator_update_capture(estimator_all_imus_input_t *data) {
+static w_status_t estimator_update_capture(estimator_all_imus_input_t* data) {
     memcpy(&captured_data, data, sizeof(estimator_all_imus_input_t));
     return W_SUCCESS;
 }

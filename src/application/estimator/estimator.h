@@ -4,7 +4,7 @@
 #include "application/controller/controller.h"
 #include "application/estimator/estimator_types.h"
 #include "common/math/math.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 

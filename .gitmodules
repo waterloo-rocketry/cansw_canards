@@ -1,8 +1,8 @@
 [submodule "src/third_party/canlib"]
-	path = src/third_party/canlib
+	path = lib/third_party/canlib
 	url = https://github.com/waterloo-rocketry/canlib
 [submodule "src/third_party/rocketlib"]
-	path = src/third_party/rocketlib
+	path = lib/third_party/rocketlib
 	url = https://github.com/waterloo-rocketry/rocketlib
 [submodule "tests/mocks/fff"]
 	path = tests/mocks/fff
@@ -11,8 +11,8 @@
 	path = tests/external/googletest
 	url = https://github.com/google/googletest.git
 [submodule "src/third_party/CMSIS-DSP"]
-	path = src/third_party/CMSIS-DSP
+	path = lib/third_party/CMSIS-DSP
 	url = https://github.com/ARM-software/CMSIS-DSP
 [submodule "src/third_party/xsens-mti"]
-	path = src/third_party/xsens-mti
+	path = lib/third_party/xsens-mti
 	url = https://github.com/waterloo-rocketry/xsens-mti

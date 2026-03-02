@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-// add includes like freertos, hal, proc headers, etc
+    // add includes like freertos, hal, proc headers, etc
 #include "FreeRTOS.h"
 #include "application/controller/controller.h"
 #include "application/controller/controller_module.h"
@@ -11,9 +11,9 @@ extern "C" {
 #include "math.h"
 #include "queue.h"
 #include "rocketlib/include/common.h"
-#include "third_party/canlib/message/msg_actuator.h"
+#include "canlib/message/msg_actuator.h"
 
-FAKE_VALUE_FUNC(w_status_t, log_text, const char *, const char *);
+    FAKE_VALUE_FUNC(w_status_t, log_text, const char*, const char*);
 }
 
 #define TOL 1e-4 // tolerance for float comparisons
@@ -58,7 +58,7 @@ fprintf('Reference Signal (r): %.8f rad (%.4f deg)\n', r, rad2deg(r));
 
 TEST_F(ControllerTest, Step1) {
     // Arrange
-    controller_input_t input = {0};
+    controller_input_t input = { 0 };
     input.roll_state.roll_angle = 0.16345;
     input.roll_state.roll_rate = 0.154534;
     input.roll_state.canard_angle = 0.000134;
@@ -83,7 +83,7 @@ TEST_F(ControllerTest, Step1) {
 
 TEST_F(ControllerTest, Step2) {
     // Arrange
-    controller_input_t input = {0};
+    controller_input_t input = { 0 };
     input.roll_state.roll_angle = 0.16345;
     input.roll_state.roll_rate = 0.154534;
     input.roll_state.canard_angle = 0.000134;
@@ -108,7 +108,7 @@ TEST_F(ControllerTest, Step2) {
 
 TEST_F(ControllerTest, Step3) {
     // Arrange
-    controller_input_t input = {0};
+    controller_input_t input = { 0 };
     input.roll_state.roll_angle = 0.16345;
     input.roll_state.roll_rate = 0.154534;
     input.roll_state.canard_angle = 0.000134;
@@ -133,7 +133,7 @@ TEST_F(ControllerTest, Step3) {
 
 TEST_F(ControllerTest, Step4) {
     // Arrange
-    controller_input_t input = {0};
+    controller_input_t input = { 0 };
     input.roll_state.roll_angle = 0.16345;
     input.roll_state.roll_rate = 0.154534;
     input.roll_state.canard_angle = 0.000134;
@@ -177,7 +177,7 @@ fprintf('Reference Signal (r): %.8f rad (%.4f deg)\n', r, rad2deg(r));
  */
 TEST_F(ControllerTest, Step2MoreConds) {
     // Arrange
-    controller_input_t input = {0};
+    controller_input_t input = { 0 };
     input.roll_state.roll_angle = 0.16345;
     input.roll_state.roll_rate = 2.54534;
     input.roll_state.canard_angle = -1.00134;
@@ -203,7 +203,7 @@ TEST_F(ControllerTest, Step2MoreConds) {
 
 TEST_F(ControllerTest, CondsOutOfBounds) {
     // Arrange
-    controller_input_t input = {0};
+    controller_input_t input = { 0 };
     input.roll_state.roll_angle = 0.16345;
     input.roll_state.roll_rate = 2.54534;
     input.roll_state.canard_angle = -1.00134;

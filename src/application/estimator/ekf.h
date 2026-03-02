@@ -7,7 +7,7 @@
 #include "application/estimator/estimator_types.h"
 #include "arm_math.h"
 #include "common/math/math.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 #include <stdbool.h>
 
 /**

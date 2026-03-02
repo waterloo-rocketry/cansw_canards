@@ -16,39 +16,39 @@ extern "C" {
 #include "drivers/timer/timer.h"
 #include "queue.h"
 #include "task.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 
-extern w_status_t controller_run_loop();
+    extern w_status_t controller_run_loop();
 
-DEFINE_FFF_GLOBALS;
+    DEFINE_FFF_GLOBALS;
 }
 
 // Define Fakes
 // flight_phase_state_t flight_phase_get_state(void);
 FAKE_VALUE_FUNC(flight_phase_state_t, flight_phase_get_state);
 // bool get_analog_data(const can_msg_t *msg, can_analog_sensor_id_t *sensor_id, uint16_t *value);
-FAKE_VALUE_FUNC(bool, get_analog_data, const can_msg_t *, can_analog_sensor_id_t *, uint16_t *);
-FAKE_VOID_FUNC(proc_handle_fatal_error, const char *);
+FAKE_VALUE_FUNC(bool, get_analog_data, const can_msg_t*, can_analog_sensor_id_t*, uint16_t*);
+FAKE_VOID_FUNC(proc_handle_fatal_error, const char*);
 // w_status_t can_handler_transmit(const can_msg_t *msg);
-FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, const can_msg_t *);
-FAKE_VALUE_FUNC(w_status_t, flight_phase_get_act_allowed_ms, uint32_t *);
-FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
-FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t *);
+FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, const can_msg_t*);
+FAKE_VALUE_FUNC(w_status_t, flight_phase_get_act_allowed_ms, uint32_t*);
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char*, const char*, ...);
+FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t*);
 FAKE_VALUE_FUNC(
     bool, build_actuator_analog_cmd_msg, can_msg_prio_t, uint32_t, can_actuator_id_t, uint16_t,
-    can_msg_t *
+    can_msg_t*
 );
 
 // Customizable fake for flight_phase_get_act_allowed_ms
 static uint32_t test_act_allowed_ms_value = 0;
-w_status_t flight_phase_get_act_allowed_custom(uint32_t *out_ms) {
+w_status_t flight_phase_get_act_allowed_custom(uint32_t* out_ms) {
     *out_ms = test_act_allowed_ms_value;
     return flight_phase_get_act_allowed_ms_fake.return_val;
 }
 
-static controller_input_t new_input_state = {0};
-BaseType_t xQueueReceive_custom(QueueHandle_t arg0, void *arg1, TickType_t arg2) {
-    *(controller_input_t *)arg1 = new_input_state;
+static controller_input_t new_input_state = { 0 };
+BaseType_t xQueueReceive_custom(QueueHandle_t arg0, void* arg1, TickType_t arg2) {
+    *(controller_input_t*)arg1 = new_input_state;
     return xQueueReceive_fake.return_val;
 }
 

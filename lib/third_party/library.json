@@ -1,0 +1,26 @@
+{
+    "name": "third_party",
+    "build": {
+        "flags": ["-w"],
+        "srcFilter": [
+            "+<*>",
+            "-<canlib/**>",
+            "+<canlib/message/**>",
+            "+<canlib/stm32h7/**>",
+            "-<rocketlib/**>",
+            "-<CMSIS-DSP/**>",
+            "+<CMSIS-DSP/Source/BasicMathFunctions/BasicMathFunctions.c>",
+            "+<CMSIS-DSP/Source/InterpolationFunctions/InterpolationFunctions.c>",
+            "+<CMSIS-DSP/Source/MatrixFunctions/MatrixFunctions.c>",
+            "+<CMSIS-DSP/Source/QuaternionMathFunctions/QuaternionMathFunctions.c>",
+            "+<CMSIS-DSP/Source/FastMathFunctions/FastMathFunctions.c>",
+            "-<xsens-mti/**>",
+            "+<xsens-mti/src/xsens_mdata2.c>",
+            "+<xsens-mti/src/xsens_mti.c>",
+            "+<xsens-mti/src/xsens_utility.c>"
+        ],
+        "unflags": [
+            "-werror"
+        ]
+    }
+}

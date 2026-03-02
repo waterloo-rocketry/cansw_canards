@@ -2,7 +2,7 @@
 #define CONTROLLER_MODULE_H
 
 #include "application/controller/controller.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 
 /**
  * Top-level controller module. Calls controller algorithm. Sets reference signal.

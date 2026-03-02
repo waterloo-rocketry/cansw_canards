@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "common/math/math.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 
 typedef struct {
 	vector3d_t acc; // (x, y, z) m/s^2

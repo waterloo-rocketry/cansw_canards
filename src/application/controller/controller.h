@@ -3,7 +3,7 @@
 
 #include "FreeRTOS.h"
 #include "application/controller/gain_table.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 

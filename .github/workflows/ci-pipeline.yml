@@ -34,7 +34,7 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
           
-      - name: Build and run unit tests
+      - name: Build firmwarwe and run unit tests
         run: |
           pio run -e release
           chmod +x ./scripts/run_unit_tests.sh

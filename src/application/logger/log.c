@@ -10,10 +10,10 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "message_types.h"
+#include "printf/printf.h"
 #include "queue.h"
 #include "rocketlib/include/common.h"
 #include "semphr.h"
-#include "third_party/printf/printf.h"
 
 // number of times to try writing a log message in case fails once
 #define LOG_WRITE_TRY_COUNT 2

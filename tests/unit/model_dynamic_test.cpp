@@ -9,7 +9,7 @@ extern "C" {
 #include "arm_math.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 #include <math.h>
 #include <stdlib.h>
 

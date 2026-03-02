@@ -6,7 +6,7 @@ extern "C" {
 #include "application/estimator/estimator_types.h"
 #include "arm_math.h"
 #include "common/math/math-algebra3d.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 
     DEFINE_FFF_GLOBALS;
     FAKE_VALUE_FUNC(w_status_t, log_text, const char*, const char*);

@@ -16,13 +16,13 @@ extern "C" {
 #include "arm_math.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 #include <math.h>
 #include <stdlib.h>
 
-DEFINE_FFF_GLOBALS;
+    DEFINE_FFF_GLOBALS;
 
-FAKE_VALUE_FUNC(w_status_t, log_text, uint32_t, const char *, const char *);
+    FAKE_VALUE_FUNC(w_status_t, log_text, uint32_t, const char*, const char*);
 }
 
 #define TOLERANCE 0.001 // tolerance for float comparisons
@@ -70,26 +70,26 @@ fprintf('{');
 fprintf('%.9f, ', bias_2(1:end-1));
 fprintf('%.9f}\n', bias_2(end));
  */
-// clang-format on
+ // clang-format on
 TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseOnce) {
     // Arrange
-    estimator_module_input_t input = {0};
+    estimator_module_input_t input = { 0 };
     input.timestamp = 0.005;
-    input.movella = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25};
-    input.pololu = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30};
+    input.movella = { 0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25 };
+    input.pololu = { -0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30 };
     input.movella_is_dead = false;
     input.pololu_is_dead = false;
 
     // Commanded angle and timestamp for the controller
-    controller_output_t cmd = {0, 5}; // commanded_angle in radians, timestamp in ms
+    controller_output_t cmd = { 0, 5 }; // commanded_angle in radians, timestamp in ms
     input.cmd = cmd;
     input.encoder = 0.03;
 
     flight_phase_state_t flight_phase = STATE_SE_INIT;
 
     // Initializing the context
-    estimator_module_ctx_t ctx = {0};
-    controller_input_t controller_input = {0}; // Initialize controller_input_t to zero
+    estimator_module_ctx_t ctx = { 0 };
+    controller_input_t controller_input = { 0 }; // Initialize controller_input_t to zero
 
     // Act
     w_status_t status = estimator_module(&input, flight_phase, &ctx, &controller_input);
@@ -168,7 +168,7 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseOnce) {
     }
 
     // Optionally, check Phat shouldnt change from 0
-    double expected_Phat[169] = {0};
+    double expected_Phat[169] = { 0 };
     for (int i = 0; i < 169; ++i) {
         EXPECT_NEAR(ctx.P_flat[i], expected_Phat[i], 1e-5); // Adjust tolerance if needed
     }
@@ -216,24 +216,24 @@ fprintf('{');
 fprintf('%.9f, ', bias_2(1:end-1));
 fprintf('%.9f}\n', bias_2(end));
  */
-// clang-format on
+ // clang-format on
 TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
     // Arrange - First iteration
-    estimator_module_input_t input = {0};
+    estimator_module_input_t input = { 0 };
     input.timestamp = 0.005;
-    input.movella = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25};
-    input.pololu = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30};
+    input.movella = { 0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25 };
+    input.pololu = { -0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30 };
     input.movella_is_dead = false;
     input.pololu_is_dead = false;
 
-    controller_output_t cmd = {0.1, 5}; // Commanded angle in radians, timestamp in ms
+    controller_output_t cmd = { 0.1, 5 }; // Commanded angle in radians, timestamp in ms
     input.cmd = cmd;
     input.encoder = 0.03;
 
     flight_phase_state_t flight_phase = STATE_SE_INIT;
 
-    estimator_module_ctx_t ctx = {0};
-    controller_input_t controller_input = {0};
+    estimator_module_ctx_t ctx = { 0 };
+    controller_input_t controller_input = { 0 };
 
     // Act - First call
     w_status_t status = estimator_module(&input, flight_phase, &ctx, &controller_input);
@@ -309,9 +309,9 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
 
     // --- Second iteration setup ---
     input.timestamp = 0.01;
-    input.movella = {0.06, 0.1, -9.99, 0.001, -0.002, 0.0005, 0.5, 0.4, 0.4, 1010.25};
-    input.pololu = {-0.03, 0.08, -9.1, 0.005, 0.01, -0.001, 0.31, -0.01, 0.99, 1014.30};
-    input.cmd = {0.0, 10}; // Dummy cmd.angle = 0, timestamp = 100ms
+    input.movella = { 0.06, 0.1, -9.99, 0.001, -0.002, 0.0005, 0.5, 0.4, 0.4, 1010.25 };
+    input.pololu = { -0.03, 0.08, -9.1, 0.005, 0.01, -0.001, 0.31, -0.01, 0.99, 1014.30 };
+    input.cmd = { 0.0, 10 }; // Dummy cmd.angle = 0, timestamp = 100ms
 
     // Act - Second call
     status = estimator_module(&input, flight_phase, &ctx, &controller_input);
@@ -365,7 +365,7 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
         }
     };
 
-    double expected_Phat[169] = {0}; // All zeros from MATLAB output
+    double expected_Phat[169] = { 0 }; // All zeros from MATLAB output
 
     // Assert - Second iteration
     for (int i = 0; i < 13; ++i) {
@@ -462,17 +462,17 @@ fprintf('{ ');
 fprintf('%.9f, ', P_c(1:end-1));
 fprintf('%.9f };\n', P_c(end));
  */
-// clang-format on
+ // clang-format on
 TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
     // Arrange
-    estimator_module_input_t input = {0};
+    estimator_module_input_t input = { 0 };
     input.timestamp = 0.1;
-    input.movella = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25};
-    input.pololu = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30};
+    input.movella = { 0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25 };
+    input.pololu = { -0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30 };
     input.movella_is_dead = false;
     input.pololu_is_dead = false;
 
-    controller_output_t cmd = {0.1, 5}; // commanded_angle, timestamp (ms)
+    controller_output_t cmd = { 0.1, 5 }; // commanded_angle, timestamp (ms)
     input.cmd = cmd;
     input.encoder = 0.03;
 
@@ -496,7 +496,7 @@ TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
                   0.000000}},
         .t = 0.005
     };
-    controller_input_t controller_input = {0};
+    controller_input_t controller_input = { 0 };
 
     // Act
     w_status_t status = estimator_module(&input, flight_phase, &ctx, &controller_input);

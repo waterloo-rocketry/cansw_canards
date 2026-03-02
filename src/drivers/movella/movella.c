@@ -4,7 +4,7 @@
 #include "stm32h7xx_hal.h"
 #include "task.h"
 
-#include "third_party/xsens-mti/src/xsens_mti.h"
+#include "xsens-mti/src/xsens_mti.h"
 
 #include "common/math/math.h"
 #include "drivers/movella/movella.h"

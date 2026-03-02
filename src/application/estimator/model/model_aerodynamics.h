@@ -2,7 +2,7 @@
 #define MODEL_AERODYNAMICS_H
 #include "application/estimator/estimator_types.h"
 #include "application/estimator/model/model_airdata.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib/include/common.h"
 
 static const double canard_sweep_angle = (61 * RAD_PER_DEG);
 
@@ -12,7 +12,7 @@ static const double canard_sweep_angle = (61 * RAD_PER_DEG);
  * @param estimator_airdata_t airdata results from model_airdata
  * @param pointer to resulting torque vector
  */
-void aerodynamics(const x_state_t *state, const estimator_airdata_t *airdata, vector3d_t *torque);
+void aerodynamics(const x_state_t* state, const estimator_airdata_t* airdata, vector3d_t* torque);
 
 /**
  * @brief returns CL to expected value slowly, to force convergence in EKF
@@ -30,8 +30,8 @@ double airfoil(double mach_num);
  * @param vector3d_t *torque_delta to write to
  */
 void aerodynamics_jacobian(
-    const x_state_t *state, const estimator_airdata_t *airdata, matrix3d_t *torque_v,
-    vector3d_t *torque_cl, vector3d_t *torque_delta
+    const x_state_t* state, const estimator_airdata_t* airdata, matrix3d_t* torque_v,
+    vector3d_t* torque_cl, vector3d_t* torque_delta
 );
 
 #endif // MODEL_AERODYNAMICS_H
