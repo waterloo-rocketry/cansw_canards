@@ -30,6 +30,9 @@
 #define IMU_HANDLER_CAN_TX_PERIOD_MS 100
 #define IMU_HANDLER_CAN_TX_RATE (IMU_HANDLER_CAN_TX_PERIOD_MS / IMU_SAMPLING_PERIOD_MS)
 
+// imu data global variable to be send to flight phase
+static estimator_all_imus_input_t imu_data = {0};
+
 // correct orientation from finn irl, may 4 2025
 // S1 (movella)
 static const matrix3d_t g_movella_upd_mat = {
@@ -332,6 +335,20 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 
 	// Return overall status
 	return status;
+}
+
+w_status_t imu_handler_get_data(estimator_all_imus_input_t* all_imu_data) {
+	// check if the sensors are dead, if so return failure to indicate data is not fresh
+	if (imu_data.pololu.is_dead || imu_data.movella.is_dead) {
+		return W_FAILURE;
+	}
+
+	// copy the data to the provided pointer
+	all_imu_data->pololu = imu_data.pololu;
+	all_imu_data->movella = imu_data.movella;
+
+	// reutrn success to indicate data is fresh and valid
+	return W_SUCCESS;
 }
 
 /**
