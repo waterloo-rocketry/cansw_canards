@@ -16,3 +16,9 @@
 [submodule "src/third_party/CMSIS-DSP"]
 	path = src/third_party/CMSIS-DSP
 	url = https://github.com/ARM-software/CMSIS-DSP
+[submodule "littlefs"]
+	path = littlefs
+	url = https://github.com/littlefs-project/littlefs
+[submodule "rocketlib"]
+	path = rocketlib
+	url = https://github.com/waterloo-rocketry/rocketlib.git
