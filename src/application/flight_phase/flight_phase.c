@@ -350,7 +350,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 										 const estimator_all_imus_input_t *all_imu_data,
 										 const uint32_t *last_imu_timestamp,
-										 int *num_consec_detection,
+										 uint32_t *num_consec_detection,
 										 flight_phase_event_t *sensor_event) {
 	*sensor_event = EVENT_NULL;
 	bool threshold_detection = false;
