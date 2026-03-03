@@ -25,6 +25,7 @@ static const float32_t ACCEL_THRESHOLD_LAUNCH =
 	20; // mimimum acceleration in m/s^2 for a launch to be detected
 static const float32_t NUM_CONSEC_THRESHOLD =
 	20; // number of consecutive detection beyond threshold to satisfy for condition
+static const uint32_t MAX_TIMESTAMP_DIFFERENCE = 10; // the max timestamp difference before consec_num_detecion resets 
 
 /**
  * module health status trackers
@@ -77,7 +78,7 @@ static flight_phase_status_t flight_phase_status = {
 
 // number of valid sensor detection that would cause a state change
 static int consec_num_detecion = 0;
-static uint32_t last_imu_timestamp = 0;
+static uint32_t last_imu_timestamp = 0; // latest imu timestamp
 
 /**
  * Intialize flight phase module.
@@ -360,10 +361,13 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 		return W_FAILURE;
 	}
 
-	// check to make sure there is new data
 	if (*last_imu_timestamp == all_imu_data->pololu.timestamp_imu) {
 		log_text(5, "FlightPhaseSensorDetection", "WARNING: POLOLU IMU did not update");
 		return W_SUCCESS;
+
+	} else if (MAX_TIMESTAMP_DIFFERENCE <  all_imu_data->pololu.timestamp_imu - *last_imu_timestamp) {
+		log_text(5, "FlightPhaseSensorDetection", "WARNING: POLOLU IMU timestamp exceed max difference");
+		*num_consec_detection = 0;
 	}
 
 	double acceleration_magnitude =
