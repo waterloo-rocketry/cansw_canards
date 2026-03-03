@@ -478,6 +478,24 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_NoUpdate) {
     EXPECT_EQ(status, W_SUCCESS);
 }
 
+TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_ExceedMaxTimestamp) {
+    // Arrange
+    flight_phase_state_t state = STATE_PAD_FILTER;
+    int consec_num_detecion = 19;
+    estimator_all_imus_input_t imu_data = imu_set_acceleration(0, 0, 22, 1772500991, false);
+    flight_phase_event_t sensor_event = EVENT_RESET; // checks if null will be returned by default
+    uint32_t last_imu_timestamp = 1772500980;
+
+    // Act
+    w_status_t status = flight_phase_sensor_detection(&state, &imu_data, &last_imu_timestamp, &consec_num_detecion, &sensor_event);
+
+    // Assert
+    EXPECT_EQ(state, STATE_PAD_FILTER);
+    EXPECT_EQ(consec_num_detecion, 1);
+    EXPECT_EQ(sensor_event, EVENT_NULL);
+    EXPECT_EQ(status, W_SUCCESS);
+}
+
 TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_State) {
     // Arrange
     flight_phase_state_t state = STATE_PAD_FILTER;
