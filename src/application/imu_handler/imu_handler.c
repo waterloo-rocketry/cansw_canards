@@ -388,3 +388,12 @@ uint32_t imu_handler_get_status(void) {
 
 	return status_bitfield;
 }
+
+/**
+ * @brief Reports all IMU data based on request from outside tasks
+ * @param all_imu_data pointer to load the imu data on to
+ * @return Status of retreval
+ */
+w_status_t imu_handler_get_data(estimator_all_imus_input_t *all_imu_data) {
+	return W_SUCCESS;
+}
