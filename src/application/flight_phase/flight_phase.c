@@ -78,7 +78,7 @@ static flight_phase_status_t flight_phase_status = {
 };
 
 // number of valid sensor detection that would cause a state change
-static int consec_num_detection = 0;
+static uint32_t consec_num_detection = 0;
 static uint32_t last_imu_timestamp = 0; // latest imu timestamp
 
 /**
