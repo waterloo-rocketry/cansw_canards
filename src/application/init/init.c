@@ -22,7 +22,13 @@
 #include "fdcan.h" // For hfdcan1
 #include "i2c.h" // For hi2c2, hi2c4
 #include "task.h"
-#include "usart.h" // For huart4, huart8
+#include "usart.h"
+
+// Maximum number of initialization retries before giving up
+#define MAX_INIT_RETRIES 1
+
+// Delay between initialization retries in milliseconds
+#define INIT_RETRY_DELAY_MS 1000
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -52,7 +58,7 @@ const uint32_t log_task_priority = 15;
 const uint32_t health_checks_task_priority = 10;
 
 // Initialize a function with retry logic
-w_status_t init_with_retry(w_status_t (*init_fn)(void)) {
+static w_status_t init_with_retry(w_status_t (*init_fn)(void)) {
 	w_status_t status;
 	uint32_t retry_count = 0;
 
@@ -73,7 +79,7 @@ w_status_t init_with_retry(w_status_t (*init_fn)(void)) {
 }
 
 // Initialize a function with retry logic and parameter
-w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *param) {
+static w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *param) {
 	w_status_t status;
 	uint32_t retry_count = 0;
 
@@ -93,15 +99,14 @@ w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *param) {
 	return W_FAILURE;
 }
 
-// Main initialization function
-w_status_t system_init(void) {
+static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
 	vTaskDelay(500);
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status = sd_card_init();
+	w_status_t non_crit_status = W_SUCCESS; // sd_card_init();
 	non_crit_status |= log_init();
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
@@ -119,7 +124,7 @@ w_status_t system_init(void) {
 	status |= adc_init(&hadc1);
 	status |= estimator_init();
 	status |= health_check_init();
-	status |= init_with_retry(altimu_init);
+	// status |= init_with_retry(altimu_init);
 	status |= init_with_retry(movella_init);
 	status |= init_with_retry(flight_phase_init);
 	status |= init_with_retry(imu_handler_init);
@@ -131,7 +136,8 @@ w_status_t system_init(void) {
 	if (status != W_SUCCESS) {
 		// Log critical initialization failure - specific modules should have logged details
 		log_text(10, "init", "crit init fail (status: 0x%lx).", status);
-		return status;
+		// critical err
+		proc_handle_fatal_error("sysinit");
 	}
 
 	// Create FreeRTOS tasks
@@ -190,8 +196,22 @@ w_status_t system_init(void) {
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
 		log_text(10, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
-		return W_OVERFLOW;
+		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
-	return W_SUCCESS;
+
+	// its blinky now
+	while (1) {
+		gpio_toggle(GPIO_PIN_RED_LED, 1);
+		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+		vTaskDelay(1000);
+	}
+}
+
+w_status_t init_tasks(void) {
+	// create first task that will run system_init_task
+	BaseType_t task_status =
+		xTaskCreate(system_init_task, "SysInit", 1024, NULL, configMAX_PRIORITIES - 1, NULL);
+	return (task_status == pdTRUE) ? W_SUCCESS : W_FAILURE;
 }
