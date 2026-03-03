@@ -22,7 +22,7 @@ static const uint32_t FLIGHT_TIMEOUT_MS =
 static const uint32_t TASK_TIMEOUT_MS = 1000;
 
 static const float32_t ACCEL_THRESHOLD_LAUNCH =
-	20; // mimimum acceleration in m/s^2 for a launch to be detected
+	20; // minimum acceleration in m/s^2 for a launch to be detected
 static const uint32_t NUM_CONSEC_THRESHOLD =
 	20; // number of consecutive detection beyond threshold to satisfy for condition
 static const uint32_t MAX_TIMESTAMP_DIFFERENCE =
@@ -366,8 +366,8 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 		log_text(5, "FlightPhaseSensorDetection", "WARNING: POLOLU IMU did not update");
 		return W_SUCCESS;
 
-	} else if (MAX_TIMESTAMP_DIFFERENCE <
-			   all_imu_data->pololu.timestamp_imu - *last_imu_timestamp) {
+	} else if ((MAX_TIMESTAMP_DIFFERENCE + *last_imu_timestamp) <
+			   all_imu_data->pololu.timestamp_imu) {
 		log_text(
 			5, "FlightPhaseSensorDetection", "WARNING: POLOLU IMU timestamp exceed max difference");
 		*num_consec_detection = 0;
@@ -413,24 +413,24 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 
 /**
  * Task to execute the state machine itself. Consumes events and transitions the state
- * Perform checks to determine if a sensor based transition is nesscary
+ * Perform checks to determine if a sensor based transition is necessary
  */
 void flight_phase_task(void *args) {
 	(void)args;
 	flight_phase_event_t event;
 	flight_phase_event_t sensor_event;
 	estimator_all_imus_input_t imu_data;
-	bool sucessful_data_collection;
+	w_status_t data_collection_status;
 
 	while (1) {
-		sucessful_data_collection = W_SUCCESS;
+		data_collection_status = W_SUCCESS;
 		sensor_event = EVENT_NULL;
 
-		sucessful_data_collection |= imu_handler_get_data(&imu_data);
+		data_collection_status |= imu_handler_get_data(&imu_data);
 		// TO DO ADD Estimator data collection call
 
 		// TO CONSIDER IF consec_num_detecion RESETS if data dies
-		if (W_SUCCESS == sucessful_data_collection) {
+		if (W_SUCCESS == data_collection_status) {
 			if (flight_phase_sensor_detection(&curr_state,
 											  &imu_data,
 											  &last_imu_timestamp,
