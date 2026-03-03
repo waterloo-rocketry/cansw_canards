@@ -106,7 +106,7 @@ static void system_init_task(void *arg) {
 	vTaskDelay(500);
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status = W_SUCCESS; // sd_card_init();
+	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
@@ -124,7 +124,7 @@ static void system_init_task(void *arg) {
 	status |= adc_init(&hadc1);
 	status |= estimator_init();
 	status |= health_check_init();
-	// status |= init_with_retry(altimu_init);
+	status |= init_with_retry(altimu_init);
 	status |= init_with_retry(movella_init);
 	status |= init_with_retry(flight_phase_init);
 	status |= init_with_retry(imu_handler_init);
