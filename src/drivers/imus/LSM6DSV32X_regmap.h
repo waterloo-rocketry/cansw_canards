@@ -1,0 +1,24 @@
+#ifndef LSM6DSV32X_regmap_h
+#define LSM6DSV32X_regmap_h
+
+enum LSM6_reg {
+	LSM6DSV32X_WHO_AM_I = 0x0F,
+
+	INT1_CTRL = 0x0D,
+
+	CTRL1_XL = 0x10,
+	CTRL2_G = 0x11,
+	CTRL3 = 0x12,
+	CTRL5 = 0x14,
+	CTRL6_G = 0x15,
+	CTRL7 = 0x16,
+	CTRL8_XL = 0x17,
+	CTRL9_XL = 0X18,
+
+	FIFO_CTRL1 = 0x07,
+	FIFO_CTRL2 = 0x08,
+	FIFO_CTRL3 = 0x09,
+	FIFO_CTRL4 = 0x0A
+};
+
+#endif
