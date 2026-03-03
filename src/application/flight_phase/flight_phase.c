@@ -77,6 +77,7 @@ static flight_phase_status_t flight_phase_status = {
 
 // number of valid sensor detection that would cause a state change
 static int consec_num_detecion = 0;
+static uint32_t last_imu_timestamp = 0;
 
 /**
  * Intialize flight phase module.
@@ -346,6 +347,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
  */
 w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 										 const estimator_all_imus_input_t *all_imu_data,
+										 const uint32_t *last_imu_timestamp,
 										 int *num_consec_detection,
 										 flight_phase_event_t *sensor_event) {
 	*sensor_event = EVENT_NULL;
@@ -354,7 +356,14 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 
 	if (true == all_imu_data->pololu.is_dead) { // TO BE CAHNGED to ST IMU
 		log_text(5, "FlightPhaseSensorDetection", "ERROR: POLOLU IMU is DEAD");
+		*num_consec_detection = 0;
 		return W_FAILURE;
+	}
+
+	// check to make sure there is new data
+	if (*last_imu_timestamp == all_imu_data->pololu.timestamp_imu) {
+		log_text(5, "FlightPhaseSensorDetection", "WARNING: POLOLU IMU did not update");
+		return W_SUCCESS;
 	}
 
 	double acceleration_magnitude =
@@ -416,7 +425,7 @@ void flight_phase_task(void *args) {
 		// TO CONSIDER IF consec_num_detecion RESETS if data dies
 		if (W_SUCCESS == sucessful_data_collection) {
 			if (flight_phase_sensor_detection(
-					&curr_state, &imu_data, &consec_num_detecion, &sensor_event) != W_SUCCESS) {
+					&curr_state, &imu_data, &last_imu_timestamp, &consec_num_detecion, &sensor_event) != W_SUCCESS) {
 				log_text(
 					5, "FlightPhaseTask", "ERROR: Failed sensor detection in state %d", curr_state);
 
@@ -433,6 +442,7 @@ void flight_phase_task(void *args) {
 					}
 				}
 			}
+			last_imu_timestamp = imu_data.pololu.timestamp_imu; // TO DO UPDATE ST IMU
 		} else {
 			log_text(5,
 					 "FlightPhaseTask",
