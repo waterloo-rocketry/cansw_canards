@@ -26,7 +26,7 @@ static const float32_t ACCEL_THRESHOLD_LAUNCH =
 static const uint32_t NUM_CONSEC_THRESHOLD =
 	20; // number of consecutive detection beyond threshold to satisfy for condition
 static const uint32_t MAX_TIMESTAMP_DIFFERENCE =
-	10; // the max timestamp difference before consec_num_detecion resets
+	10; // the max timestamp difference before consec_num_detection resets
 
 /**
  * module health status trackers
@@ -78,7 +78,7 @@ static flight_phase_status_t flight_phase_status = {
 };
 
 // number of valid sensor detection that would cause a state change
-static int consec_num_detecion = 0;
+static int consec_num_detection = 0;
 static uint32_t last_imu_timestamp = 0; // latest imu timestamp
 
 /**
@@ -331,7 +331,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 	// Only count as a transition if the state actually changed
 	if (previous_state != *state) {
 		flight_phase_status.state_transitions++;
-		consec_num_detecion = 0;
+		consec_num_detection = 0;
 	}
 
 	return W_SUCCESS;
@@ -429,12 +429,12 @@ void flight_phase_task(void *args) {
 		data_collection_status |= imu_handler_get_data(&imu_data);
 		// TO DO ADD Estimator data collection call
 
-		// TO CONSIDER IF consec_num_detecion RESETS if data dies
+		// TO CONSIDER IF consec_num_detection RESETS if data dies
 		if (W_SUCCESS == data_collection_status) {
 			if (flight_phase_sensor_detection(&curr_state,
 											  &imu_data,
 											  &last_imu_timestamp,
-											  &consec_num_detecion,
+											  &consec_num_detection,
 											  &sensor_event) != W_SUCCESS) {
 				log_text(
 					5, "FlightPhaseTask", "ERROR: Failed sensor detection in state %d", curr_state);
