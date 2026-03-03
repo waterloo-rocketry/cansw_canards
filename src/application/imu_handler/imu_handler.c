@@ -33,13 +33,27 @@
 // imu data global variable to be send to flight phase
 static estimator_all_imus_input_t imu_data = {0};
 
-// correct orientation from finn irl, may 4 2025
-// S1 (movella)
-static const matrix3d_t g_movella_upd_mat = {
-	.array = {{0, 0, 1.000000000}, {1.0000000, 0, 0}, {0, 1.0000000000, 0}}};
-// S2 (pololu)
-static const matrix3d_t g_pololu_upd_mat = {
-	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+// // correct orientation from finn irl, may 4 2025
+// // S1 (movella)
+// static const matrix3d_t g_movella_upd_mat = {
+// 	.array = {{0, 0, 1.000000000}, {1.0000000, 0, 0}, {0, 1.0000000000, 0}}};
+// // S2 (pololu)
+// static const matrix3d_t g_pololu_upd_mat = {
+// 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+
+// unhardcoded orientation correction matrices, calibrated by the calibration module
+static matrix3d_t g_movella_upd_mat = {0};
+static matrix3d_t g_pololu_upd_mat = {0};
+
+// flag to indicate if the orientation correction matrices have been set by the calibration module
+static bool orientation_calibrated = false;
+
+// TODO: function to be set by the calibration module to update the calibration matrices once calibrated
+// g_movella_upd_mat = ...;
+// g_pololu_upd_mat = ...;
+// if (calibration_successful) {
+// 		orientation_calibrated = true; // set to true once calibrated
+// }
 
 // Module state tracking
 typedef struct {
@@ -340,6 +354,8 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 w_status_t imu_handler_get_data(estimator_all_imus_input_t* all_imu_data) {
 	// check if the sensors are dead, if so return failure to indicate data is not fresh
 	if (imu_data.pololu.is_dead || imu_data.movella.is_dead) {
+		log(1, "IMUHandler", "Data request failed: IMU data is not fresh (pololu is_dead: %d, movella is_dead: %d)",
+			imu_data.pololu.is_dead, imu_data.movella.is_dead);
 		return W_FAILURE;
 	}
 
