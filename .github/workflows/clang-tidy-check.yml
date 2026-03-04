@@ -21,6 +21,10 @@ jobs:
           chmod +x llvm.sh
           sudo ./llvm.sh 21
           sudo apt install clang-tidy-21
+
+      - name: Register clang-tidy problem matcher
+        run: echo "::add-matcher::.github/clang-tidy-matcher.json"
+
       - name: Run lint check
         id: run-lint
         shell: bash
