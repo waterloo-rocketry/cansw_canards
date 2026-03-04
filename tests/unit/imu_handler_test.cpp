@@ -484,7 +484,7 @@ TEST_F(ImuHandlerTest, ImuHandlerRun_CalibrationWarning) {
 	EXPECT_EQ(result, W_SUCCESS); // Initialization should still succeed
 	EXPECT_STREQ(log_text_fake.arg1_history[0], "IMUHandler");
 	EXPECT_STREQ(log_text_fake.arg2_history[0],
-				 "Warning: IMU orientation correction matrices not calibrated yet, using default "
+				 "WARN: IMU orientation correction matrices not calibrated yet, using default "
 				 "orientation.");
 }
 

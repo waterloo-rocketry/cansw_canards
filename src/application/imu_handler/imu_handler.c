@@ -354,13 +354,15 @@ w_status_t imu_handler_run(uint32_t loop_count) {
  * @return Status of the execution
  */
 w_status_t imu_handler_get_data_internal(const estimator_all_imus_input_t* source, estimator_all_imus_input_t* out) {
-    if (NULL == out || NULL == source)
+    if (NULL == out || NULL == source){
 		log_text(1, "IMUHandler", "ERROR: Get imu data failed - imu data cannot be null pointers.");
         return W_INVALID_PARAM;
-
-    if (source->pololu.is_dead || source->movella.is_dead)
+	}
+	
+    if (source->pololu.is_dead || source->movella.is_dead){
 		log_text(1, "IMUHandler", "WARN: Get imu data failed - one or more sensors are dead.");
         return W_FAILURE;
+	}
 
     *out = *source;
 
