@@ -43,9 +43,11 @@ static const matrix3d_t g_pololu_upd_mat = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
 
 // flag to indicate if the orientation correction matrices have been set by the calibration module
-static w_status_t orientation_calibrated = W_FAILURE; // set to true once calibrated, initialized to false to prevent use before calibration
+static w_status_t orientation_calibrated = W_FAILURE; // set to true once calibrated, initialized to
+													  // false to prevent use before calibration
 
-// TODO: function to be set by the calibration module to update the calibration matrices once calibrated
+// TODO: function to be set by the calibration module to update the calibration matrices once
+// calibrated
 
 // Module state tracking
 typedef struct {
@@ -226,7 +228,10 @@ w_status_t imu_handler_init(void) {
 	imu_handler_state.initialized = true;
 
 	if (orientation_calibrated != W_SUCCESS) {
-		log_text(1, "IMUHandler", "WARN: IMU orientation correction matrices not calibrated yet, using default orientation.");
+		log_text(1,
+				 "IMUHandler",
+				 "WARN: IMU orientation correction matrices not calibrated yet, using default "
+				 "orientation.");
 	}
 
 	log_text(10, "IMUHandler", "INFO: IMU Handler Initialized.");
@@ -353,20 +358,21 @@ w_status_t imu_handler_run(uint32_t loop_count) {
  * @note This function is non-static to allow exposed to unit tests
  * @return Status of the execution
  */
-w_status_t imu_handler_get_data_internal(const estimator_all_imus_input_t* source, estimator_all_imus_input_t* out) {
-    if (NULL == out || NULL == source){
+w_status_t imu_handler_get_data_internal(const estimator_all_imus_input_t *source,
+										 estimator_all_imus_input_t *out) {
+	if (NULL == out || NULL == source) {
 		log_text(1, "IMUHandler", "ERROR: Get imu data failed - imu data cannot be null pointers.");
-        return W_INVALID_PARAM;
+		return W_INVALID_PARAM;
 	}
-	
-    if (source->pololu.is_dead || source->movella.is_dead){
+
+	if (source->pololu.is_dead || source->movella.is_dead) {
 		log_text(1, "IMUHandler", "WARN: Get imu data failed - one or more sensors are dead.");
-        return W_FAILURE;
+		return W_FAILURE;
 	}
 
-    *out = *source;
+	*out = *source;
 
-    return W_SUCCESS;
+	return W_SUCCESS;
 }
 
 /**
@@ -374,8 +380,8 @@ w_status_t imu_handler_get_data_internal(const estimator_all_imus_input_t* sourc
  * @param all_imu_data Pointer to store the output data
  * @return Status of the execution
  */
-w_status_t imu_handler_get_data(estimator_all_imus_input_t* all_imu_data) {
-    return imu_handler_get_data_internal(&imu_data, all_imu_data);
+w_status_t imu_handler_get_data(estimator_all_imus_input_t *all_imu_data) {
+	return imu_handler_get_data_internal(&imu_data, all_imu_data);
 }
 
 /**
