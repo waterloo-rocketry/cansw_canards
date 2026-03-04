@@ -1,10 +1,10 @@
 #include "application/logger/log.h"
-#include "drivers/altimu-10/LIS3MDL_regmap.h"
 #include "drivers/altimu-10/LPS_regmap.h"
-#include "drivers/altimu-10/LSM6DSO_regmap.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/imus/LSM6DSV32X_regmap.h"
+#include "drivers/imus/LSM6DSV32X.h"
 #include <limits.h>
 #include <stdio.h>
 
@@ -38,7 +38,18 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
  * @note Must be called after scheduler start
  * @return Status of the operation
  */
-w_status_t altimu_init() {
+
+w_status_t lsm6dsv32x_handshake()
+
+{
+
+	w_status_t status = W_SUCCESS;
+
+
+
+}
+
+w_status_t lsm6dsv32x_init() {
 	w_status_t status = W_SUCCESS;
 
 	// Drive addr sel pin HIGH to use each device's "default" i2c addr
@@ -75,11 +86,17 @@ w_status_t altimu_init() {
 	// set LPF bandwith to 100
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL6_G, 0x4C);
 
-	// set gyro range to +-4000dps
-	// set LPF bandwith to 100
-	// disable 2 channel mode, is higher resolution data usefull to store in other registers for
-	// logging purposes??
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL8_XL, 0x4C);
+
+	//Disable 2 channel mode
+	//Accel full scale range +-32g
+	//Accel low pass cutoff frequency ODR/4 (240hz)
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL8_XL, 0x07);
+
+	//accel slope filter: low pass
+	//accel user offset bit weight: 2^-10 g/LSB
+	//enable user accel user offset
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL9_XL, 0x29);
+
 
 	if (status != W_SUCCESS) {
 		log_text(1, "LSM6DSV32X", "initfail");
