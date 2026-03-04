@@ -120,10 +120,10 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 
 	// Transmit CAN message
 	if (can_tx_sts != W_SUCCESS) {
-		log_text(0, "IMUHandler", "CAN tx failed");
+		log_text(0, "IMUHandler", "ERROR: CAN tx failed");
 	}
 	if (!build_sts) {
-		log_text(0, "IMUHandler", "build raw CAN msg failed");
+		log_text(0, "IMUHandler", "ERROR: build raw CAN msg failed");
 	}
 
 	if ((can_tx_sts != W_SUCCESS) || !build_sts) {
@@ -226,10 +226,10 @@ w_status_t imu_handler_init(void) {
 	imu_handler_state.initialized = true;
 
 	if (orientation_calibrated != W_SUCCESS) {
-		log_text(1, "IMUHandler", "Warning: IMU orientation correction matrices not calibrated yet, using default orientation.");
+		log_text(1, "IMUHandler", "WARN: IMU orientation correction matrices not calibrated yet, using default orientation.");
 	}
 
-	log_text(10, "IMUHandler", "IMU Handler Initialized.");
+	log_text(10, "IMUHandler", "INFO: IMU Handler Initialized.");
 	return W_SUCCESS;
 }
 
@@ -329,7 +329,7 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	// do CAN logging as backup less frequently to avoid flooding can bus
 	if ((loop_count % IMU_HANDLER_CAN_TX_RATE) == 0) {
 		if (log_raw_to_can(&raw_pololu_data) != W_SUCCESS) {
-			log_text(0, "imuhandler", "raw log to CAN fail");
+			log_text(0, "imuhandler", "WARN: raw log to CAN fail");
 		}
 	}
 
@@ -338,7 +338,7 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	if (W_SUCCESS != estimator_status) {
 		status = estimator_status;
 		imu_handler_state.error_count++;
-		log_text(1, "IMUHandler", "estimator update fail (status: %d).", estimator_status);
+		log_text(1, "IMUHandler", "ERROR: estimator update fail (status: %d).", estimator_status);
 	}
 
 	imu_handler_state.sample_count++;
@@ -355,11 +355,11 @@ w_status_t imu_handler_run(uint32_t loop_count) {
  */
 w_status_t imu_handler_get_data_internal(const estimator_all_imus_input_t* source, estimator_all_imus_input_t* out) {
     if (NULL == out || NULL == source)
-		log_text(1, "IMUHandler", "Get imu data failed: imu data cannot be null pointers.");
+		log_text(1, "IMUHandler", "ERROR: Get imu data failed - imu data cannot be null pointers.");
         return W_INVALID_PARAM;
 
     if (source->pololu.is_dead || source->movella.is_dead)
-		log_text(1, "IMUHandler", "Get imu data failed: one or more sensors are dead.");
+		log_text(1, "IMUHandler", "WARN: Get imu data failed - one or more sensors are dead.");
         return W_FAILURE;
 
     *out = *source;
@@ -392,13 +392,13 @@ void imu_handler_task(void *argument) {
 	uint32_t loop_count = 0;
 
 	// Main task loop
-	log_text(10, "IMUHandlerTask", "IMU Handler task started.");
+	log_text(10, "IMUHandlerTask", "INFO: IMU Handler task started.");
 	while (1) {
 		w_status_t run_status = imu_handler_run(loop_count++);
 		if (W_SUCCESS != run_status) {
 			// Log or handle run failures if needed
 			imu_handler_state.error_count++;
-			log_text(1, "IMUHandlerTask", "run failed (status: %d).", run_status);
+			log_text(1, "IMUHandlerTask", "ERROR: task run failed (status: %d).", run_status);
 		}
 
 		// Wait for next sampling period with precise timing
