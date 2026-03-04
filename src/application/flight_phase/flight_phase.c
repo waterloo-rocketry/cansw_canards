@@ -356,6 +356,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
  * @brief would complete sensor-based detection of state change for flight phase
  * @param state is a pointer to the present state
  * @param all_imu_data is a pointer to the current the imu data
+ * @param last_imu_timestamp this is last imu timestamp that has was used
  * @param num_consec_detection is a pointer to the number of consecutive detection made in this
  * particular flight phase
  * @param sensor_event a pointer to return the event the sensor triggers (default returns
