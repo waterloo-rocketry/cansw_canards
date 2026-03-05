@@ -33,7 +33,7 @@ typedef enum {
 /**
  * Initialize gpio module. Inits status trackers and mutexes
  */
-w_status_t gpio_init();
+w_status_t gpio_init(void);
 
 /**
  * Read the current level of `pin` into `level`.

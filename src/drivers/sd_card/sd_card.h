@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "stm32h7xx_hal.h"
 
 #include "rocketlib/include/common.h"
+#include "stm32h7xx_hal_sd.h"
 
 /**
  * @brief SD card module health stats

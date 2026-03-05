@@ -1,15 +1,21 @@
-#include "FreeRTOS.h"
 #include "application/logger/log.h"
+#include "canlib.h"
+#include "cmsis_gcc.h"
 #include "drivers/gpio/gpio.h"
+#include "message/msg_common.h"
+#include "portmacro.h"
+#include "projdefs.h"
 #include "queue.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "drivers/gpio/gpio.h"
-#include "drivers/timer/timer.h"
 
 // Include necessary headers for fatal error handler
-#include "stm32h7xx_hal.h" // For __disable_irq, __NOP
+#include "rocketlib/include/common.h"
+#include "stm32h733xx.h"
+#include "stm32h7xx_hal_fdcan.h"
+#include "stm32h7xx_hal_cortex.h"
 #include "third_party/canlib/can.h" // For can_msg_t, can_send
 #include "third_party/canlib/message/msg_general.h" // For build_debug_raw_msg
 #include "third_party/canlib/message_types.h" // For MSG_DEBUG_RAW, PRIO_HIGH, etc.

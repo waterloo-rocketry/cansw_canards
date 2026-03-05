@@ -1,7 +1,12 @@
 #include "application/estimator/estimator_module.h"
+#include "application/controller/controller.h"
 #include "application/estimator/ekf.h"
+#include "application/estimator/estimator_types.h"
+#include "application/estimator/pad_filter.h"
 #include "application/estimator/projector.h"
+#include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
+#include "rocketlib/include/common.h"
 
 w_status_t estimator_module(const estimator_module_input_t *input,
 							flight_phase_state_t flight_phase, estimator_module_ctx_t *ctx,

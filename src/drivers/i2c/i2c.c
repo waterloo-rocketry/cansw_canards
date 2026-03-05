@@ -4,12 +4,14 @@
  */
 
 #include "i2c.h"
-#include "FreeRTOS.h"
-#include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
-#include "message_types.h"
+#include "rocketlib/include/common.h"
+#include "portmacro.h"
+#include "projdefs.h"
 #include "semphr.h"
-#include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_i2c.h"
+#include <stdint.h>
+#include "stm32h7xx_hal_def.h"
 /** @brief Default timeout for I2C operations in milliseconds */
 #define I2C_DEFAULT_TIMEOUT_MS 50
 

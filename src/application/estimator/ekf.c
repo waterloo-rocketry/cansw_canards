@@ -1,4 +1,5 @@
 #include "application/estimator/ekf.h"
+#include "application/estimator/estimator_types.h"
 #include "application/estimator/model/jacobians.h"
 #include "application/estimator/model/model_acceleration.h"
 #include "application/estimator/model/model_dynamics.h"
@@ -6,10 +7,14 @@
 #include "application/estimator/model/model_imu.h"
 #include "application/estimator/model/quaternion.h"
 #include "application/logger/log.h"
+#include "arm_math_types.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
-#include <math.h>
+#include "dsp/matrix_functions.h"
+#include "rocketlib/include/common.h"
+#include "dsp/basic_math_functions.h"
 #include <stdint.h>
+#include <string.h>
 
 static double Q_arr[SIZE_STATE * SIZE_STATE] = {0};
 static double R_MTI_arr[SIZE_IMU_MEAS * SIZE_IMU_MEAS] = {0};

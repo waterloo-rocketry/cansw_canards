@@ -3,11 +3,16 @@
 #include "application/controller/controller_module.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
+#include "common/math/math.h"
+#include "can.h"
 #include "drivers/timer/timer.h"
+#include "message_types.h"
+#include "projdefs.h"
 #include "queue.h"
+#include "rocketlib/include/common.h"
 #include "task.h"
 #include "third_party/canlib/message/msg_actuator.h"
-#include <math.h>
+#include <stdint.h>
 
 static QueueHandle_t internal_state_queue;
 static QueueHandle_t output_queue;
@@ -148,7 +153,7 @@ w_status_t controller_get_latest_output(controller_output_t *output) {
 
 // helper to run 1 loop of the controller task, including delaying where needed.
 // not declared static to allow unit testing access
-w_status_t controller_run_loop() {
+w_status_t controller_run_loop(void) {
 	log_data_container_t log_container = {0};
 	w_status_t status = W_SUCCESS;
 	flight_phase_state_t current_phase = flight_phase_get_state();

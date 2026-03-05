@@ -1,4 +1,5 @@
 #include "application/estimator/model/model_encoder.h"
+#include "application/estimator/estimator_types.h"
 
 double model_meas_encoder(const x_state_t *state) {
     return state->delta;

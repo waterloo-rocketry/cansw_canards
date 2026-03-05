@@ -6,7 +6,9 @@
 
 #include "drivers/timer/timer.h"
 #include "application/logger/log.h"
-#include "stm32h7xx_hal.h"
+#include "rocketlib/include/common.h"
+#include "stm32h7xx_hal_tim.h"
+#include <stdint.h>
 
 // external timer handle declaration
 extern TIM_HandleTypeDef htim2;

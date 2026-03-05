@@ -2,9 +2,6 @@
 #define MODEL_DYNAMICS_H
 
 #include "application/estimator/estimator_types.h"
-#include "application/estimator/model/model_airdata.h"
-#include "arm_math.h"
-#include "third_party/rocketlib/include/common.h"
 
 /**
  * Model dynamics update (non-jacobian)

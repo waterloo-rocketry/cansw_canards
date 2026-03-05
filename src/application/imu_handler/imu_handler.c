@@ -1,6 +1,12 @@
-#include <string.h>
+#include <stdint.h>
 
-#include "FreeRTOS.h"
+#include "rocketlib/include/common.h"
+#include "can.h"
+#include "message/msg_sensor.h"
+#include "message_types.h"
+#include "drivers/altimu-10/altimu-10.h"
+#include "portmacro.h"
+#include "projdefs.h"
 #include "task.h"
 
 #include "application/can_handler/can_handler.h"
@@ -12,7 +18,6 @@
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 
-#include "canlib.h"
 
 // Period of IMU sampling in milliseconds
 // slightly slower than 200 hz to always receive encoder which can be >5ms

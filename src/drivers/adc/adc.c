@@ -1,7 +1,13 @@
 #include "drivers/adc/adc.h"
-#include "FreeRTOS.h"
 #include "application/logger/log.h"
+#include "projdefs.h"
+#include "portmacro.h"
+#include "rocketlib/include/common.h"
 #include "semphr.h"
+#include "stm32h7xx_hal_adc.h"
+#include "stm32h7xx_hal_def.h"
+#include "stm32h7xx_hal_adc_ex.h"
+#include <stdint.h>
 
 #define ADC_CONV_TIMEOUT_TICKS pdMS_TO_TICKS(1)
 

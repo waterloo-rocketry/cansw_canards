@@ -1,7 +1,6 @@
 #ifndef HEALTH_CHECKS_H
 #define HEALTH_CHECKS_H
 
-#include "FreeRTOS.h"
 #include "rocketlib/include/common.h"
 #include "task.h"
 #include <stdbool.h>

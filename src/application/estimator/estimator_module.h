@@ -1,7 +1,6 @@
 #ifndef ESTIMATOR_MODULE_H
 #define ESTIMATOR_MODULE_H
 
-#include "arm_math.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -9,6 +8,7 @@
 #include "application/estimator/estimator_types.h"
 #include "application/estimator/pad_filter.h"
 #include "application/flight_phase/flight_phase.h"
+#include "rocketlib/include/common.h"
 
 /**
  * persistent state updated by estimator_module
