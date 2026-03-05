@@ -19,14 +19,14 @@ static const uint32_t ACT_DELAY_MS =
 static const uint32_t FLIGHT_TIMEOUT_MS =
 	49000; // K - the approximate time between launch and apogee
 
-static const uint32_t TASK_TIMEOUT_MS = 1000;
+static const uint32_t TASK_TIMEOUT_MS = 10;
 
 static const float32_t ACCEL_THRESHOLD_LAUNCH_M_S2 =
 	20; // minimum acceleration in m/s^2 for a launch to be detected
 static const uint32_t NUM_CONSEC_THRESHOLD =
 	20; // number of consecutive detection beyond threshold to satisfy for condition (no units)
 static const uint32_t MAX_TIMESTAMP_DIFFERENCE_MS =
-	10; // the max timestamp difference before consec_num_detection resets
+	500; // the max timestamp difference before consec_num_detection resets
 
 /**
  * module health status trackers
