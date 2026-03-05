@@ -12,21 +12,17 @@
 #define LSM6DSV32X_ADDR 0x6B // addr sel pin HIGH IMU
 
 // sensor ranges. these must be selected using the i2c init regs
-static const double ALTIMU_ACC_RANGE = 16.0; // g
-static const double ALTIMU_GYRO_RANGE = 2000.0; // dps
-static const double ALTIMU_MAG_RANGE = 16.0; // Gauss
+static const double ACC_RANGE = 32.0; // g
+static const double GYRO_RANGE = 4000.0; // dps
 
 // lps22df baro range is actually smaller than this, but we deemed better to "extend" the range and
 // gamble on possible undefined values, as thats better than saturating for estimator
-static const double ALTIMU_BARO_MAX = 110000; // conservative max Pa at sea level
-static const double ALTIMU_BARO_MIN = 6000; // min Pa we can possibly reach (60000 ft apogee)
+static const double BARO_MAX = 110000; // conservative max Pa at sea level
+static const double BARO_MIN = 6000; // min Pa we can possibly reach (60000 ft apogee)
 
 // AltIMU conversion factors - based on config settings below
-static const double ACC_FS = ALTIMU_ACC_RANGE / INT16_MAX; // g / LSB
-static const double GYRO_FS = ALTIMU_GYRO_RANGE / INT16_MAX; // dps / LSB
-static const double MAG_FS = ALTIMU_MAG_RANGE / INT16_MAX; // gauss / LSB
-static const double BARO_FS = 100.0 / 4096.0; // fixed scale: 100 Pa / 4096 LSB
-static const double TEMP_FS = 1.0 / 100.0; // fixed scale: 1 deg C / 100 LSB
+static const double ACC_FS = ACC_RANGE / INT16_MAX; // g / LSB
+static const double GYRO_FS = GYRO_RANGE / INT16_MAX; // dps / LSB
 
 // Helper function for writing config (passing value as literal)
 static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
@@ -38,19 +34,91 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
  * @note Must be called after scheduler start
  * @return Status of the operation
  */
-
-w_status_t lsm6dsv32x_handshake()
+w_status_t lsm6dsv32x_config_open()
 
 {
 
 	w_status_t status = W_SUCCESS;
+	w_status_t read_status = W_FAILURE;
 
+	uint16_t timeout = 0;
+	uint8_t ctrl_result;
+	const uint16_t MAX_TIMEOUT = 500;
 
+	status |= write_1_byte(LSM6DSV32X_ADDR, FUNC_CFG_ACCESS, 0x80);
+
+	while (timeout < MAX_TIMEOUT) {
+    
+
+		//read the register with the bit that controlls 
+		read_status &= i2c_read_reg(I2C_BUS_4, LSM6DSV32X_ADDR, CTRL_STATUS, &ctrl_result, 1);
+
+    
+    	// Check if the acknowledge bit is 0 (Ready for writes)
+    	if (ctrl_result == 0x00) {
+        break; 
+		}
+    
+    // Increment timeout and give FreeRTOS a tiny breather
+    timeout++;
+    vTaskDelay(pdMS_TO_TICKS(1)); 
+
+	}
+
+	if(timeout == MAX_TIMEOUT){
+		status = W_FAILURE;
+	}
+
+	return status | read_status;
+
+}
+
+w_status_t lsm6dsv32x_config_close()
+
+{
+
+	w_status_t status = W_SUCCESS;
+	w_status_t read_status = W_FAILURE;
+
+	uint16_t timeout = 0;
+	uint8_t ctrl_result;
+	const uint16_t MAX_TIMEOUT = 500;
+
+	status |= write_1_byte(LSM6DSV32X_ADDR, FUNC_CFG_ACCESS, 0x0);
+
+	
+	status |= write_1_byte(LSM6DSV32X_ADDR, FUNC_CFG_ACCESS, 0x80);
+
+	while (timeout < MAX_TIMEOUT) {
+    
+
+		//read the register with the bit that controlls 
+		read_status &= i2c_read_reg(I2C_BUS_4, LSM6DSV32X_ADDR, CTRL_STATUS, &ctrl_result, 1);
+
+    	// Check if the acknowledge bit is 0 (Ready for writes)
+    	if (ctrl_result == 0x04) {
+        break; 
+		}
+    
+    	// Increment timeout and give FreeRTOS a tiny breather
+    	timeout++;
+    	vTaskDelay(pdMS_TO_TICKS(1)); 
+
+	}
+
+	if(timeout == MAX_TIMEOUT){
+		status = W_FAILURE;
+	}
+
+	return status | read_status;
 
 }
 
 w_status_t lsm6dsv32x_init() {
+
 	w_status_t status = W_SUCCESS;
+
+	status |= lsm6dsv32x_config_open();
 
 	// Drive addr sel pin HIGH to use each device's "default" i2c addr
 	status |= gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
@@ -86,7 +154,6 @@ w_status_t lsm6dsv32x_init() {
 	// set LPF bandwith to 100
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL6_G, 0x4C);
 
-
 	//Disable 2 channel mode
 	//Accel full scale range +-32g
 	//Accel low pass cutoff frequency ODR/4 (240hz)
@@ -97,10 +164,11 @@ w_status_t lsm6dsv32x_init() {
 	//enable user accel user offset
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL9_XL, 0x29);
 
-
 	if (status != W_SUCCESS) {
 		log_text(1, "LSM6DSV32X", "initfail");
 	}
+
+	status |= lsm6dsv32x_config_close();
 
 	return status;
 }
