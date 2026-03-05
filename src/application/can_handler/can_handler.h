@@ -1,9 +1,10 @@
 #ifndef CAN_HANDLER_H
 #define CAN_HANDLER_H
 
-#include "canlib.h"
+#include "can.h"
+#include "message_types.h"
 #include "rocketlib/include/common.h"
-#include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_fdcan.h"
 #include <stdint.h>
 
 /**

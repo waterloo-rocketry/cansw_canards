@@ -5,8 +5,7 @@
 #define EKF_H
 
 #include "application/estimator/estimator_types.h"
-#include "arm_math.h"
-#include "common/math/math.h"
+#include "dsp/matrix_functions.h"
 #include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
 

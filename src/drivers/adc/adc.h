@@ -2,7 +2,7 @@
 #define ADC_H
 
 #include "rocketlib/include/common.h"
-#include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_adc.h"
 #include <stdbool.h>
 #include <stdint.h>
 

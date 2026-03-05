@@ -2,7 +2,7 @@
 #define MODEL_AERODYNAMICS_H
 #include "application/estimator/estimator_types.h"
 #include "application/estimator/model/model_airdata.h"
-#include "third_party/rocketlib/include/common.h"
+#include "common/math/math.h"
 
 static const double canard_sweep_angle = (61 * RAD_PER_DEG);
 

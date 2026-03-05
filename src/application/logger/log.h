@@ -1,12 +1,11 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include "common/math/math.h"
+#include "drivers/altimu-10/altimu-10.h"
 #include "rocketlib/include/common.h"
 #include <stdint.h>
 // Include headers for structs used in log_data_container_t
-#include "application/controller/controller.h" // For controller_input_t, controller_output_t
-#include "application/estimator/estimator.h" // For estimator_all_imus_input_t
-#include "application/imu_handler/imu_handler.h"
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32768

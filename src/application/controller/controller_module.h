@@ -3,6 +3,7 @@
 
 #include "application/controller/controller.h"
 #include "third_party/rocketlib/include/common.h"
+#include <stdint.h>
 
 /**
  * Top-level controller module. Calls controller algorithm. Sets reference signal.

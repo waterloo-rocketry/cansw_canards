@@ -3,13 +3,16 @@
  */
 
 #include "application/estimator/pad_filter.h"
-#include "application/estimator/estimator.h"
+#include "application/estimator/estimator_types.h"
 #include "application/estimator/model/model_aerodynamics.h"
 #include "application/estimator/model/model_airdata.h"
 #include "application/estimator/model/quaternion.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
+#include "rocketlib/include/common.h"
 #include <math.h>
+#include <string.h>
+#include <stdint.h>
 
 static const double low_pass_alpha = 0.0002; // low pass time constant
 static const double launch_elevation = 420.0; // 420m above sea level

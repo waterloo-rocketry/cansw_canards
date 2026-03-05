@@ -7,11 +7,10 @@
 #ifndef UART_H
 #define UART_H
 
-#include "FreeRTOS.h"
 #include "queue.h"
 #include "rocketlib/include/common.h"
 #include "semphr.h"
-#include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_uart.h"
 #include <stdbool.h>
 #include <stdint.h>
 

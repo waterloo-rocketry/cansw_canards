@@ -1,5 +1,4 @@
 #include "health_checks.h"
-#include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/estimator/estimator.h"
@@ -8,16 +7,19 @@
 #include "application/logger/log.h"
 #include "can.h"
 #include "drivers/adc/adc.h"
-#include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
-#include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#include "message/msg_sensor.h"
+#include "message/msg_general.h"
 #include "message_types.h"
-#include "printf.h"
+#include "portmacro.h"
+#include "rocketlib/include/common.h"
+#include "projdefs.h"
 #include "task.h"
+#include <stdint.h>
 
 #define TASK_DELAY_MS 3000
 #define ADC_VREF 3.3f
@@ -207,7 +209,7 @@ static uint32_t check_modules_status(void) {
 	return status_bitfield;
 }
 
-w_status_t health_check_exec() {
+w_status_t health_check_exec(void) {
 	uint32_t status_bitfield = 0;
 
 	status_bitfield |= check_current();

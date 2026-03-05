@@ -11,10 +11,9 @@
 #ifndef I2C_H
 #define I2C_H
 
-#include "FreeRTOS.h"
 #include "rocketlib/include/common.h"
 #include "semphr.h"
-#include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_i2c.h"
 #include <stdbool.h>
 #include <stdint.h>
 

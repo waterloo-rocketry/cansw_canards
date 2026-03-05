@@ -4,11 +4,15 @@
  */
 
 #include "drivers/uart/uart.h"
-#include "FreeRTOS.h"
 #include "application/logger/log.h"
+#include "projdefs.h"
+#include "portmacro.h"
 #include "queue.h"
+#include "rocketlib/include/common.h"
 #include "semphr.h"
-#include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_uart.h"
+#include "stm32h7xx_hal_def.h"
+#include "stm32h7xx_hal_uart_ex.h"
 #include <stdint.h>
 #include <string.h>
 /* Static buffer pool for all channels */

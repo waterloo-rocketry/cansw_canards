@@ -1,6 +1,12 @@
 #include "application/controller/controller_module.h"
+#include "application/controller/gain_table.h"
+#include "application/controller/controller.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
+#include "dsp/interpolation_functions.h"
+#include "rocketlib/include/common.h"
+#include <math.h>
+#include <stdint.h>
 
 // roll program steps. ms from act-allowed timestamp (ie end of boost phase is 0ms)
 #define STEP_0_START_MS 0

@@ -4,10 +4,12 @@
 #ifndef COMMON_MATH_H
 #define COMMON_MATH_H
 
-#include "arm_math.h"
+#include "dsp/matrix_functions.h"
+#include "arm_math_types.h"
 #include <math.h>
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265

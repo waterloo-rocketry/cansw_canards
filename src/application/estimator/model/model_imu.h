@@ -2,9 +2,6 @@
 #define MODEL_IMU_H
 
 #include "application/estimator/estimator_types.h"
-#include "application/estimator/model/jacobians.h"
-#include "arm_math.h"
-#include "common/math/math.h"
 
 /**
  * @brief Computes measurement prediction using current state and sensor biases

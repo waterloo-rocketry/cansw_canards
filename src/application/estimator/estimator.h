@@ -1,7 +1,6 @@
 #ifndef STATE_EST_H
 #define STATE_EST_H
 
-#include "application/controller/controller.h"
 #include "application/estimator/estimator_types.h"
 #include "common/math/math.h"
 #include "third_party/rocketlib/include/common.h"
@@ -49,7 +48,7 @@ w_status_t estimator_update_imu_data(estimator_all_imus_input_t *data);
 /**
  * @brief initialize estimator module. call before creating estimator task
  */
-w_status_t estimator_init();
+w_status_t estimator_init(void);
 
 /**
  * @brief Sends the complete state estimation data over CAN.

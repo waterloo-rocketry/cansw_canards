@@ -3,12 +3,15 @@
  * Driver for GPIO pins
  */
 #include <stdbool.h>
+#include <stdint.h>
 
-#include "stm32h7xx_hal.h"
+#include "stm32h733xx.h"
+#include "rocketlib/include/common.h"
+#include "projdefs.h"
 
-#include "FreeRTOS.h"
 #include "application/logger/log.h"
 #include "semphr.h"
+#include "stm32h7xx_hal_gpio.h"
 
 #include "drivers/gpio/gpio.h"
 
@@ -52,7 +55,7 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 /**
  * Initialize gpio module. Can be run before scheduler start
  */
-w_status_t gpio_init() {
+w_status_t gpio_init(void) {
 	w_status_t status = W_SUCCESS;
 
 	gpio_status.is_init = false;

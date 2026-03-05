@@ -1,7 +1,7 @@
-#include "FreeRTOS.h"
+#include "projdefs.h"
 #include "queue.h"
+#include "rocketlib/include/common.h"
 #include "semphr.h"
-#include "stm32h7xx_hal.h"
 #include "task.h"
 
 #include "third_party/xsens-mti/src/xsens_mti.h"
@@ -9,6 +9,9 @@
 #include "common/math/math.h"
 #include "drivers/movella/movella.h"
 #include "drivers/uart/uart.h"
+#include "xsens-mti/src/xsens_constants.h"
+#include <stdint.h>
+#include <math.h>
 
 #define UART_TX_TIMEOUT_MS 100
 // should be every 5 ms but allow some leeway before erroring

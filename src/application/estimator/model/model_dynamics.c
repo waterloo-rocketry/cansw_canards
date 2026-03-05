@@ -1,10 +1,11 @@
 #include "application/estimator/model/model_dynamics.h"
+#include "application/estimator/estimator_types.h"
 #include "application/estimator/model/jacobians.h"
 #include "application/estimator/model/model_aerodynamics.h"
+#include "application/estimator/model/model_airdata.h"
 #include "application/estimator/model/quaternion.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
-#include <math.h>
 
 /*
  * Parameters

@@ -2,7 +2,9 @@
 #include <stdint.h>
 
 #include "application/estimator/model/model_acceleration.h"
+#include "application/estimator/estimator_types.h"
 #include "common/math/math-algebra3d.h"
+#include "common/math/math.h"
 
 // from params.m commit 6eb11c1 - for testflight
 // positions of IMU centers relative to body frame

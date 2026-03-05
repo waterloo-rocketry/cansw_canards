@@ -1,15 +1,16 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
-#include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "message_types.h"
+#include "projdefs.h"
 #include "queue.h"
 #include "rocketlib/include/common.h"
 #include "semphr.h"

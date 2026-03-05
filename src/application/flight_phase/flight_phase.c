@@ -1,13 +1,17 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
+#include "can.h"
 #include "drivers/timer/timer.h"
 
-#include "canlib.h"
 
-#include "FreeRTOS.h"
+#include "projdefs.h"
+#include "message_types.h"
+#include "message/msg_actuator.h"
 #include "queue.h"
+#include "rocketlib/include/common.h"
 #include "timers.h"
+#include <stdint.h>
 
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these
@@ -97,7 +101,7 @@ w_status_t flight_phase_init(void) {
  * @return STATE_ERROR if getting the current state failed/timed out, otherwise the current flight
  * phase
  */
-flight_phase_state_t flight_phase_get_state() {
+flight_phase_state_t flight_phase_get_state(void) {
 	flight_phase_state_t state = STATE_ERROR;
 	// Use a timeout of 0 to prevent blocking
 	if (xQueuePeek(state_mailbox, &state, 0) != pdPASS) {
