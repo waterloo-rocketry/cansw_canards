@@ -154,19 +154,39 @@ static uint32_t check_modules_status(void) {
 	// Call each module's get_status function
 	// These functions handle their own status checking, logging, and CAN messaging
 
+	//get health_status struct from each module 
+	//if If any module reports ERROR or FATAL as its 
+	//health_severity_t, health check will notify flight phase by calling 
+	//flight_phase_send_event(flight_phase_event_t event)
+	
+	// Using example module
+
+	//Add in later
+	// health_status_t i2c_status = i2c_get_status();
+	// health_status_t adc_status = adc_get_status();
+	// health_status_t can_handler_status = can_handler_get_status();
+	// health_status_t estimator_status = estimator_get_status();
+	// health_status_t controller_status = controller_get_status();
+	// health_status_t sd_card_status = sd_card_get_status();
+	// health_status_t timer_status = timer_get_status();
+	// health_status_t gpio_status = gpio_get_status();
+	// health_status_t fight_phase_status = flight_phase_get_status();
+	// health_status_t imu_handler_status = imu_handler_get_status();
+	// health_status_t uart_get_status = uart_get_status();
+
+	//Delete later
 	// status_bitfield |= i2c_get_status();
 	// status_bitfield |= adc_get_status();
 	// status_bitfield |= can_handler_get_status();
 	// status_bitfield |= estimator_get_status();
 	// status_bitfield |= controller_get_status();
 	// status_bitfield |= sd_card_get_status();
-	// status_bitfield |= timer_get_status();
-	// status_bitfield |= gpio_get_status();
+	//status_bitfield |= timer_get_status();
+	//status_bitfield |= gpio_get_status();
 	// status_bitfield |= flight_phase_get_status();
 	// status_bitfield |= imu_handler_get_status();
 	// status_bitfield |= uart_get_status();
 
-	health_check_test_module_get_status();
 
 	if (logger_get_status() == W_FAILURE) {
 		status_bitfield |= (1 << E_FS_ERROR_OFFSET);
@@ -178,8 +198,16 @@ static uint32_t check_modules_status(void) {
 
 w_status_t health_check_exec() {
 	uint32_t status_bitfield = 0;
+	bool fatal_error_detected = false;
 
+	uint32_t watchdog_status = check_watchdog_tasks();
 	status_bitfield |= check_watchdog_tasks();
+
+	// Watchdog timeout is always fatal
+	if (watchdog_status & (1 << E_WATCHDOG_TIMEOUT_OFFSET)) {
+		fatal_error_detected = true;
+	}
+	
 	status_bitfield |= check_modules_status();
 
 	// send status CAN msg
@@ -193,6 +221,12 @@ w_status_t health_check_exec() {
 	} else {
 		log_text(0, "health_checks", "build_general_board_status_msg failure");
 		return W_FAILURE;
+	}
+
+	// Notify flight phase if watchdog timeout
+	if (fatal_error_detected) {
+		log_text(0, "health_checks", "Watchdog timeout error");
+		flight_phase_send_event(EVENT_HEALTH_ERROR);
 	}
 
 	return W_SUCCESS;
