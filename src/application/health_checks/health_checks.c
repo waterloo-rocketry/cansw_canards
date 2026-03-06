@@ -34,13 +34,6 @@ typedef struct {
 	uint32_t timeout_ticks;
 } watchdog_task_t;
 
-// struct for module health status
-typedef struct {
-    health_severity_t severity;
-    module_id_t module_id;    
-    module_error_code_t error_code;  
-} health_status_t;
-
 
 // watchdog initiailsations
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
@@ -165,7 +158,7 @@ static uint32_t check_modules_status(void) {
 				example_status.severity,
 				example_status.error_code);
 		
-		// Convert to CAN bitfield and set bit
+		// Need to write this function
 		status_bitfield |= health_status_to_bitfield(example_status);
 		
 		if (example_status.severity == HEALTH_ERROR) {
