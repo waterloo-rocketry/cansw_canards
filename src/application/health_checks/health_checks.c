@@ -23,10 +23,7 @@
 #define ADC_VREF 3.3f
 #define R_SENSE 0.033f
 #define INA180A3_GAIN 100.0f
-#define MAX_CURRENT_mA 400
 #define MAX_WATCHDOG_TASKS 10
-#define CONV_ADC_COUNTS_TO_CURRENT_mA                                                              \
-	((ADC_VREF * 1000.0f) / (ADC_MAX_COUNTS * INA180A3_GAIN * R_SENSE))
 
 // struct for watchdog
 typedef struct {
@@ -36,47 +33,17 @@ typedef struct {
 	uint32_t timeout_ticks;
 } watchdog_task_t;
 
+// struct for module health status
+typedef struct {
+    health_severity_t severity;
+    module_id_t module_id;    
+    module_error_code_t error_code;  
+} health_status_t;
+
+
 // watchdog initiailsations
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
 static uint32_t num_watchdog_tasks = 0;
-
-w_status_t get_adc_current(uint32_t *adc_current_mA) {
-	w_status_t status = W_SUCCESS;
-	uint32_t adc_value;
-
-	status |= adc_get_value(PROCESSOR_BOARD_VOLTAGE, &adc_value, TASK_DELAY_MS);
-	if (status != W_SUCCESS) {
-		return status;
-	}
-
-	*adc_current_mA = (uint32_t)(adc_value * CONV_ADC_COUNTS_TO_CURRENT_mA);
-
-	return W_SUCCESS;
-}
-
-uint32_t check_current(void) {
-	uint32_t status = 0;
-	uint32_t adc_current_mA;
-
-	if (get_adc_current(&adc_current_mA) == W_SUCCESS) {
-		float ms = 0;
-		timer_get_ms(&ms);
-		can_msg_t msg = {0};
-
-		// always send current sense msg to can
-		build_analog_data_msg(PRIO_LOW, (uint16_t)ms, SENSOR_5V_CURR, adc_current_mA, &msg);
-		status |= can_handler_transmit(&msg);
-
-		// send CAN err msg and log text if over current
-		if (adc_current_mA > MAX_CURRENT_mA) {
-			status |= 1 << E_5V_OVER_CURRENT_OFFSET;
-			log_text(10, "health_checks", "5V overcurrent: %d mA", adc_current_mA);
-		} else {
-		}
-	}
-
-	return status;
-}
 
 w_status_t health_check_init(void) {
 	num_watchdog_tasks = 0;
@@ -133,7 +100,7 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
 	watchdog_tasks[num_watchdog_tasks].last_kick_timestamp = current_time;
 	watchdog_tasks[num_watchdog_tasks].timeout_ticks = timeout_ticks;
 
-	num_watchdog_tasks++; // incriminent the watchdog task count for future ref
+	num_watchdog_tasks++; // increment the watchdog task count for future ref
 
 	return status;
 }
@@ -187,17 +154,19 @@ static uint32_t check_modules_status(void) {
 	// Call each module's get_status function
 	// These functions handle their own status checking, logging, and CAN messaging
 
-	status_bitfield |= i2c_get_status();
-	status_bitfield |= adc_get_status();
-	status_bitfield |= can_handler_get_status();
-	status_bitfield |= estimator_get_status();
-	status_bitfield |= controller_get_status();
-	status_bitfield |= sd_card_get_status();
-	status_bitfield |= timer_get_status();
-	status_bitfield |= gpio_get_status();
-	status_bitfield |= flight_phase_get_status();
-	status_bitfield |= imu_handler_get_status();
-	status_bitfield |= uart_get_status();
+	// status_bitfield |= i2c_get_status();
+	// status_bitfield |= adc_get_status();
+	// status_bitfield |= can_handler_get_status();
+	// status_bitfield |= estimator_get_status();
+	// status_bitfield |= controller_get_status();
+	// status_bitfield |= sd_card_get_status();
+	// status_bitfield |= timer_get_status();
+	// status_bitfield |= gpio_get_status();
+	// status_bitfield |= flight_phase_get_status();
+	// status_bitfield |= imu_handler_get_status();
+	// status_bitfield |= uart_get_status();
+
+	health_check_test_module_get_status();
 
 	if (logger_get_status() == W_FAILURE) {
 		status_bitfield |= (1 << E_FS_ERROR_OFFSET);
@@ -210,7 +179,6 @@ static uint32_t check_modules_status(void) {
 w_status_t health_check_exec() {
 	uint32_t status_bitfield = 0;
 
-	status_bitfield |= check_current();
 	status_bitfield |= check_watchdog_tasks();
 	status_bitfield |= check_modules_status();
 

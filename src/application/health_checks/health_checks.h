@@ -55,4 +55,31 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
  */
 void health_check_task(void *argument);
 
+typedef enum {
+    HEALTH_OK = 0,
+    HEALTH_WARN,    //Log it, set CAN bit
+    HEALTH_ERROR,     // Log it, set CAN bit, notify flight phase 
+    HEALTH_FATAL      // Log it, set CAN bit, notify flight phase
+} health_severity_t;
+
+typedef enum {
+    CAN_HANDLER_H = 0,  
+    CONTROLLER,
+    ESTIMATOR,
+    FLIGHT_PHASE,
+    IMU_HANDLER,
+    INIT,
+    LOGGER
+} module_id_t;
+
+
+
+typedef enum {
+    ERRORCODE1 = 0,
+    ERRORCODE2,
+    ERRORCODE3
+    
+} module_error_code_t;
+
+
 #endif
