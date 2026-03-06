@@ -18,6 +18,7 @@
 #include "message_types.h"
 #include "printf.h"
 #include "task.h"
+#include "application/example_module/example_module.h"
 
 #define TASK_DELAY_MS 3000
 #define ADC_VREF 3.3f
@@ -150,16 +151,30 @@ uint32_t check_watchdog_tasks(void) {
 static uint32_t check_modules_status(void) {
 	// CAN error bitfield
 	uint32_t status_bitfield = 0;
+	bool health_error_detected = false;
+	bool health_fatal_detected = false;
 
-	// Call each module's get_status function
-	// These functions handle their own status checking, logging, and CAN messaging
-
-	//get health_status struct from each module 
-	//if If any module reports ERROR or FATAL as its 
-	//health_severity_t, health check will notify flight phase by calling 
-	//flight_phase_send_event(flight_phase_event_t event)
-	
 	// Using example module
+	health_status_t example_status = example_module_get_status();
+	
+	if (example_status.severity != HEALTH_OK) {
+		log_text(0,
+				"health",
+				"%s: sev=%d, err=%d",
+				"Example",
+				example_status.severity,
+				example_status.error_code);
+		
+		// Convert to CAN bitfield and set bit
+		status_bitfield |= health_status_to_bitfield(example_status);
+		
+		if (example_status.severity == HEALTH_ERROR) {
+			health_error_detected = true;
+		}
+		if (example_status.severity == HEALTH_FATAL) {
+			health_fatal_detected = true;
+		}
+	}
 
 	//Add in later
 	// health_status_t i2c_status = i2c_get_status();
@@ -191,6 +206,16 @@ static uint32_t check_modules_status(void) {
 	if (logger_get_status() == W_FAILURE) {
 		status_bitfield |= (1 << E_FS_ERROR_OFFSET);
 		log_text(5, "health", "logger not init");
+	}
+
+	
+	// Notify flight phase if any ERROR or FATAL detected
+	if (health_error_detected) {
+		flight_phase_send_event(EVENT_HEALTH_ERROR);
+	}
+
+	if (health_fatal_detected) {
+		flight_phase_send_event(EVENT_HEATH_FATAL);
 	}
 
 	return status_bitfield;

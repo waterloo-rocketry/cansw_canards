@@ -46,7 +46,7 @@ typedef uint8_t module_error_code_t;
  * 
  * Standard structure returned by all module health check functions
  */
-typedef struct {
+typedef struct health_status {
     health_severity_t severity;         
     module_id_t module_id;             
     module_error_code_t error_code;     
