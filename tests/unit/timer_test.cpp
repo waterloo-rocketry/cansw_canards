@@ -61,7 +61,7 @@ TEST_F(TimerTest, GetMsInvalidTimerInstanceFails) {
 TEST_F(TimerTest, GetMsTimerNotRunningFails) {
     // Arrange
     float ms;
-    HAL_TIM_IC_GetState_fake.return_val = HAL_TIM_STATE_READY;
+    HAL_TIM_IC_GetState_fake.return_val = HAL_TIM_STATE_ERROR;
 
     // Act
     w_status_t status = timer_get_ms(&ms);
