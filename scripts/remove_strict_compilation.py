@@ -1,17 +1,15 @@
-# pre-compiling script to remove strict compilcation flags from thirdparty files we have no control over
+# TODO: figure out a way to properly do this... this code appends -w to everythign including src/ which is not good
 
-Import("env")
+# Import("env")
 
-def middleware(node):
-    p = str(node).replace("\\", "/")
+# def middleware(env_, node):
+#     path = str(node).replace("\\", "/")
 
-    if "/third_party/" in p:
-        new_flags = env.get("CCFLAGS", []) + ["-w"]
-        return env.Object(
-            node,
-            CCFLAGS=new_flags
-        )
+#     if "/third_party/" in path:
+#         cloned = env_.Clone()
+#         cloned.Append(CCFLAGS=["-w"])
+#         return cloned
 
-    return None
+#     return env_
 
-env.AddBuildMiddleware(middleware)
+# env.AddBuildMiddleware(middleware)

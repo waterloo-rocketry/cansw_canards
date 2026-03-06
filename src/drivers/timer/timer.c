@@ -26,9 +26,9 @@ w_status_t timer_get_ms(float *ms) {
 		return W_FAILURE;
 	}
 
-	// check and validate whether the timer is actually running or not
+	// check and validate whether the timer is alive
 	HAL_TIM_StateTypeDef state = HAL_TIM_IC_GetState(&htim2);
-	if (state != HAL_TIM_STATE_BUSY) {
+	if (state == HAL_TIM_STATE_RESET || state == HAL_TIM_STATE_ERROR) {
 		timer_health.timer_stopped++;
 		return W_FAILURE;
 	}
