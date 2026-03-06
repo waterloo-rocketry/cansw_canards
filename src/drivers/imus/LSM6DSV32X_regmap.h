@@ -2,7 +2,6 @@
 #define LSM6DSV32X_regmap_h
 
 enum LSM6_reg {
-
 	LSM6DSV32X_WHO_AM_I = 0x0F,
 
 	FUNC_CFG_ACCESS = 0x01,
@@ -24,8 +23,7 @@ enum LSM6_reg {
 	FIFO_CTRL3 = 0x09,
 	FIFO_CTRL4 = 0x0A,
 
-	CTRL_STATUS = 0x1A,
-
+	CTRL_STATUS = 0x1A
 };
 
 #endif
