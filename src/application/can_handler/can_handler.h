@@ -5,6 +5,11 @@
 #include "rocketlib/include/common.h"
 #include "stm32h7xx_hal.h"
 #include <stdint.h>
+#include "application/can_handler/can_telemetry_scaling.h"
+
+#define UINT24_MAX (2 << 24) - 1
+#define INT24_MIN (-(2 << 23))
+#define INT24_MAX (2 << 23) - 1
 
 /**
  * @brief Structure to track CAN handler stats, errors and status
@@ -79,5 +84,16 @@ void proc_handle_fatal_error(const char *errorMsg);
  * @return CAN board specific err bitfield
  */
 uint32_t can_handler_get_status(void);
+
+/**
+ * @brief Encode telemetry values into CAN message payloads according to predefined scaling rules.
+ * 
+ * @param scale The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
+ * @param input The raw telemetry value to encode
+ * @param out Pointer to the output variable where the encoded value will be stored
+ * 
+ * @return true if encoding was successful, false if there was an error (e.g., value has been clamped)
+ */
+bool can_encode_scaled(can_scaling_types_t scaling_type, float input, void *out);
 
 #endif
