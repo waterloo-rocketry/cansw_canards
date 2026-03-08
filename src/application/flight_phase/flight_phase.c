@@ -12,7 +12,7 @@
 #include "queue.h"
 #include "timers.h"
 
-// TODO: these are made up values, up to FIDO what these actually are
+// TODO: changes these values once more detailed values are obtained
 // See the flowchart in the design doc for more context on these
 static const uint32_t ACT_DELAY_MS =
 	11000; // Q - the minimum time after launch before allowing canards to actuate
@@ -372,19 +372,19 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 	bool threshold_detection = false;
 	flight_phase_event_t trigger_event = EVENT_NULL;
 
-	if (true == all_imu_data->pololu.is_dead) { // TODO: to be changed to ST IMU
+	if (true == all_imu_data->pololu.is_dead) { // TODO: to be changed to ST IMU. Blocked by ST IMU not implemented yet
 		log_text(5, "FlightPhaseSensorDetection", "ERROR: POLOLU IMU is DEAD");
 		*num_consec_detection = 0;
 		return W_FAILURE;
 	}
 
 	if (*last_imu_timestamp ==
-		all_imu_data->pololu.timestamp_imu) { // TODO: to be changed to ST IMU
+		all_imu_data->pololu.timestamp_imu) { // TODO: to be changed to ST IMU. Blocked by ST IMU not implemented yet
 		log_text(5, "FlightPhaseSensorDetection", "WARNING: POLOLU IMU did not update");
 		return W_SUCCESS;
 
 	} else if ((MAX_TIMESTAMP_DIFFERENCE_MS + *last_imu_timestamp) <
-			   all_imu_data->pololu.timestamp_imu) { // TODO: to be changed to ST IMU
+			   all_imu_data->pololu.timestamp_imu) { // TODO: to be changed to ST IMU. Blocked by ST IMU not implemented yet
 		log_text(
 			5, "FlightPhaseSensorDetection", "WARNING: POLOLU IMU timestamp exceed max difference");
 		*num_consec_detection = 0;
@@ -395,7 +395,7 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 			trigger_event = EVENT_LAUNCH_ACCEL;
 
 			if (ACCEL_THRESHOLD_LAUNCH_M_S2 <=
-				all_imu_data->pololu.accelerometer.x) { // TODO: to be changed to ST IMU
+				all_imu_data->pololu.accelerometer.x) { // TODO: to be changed to ST IMU. Blocked by ST IMU not implemented yet
 				threshold_detection = true;
 				log_text(5,
 						 "FlightPhaseSensorDetection",
@@ -406,7 +406,7 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 			break;
 
 		default:
-			// TODO: complete default case
+			// TODO: complete default case. Blocked by not finishing other cases
 			break;
 	}
 
@@ -442,7 +442,7 @@ void flight_phase_task(void *args) {
 		sensor_event = EVENT_NULL;
 
 		data_collection_status |= imu_handler_get_data(&imu_data);
-		// TODO: add estimator data collection call
+		// TODO: add estimator data collection call. Blocked by estimator data collection function not designed or implemented
 
 		if (W_SUCCESS == data_collection_status) {
 			if (flight_phase_sensor_detection(&curr_state,
@@ -466,7 +466,7 @@ void flight_phase_task(void *args) {
 					}
 				}
 			}
-			last_imu_timestamp = imu_data.pololu.timestamp_imu; // TODO: to be changed to ST IMU
+			last_imu_timestamp = imu_data.pololu.timestamp_imu; // TODO: to be changed to ST IMU. Blocked by ST IMU not implemented yet
 		} else {
 			log_text(5,
 					 "FlightPhaseTask",
