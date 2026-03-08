@@ -7,21 +7,19 @@
 #include <limits.h>
 #include <stdio.h>
 
+/**
+ * raw data from imu/mag registers
+ */
+typedef struct __attribute__((packed)) {
+	uint16_t x;
+	uint16_t y;
+	uint16_t z;
+} lsm6dsv32x_raw_imu_data_t;
+
 static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data);
 
-/**
- * @brief Flips and checks the bit register on that allows access to the controll registers
- * @note Must be called before any bit registers are configured
- * @return Status of the operation
- */
-w_status_t lsm6dsv32x_config_open();
 
-/**
- * @brief Flips and checks the bit register off that allows access to the controll registers
- * @note Must be called after bit registers are configured, called before flight!!!
- * @return Status of the operation
- */
-w_status_t lsm6dsv32x_config_close();
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c);
 
 /**
  * @brief Initializes the bit registers for lsm6dsv32x

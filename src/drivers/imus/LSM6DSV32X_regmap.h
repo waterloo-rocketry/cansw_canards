@@ -1,7 +1,7 @@
 #ifndef LSM6DSV32X_regmap_h
 #define LSM6DSV32X_regmap_h
 
-enum LSM6_reg {
+enum LSM6DSV32X_reg {
 	LSM6DSV32X_WHO_AM_I = 0x0F,
 
 	FUNC_CFG_ACCESS = 0x01,
@@ -23,7 +23,14 @@ enum LSM6_reg {
 	FIFO_CTRL3 = 0x09,
 	FIFO_CTRL4 = 0x0A,
 
-	CTRL_STATUS = 0x1A
+	CTRL_STATUS = 0x1A,
+
+	FIFO_READ_BEGIN = 0x78,
+};
+
+enum {
+    IMU_BUFFER_MAIN = 0,
+    IMU_BUFFER_SECONDARY = 1
 };
 
 #endif
