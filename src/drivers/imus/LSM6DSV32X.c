@@ -19,15 +19,11 @@
 static const double ACC_RANGE = 32.0; // g
 static const double GYRO_RANGE = 4000.0; // dps
 
-// lps22df baro range is actually smaller than this, but we deemed better to "extend" the range and
-// gamble on possible undefined values, as thats better than saturating for estimator
-static const double BARO_MAX = 110000; // conservative max Pa at sea level
-static const double BARO_MIN = 6000; // min Pa we can possibly reach (60000 ft apogee)
-
 // AltIMU conversion factors - based on config settings below
 static const double ACC_FS = ACC_RANGE / INT16_MAX; // g / LSB
 static const double GYRO_FS = GYRO_RANGE / INT16_MAX; // dps / LSB
 
+//struct to hold all context info about the state of the imu
 typedef struct {
     I2C_HandleTypeDef *hi2c;
     uint8_t dev_addr;
@@ -114,7 +110,6 @@ w_status_t lsm6dsv32x_init() {
 
 /**
  * @brief Interupt handler for the int1 pin
- * @return Status of the operation
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     if (GPIO_Pin == IMU_INT1_PIN) {
@@ -123,18 +118,23 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		lsm6dsv32x_ctx.read_ready_buffer = IMU_BUFFER_SECONDARY;
 
 		//begin dma read to the main buffer
-        HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c, LSM6DSV32X_ADDR, FIFO_READ_BEGIN, I2C_MEMADD_SIZE_8BIT, lsm6dsv32x_ctx.dual_buffer[IMU_BUFFER_MAIN], 12);
+        HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c, 
+			LSM6DSV32X_ADDR, 
+			FIFO_READ_BEGIN, 
+			I2C_MEMADD_SIZE_8BIT, 
+			lsm6dsv32x_ctx.dual_buffer[IMU_BUFFER_MAIN], 
+			12);
     }
 }
 
 /**
  * @brief handler for after the DMA is completed
- * @return Status of the operation
  */
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c){
 	if (hi2c == lsm6dsv32x_ctx.hi2c){
         
 	//flip the read ready buffer to the main buffer
+	lsm6dsv32x_ctx.stale_data = IMU_DATA_READY;
 	lsm6dsv32x_ctx.read_ready_buffer = IMU_BUFFER_MAIN;
 	
 	//copy the data from the main buffer into the second buffer
@@ -162,7 +162,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 	w_status_t status = W_SUCCESS;									
 	uint8_t *raw_bytes = lsm6dsv32x_ctx.dual_buffer[lsm6dsv32x_ctx.read_ready_buffer];
 
-	if (W_SUCCESS == status) {
+	if (lsm6dsv32x_ctx.stale_data == IMU_DATA_READY) {
 		// Parse gyroscope raw data (first 6 bytes)
 		raw_gyro->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
 		raw_gyro->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
@@ -184,6 +184,8 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 	} else {
 		return W_IO_ERROR;
 	}
+
+	lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
 
 }
 

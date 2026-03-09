@@ -28,9 +28,6 @@ enum LSM6DSV32X_reg {
 	FIFO_READ_BEGIN = 0x78,
 };
 
-enum {
-    IMU_BUFFER_MAIN = 0,
-    IMU_BUFFER_SECONDARY = 1
-};
+
 
 #endif
