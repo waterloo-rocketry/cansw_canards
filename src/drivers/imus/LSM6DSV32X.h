@@ -7,6 +7,14 @@
 #include <limits.h>
 #include <stdio.h>
 
+enum {
+    IMU_BUFFER_MAIN = 0,
+    IMU_BUFFER_SECONDARY = 1,
+
+    IMU_DATA_STALE = 1,
+    IMU_DATA_READY = 0,
+};
+
 /**
  * raw data from imu/mag registers
  */
@@ -18,13 +26,12 @@ typedef struct __attribute__((packed)) {
 
 static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data);
 
-
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c);
-
 /**
  * @brief Initializes the bit registers for lsm6dsv32x
  * @note Must be called to wake up imu
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_init();
+
+
 
