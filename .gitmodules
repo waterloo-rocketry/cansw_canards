@@ -16,3 +16,6 @@
 [submodule "src/third_party/xsens-mti"]
 	path = src/third_party/xsens-mti
 	url = https://github.com/waterloo-rocketry/xsens-mti
+[submodule "littlefs"]
+	path = littlefs
+	url = https://github.com/littlefs-project/littlefs
