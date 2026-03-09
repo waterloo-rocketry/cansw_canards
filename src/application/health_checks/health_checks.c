@@ -144,8 +144,7 @@ uint32_t check_watchdog_tasks(void) {
 static uint32_t check_modules_status(void) {
 	// CAN error bitfield
 	uint32_t status_bitfield = 0;
-	bool health_error_detected = false;
-	bool health_fatal_detected = false;
+	bool fatal_error_detected = false;
 
 	// Using example module
 	health_status_t example_status = example_module_get_status();
@@ -157,15 +156,13 @@ static uint32_t check_modules_status(void) {
 				"Example",
 				example_status.severity,
 				example_status.error_code);
-		
-		// Need to write this function
-		status_bitfield |= health_status_to_bitfield(example_status);
-		
-		if (example_status.severity == HEALTH_ERROR) {
-			health_error_detected = true;
-		}
+
+		if (example_status.severity >= HEALTH_WARN) {
+        status_bitfield |= (1 << example_status.module_id);
+    	}
+	
 		if (example_status.severity == HEALTH_FATAL) {
-			health_fatal_detected = true;
+			fatal_error_detected = true;
 		}
 	}
 
@@ -202,13 +199,8 @@ static uint32_t check_modules_status(void) {
 	}
 
 	
-	// Notify flight phase if any ERROR or FATAL detected
-	if (health_error_detected) {
-		flight_phase_send_event(EVENT_HEALTH_ERROR);
-	}
-
-	if (health_fatal_detected) {
-		flight_phase_send_event(EVENT_HEATH_FATAL);
+	if (fatal_error_detected) {
+		proc_handle_fatal_error("app module fatal");
 	}
 
 	return status_bitfield;
@@ -239,12 +231,6 @@ w_status_t health_check_exec() {
 	} else {
 		log_text(0, "health_checks", "build_general_board_status_msg failure");
 		return W_FAILURE;
-	}
-
-	// Notify flight phase if watchdog timeout
-	if (fatal_error_detected) {
-		log_text(0, "health_checks", "Watchdog timeout error");
-		flight_phase_send_event(EVENT_HEALTH_ERROR);
 	}
 
 	return W_SUCCESS;
