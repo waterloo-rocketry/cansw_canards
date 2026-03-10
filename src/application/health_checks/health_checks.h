@@ -34,8 +34,7 @@ typedef enum {
     MODULE_FLIGHT_PHASE,
     MODULE_IMU_HANDLER,
     MODULE_UART,
-    MODULE_LOGGER,
-    MODULE_EXAMPLE
+    MODULE_LOGGER
 } module_id_t;
 
 // Each module defines error codes in its header file 

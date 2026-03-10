@@ -18,7 +18,6 @@
 #include "message_types.h"
 #include "printf.h"
 #include "task.h"
-#include "application/example_module/example_module.h"
 
 #define TASK_DELAY_MS 3000
 #define ADC_VREF 3.3f
