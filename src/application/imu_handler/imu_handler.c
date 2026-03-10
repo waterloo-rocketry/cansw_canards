@@ -364,7 +364,7 @@ void imu_handler_task(void *argument) {
 	}
 }
 
-uint32_t imu_handler_get_status(void) {
+health_status_t imu_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log sampling statistics
@@ -384,5 +384,5 @@ uint32_t imu_handler_get_status(void) {
 			 imu_handler_state.movella_stats.success_count,
 			 imu_handler_state.movella_stats.failure_count);
 
-	return status_bitfield;
+	return HEALTH_STATUS_OK(MODULE_IMU_HANDLER); 
 }

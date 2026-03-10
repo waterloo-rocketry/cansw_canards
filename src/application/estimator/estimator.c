@@ -321,8 +321,7 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state) {
 	return status;
 }
 
-uint32_t estimator_get_status(void) {
-	uint32_t status_bitfield = 0;
+health_status_t estimator_get_status(void) {
 
 	// Log all error statistics
 	log_text(0,
@@ -338,7 +337,7 @@ uint32_t estimator_get_status(void) {
 			 estimator_error_stats.can_log_fails,
 			 estimator_error_stats.invalid_phase_errors);
 
-	return status_bitfield;
+	return HEALTH_STATUS_OK(MODULE_ESTIMATOR);
 }
 
 void estimator_task(void *argument) {

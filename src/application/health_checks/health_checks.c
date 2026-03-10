@@ -148,7 +148,6 @@ static uint32_t check_modules_status(void) {
 
 	// Using example module
 	health_status_t example_status = example_module_get_status();
-	
 	if (example_status.severity != HEALTH_OK) {
 		log_text(0,
 				"health",
@@ -157,48 +156,44 @@ static uint32_t check_modules_status(void) {
 				example_status.severity,
 				example_status.error_code);
 
-		if (example_status.severity >= HEALTH_WARN) {
         status_bitfield |= (1 << example_status.module_id);
-    	}
 	
 		if (example_status.severity == HEALTH_FATAL) {
 			fatal_error_detected = true;
 		}
 	}
 
-	//Add in later
-	// health_status_t i2c_status = i2c_get_status();
-	// health_status_t adc_status = adc_get_status();
-	// health_status_t can_handler_status = can_handler_get_status();
-	// health_status_t estimator_status = estimator_get_status();
-	// health_status_t controller_status = controller_get_status();
-	// health_status_t sd_card_status = sd_card_get_status();
-	// health_status_t timer_status = timer_get_status();
-	// health_status_t gpio_status = gpio_get_status();
-	// health_status_t fight_phase_status = flight_phase_get_status();
-	// health_status_t imu_handler_status = imu_handler_get_status();
-	// health_status_t uart_get_status = uart_get_status();
+	health_status_t i2c_status = i2c_get_status();
+	if (i2c_status.severity != HEALTH_OK) {
+		log_text(0,
+				"health",
+				"%s: sev=%d, err=%d",
+				"i2c",
+				i2c_status.severity,
+				i2c_status.error_code);
+		
+        status_bitfield |= (1 << example_status.module_id);
+    	
+		if (i2c_status.severity == HEALTH_FATAL) {
+			fatal_error_detected = true;
+		}
+	}
 
-	//Delete later
-	// status_bitfield |= i2c_get_status();
-	// status_bitfield |= adc_get_status();
-	// status_bitfield |= can_handler_get_status();
-	// status_bitfield |= estimator_get_status();
-	// status_bitfield |= controller_get_status();
-	// status_bitfield |= sd_card_get_status();
-	//status_bitfield |= timer_get_status();
-	//status_bitfield |= gpio_get_status();
-	// status_bitfield |= flight_phase_get_status();
-	// status_bitfield |= imu_handler_get_status();
-	// status_bitfield |= uart_get_status();
-
+	health_status_t adc_status = adc_get_status();
+	health_status_t can_handler_status = can_handler_get_status();
+	health_status_t estimator_status = estimator_get_status();
+	health_status_t controller_status = controller_get_status();
+	health_status_t sd_card_status = sd_card_get_status();
+	health_status_t timer_status = timer_get_status();
+	health_status_t gpio_status = gpio_get_status();
+	health_status_t fight_phase_status = flight_phase_get_status();
+	health_status_t imu_handler_status = imu_handler_get_status();
 
 	if (logger_get_status() == W_FAILURE) {
 		status_bitfield |= (1 << E_FS_ERROR_OFFSET);
 		log_text(5, "health", "logger not init");
 	}
 
-	
 	if (fatal_error_detected) {
 		proc_handle_fatal_error("app module fatal");
 	}
@@ -208,16 +203,9 @@ static uint32_t check_modules_status(void) {
 
 w_status_t health_check_exec() {
 	uint32_t status_bitfield = 0;
-	bool fatal_error_detected = false;
 
 	uint32_t watchdog_status = check_watchdog_tasks();
-	status_bitfield |= check_watchdog_tasks();
-
-	// Watchdog timeout is always fatal
-	if (watchdog_status & (1 << E_WATCHDOG_TIMEOUT_OFFSET)) {
-		fatal_error_detected = true;
-	}
-	
+	status_bitfield |= check_watchdog_tasks();	
 	status_bitfield |= check_modules_status();
 
 	// send status CAN msg

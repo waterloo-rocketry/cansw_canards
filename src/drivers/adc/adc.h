@@ -2,6 +2,7 @@
 #define ADC_H
 
 #include "rocketlib/include/common.h"
+#include "application/health_checks/health_checks.h"
 #include "stm32h7xx_hal.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -49,6 +50,6 @@ w_status_t adc_get_value(adc_channel_t channel, uint32_t *output, uint32_t timeo
  *
  * @return CAN board specific err bitfield
  */
-uint32_t adc_get_status(void);
+health_status_t adc_get_status(void);
 
 #endif

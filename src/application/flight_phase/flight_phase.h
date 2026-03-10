@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
+
 #include "rocketlib/include/common.h"
 
 /**
@@ -65,7 +67,7 @@ w_status_t flight_phase_reset(void);
  * @details Logs initialization status, state machine state, event statistics,
  * and error conditions for the flight phase state machine
  */
-uint32_t flight_phase_get_status(void);
+health_status_t flight_phase_get_status(void);
 
 /**
  * return time (ms) elapsed since the moment of launch

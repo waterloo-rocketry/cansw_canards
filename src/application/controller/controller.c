@@ -239,8 +239,7 @@ void controller_task(void *argument) {
 	}
 }
 
-uint32_t controller_get_status(void) {
-	uint32_t status_bitfield = 0;
+health_status_t controller_get_status(void) {
 
 	// Log all error statistics
 	log_text(0,
@@ -262,6 +261,6 @@ uint32_t controller_get_status(void) {
 			 controller_state.can_send_errors,
 			 controller_state.data_miss_counter);
 
-	return status_bitfield;
+	return HEALTH_STATUS_OK(MODULE_CONTROLLER); 
 }
 
