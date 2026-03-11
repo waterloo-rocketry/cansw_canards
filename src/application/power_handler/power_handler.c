@@ -30,20 +30,20 @@ w_status_t power_handler_set_payload_power(bool enabled) {
     return W_SUCCESS;
 }
 
-/**
- * Reads messages from RocketCAN that toggles payload power and 
- * calls power_handler_set_payload_power. 
- */
-static w_status_t payload_power_callback(const can_msg_t *msg) {
-    (void)msg;
-    return W_SUCCESS;
-}
+// /**
+//  * Reads messages from RocketCAN that toggles payload power and 
+//  * calls power_handler_set_payload_power. 
+//  */
+// static w_status_t payload_power_callback(const can_msg_t *msg) {
+//     (void)msg;
+//     return W_SUCCESS;
+// }
 
-/**
- * Reads messages from RocketCAN that toggles low power mode and
- * turns off canard board components via GPIO pins.
- */
-static w_status_t low_power_callback(const can_msg_t *msg) {
-    (void)msg;
-    return W_SUCCESS;
-}
+// /**
+//  * Reads messages from RocketCAN that toggles low power mode and
+//  * turns off canard board components via GPIO pins.
+//  */
+// static w_status_t low_power_callback(const can_msg_t *msg) {
+//     (void)msg;
+//     return W_SUCCESS;
+// }
