@@ -45,6 +45,7 @@ FAKE_VALUE_FUNC(uint32_t, gpio_get_status);
 FAKE_VALUE_FUNC(uint32_t, flight_phase_get_status);
 FAKE_VALUE_FUNC(uint32_t, imu_handler_get_status);
 FAKE_VALUE_FUNC(uint32_t, uart_get_status);
+FAKE_VALUE_FUNC(uint32_t, motor_handler_get_status);
 
 // Mocked global variables
 static float timer_ms_value_mock;
@@ -93,6 +94,7 @@ protected:
         RESET_FAKE(flight_phase_get_status);
         RESET_FAKE(imu_handler_get_status);
         RESET_FAKE(uart_get_status);
+        RESET_FAKE(motor_handler_get_status);
 
         FFF_RESET_HISTORY();
 
@@ -114,6 +116,7 @@ protected:
         flight_phase_get_status_fake.return_val = W_SUCCESS;
         imu_handler_get_status_fake.return_val = W_SUCCESS;
         uart_get_status_fake.return_val = W_SUCCESS;
+        motor_handler_get_status_fake.return_val = W_SUCCESS;
     }
 
     void TearDown() override {}
