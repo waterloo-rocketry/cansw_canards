@@ -8,11 +8,11 @@
 #include <stdio.h>
 
 enum {
-    IMU_BUFFER_MAIN = 0,
-    IMU_BUFFER_SECONDARY = 1,
+	IMU_BUFFER_MAIN = 0,
+	IMU_BUFFER_SECONDARY = 1,
 
-    IMU_DATA_STALE = 1,
-    IMU_DATA_READY = 0,
+	IMU_DATA_STALE = 1,
+	IMU_DATA_READY = 0
 };
 
 /**
@@ -24,14 +24,10 @@ typedef struct __attribute__((packed)) {
 	uint16_t z;
 } lsm6dsv32x_raw_imu_data_t;
 
-static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data);
-
 /**
  * @brief Initializes the bit registers for lsm6dsv32x
  * @note Must be called to wake up imu
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_init();
-
-
 
