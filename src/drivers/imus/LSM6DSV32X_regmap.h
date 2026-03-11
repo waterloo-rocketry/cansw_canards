@@ -25,9 +25,7 @@ enum LSM6DSV32X_reg {
 
 	CTRL_STATUS = 0x1A,
 
-	FIFO_READ_BEGIN = 0x78,
+	FIFO_READ_BEGIN = 0x78
 };
-
-
 
 #endif
