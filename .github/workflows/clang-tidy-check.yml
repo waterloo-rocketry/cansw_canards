@@ -1,0 +1,31 @@
+name: C Lint Check
+
+# Runs on pushes to pull request
+on: pull_request
+
+jobs:
+  # Build job
+  clang-tidy-lint-check:
+    name: C Lint Check (clang-tidy check)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+      - name: Install clang-tidy 21
+        id: llvm-install
+        shell: bash
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 21
+          sudo apt install clang-tidy-21
+
+      - name: Register clang-tidy problem matcher
+        run: echo "::add-matcher::.github/clang-tidy-matcher.json"
+
+      - name: Run lint check
+        id: run-lint
+        shell: bash
+        run: clang-tidy-21 --warnings-as-errors="*" --checks="clang-*,misc-*" --extra-arg-before="-std=c99" --extra-arg-before="-pedantic" --extra-arg-before="-Isrc" --extra-arg-before="-Isrc/third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS/Source/include" --extra-arg-before="-IInc" --extra-arg-before="-Isrc/third_party/canlib" --extra-arg-before="-Isrc/third_party" --extra-arg-before="-Isrc/third_party/CMSIS-DSP/Include" --extra-arg-before="-Isrc/third_party/cubemx_autogen/Drivers/STM32H7xx_HAL_Driver/Inc" --extra-arg-before="-Isrc/third_party/cubemx_autogen/Drivers/CMSIS/Include" --extra-arg-before="-Isrc/third_party/cubemx_autogen/Drivers/CMSIS/Device/ST/STM32H7xx/Include" --extra-arg-before="-Isrc/third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F" --extra-arg-before="-Isrc/third_party/cubemx_autogen/Middlewares/Third_Party/FatFs/src" --extra-arg-before="-DSTM32H733xx" src/application/*/*.c src/application/*/*.h src/application/*/*/*.c src/application/*/*/*.h src/drivers/*/*.c src/drivers/*/*.h src/common/math/*.c src/common/math/*.h
