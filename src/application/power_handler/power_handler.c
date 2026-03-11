@@ -7,29 +7,51 @@
 
 /**
  * Initializes power handler.
+ * Registers CAN callbacks for payload 5V and low power mode commands.
+ * Defaults everything to ON.
  */
 w_status_t power_handler_init(void) {
     return W_SUCCESS; 
 }
 
 /**
- * Main task that handles flight phase changes, detects faults and 
- * reports health statuses. 
+ * Main task. Periodically reads ADC rails and checks voltage/current
+ * against expected thresholds. Sends telemetry via can_handler_transmit.
  */
 void power_handler_task(void *args) {
     return;
 }
 
 /**
- * Provides power handler status. 
+ * Returns uint32_t bitfield of active faults.
+ * Called by health checks.
  */
 uint32_t power_handler_get_status(void) {
     return 0;
 }
 
+
 /**
- * Toggles 5V payload rail.
+ * Toggles 5V payloads power rail via a GPIO pin.
  */
 w_status_t power_handler_set_payload_power(bool enabled) {
+    return W_SUCCESS;
+}
+
+/**
+ * Reads messages from RocketCAN that toggles payload power and 
+ * calls power_handler_set_payload_power. 
+ */
+static w_status_t payload_power_callback(const can_msg_t *msg) {
+    (void)msg;
+    return W_SUCCESS;
+}
+
+/**
+ * Reads messages from RocketCAN that toggles low power mode and
+ * turns off canard board components via GPIO pins.
+ */
+static w_status_t low_power_callback(const can_msg_t *msg) {
+    (void)msg;
     return W_SUCCESS;
 }
