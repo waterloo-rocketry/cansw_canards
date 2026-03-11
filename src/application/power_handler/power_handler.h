@@ -1,7 +1,6 @@
 #ifndef POWER_HANDLER_H
 #define POWER_HANDLER_H
 
-#include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
@@ -16,12 +15,6 @@
  * Defaults everything to ON.
  */
 w_status_t power_handler_init(void);
-
-/**
- * Main task. Periodically reads ADC rails and checks voltage/current
- * against expected thresholds. Sends telemetry via can_handler_transmit.
- */
-void power_handler_task(void *args);
 
 /**
  * Returns uint32_t bitfield of active faults.

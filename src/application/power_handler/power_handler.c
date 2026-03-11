@@ -4,7 +4,7 @@
 #include "application/flight_phase/flight_phase.h"
 #include "drivers/gpio/gpio.h"
 #include "queue.h"
-
+#include "rocketlib/include/common.h"
 /**
  * Initializes power handler.
  * Registers CAN callbacks for payload 5V and low power mode commands.
@@ -12,14 +12,6 @@
  */
 w_status_t power_handler_init(void) {
     return W_SUCCESS; 
-}
-
-/**
- * Main task. Periodically reads ADC rails and checks voltage/current
- * against expected thresholds. Sends telemetry via can_handler_transmit.
- */
-void power_handler_task(void *args) {
-    return;
 }
 
 /**
