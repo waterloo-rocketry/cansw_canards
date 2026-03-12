@@ -4,24 +4,26 @@
 #include "drivers/ad_breakout_board/ads1219_stm32.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 // define addresses
 #define ADS1219_ADDR 0x00 // TODO: to be set once the address has been determind
 
 // sensor range
-static const float32_t ADXRS649_GYRO_RANGE = 20000.0;
+static const float ADXRS649_GYRO_RANGE = 20000.0;
 
 // conversion factors
-static const float32_t ADXRS649_CONV_mV_DEG_S = 0.1; // from datasheet
+static const float ADXRS649_CONV_mV_DEG_S = 0.1; // from datasheet
 
 // self-test constants
-static const float32_t MIN_SELF_TEST_mV = 130; // magnitude
-static const float32_t MAX_SELF_TEST_mV = 170; // magnitude
+static const float MIN_SELF_TEST_mV = 130; // magnitude
+static const float MAX_SELF_TEST_mV = 170; // magnitude
 static const uint32_t MAX_NUM_TESTS = 2; // unitless
 
 // ADC constants
-static float32_t V_EXTERNAL_REF_P_mV = 5000.0f;
-static float32_t V_EXTERNAL_REF_N_mV = 0.0f;
+static float V_EXTERNAL_REF_P_mV = 5000.0f;
+static float V_EXTERNAL_REF_N_mV = 0.0f;
 
 // global adc handle
 static ads1219_handle_t adc_handle = {};
@@ -32,7 +34,7 @@ static ads1219_handle_t adc_handle = {};
  */
 static w_status_t adxrs649_self_test() {
 	w_status_t status = W_SUCCESS;
-	float32_t adc_voltage; // will be mV
+	float adc_voltage; // will be mV
 	uint32_t test_num = 0;
 
 	// SELF-TEST 1
@@ -113,18 +115,17 @@ w_status_t adxrs649_init() {
 	}
 
 	if (W_SUCCESS != adxrs649_self_test()) {
-        // Make sure ST pins are low
-        if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_HIGH, 1)){
-            // TODO: logging message
-        }
-        if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST2, GPIO_LEVEL_HIGH, 1)){
-            // TODO: logging message
-        }
-        
+		// Make sure ST pins are low
+		if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_HIGH, 1)) {
+			// TODO: logging message
+		}
+		if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST2, GPIO_LEVEL_HIGH, 1)) {
+			// TODO: logging message
+		}
+
 		// TODO: logging message
 		return W_FAILURE;
 	}
-
 
 	return W_SUCCESS;
 }
@@ -134,34 +135,34 @@ w_status_t adxrs649_init() {
  * @param data is a pointer to where the data will be stored (deg/sec)
  * @return the status of the get data function
  */
-w_status_t adxrs649_get_gyro_data(float32_t *data){
-    bool data_ready = false;
-    gpio_level_t ndrdy;
+w_status_t adxrs649_get_gyro_data(float *data) {
+	bool data_ready = false;
+	gpio_level_t ndrdy;
 
-    if (W_SUCCESS == gpio_read(GPIO_PIN_ADC_INT, ndrdy, 0)) {
-        data_ready = !ndrdy;
+	if (W_SUCCESS == gpio_read(GPIO_PIN_ADC_INT, &ndrdy, 0)) {
+		data_ready = !ndrdy;
 
-    } else {
-        // TODO: logging message WARNING
+	} else {
+		// TODO: logging message WARNING
 
-        // use I2C to get value
-        if (W_SUCCESS != ads1219_conversion_ready(&adc_handle, data_ready)) {
-            // TODO: logging message
-            return W_FAILURE;
-        }
-    }
+		// use I2C to get value
+		if (W_SUCCESS != ads1219_conversion_ready(&adc_handle, &data_ready)) {
+			// TODO: logging message
+			return W_FAILURE;
+		}
+	}
 
-    if (!data_ready) {
-        // TODO: logging message WARNING
-        return W_SUCCESS;
-    }
+	if (!data_ready) {
+		// TODO: logging message WARNING
+		return W_SUCCESS;
+	}
 
-    float32_t data_mv = 0;
-    if (W_SUCCESS != ads1219_get_millivolts(&adc_handle, &data_mv)) {
-        // TODO: logging message
-    }
+	float data_mv = 0;
+	if (W_SUCCESS != ads1219_get_millivolts(&adc_handle, &data_mv)) {
+		// TODO: logging message
+	}
 
-    *data =  data_mv / ADXRS649_CONV_mV_DEG_S;
+	*data = data_mv / ADXRS649_CONV_mV_DEG_S;
 
-    return W_SUCCESS;
+	return W_SUCCESS;
 }
