@@ -51,15 +51,15 @@
 #define ADS1219_CONFIG_MASK_GAIN 0xEF /* bit 4 */
 #define ADS1219_CONFIG_MASK_MUX 0x1F /* bits 5-7 */
 
-/* MUX field values */
-#define ADS1219_MUX_DIFF_0_1 0x00
-#define ADS1219_MUX_DIFF_2_3 0x20
-#define ADS1219_MUX_DIFF_1_2 0x40
-#define ADS1219_MUX_SINGLE_0 0x60
-#define ADS1219_MUX_SINGLE_1 0x80
-#define ADS1219_MUX_SINGLE_2 0xA0
-#define ADS1219_MUX_SINGLE_3 0xC0
-#define ADS1219_MUX_SHORTED 0xE0
+/* MUX field values */				// AINP - AINN
+#define ADS1219_MUX_DIFF_0_1 0x00 	// AIN0 - AIN1
+#define ADS1219_MUX_DIFF_2_3 0x20	// AIN2 - AIN3
+#define ADS1219_MUX_DIFF_1_2 0x40	// AIN1 - AIN2
+#define ADS1219_MUX_SINGLE_0 0x60	// AIN0 - AGND
+#define ADS1219_MUX_SINGLE_1 0x80	// AIN1 - AGND
+#define ADS1219_MUX_SINGLE_2 0xA0	// AIN2 - AGND
+#define ADS1219_MUX_SINGLE_3 0xC0	// AIN3 - AGND
+#define ADS1219_MUX_SHORTED 0xE0	// AVDD/2 - AVDD/2
 
 /* Gain settings */
 #define ADS1219_GAIN_ONE 1
@@ -88,7 +88,6 @@
 typedef struct {
 	i2c_bus_t bus; /**< Which project I2C bus the device sits on */
 	uint8_t i2c_addr; /**< 7-bit I2C address */
-	uint32_t timeout_ms; /**< Timeout for conversion polling (ms) */
 	uint8_t gain;
 	float aref_n; /**< Negative reference voltage in mV */
 	float aref_p; /**< Positive reference voltage in mV */

@@ -17,7 +17,7 @@ static const float32_t ADXRS649_CONV_mV_DEG_S = 0.1; // from datasheet
 // self-test constants
 static const float32_t MIN_SELF_TEST_mV = 130; // magnitude
 static const float32_t MAX_SELF_TEST_mV = 170; // magnitude
-static const int32_t MAX_NUM_TESTS = 2; // unitless
+static const uint32_t MAX_NUM_TESTS = 2; // unitless
 
 // ADC constants
 static float32_t V_EXTERNAL_REF_P_mV = 5000.0f;
@@ -33,7 +33,7 @@ static ads1219_handle_t adc_handle = {};
 static w_status_t adxrs649_self_test() {
 	w_status_t status = W_SUCCESS;
 	float32_t adc_voltage; // will be mV
-	int32_t test_num = 0;
+	uint32_t test_num = 0;
 
 	// SELF-TEST 1
 	status |=
@@ -113,9 +113,55 @@ w_status_t adxrs649_init() {
 	}
 
 	if (W_SUCCESS != adxrs649_self_test()) {
+        // Make sure ST pins are low
+        if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_HIGH, 1)){
+            // TODO: logging message
+        }
+        if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST2, GPIO_LEVEL_HIGH, 1)){
+            // TODO: logging message
+        }
+        
 		// TODO: logging message
 		return W_FAILURE;
 	}
 
+
 	return W_SUCCESS;
+}
+
+/**
+ * @brief get the spin rate data from the ADXRS649 Gyro
+ * @param data is a pointer to where the data will be stored (deg/sec)
+ * @return the status of the get data function
+ */
+w_status_t adxrs649_get_gyro_data(float32_t *data){
+    bool data_ready = false;
+    gpio_level_t ndrdy;
+
+    if (W_SUCCESS == gpio_read(GPIO_PIN_ADC_INT, ndrdy, 0)) {
+        data_ready = !ndrdy;
+
+    } else {
+        // TODO: logging message WARNING
+
+        // use I2C to get value
+        if (W_SUCCESS != ads1219_conversion_ready(&adc_handle, data_ready)) {
+            // TODO: logging message
+            return W_FAILURE;
+        }
+    }
+
+    if (!data_ready) {
+        // TODO: logging message WARNING
+        return W_SUCCESS;
+    }
+
+    float32_t data_mv = 0;
+    if (W_SUCCESS != ads1219_get_millivolts(&adc_handle, &data_mv)) {
+        // TODO: logging message
+    }
+
+    *data =  data_mv / ADXRS649_CONV_mV_DEG_S;
+
+    return W_SUCCESS;
 }
