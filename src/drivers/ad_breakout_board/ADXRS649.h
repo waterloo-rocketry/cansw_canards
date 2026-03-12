@@ -2,6 +2,7 @@
 #define ADXRS649_H
 
 #include "rocketlib/include/common.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 /**
@@ -15,5 +16,5 @@ w_status_t adxrs649_init();
  * @param data is a pointer to where the data will be stored (deg/sec)
  * @return the status of the get data function
  */
-w_status_t adxrs649_get_gyro_data(float32_t *data);
+w_status_t adxrs649_get_gyro_data(float *data);
 #endif
