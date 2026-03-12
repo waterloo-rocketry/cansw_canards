@@ -26,8 +26,8 @@
  */
 
 #include "drivers/ad_breakout_board/ads1219_stm32.h"
-#include "stm32h7xx_hal.h"
 #include "drivers/i2c/i2c.h"
+#include "stm32h7xx_hal.h"
 
 /* ── internal helpers (static, replace the C++ private methods) ────────── */
 
@@ -114,13 +114,12 @@ static w_status_t ads1219_read_value(ads1219_handle_t *handle, int32_t *value) {
 	}
 
 	/* 24-bit two's-complement -> 32-bit int with sign extension */
-	int32_t raw =
-		(((int32_t)buf[0] << 24) | ((int32_t)buf[1] << 16) | ((int32_t)buf[2] << 8)) >> 8;
+	int32_t raw = (((int32_t)buf[0] << 24) | ((int32_t)buf[1] << 16) | ((int32_t)buf[2] << 8)) >> 8;
 
 	*value = raw;
 
 	/* Over / underflow detection (full-scale codes) */
-	if ((int32_t) 0x7FFFFF <= raw) {
+	if ((int32_t)0x7FFFFF <= raw) {
 		return W_OVERFLOW;
 	}
 	if ((int32_t)0xFF800000 >= raw) { /* sign-extended 0x800000 */
@@ -141,6 +140,7 @@ w_status_t ads1219_init(ads1219_handle_t *handle, i2c_bus_t bus, uint8_t addr) {
 	handle->aref_n = 0.0f;
 	handle->aref_p = 2048.0f;
 	handle->initialized = false;
+	handle->timeout_ms = 1;
 
 	/* Reset the device to known defaults */
 	w_status_t status = ads1219_send_cmd(handle, ADS1219_CMD_RESET);
@@ -298,8 +298,7 @@ w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t channel) {
 	return ads1219_modify_register(handle, mux, ADS1219_CONFIG_MASK_MUX);
 }
 
-w_status_t ads1219_millivolts(ads1219_handle_t *handle, const int32_t adc_count,
-							  float *mv) {
+w_status_t ads1219_millivolts(ads1219_handle_t *handle, const int32_t adc_count, float *mv) {
 	float span = handle->aref_p - handle->aref_n;
 
 	if (handle->gain == ADS1219_GAIN_ONE) {
@@ -312,15 +311,15 @@ w_status_t ads1219_millivolts(ads1219_handle_t *handle, const int32_t adc_count,
 
 	return W_SUCCESS;
 }
+
 /**
  * @param data this is pointer to the data return which would be in terms of mv
  */
 w_status_t ads1219_get_millivolts(ads1219_handle_t *handle, float *data) {
-
 	int32_t value;
-	
+
 	w_status_t status = W_SUCCESS;
-	
+
 	status |= ads1219_read_value(handle, &value);
 	status |= ads1219_millivolts(handle, value, data);
 
