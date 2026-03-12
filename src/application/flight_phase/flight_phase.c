@@ -372,9 +372,7 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 	bool threshold_detection = false;
 	flight_phase_event_t trigger_event = EVENT_NULL;
 
-	if (true ==
-		all_imu_data->pololu
-			.is_dead) { // TODO: to be changed to ST IMU. Blocked by ST IMU not implemented yet
+	if (all_imu_data->pololu.is_dead) { // TODO: to be changed to ST IMU. Blocked by ST IMU not implemented yet
 		log_text(5, "FlightPhaseSensorDetection", "ERROR: POLOLU IMU is DEAD");
 		*num_consec_detection = 0;
 		return W_FAILURE;
