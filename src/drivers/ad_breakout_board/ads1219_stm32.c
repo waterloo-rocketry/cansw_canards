@@ -140,7 +140,6 @@ w_status_t ads1219_init(ads1219_handle_t *handle, i2c_bus_t bus, uint8_t addr) {
 	handle->aref_n = 0.0f;
 	handle->aref_p = 2048.0f;
 	handle->initialized = false;
-	handle->timeout_ms = 1;
 
 	/* Reset the device to known defaults */
 	w_status_t status = ads1219_send_cmd(handle, ADS1219_CMD_RESET);
