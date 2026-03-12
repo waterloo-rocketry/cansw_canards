@@ -130,6 +130,14 @@ static w_status_t ads1219_read_value(ads1219_handle_t *handle, int32_t *value) {
 
 /* ── public API ────────────────────────────────────────────────────────── */
 
+/**
+ * @brief Initialise the handle and reset the device.
+ *
+ * @param[out] handle  Handle to populate
+ * @param[in]  bus     Project I2C bus the device is on
+ * @param[in]  addr    7-bit I2C address (use ADS1219_I2C_ADDRESS for default)
+ * @return W_SUCCESS or an error code
+ */
 w_status_t ads1219_init(ads1219_handle_t *handle, i2c_bus_t bus, uint8_t addr) {
 	if (!handle) {
 		return W_INVALID_PARAM;
@@ -152,18 +160,39 @@ w_status_t ads1219_init(ads1219_handle_t *handle, i2c_bus_t bus, uint8_t addr) {
 	return ads1219_get_gain(handle, &(handle->gain));
 }
 
+/**
+ * @brief Issue a RESET command.
+ * @param handle handle to the ADC data
+ * @return status of function
+ */
 w_status_t ads1219_reset(ads1219_handle_t *handle) {
 	return ads1219_send_cmd(handle, ADS1219_CMD_RESET);
 }
 
+/**
+ * @brief Issue a START / SYNC command (begin conversion).
+ * @param handle handle to the ADC data
+ * @return status of function
+ */
 w_status_t ads1219_start(ads1219_handle_t *handle) {
 	return ads1219_send_cmd(handle, ADS1219_CMD_START_SYNC);
 }
 
+/**
+ * @brief Issue a POWERDOWN command.
+ * @param handle handle to the ADC data
+ * @return status of function
+ */
 w_status_t ads1219_powerdown(ads1219_handle_t *handle) {
 	return ads1219_send_cmd(handle, ADS1219_CMD_POWERDOWN);
 }
 
+/**
+ * @brief Read the current gain setting from the config register.
+ * @param handle handle to the ADC data
+ * @param[out] gain  ADS1219_GAIN_ONE or ADS1219_GAIN_FOUR
+ * @return status of function
+ */
 w_status_t ads1219_get_gain(ads1219_handle_t *handle, uint8_t *gain) {
 	uint8_t reg;
 	w_status_t status = ads1219_read_register(handle, ADS1219_CMD_RREG_CONFIG, &reg);
@@ -175,6 +204,12 @@ w_status_t ads1219_get_gain(ads1219_handle_t *handle, uint8_t *gain) {
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Set the gain.
+ * @param handle handle to the ADC data
+ * @param[in] gain  ADS1219_GAIN_ONE or ADS1219_GAIN_FOUR
+ * @return status of function
+ */
 w_status_t ads1219_set_gain(ads1219_handle_t *handle, uint8_t gain) {
 	uint8_t value;
 	if (gain == ADS1219_GAIN_ONE) {
@@ -190,6 +225,12 @@ w_status_t ads1219_set_gain(ads1219_handle_t *handle, uint8_t gain) {
 	return ads1219_modify_register(handle, value, ADS1219_CONFIG_MASK_GAIN);
 }
 
+/**
+ * @brief Read the current voltage-reference setting.
+ * @param handle handle to the ADC data
+ * @param[out] vref  ADS1219_VREF_INTERNAL or ADS1219_VREF_EXTERNAL
+ * @return status of function
+ */
 w_status_t ads1219_get_vref(ads1219_handle_t *handle, uint8_t *vref) {
 	uint8_t reg;
 	w_status_t status = ads1219_read_register(handle, ADS1219_CMD_RREG_CONFIG, &reg);
@@ -201,6 +242,14 @@ w_status_t ads1219_get_vref(ads1219_handle_t *handle, uint8_t *vref) {
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Set the voltage reference and ref voltages.
+ * @param handle handle to the ADC data
+ * @param[in] vref    ADS1219_VREF_INTERNAL or ADS1219_VREF_EXTERNAL
+ * @param[in] aref_n  Negative reference in mV (ignored for internal, 0 used)
+ * @param[in] aref_p  Positive reference in mV (ignored for internal, 2048 used)
+ * @return status of function
+ */
 w_status_t ads1219_set_vref(ads1219_handle_t *handle, uint8_t vref, float aref_n, float aref_p) {
 	uint8_t value;
 	if (vref == ADS1219_VREF_INTERNAL) {
@@ -226,6 +275,12 @@ w_status_t ads1219_set_vref(ads1219_handle_t *handle, uint8_t vref, float aref_n
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Read the current data-rate setting.
+ * @param handle handle to the ADC data
+ * @param[out] rate  0-3 (ADS1219_DATARATE_*)
+ * @return status of function
+ */
 w_status_t ads1219_get_data_rate(ads1219_handle_t *handle, uint8_t *rate) {
 	uint8_t reg;
 	w_status_t status = ads1219_read_register(handle, ADS1219_CMD_RREG_CONFIG, &reg);
@@ -237,6 +292,12 @@ w_status_t ads1219_get_data_rate(ads1219_handle_t *handle, uint8_t *rate) {
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Set the data rate.
+ * @param handle handle to the ADC data
+ * @param[in] rate  0-3 (ADS1219_DATARATE_*)
+ * @return status of function
+ */
 w_status_t ads1219_set_data_rate(ads1219_handle_t *handle, uint8_t rate) {
 	if (rate > 3) {
 		return W_INVALID_PARAM;
@@ -244,6 +305,12 @@ w_status_t ads1219_set_data_rate(ads1219_handle_t *handle, uint8_t rate) {
 	return ads1219_modify_register(handle, rate << 2, ADS1219_CONFIG_MASK_DR);
 }
 
+/**
+ * @brief Read the current conversion-mode setting.
+ * @param handle handle to the ADC data
+ * @param[out] mode  ADS1219_CM_SINGLE_SHOT or ADS1219_CM_CONTINUOUS
+ * @return status of function
+ */
 w_status_t ads1219_get_conversion_mode(ads1219_handle_t *handle, uint8_t *mode) {
 	uint8_t reg;
 	w_status_t status = ads1219_read_register(handle, ADS1219_CMD_RREG_CONFIG, &reg);
@@ -255,6 +322,12 @@ w_status_t ads1219_get_conversion_mode(ads1219_handle_t *handle, uint8_t *mode) 
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Set the conversion mode.
+ * @param handle handle to the ADC data
+ * @param[in] mode  ADS1219_CM_SINGLE_SHOT or ADS1219_CM_CONTINUOUS
+ * @return status of function
+ */
 w_status_t ads1219_set_conversion_mode(ads1219_handle_t *handle, uint8_t mode) {
 	if (mode > 1) {
 		return W_INVALID_PARAM;
@@ -262,6 +335,12 @@ w_status_t ads1219_set_conversion_mode(ads1219_handle_t *handle, uint8_t mode) {
 	return ads1219_modify_register(handle, mode << 1, ADS1219_CONFIG_MASK_CM);
 }
 
+/**
+ * @brief Check whether a conversion result is ready.
+ * @param handle handle to the ADC data
+ * @param[out] ready  true when a new result is available
+ * @return status of function
+ */
 w_status_t ads1219_conversion_ready(ads1219_handle_t *handle, bool *ready) {
 	uint8_t stat;
 	w_status_t status = ads1219_read_register(handle, ADS1219_CMD_RREG_STATUS, &stat);
@@ -274,6 +353,12 @@ w_status_t ads1219_conversion_ready(ads1219_handle_t *handle, bool *ready) {
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Set the MUX Channel that is used
+ * @param handle handle to the ADC data
+ * @param channel the channel that is used (Macros defined above)
+ * @return status of function
+ */
 w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t channel) {
 	uint8_t mux;
 
@@ -297,6 +382,13 @@ w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t channel) {
 	return ads1219_modify_register(handle, mux, ADS1219_CONFIG_MASK_MUX);
 }
 
+/**
+ * @brief Convert a raw ADC count to millivolts.
+ * @param[in]  handle    Device handle (carries reference voltages)
+ * @param[in]  adc_count Raw signed count from a read function
+ * @param[out] mv        Result in millivolts
+ * @return status of function
+ */
 w_status_t ads1219_millivolts(ads1219_handle_t *handle, const int32_t adc_count, float *mv) {
 	float span = handle->aref_p - handle->aref_n;
 
@@ -312,7 +404,10 @@ w_status_t ads1219_millivolts(ads1219_handle_t *handle, const int32_t adc_count,
 }
 
 /**
- * @param data this is pointer to the data return which would be in terms of mv
+ * @brief Return the converted ADC voltage (millivolts)
+ * @param handle handle to the ADC data
+ * @param data this is pointer to the data return which would be in terms of mV
+ * @return status of function
  */
 w_status_t ads1219_get_millivolts(ads1219_handle_t *handle, float *data) {
 	int32_t value;
