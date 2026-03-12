@@ -36,33 +36,33 @@
 #define ADS1219_I2C_ADDRESS 0x40
 
 /* Command bytes (table 7, p.25 in datasheet) */
-#define ADS1219_CMD_RESET       0x06
-#define ADS1219_CMD_START_SYNC  0x08
-#define ADS1219_CMD_POWERDOWN   0x02
-#define ADS1219_CMD_RDATA       0x10
+#define ADS1219_CMD_RESET 0x06
+#define ADS1219_CMD_START_SYNC 0x08
+#define ADS1219_CMD_POWERDOWN 0x02
+#define ADS1219_CMD_RDATA 0x10
 #define ADS1219_CMD_RREG_CONFIG 0x20
 #define ADS1219_CMD_RREG_STATUS 0x24
-#define ADS1219_CMD_WREG        0x40
+#define ADS1219_CMD_WREG 0x40
 
 /* Config register field masks (1 = untouched, 0 = field bits) */
 #define ADS1219_CONFIG_MASK_VREF 0xFE /* bit 0 */
-#define ADS1219_CONFIG_MASK_CM   0xFD /* bit 1 */
-#define ADS1219_CONFIG_MASK_DR   0xF3 /* bits 2-3 */
+#define ADS1219_CONFIG_MASK_CM 0xFD /* bit 1 */
+#define ADS1219_CONFIG_MASK_DR 0xF3 /* bits 2-3 */
 #define ADS1219_CONFIG_MASK_GAIN 0xEF /* bit 4 */
-#define ADS1219_CONFIG_MASK_MUX  0x1F /* bits 5-7 */
+#define ADS1219_CONFIG_MASK_MUX 0x1F /* bits 5-7 */
 
 /* MUX field values */
-#define ADS1219_MUX_DIFF_0_1  0x00
-#define ADS1219_MUX_DIFF_2_3  0x20
-#define ADS1219_MUX_DIFF_1_2  0x40
-#define ADS1219_MUX_SINGLE_0  0x60
-#define ADS1219_MUX_SINGLE_1  0x80
-#define ADS1219_MUX_SINGLE_2  0xA0
-#define ADS1219_MUX_SINGLE_3  0xC0
-#define ADS1219_MUX_SHORTED   0xE0
+#define ADS1219_MUX_DIFF_0_1 0x00
+#define ADS1219_MUX_DIFF_2_3 0x20
+#define ADS1219_MUX_DIFF_1_2 0x40
+#define ADS1219_MUX_SINGLE_0 0x60
+#define ADS1219_MUX_SINGLE_1 0x80
+#define ADS1219_MUX_SINGLE_2 0xA0
+#define ADS1219_MUX_SINGLE_3 0xC0
+#define ADS1219_MUX_SHORTED 0xE0
 
 /* Gain settings */
-#define ADS1219_GAIN_ONE  1
+#define ADS1219_GAIN_ONE 1
 #define ADS1219_GAIN_FOUR 4
 
 /* Voltage reference */
@@ -70,14 +70,14 @@
 #define ADS1219_VREF_EXTERNAL 1
 
 /* Data-rate settings */
-#define ADS1219_DATARATE_20SPS   0
-#define ADS1219_DATARATE_90SPS   1
-#define ADS1219_DATARATE_330SPS  2
+#define ADS1219_DATARATE_20SPS 0
+#define ADS1219_DATARATE_90SPS 1
+#define ADS1219_DATARATE_330SPS 2
 #define ADS1219_DATARATE_1000SPS 3
 
 /* Conversion mode */
 #define ADS1219_CM_SINGLE_SHOT 0
-#define ADS1219_CM_CONTINUOUS  1
+#define ADS1219_CM_CONTINUOUS 1
 
 /**
  * @brief Run-time handle for one ADS1219 device.
@@ -86,13 +86,13 @@
  * The caller allocates this (stack or static) and passes it to every function.
  */
 typedef struct {
-	i2c_bus_t bus;       /**< Which project I2C bus the device sits on */
-	uint8_t i2c_addr;    /**< 7-bit I2C address */
+	i2c_bus_t bus; /**< Which project I2C bus the device sits on */
+	uint8_t i2c_addr; /**< 7-bit I2C address */
 	uint32_t timeout_ms; /**< Timeout for conversion polling (ms) */
 	uint8_t gain;
-	float aref_n;        /**< Negative reference voltage in mV */
-	float aref_p;        /**< Positive reference voltage in mV */
-	bool initialized;    /**< Set true after ads1219_init() succeeds */
+	float aref_n; /**< Negative reference voltage in mV */
+	float aref_p; /**< Positive reference voltage in mV */
+	bool initialized; /**< Set true after ads1219_init() succeeds */
 } ads1219_handle_t;
 
 /**
@@ -177,20 +177,9 @@ w_status_t ads1219_set_conversion_mode(ads1219_handle_t *handle, uint8_t mode);
 w_status_t ads1219_conversion_ready(ads1219_handle_t *handle, bool *ready);
 
 /**
- * @brief Read a single-ended result from the given channel (0-3).
- * @param[in]  channel        Channel number 0-3
- * @param[out] result         Raw 24-bit signed value
- * @param[in]  offset_samples If > 0, first measure a shorted offset and subtract it
+ * TODO
  */
-w_status_t ads1219_read_single_ended(ads1219_handle_t *handle, uint8_t channel, int32_t *result,
-									 uint16_t offset_samples);
-
-/**
- * @brief Read the shorted (offset) value, averaged over `samples` readings.
- * @param[out] result   Averaged offset value
- * @param[in]  samples  Number of readings to average (>= 1)
- */
-w_status_t ads1219_read_shorted(ads1219_handle_t *handle, int32_t *result, uint16_t samples);
+w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t channel);
 
 /**
  * @brief Convert a raw ADC count to millivolts.
@@ -199,8 +188,7 @@ w_status_t ads1219_read_shorted(ads1219_handle_t *handle, int32_t *result, uint1
  * @param[in]  gain      ADS1219_GAIN_ONE or ADS1219_GAIN_FOUR
  * @param[out] mv        Result in millivolts
  */
-w_status_t ads1219_millivolts(ads1219_handle_t *handle, int32_t adc_count,
-							  float *mv);
+w_status_t ads1219_millivolts(ads1219_handle_t *handle, int32_t adc_count, float *mv);
 
 /**
  * @param data this is pointer to the data return which would be in terms of mv
