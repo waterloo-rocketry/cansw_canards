@@ -2,6 +2,7 @@
 #define ADXRS649_H
 
 #include "rocketlib/include/common.h"
+#include <stdint.h>
 
 /**
  * @brief initialize and start up the ADXRS649 AD Gyro and ADS1219
