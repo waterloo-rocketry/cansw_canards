@@ -315,7 +315,7 @@ w_status_t ads1219_millivolts(ads1219_handle_t *handle, const int32_t adc_count,
 /**
  * @param data this is pointer to the data return which would be in terms of mv
  */
-w_status_t ads1219_get_data(ads1219_handle_t *handle, float *data) {
+w_status_t ads1219_get_millivolts(ads1219_handle_t *handle, float *data) {
 
 	int32_t value;
 	

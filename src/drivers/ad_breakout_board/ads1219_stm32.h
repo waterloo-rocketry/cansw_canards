@@ -202,4 +202,9 @@ w_status_t ads1219_read_shorted(ads1219_handle_t *handle, int32_t *result, uint1
 w_status_t ads1219_millivolts(ads1219_handle_t *handle, int32_t adc_count,
 							  float *mv);
 
+/**
+ * @param data this is pointer to the data return which would be in terms of mv
+ */
+w_status_t ads1219_get_millivolts(ads1219_handle_t *handle, float *data);
+
 #endif /* ADS1219_STM32_H */
