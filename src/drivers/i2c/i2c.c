@@ -303,5 +303,5 @@ health_status_t i2c_get_status(void) {
 				 i2c_error_stats[i].bus_errors);
 	}
 
-	return HEALTH_STATUS_OK(MODULE_I2C);
+	return (health_status_t){HEALTH_OK, MODULE_I2C, 0};
 }

@@ -358,5 +358,5 @@ health_status_t flight_phase_get_status(void) {
 			 current_state,
 			 flight_phase_status.event_queue_full_count);
 
-	return HEALTH_STATUS_OK(MODULE_FLIGHT_PHASE);
+	return (health_status_t){HEALTH_OK, MODULE_FLIGHT_PHASE, 0};
 }

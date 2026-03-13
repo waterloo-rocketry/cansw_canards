@@ -117,6 +117,6 @@ health_status_t adc_get_status(void) {
 			 adc_error_stats.invalid_channels,
 			 adc_error_stats.overflow_errors);
 
-	return HEALTH_STATUS_OK(MODULE_ADC);
+	return (health_status_t){HEALTH_OK, MODULE_ADC, 0};
 }
 

@@ -17,8 +17,8 @@
  */
 typedef enum {
 	HEALTH_OK = 0,
-	HEALTH_ERROR,
-	HEALTH_FATAL
+    HEALTH_ERROR, 
+    HEALTH_FATAL
 } health_severity_t;
 
 typedef enum {
@@ -38,7 +38,7 @@ typedef enum {
 
 // Any module can add more error codes
 typedef enum {
-    MODULE_ERR_NONE,
+    MODULE_ERR_NONE = 0,
     MODULE_ERR_I2C_FAIL,
     MODULE_ERR_I2C_NOT_INIT
 }
@@ -54,12 +54,6 @@ typedef struct {
 	module_id_t module_id;
 	module_error_code_t error_code;
 } health_status_t;
-
-// helper macros
-#define HEALTH_STATUS_OK(module_id) ((health_status_t){HEALTH_OK, (module_id), 0})
-
-#define HEALTH_STATUS(severity, module_id, error_code)                                             \
-	((health_status_t){(severity), (module_id), (error_code)})
 
 /**
  * @brief Initializes the health check module and watchdog registry

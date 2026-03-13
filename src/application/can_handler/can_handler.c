@@ -238,5 +238,5 @@ health_status_t can_handler_get_status(void) {
 			 can_error_stats.rx_timeouts,
 			 can_error_stats.tx_timeouts);
 
-	return HEALTH_STATUS_OK(MODULE_CAN_HANDLER);
+	return (health_status_t){HEALTH_OK, MODULE_CAN_HANDLER, 0};
 }
