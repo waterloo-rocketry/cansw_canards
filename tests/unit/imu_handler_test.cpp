@@ -488,7 +488,7 @@ TEST_F(ImuHandlerTest, ImuHandlerRun_CalibrationWarning) {
 				 "orientation.");
 }
 
-TEST(IMUHandler, NullPointerReturnsInvalidParam) {
+TEST_F(ImuHandlerTest, NullPointerReturnsInvalidParam) {
 	// Arrange - no setup needed since we're passing NULL
 	// Act
 	w_status_t status = imu_handler_get_data(NULL);
@@ -496,80 +496,4 @@ TEST(IMUHandler, NullPointerReturnsInvalidParam) {
 	// Assert
 	EXPECT_EQ(status, W_INVALID_PARAM);
 	EXPECT_EQ(status, W_INVALID_PARAM);
-}
-
-TEST(IMUHandler, PololuDeadReturnsFailure) {
-	// Arrange
-	captured_data.pololu.is_dead = true;
-	captured_data.movella.is_dead = false;
-
-	// Act
-	estimator_all_imus_input_t out;
-	w_status_t status = imu_handler_get_data_internal(&captured_data, &out);
-
-	// Assert
-	EXPECT_EQ(status, W_FAILURE);
-}
-
-TEST(IMUHandler, MovellaDeadReturnsFailure) {
-	// Arrange
-	captured_data.pololu.is_dead = false;
-	captured_data.movella.is_dead = true;
-
-	// Act
-	estimator_all_imus_input_t out;
-	w_status_t status = imu_handler_get_data_internal(&captured_data, &out);
-
-	// Assert
-	EXPECT_EQ(status, W_FAILURE);
-}
-
-TEST(IMUHandler, BothDeadReturnsFailure) {
-	// Arrange
-	captured_data.pololu.is_dead = true;
-	captured_data.movella.is_dead = true;
-
-	// Act
-	estimator_all_imus_input_t out;
-	w_status_t status = imu_handler_get_data_internal(&captured_data, &out);
-
-	// Assert
-	EXPECT_EQ(status, W_FAILURE);
-}
-
-TEST(IMUHandler, ValidDataCopiesCorrectly) {
-	// Arrange
-	captured_data.pololu.is_dead = false;
-	captured_data.movella.is_dead = false;
-	captured_data.pololu.accelerometer.x = 67;
-	captured_data.movella.accelerometer.y = 89;
-
-	// Act
-	estimator_all_imus_input_t out;
-	w_status_t status = imu_handler_get_data_internal(&captured_data, &out);
-
-	// Assert
-	EXPECT_EQ(status, W_SUCCESS);
-	EXPECT_EQ(out.pololu.accelerometer.x, 67);
-	EXPECT_EQ(out.movella.accelerometer.y, 89);
-}
-
-TEST(IMUHandler, OutputUnmodifiedOnFailure) {
-	// Arrange
-	captured_data.pololu.is_dead = true;
-	captured_data.movella.is_dead = false;
-
-	captured_data.pololu.accelerometer.x = 67;
-	captured_data.movella.accelerometer.y = 89;
-
-	estimator_all_imus_input_t out;
-	memset(&out, 0xAA, sizeof(out));
-
-	// Act
-	w_status_t status = imu_handler_get_data_internal(&captured_data, &out);
-
-	// Assert
-	for (size_t i = 0; i < sizeof(out); ++i) {
-		EXPECT_EQ(((unsigned char *)&out)[i], 0xAA);
-	}
 }

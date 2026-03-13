@@ -42,6 +42,7 @@ static const matrix3d_t g_movella_upd_mat = {
 static const matrix3d_t g_pololu_upd_mat = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
 
+// using w_status_t to handle potential math errors in orientation correction and to track if orientation is calibrated yet
 // flag to indicate if the orientation correction matrices have been set by the calibration module
 static w_status_t orientation_calibrated = W_FAILURE; // set to true once calibrated, initialized to
 													  // false to prevent use before calibration
@@ -353,35 +354,18 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 }
 
 /**
- * @brief Get the latest IMU data for use by the flight phase
- * @param /out Pointer to store the output data
- * @note This function is non-static to allow exposed to unit tests
- * @return Status of the execution
- */
-w_status_t imu_handler_get_data_internal(const estimator_all_imus_input_t *source,
-										 estimator_all_imus_input_t *out) {
-	if (NULL == out || NULL == source) {
-		log_text(1, "IMUHandler", "ERROR: Get imu data failed - imu data cannot be null pointers.");
-		return W_INVALID_PARAM;
-	}
-
-	if (source->pololu.is_dead || source->movella.is_dead) {
-		log_text(1, "IMUHandler", "WARN: Get imu data failed - one or more sensors are dead.");
-		return W_FAILURE;
-	}
-
-	*out = *source;
-
-	return W_SUCCESS;
-}
-
-/**
  * @brief Public function to get the latest IMU data for use by the flight phase
  * @param all_imu_data Pointer to store the output data
  * @return Status of the execution
  */
 w_status_t imu_handler_get_data(estimator_all_imus_input_t *all_imu_data) {
-	return imu_handler_get_data_internal(&imu_data, all_imu_data);
+	if (NULL == all_imu_data) {
+		log_text(1, "IMUHandler", "ERROR: Get imu data failed - imu data cannot be null pointers.");
+		return W_INVALID_PARAM;
+	}
+
+	*all_imu_data = imu_data;
+	return W_SUCCESS;
 }
 
 /**
