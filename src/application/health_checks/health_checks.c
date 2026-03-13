@@ -33,7 +33,6 @@ typedef struct {
 	uint32_t timeout_ticks;
 } watchdog_task_t;
 
-
 // watchdog initiailsations
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
 static uint32_t num_watchdog_tasks = 0;
@@ -135,22 +134,18 @@ uint32_t check_watchdog_tasks(void) {
 	return status_bitfield;
 }
 
-static void process_module_status(health_status_t status, const char *module_name, 
-                                   uint32_t *status_bitfield) {
-    if (status.severity != HEALTH_OK) {
-        log_text(0,
-                 "health",
-                 "%s: sev=%d, err=%d",
-                 module_name,
-                 status.severity,
-                 status.error_code);
-        
-        *status_bitfield |= (1 << status.module_id);
-        
-        if (status.severity == HEALTH_FATAL) {
-            proc_handle_fatal_error("app module fatal");
-        }
-    }
+static void process_module_status(health_status_t status, const char *module_name,
+								  uint32_t *status_bitfield) {
+	if (status.severity != HEALTH_OK) {
+		log_text(
+			0, "health", "%s: sev=%d, err=%d", module_name, status.severity, status.error_code);
+
+		*status_bitfield |= (1 << status.module_id);
+
+		if (status.severity == HEALTH_FATAL) {
+			proc_handle_fatal_error("app module fatal");
+		}
+	}
 }
 
 /**
@@ -184,8 +179,7 @@ static uint32_t check_modules_status(void) {
 w_status_t health_check_exec() {
 	uint32_t status_bitfield = 0;
 
-	uint32_t watchdog_status = check_watchdog_tasks();
-	status_bitfield |= check_watchdog_tasks();	
+	status_bitfield |= check_watchdog_tasks();
 	status_bitfield |= check_modules_status();
 
 	// send status CAN msg

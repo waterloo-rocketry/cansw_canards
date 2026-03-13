@@ -106,7 +106,6 @@ w_status_t adc_get_value(adc_channel_t channel, uint32_t *output, uint32_t timeo
 }
 
 health_status_t adc_get_status(void) {
-
 	// Log error statistics
 	log_text(0,
 			 "adc",
@@ -118,6 +117,6 @@ health_status_t adc_get_status(void) {
 			 adc_error_stats.invalid_channels,
 			 adc_error_stats.overflow_errors);
 
-	return HEALTH_STATUS_OK(MODULE_ADC); 
+	return HEALTH_STATUS_OK(MODULE_ADC);
 }
 

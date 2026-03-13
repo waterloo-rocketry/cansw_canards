@@ -12,8 +12,8 @@
 #define I2C_H
 
 #include "FreeRTOS.h"
-#include "rocketlib/include/common.h"
 #include "application/health_checks/health_checks.h"
+#include "rocketlib/include/common.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
 #include <stdbool.h>

@@ -240,7 +240,6 @@ void controller_task(void *argument) {
 }
 
 health_status_t controller_get_status(void) {
-
 	// Log all error statistics
 	log_text(0,
 			 "controller",
@@ -261,6 +260,6 @@ health_status_t controller_get_status(void) {
 			 controller_state.can_send_errors,
 			 controller_state.data_miss_counter);
 
-	return HEALTH_STATUS_OK(MODULE_CONTROLLER); 
+	return HEALTH_STATUS_OK(MODULE_CONTROLLER);
 }
 

@@ -224,7 +224,6 @@ void proc_handle_fatal_error(const char *errorMsg) {
 // --- End Fatal Error Handler ---
 
 health_status_t can_handler_get_status(void) {
-
 	// Log all error statistics
 	log_text(0,
 			 "CAN",
@@ -239,5 +238,5 @@ health_status_t can_handler_get_status(void) {
 			 can_error_stats.rx_timeouts,
 			 can_error_stats.tx_timeouts);
 
-	return HEALTH_STATUS_OK(MODULE_CAN_HANDLER); 
+	return HEALTH_STATUS_OK(MODULE_CAN_HANDLER);
 }

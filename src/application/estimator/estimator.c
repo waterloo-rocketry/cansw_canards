@@ -322,7 +322,6 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state) {
 }
 
 health_status_t estimator_get_status(void) {
-
 	// Log all error statistics
 	log_text(0,
 			 "estimator",

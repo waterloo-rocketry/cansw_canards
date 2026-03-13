@@ -209,12 +209,9 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 }
 
 health_status_t sd_card_get_status(void) {
-
 	if (sd_card_health.is_init == false) {
 		// status_bitfield |= (1 << E_FS_ERROR_OFFSET);
-		return HEALTH_STATUS(HEALTH_ERROR,
-		                     MODULE_SD_CARD,
-		                     0);
+		return HEALTH_STATUS(HEALTH_ERROR, MODULE_SD_CARD, 0);
 	}
 
 	// Log operation statistics
@@ -226,5 +223,5 @@ health_status_t sd_card_get_status(void) {
 			 sd_card_health.read_count,
 			 sd_card_health.write_count);
 
-	return HEALTH_STATUS_OK(MODULE_SD_CARD); 
+	return HEALTH_STATUS_OK(MODULE_SD_CARD);
 }
