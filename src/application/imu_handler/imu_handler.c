@@ -42,8 +42,9 @@ static const matrix3d_t g_movella_upd_mat = {
 static const matrix3d_t g_pololu_upd_mat = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
 
-// using w_status_t to handle potential math errors in orientation correction and to track if orientation is calibrated yet
-// flag to indicate if the orientation correction matrices have been set by the calibration module
+// using w_status_t to handle potential math errors in orientation correction and to track if
+// orientation is calibrated yet flag to indicate if the orientation correction matrices have been
+// set by the calibration module
 static w_status_t orientation_calibrated = W_FAILURE; // set to true once calibrated, initialized to
 													  // false to prevent use before calibration
 
