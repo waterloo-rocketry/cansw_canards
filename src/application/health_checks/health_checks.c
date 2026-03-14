@@ -167,11 +167,8 @@ static uint32_t check_modules_status(void) {
 	process_module_status(gpio_get_status(), "GPIO", &status_bitfield);
 	process_module_status(flight_phase_get_status(), "Flight Phase", &status_bitfield);
 	process_module_status(imu_handler_get_status(), "IMU Handler", &status_bitfield);
-
-	if (logger_get_status() == W_FAILURE) {
-		status_bitfield |= (1 << E_FS_ERROR_OFFSET);
-		log_text(5, "health", "logger not init");
-	}
+	process_module_status(uart_get_status(), "UART", &status_bitfield);
+	process_module_status(logger_get_status(), "Logger", &status_bitfield);
 
 	return status_bitfield;
 }

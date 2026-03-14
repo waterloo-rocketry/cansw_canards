@@ -40,7 +40,8 @@ typedef enum {
 typedef enum {
 	MODULE_ERR_NONE = 0,
 	MODULE_ERR_I2C_FAIL,
-	MODULE_ERR_I2C_NOT_INIT
+	MODULE_ERR_I2C_NOT_INIT,
+    MODULE_ERR_LOGGER_NOT_INIT
 } module_error_code_t;
 
 /**

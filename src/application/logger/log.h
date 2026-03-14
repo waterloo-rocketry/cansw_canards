@@ -7,6 +7,7 @@
 #include "application/controller/controller.h" // For controller_input_t, controller_output_t
 #include "application/estimator/estimator.h" // For estimator_all_imus_input_t
 #include "application/imu_handler/imu_handler.h"
+#include "application/health_checks/health_checks.h"
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32768
@@ -266,6 +267,6 @@ void log_task(void *argument);
  *
  * @return CAN board status bitfield
  */
-uint32_t logger_get_status(void);
+health_status_t logger_get_status(void);
 
 #endif
