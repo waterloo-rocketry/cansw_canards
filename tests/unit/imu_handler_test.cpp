@@ -21,10 +21,8 @@ extern "C" {
 #include "task.h"
 #include "third_party/rocketlib/include/common.h"
 
-// Forward declare imu_handler_run and imu_handler_get_data_internal
+// Forward declare imu_handler_run
 extern w_status_t imu_handler_run(uint32_t loop_count);
-extern w_status_t imu_handler_get_data_internal(const estimator_all_imus_input_t *source,
-												estimator_all_imus_input_t *out);
 
 // Define all fake functions for IMUs using FFF
 FAKE_VALUE_FUNC(w_status_t, altimu_init);
@@ -488,7 +486,7 @@ TEST_F(ImuHandlerTest, ImuHandlerRun_CalibrationWarning) {
 				 "orientation.");
 }
 
-TEST_F(ImuHandlerTest, NullPointerReturnsInvalidParam) {
+TEST_F(ImuHandlerTest, ImuGetData_NullPointerReturnsInvalidParam) {
 	// Arrange - no setup needed since we're passing NULL
 	// Act
 	w_status_t status = imu_handler_get_data(NULL);
@@ -496,4 +494,31 @@ TEST_F(ImuHandlerTest, NullPointerReturnsInvalidParam) {
 	// Assert
 	EXPECT_EQ(status, W_INVALID_PARAM);
 	EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
+TEST_F(ImuHandlerTest, ImuGetData_ImuDataIsPassedCorrectly) {
+	// Arrange 
+	altimu_get_mag_data_fake.custom_fake = altimu_get_mag_data_success;
+	altimu_get_baro_data_fake.custom_fake = altimu_get_baro_data_success;
+	altimu_get_gyro_acc_data_fake.custom_fake = altimu_get_gyro_acc_data_success;
+
+	movella_get_data_fake.custom_fake = movella_get_data_success;
+
+	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
+	estimator_update_imu_data_fake.custom_fake = estimator_update_capture;
+
+	// Act - run the handler to populate the data, then call the getter
+	// Run the function under test with loop_count = 1
+	w_status_t result = imu_handler_run(1);
+	estimator_all_imus_input_t all_imu_data;
+	w_status_t status = imu_handler_get_data(&all_imu_data);
+
+	// Assert
+	EXPECT_EQ(result, W_SUCCESS);
+	EXPECT_EQ(status, W_SUCCESS);
+	assert_vec_eq(EXPECTED_ACC_POLOLU, all_imu_data.pololu.accelerometer, tolerance);
+	assert_vec_eq(EXPECTED_GYRO_POLOLU, all_imu_data.pololu.gyroscope, tolerance);
+	assert_vec_eq(EXPECTED_MAG_POLOLU, all_imu_data.pololu.magnetometer, tolerance);
+	EXPECT_NEAR(all_imu_data.pololu.barometer, EXPECTED_BARO, abs(EXPECTED_BARO * tolerance));
+	EXPECT_EQ(all_imu_data.pololu.is_dead, false);
 }

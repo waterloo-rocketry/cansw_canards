@@ -31,7 +31,7 @@
 #define IMU_HANDLER_CAN_TX_RATE (IMU_HANDLER_CAN_TX_PERIOD_MS / IMU_SAMPLING_PERIOD_MS)
 
 // imu data global variable to be send to flight phase
-static estimator_all_imus_input_t imu_data = {0};
+static estimator_all_imus_input_t g_all_imu_data = {0};
 
 // correct orientation from finn irl, may 4 2025
 // also default uncalibrated orientation until calibration module sets these
@@ -348,6 +348,9 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 		log_text(1, "IMUHandler", "ERROR: estimator update fail (status: %d).", estimator_status);
 	}
 
+	// Update global data for flight phase
+	g_all_imu_data = imu_data;
+
 	imu_handler_state.sample_count++;
 
 	// Return overall status
@@ -365,7 +368,8 @@ w_status_t imu_handler_get_data(estimator_all_imus_input_t *all_imu_data) {
 		return W_INVALID_PARAM;
 	}
 
-	*all_imu_data = imu_data;
+	*all_imu_data = g_all_imu_data;
+
 	return W_SUCCESS;
 }
 
