@@ -60,9 +60,9 @@ static TimerHandle_t act_delay_timer = NULL;
 static TimerHandle_t flight_timer = NULL;
 
 // timestamp of the moment of launch
-static float launch_timestamp_ms = 0;
+static float32_t launch_timestamp_ms = 0;
 // timestamp of the moment actuation allowed started
-static float act_allowed_timestamp_ms = 0;
+static float32_t act_allowed_timestamp_ms = 0;
 
 static void act_delay_timer_callback(TimerHandle_t xTimer);
 static void flight_timer_callback(TimerHandle_t xTimer);
@@ -216,7 +216,7 @@ w_status_t flight_phase_get_flight_ms(uint32_t *flight_ms) {
 		*flight_ms = 0;
 		return W_SUCCESS;
 	} else {
-		float current_time_ms = 0;
+		float32_t current_time_ms = 0;
 		if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
 			log_text(1, "FlightPhaseFlightTime", "ERROR: get_ms failed");
 			return W_FAILURE;
@@ -236,7 +236,7 @@ w_status_t flight_phase_get_act_allowed_ms(uint32_t *act_allowed_ms) {
 		*act_allowed_ms = 0;
 		return W_SUCCESS;
 	} else {
-		float current_time_ms = 0;
+		float32_t current_time_ms = 0;
 		if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
 			log_text(1, "FlightPhaseAllowedTime", "ERROR: get_ms fail");
 			return W_FAILURE;
