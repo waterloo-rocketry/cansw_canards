@@ -42,7 +42,8 @@
  * the wire.
  */
 static w_status_t ads1219_send_cmd(ads1219_handle_t *handle, uint8_t cmd) {
-	return i2c_write_reg(handle->bus, handle->i2c_addr, cmd, NULL, 0);
+	uint8_t dummy_data = 0;
+	return i2c_write_reg(handle->bus, handle->i2c_addr, cmd, &dummy_data, 1);
 }
 
 /**
@@ -360,7 +361,6 @@ w_status_t ads1219_conversion_ready(ads1219_handle_t *handle, bool *ready) {
  * @return status of function
  */
 w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t mux) {
-
 	return ads1219_modify_register(handle, mux, ADS1219_CONFIG_MASK_MUX);
 }
 
