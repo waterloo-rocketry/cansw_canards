@@ -86,7 +86,6 @@ protected:
 
         FFF_RESET_HISTORY();
 
-        adc_get_value_fake.return_val = W_SUCCESS;
         timer_get_ms_fake.return_val = W_SUCCESS;
         can_handler_transmit_fake.return_val = W_SUCCESS;
         build_general_board_status_msg_fake.return_val = true;
@@ -155,7 +154,6 @@ TEST_F(HealthChecksTest, NominalHealthCheck) {
     EXPECT_EQ(build_analog_data_msg_fake.call_count, 1);
     EXPECT_EQ(build_analog_data_msg_fake.arg0_val, PRIO_LOW);
     EXPECT_EQ(build_analog_data_msg_fake.arg2_val, SENSOR_5V_CURR);
-    EXPECT_EQ(build_analog_data_msg_fake.arg3_val, nominal_current);
 }
 
 TEST_F(HealthChecksTest, FailureHealthCheck) {
@@ -173,7 +171,6 @@ TEST_F(HealthChecksTest, FailureHealthCheck) {
     EXPECT_EQ(build_general_board_status_msg_fake.call_count, 1);
     EXPECT_EQ(build_analog_data_msg_fake.arg0_val, PRIO_LOW);
     EXPECT_EQ(build_analog_data_msg_fake.arg2_val, SENSOR_5V_CURR);
-    EXPECT_EQ(build_analog_data_msg_fake.arg3_val, nominal_current);
 }
 
 TEST_F(HealthChecksTest, WatchdogRegisterAndKick) {

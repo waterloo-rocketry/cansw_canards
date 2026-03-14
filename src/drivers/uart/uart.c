@@ -322,7 +322,6 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
  * @return Status code indicating success or failure
  */
 health_status_t uart_get_status(void) {
-
 	// Iterate through all UART channels
 	for (uart_channel_t channel = 0; channel < UART_CHANNEL_COUNT; channel++) {
 		const char *channel_name = "";
