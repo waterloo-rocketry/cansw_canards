@@ -150,7 +150,8 @@ w_status_t adxrs649_get_gyro_data(float *data) {
 	bool data_ready = false;
 	gpio_level_t ndrdy; // NOT-DRDY
 
-	if (W_SUCCESS == gpio_read(GPIO_PIN_BLUE_LED, &ndrdy, 0)) { // TODO: to be changed to actual GPIO
+	if (W_SUCCESS ==
+		gpio_read(GPIO_PIN_BLUE_LED, &ndrdy, 0)) { // TODO: to be changed to actual GPIO
 		data_ready = !ndrdy;
 
 	} else {
