@@ -91,41 +91,31 @@ protected:
         build_general_board_status_msg_fake.return_val = true;
 
         // Set default return values for module status functions
-        health_status_t default_ok = {HEALTH_OK, MODULE_I2C, MODULE_ERR_NONE};
-        i2c_get_status_fake.return_val = default_ok;
+        health_status_t i2c_ok = {HEALTH_OK, MODULE_I2C, MODULE_ERR_NONE};
+        health_status_t adc_ok = {HEALTH_OK, MODULE_ADC, MODULE_ERR_NONE};
+        health_status_t can_ok = {HEALTH_OK, MODULE_CAN_HANDLER, MODULE_ERR_NONE};
+        health_status_t est_ok = {HEALTH_OK, MODULE_ESTIMATOR, MODULE_ERR_NONE};
+        health_status_t ctrl_ok = {HEALTH_OK, MODULE_CONTROLLER, MODULE_ERR_NONE};
+        health_status_t sd_ok = {HEALTH_OK, MODULE_SD_CARD, MODULE_ERR_NONE};
+        health_status_t timer_ok = {HEALTH_OK, MODULE_TIMER, MODULE_ERR_NONE};
+        health_status_t logger_ok = {HEALTH_OK, MODULE_LOGGER, MODULE_ERR_NONE};
+        health_status_t gpio_ok = {HEALTH_OK, MODULE_GPIO, MODULE_ERR_NONE};
+        health_status_t fp_ok = {HEALTH_OK, MODULE_FLIGHT_PHASE, MODULE_ERR_NONE};
+        health_status_t imu_ok = {HEALTH_OK, MODULE_IMU_HANDLER, MODULE_ERR_NONE};
+        health_status_t uart_ok = {HEALTH_OK, MODULE_UART, MODULE_ERR_NONE};
         
-        default_ok.module_id = MODULE_ADC;
-        adc_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_CAN_HANDLER;
-        can_handler_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_ESTIMATOR;
-        estimator_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_CONTROLLER;
-        controller_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_SD_CARD;
-        sd_card_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_TIMER;
-        timer_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_LOGGER;
-        logger_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_GPIO;
-        gpio_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_FLIGHT_PHASE;
-        flight_phase_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_IMU_HANDLER;
-        imu_handler_get_status_fake.return_val = default_ok;
-        
-        default_ok.module_id = MODULE_UART;
-        uart_get_status_fake.return_val = default_ok;
+        i2c_get_status_fake.return_val = i2c_ok;
+        adc_get_status_fake.return_val = adc_ok;
+        can_handler_get_status_fake.return_val = can_ok;
+        estimator_get_status_fake.return_val = est_ok;
+        controller_get_status_fake.return_val = ctrl_ok;
+        sd_card_get_status_fake.return_val = sd_ok;
+        timer_get_status_fake.return_val = timer_ok;
+        logger_get_status_fake.return_val = logger_ok;
+        gpio_get_status_fake.return_val = gpio_ok;
+        flight_phase_get_status_fake.return_val = fp_ok;
+        imu_handler_get_status_fake.return_val = imu_ok;
+        uart_get_status_fake.return_val = uart_ok;
     }
 
     void TearDown() override {}
