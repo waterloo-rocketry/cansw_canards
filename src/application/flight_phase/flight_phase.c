@@ -21,7 +21,7 @@ static const uint32_t FLIGHT_TIMEOUT_MS =
 
 static const uint32_t TASK_TIMEOUT_MS = 10;
 
-static const float32_t ACCEL_THRESHOLD_LAUNCH_M_S2 =
+static const float ACCEL_THRESHOLD_LAUNCH_M_S2 =
 	20; // minimum acceleration in m/s^2 for a launch to be detected
 static const uint32_t NUM_CONSEC_THRESHOLD =
 	20; // number of consecutive detection beyond threshold to satisfy for condition (no units)
