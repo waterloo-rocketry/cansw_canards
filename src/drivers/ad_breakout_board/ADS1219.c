@@ -1,5 +1,5 @@
 /**
- * @file ads1219_stm32.c
+ * @file ADS1219.c
  * @brief ADS1219 24-bit ADC driver -- STM32 C implementation
  *
  * C port of ADS1219.cpp (Arduino / Wire) adapted for the project's I2C layer.
@@ -25,7 +25,7 @@
  * the monotonic ms counter for the timeout loop (replaces Arduino millis()).
  */
 
-#include "drivers/ad_breakout_board/ads1219_stm32.h"
+#include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/i2c/i2c.h"
 #include "stm32h7xx_hal.h"
 
@@ -356,28 +356,10 @@ w_status_t ads1219_conversion_ready(ads1219_handle_t *handle, bool *ready) {
 /**
  * @brief Set the MUX Channel that is used
  * @param handle handle to the ADC data
- * @param channel the channel that is used (Macros defined above)
+ * @param mux the channel that is used (Macros defined above)
  * @return status of function
  */
-w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t channel) {
-	uint8_t mux;
-
-	switch (channel) {
-		case 0:
-			mux = ADS1219_MUX_SINGLE_0;
-			break;
-		case 1:
-			mux = ADS1219_MUX_SINGLE_1;
-			break;
-		case 2:
-			mux = ADS1219_MUX_SINGLE_2;
-			break;
-		case 3:
-			mux = ADS1219_MUX_SINGLE_3;
-			break;
-		default:
-			return W_INVALID_PARAM;
-	}
+w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t mux) {
 
 	return ads1219_modify_register(handle, mux, ADS1219_CONFIG_MASK_MUX);
 }
@@ -412,10 +394,9 @@ w_status_t ads1219_millivolts(ads1219_handle_t *handle, const int32_t adc_count,
 w_status_t ads1219_get_millivolts(ads1219_handle_t *handle, float *data) {
 	int32_t value;
 
-	w_status_t status = W_SUCCESS;
+	if (W_SUCCESS != ads1219_read_value(handle, &value)) {
+		return W_FAILURE;
+	}
 
-	status |= ads1219_read_value(handle, &value);
-	status |= ads1219_millivolts(handle, value, data);
-
-	return status;
+	return ads1219_millivolts(handle, value, data);
 }
