@@ -17,8 +17,8 @@
  */
 typedef enum {
 	HEALTH_OK = 0,
-    HEALTH_ERROR, 
-    HEALTH_FATAL
+	HEALTH_ERROR,
+	HEALTH_FATAL
 } health_severity_t;
 
 typedef enum {
@@ -38,11 +38,10 @@ typedef enum {
 
 // Any module can add more error codes
 typedef enum {
-    MODULE_ERR_NONE = 0,
-    MODULE_ERR_I2C_FAIL,
-    MODULE_ERR_I2C_NOT_INIT
-}
- module_error_code_t;
+	MODULE_ERR_NONE = 0,
+	MODULE_ERR_I2C_FAIL,
+	MODULE_ERR_I2C_NOT_INIT
+} module_error_code_t;
 
 /**
  * @brief Health check result from a module
