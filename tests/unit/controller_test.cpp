@@ -104,7 +104,7 @@ TEST_F(ControllerTest, RunLoopPadPhase) {
 
 TEST_F(ControllerTest, RunLoopPadFilterPhase) {
     // Arrange
-    flight_phase_get_state_fake.return_val = STATE_SE_INIT;
+    flight_phase_get_state_fake.return_val = STATE_PAD_FILTER;
 
     // Act
     w_status_t actual_res = controller_run_loop();
