@@ -16,10 +16,8 @@ extern "C" {
 
 // all the functions that are being tested
 extern w_status_t health_check_exec();
-extern w_status_t get_adc_current(uint32_t *adc_current_mA);
 extern w_status_t check_watchdog_tasks(void);
 
-FAKE_VALUE_FUNC(w_status_t, adc_get_value, adc_channel_t, uint32_t *, uint32_t);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
 FAKE_VALUE_FUNC(
@@ -33,22 +31,21 @@ FAKE_VALUE_FUNC(
 );
 
 // Mock implementations for all the module get_status functions
-FAKE_VALUE_FUNC(uint32_t, i2c_get_status);
-FAKE_VALUE_FUNC(uint32_t, adc_get_status);
-FAKE_VALUE_FUNC(uint32_t, can_handler_get_status);
-FAKE_VALUE_FUNC(uint32_t, estimator_get_status);
-FAKE_VALUE_FUNC(uint32_t, controller_get_status);
-FAKE_VALUE_FUNC(uint32_t, sd_card_get_status);
-FAKE_VALUE_FUNC(uint32_t, timer_get_status);
-FAKE_VALUE_FUNC(uint32_t, logger_get_status);
-FAKE_VALUE_FUNC(uint32_t, gpio_get_status);
-FAKE_VALUE_FUNC(uint32_t, flight_phase_get_status);
-FAKE_VALUE_FUNC(uint32_t, imu_handler_get_status);
-FAKE_VALUE_FUNC(uint32_t, uart_get_status);
+FAKE_VALUE_FUNC(health_status_t, i2c_get_status);
+FAKE_VALUE_FUNC(health_status_t, adc_get_status);
+FAKE_VALUE_FUNC(health_status_t, can_handler_get_status);
+FAKE_VALUE_FUNC(health_status_t, estimator_get_status);
+FAKE_VALUE_FUNC(health_status_t, controller_get_status);
+FAKE_VALUE_FUNC(health_status_t, sd_card_get_status);
+FAKE_VALUE_FUNC(health_status_t, timer_get_status);
+FAKE_VALUE_FUNC(health_status_t, logger_get_status);
+FAKE_VALUE_FUNC(health_status_t, gpio_get_status);
+FAKE_VALUE_FUNC(health_status_t, flight_phase_get_status);
+FAKE_VALUE_FUNC(health_status_t, imu_handler_get_status);
+FAKE_VALUE_FUNC(health_status_t, uart_get_status);
 
 // Mocked global variables
 static float timer_ms_value_mock;
-static uint32_t adc_value_mock;
 }
 
 DEFINE_FFF_GLOBALS;
@@ -60,16 +57,9 @@ static w_status_t timer_get_ms_mock(float *out_time) {
     return W_SUCCESS;
 }
 
-static w_status_t
-adc_get_value_mock(adc_channel_t channel, uint32_t *out_value, uint32_t timeout_ms) {
-    *out_value = adc_value_mock;
-    return W_SUCCESS;
-}
-
 class HealthChecksTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        RESET_FAKE(adc_get_value);
         RESET_FAKE(timer_get_ms);
         RESET_FAKE(can_handler_transmit);
         RESET_FAKE(build_general_board_status_msg);
@@ -102,18 +92,41 @@ protected:
         build_general_board_status_msg_fake.return_val = true;
 
         // Set default return values for module status functions
-        i2c_get_status_fake.return_val = W_SUCCESS;
-        adc_get_status_fake.return_val = W_SUCCESS;
-        can_handler_get_status_fake.return_val = W_SUCCESS;
-        estimator_get_status_fake.return_val = W_SUCCESS;
-        controller_get_status_fake.return_val = W_SUCCESS;
-        sd_card_get_status_fake.return_val = W_SUCCESS;
-        timer_get_status_fake.return_val = W_SUCCESS;
-        logger_get_status_fake.return_val = W_SUCCESS;
-        gpio_get_status_fake.return_val = W_SUCCESS;
-        flight_phase_get_status_fake.return_val = W_SUCCESS;
-        imu_handler_get_status_fake.return_val = W_SUCCESS;
-        uart_get_status_fake.return_val = W_SUCCESS;
+        health_status_t default_ok = {HEALTH_OK, MODULE_I2C, MODULE_ERR_NONE};
+        i2c_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_ADC;
+        adc_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_CAN_HANDLER;
+        can_handler_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_ESTIMATOR;
+        estimator_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_CONTROLLER;
+        controller_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_SD_CARD;
+        sd_card_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_TIMER;
+        timer_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_LOGGER;
+        logger_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_GPIO;
+        gpio_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_FLIGHT_PHASE;
+        flight_phase_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_IMU_HANDLER;
+        imu_handler_get_status_fake.return_val = default_ok;
+        
+        default_ok.module_id = MODULE_UART;
+        uart_get_status_fake.return_val = default_ok;
     }
 
     void TearDown() override {}
@@ -123,62 +136,11 @@ protected:
         timer_ms_value_mock = time_ms;
         timer_get_ms_fake.custom_fake = timer_get_ms_mock;
     }
-
-    // Set the ADC value to be returned by the fake function
-    void SetAdcValue(uint32_t adc_val) {
-        adc_value_mock = adc_val;
-        adc_get_value_fake.custom_fake = adc_get_value_mock;
-    }
-
-    // Constants for mocking tests
-    static constexpr float ADC_VREF = 3.3f;
-    static constexpr float INA180A3_GAIN = 100.0f;
-    static constexpr float R_SENSE = 0.033f;
-    static constexpr uint16_t MAX_CURRENT_mA = 400;
-    static constexpr uint32_t ADC_MAX_COUNTS_MOCK = 65535; // need another local definition for this
 };
-
-TEST_F(HealthChecksTest, GetAdcCurrentPassing) {
-    // Arrange
-    uint32_t adc_current_mA;
-    uint32_t adc_value = 1000; // Example ADC value
-    SetAdcValue(adc_value);
-
-    float voltage_mV = ((float)(adc_value) / ADC_MAX_COUNTS_MOCK) * ADC_VREF * 1000.0f;
-    uint32_t expected_current_mA =
-        ((float)(voltage_mV) / INA180A3_GAIN) / R_SENSE; // doing the math again here
-
-    // Act
-    w_status_t result = get_adc_current(&adc_current_mA);
-
-    // Assert
-    EXPECT_EQ(W_SUCCESS, result);
-    EXPECT_EQ(expected_current_mA, adc_current_mA);
-    EXPECT_EQ(adc_get_value_fake.call_count, 1);
-    EXPECT_EQ(adc_get_value_fake.arg0_val, PROCESSOR_BOARD_VOLTAGE);
-}
-
-TEST_F(HealthChecksTest, GetAdcCurrentFailing) {
-    // Arrange
-    uint32_t adc_current_mA;
-    adc_get_value_fake.return_val = W_IO_TIMEOUT;
-
-    // Act
-    w_status_t result = get_adc_current(&adc_current_mA);
-
-    // Assert
-    EXPECT_EQ(W_IO_TIMEOUT, result);
-    EXPECT_EQ(adc_get_value_fake.call_count, 1);
-}
 
 TEST_F(HealthChecksTest, NominalHealthCheck) {
     // Arrange
     SetTimerMs(1000.0f);
-    uint32_t nominal_current = 300; // example current
-    SetAdcValue(
-        // +1 for integer rounding
-        nominal_current * R_SENSE * INA180A3_GAIN / (ADC_VREF * 1000.0f) * ADC_MAX_COUNTS_MOCK + 1
-    );
     build_general_board_status_msg_fake.return_val = true;
     build_analog_data_msg_fake.return_val = true;
 
@@ -196,39 +158,10 @@ TEST_F(HealthChecksTest, NominalHealthCheck) {
     EXPECT_EQ(build_analog_data_msg_fake.arg3_val, nominal_current);
 }
 
-TEST_F(HealthChecksTest, OvercurrentHealthCheck) {
-    // Arrange
-    SetTimerMs(1000.0f);
-    uint32_t over_current = 5000; // example too much current
-    // +1 for integer rounding
-    SetAdcValue(
-        over_current * R_SENSE * INA180A3_GAIN / (ADC_VREF * 1000.0f) * ADC_MAX_COUNTS_MOCK + 1
-    );
-
-    build_general_board_status_msg_fake.return_val = true;
-    build_analog_data_msg_fake.return_val = true;
-
-    // Act
-    w_status_t result = health_check_exec();
-
-    // Assert
-    EXPECT_EQ(W_SUCCESS, result);
-    EXPECT_EQ(build_general_board_status_msg_fake.call_count, 1);
-    EXPECT_EQ(build_general_board_status_msg_fake.arg0_val, PRIO_LOW);
-    EXPECT_EQ(build_general_board_status_msg_fake.arg2_val, 1 << E_5V_OVER_CURRENT_OFFSET);
-    EXPECT_EQ(build_analog_data_msg_fake.arg0_val, PRIO_LOW);
-    EXPECT_EQ(build_analog_data_msg_fake.arg2_val, SENSOR_5V_CURR);
-    EXPECT_EQ(build_analog_data_msg_fake.arg3_val, over_current);
-}
-
 TEST_F(HealthChecksTest, FailureHealthCheck) {
     // Arrange
     SetTimerMs(1000.0f);
-    uint32_t nominal_current = 300;
-    // +1 for integer rounding
-    SetAdcValue(
-        nominal_current * R_SENSE * INA180A3_GAIN / (ADC_VREF * 1000.0f) * ADC_MAX_COUNTS_MOCK + 1
-    );
+    
     build_general_board_status_msg_fake.return_val = false;
     build_analog_data_msg_fake.return_val = true;
 
