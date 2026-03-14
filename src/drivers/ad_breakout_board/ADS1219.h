@@ -1,5 +1,5 @@
 /**
- * @file ads1219_stm32.h
+ * @file ADS1219.h
  * @brief ADS1219 24-bit ADC driver for STM32 (C port)
  *
  * C port of the Arduino ADS1219 C++ library, adapted to use the project's
@@ -24,8 +24,8 @@
  *     architecture-specific and not needed on STM32 with the project I2C layer.
  */
 
-#ifndef ADS1219_STM32_H
-#define ADS1219_STM32_H
+#ifndef ADS1219_H
+#define ADS1219_H
 
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
@@ -224,4 +224,4 @@ w_status_t ads1219_millivolts(ads1219_handle_t *handle, int32_t adc_count, float
  */
 w_status_t ads1219_get_millivolts(ads1219_handle_t *handle, float *data);
 
-#endif /* ADS1219_STM32_H */
+#endif /* ADS1219_H */

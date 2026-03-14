@@ -1,7 +1,7 @@
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
-#include "drivers/ad_breakout_board/ads1219_stm32.h"
+#include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include <stdbool.h>
@@ -39,7 +39,8 @@ static w_status_t adxrs649_self_test() {
 
 	// SELF-TEST 1
 	status |=
-		gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_HIGH, 1); // TODO: create new GPIO pin for test
+		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1); // TODO: create new GPIO pin for test
+	status |= ads1219_get_millivolts(&adc_handle, &adc_voltage);
 
 	while ((MAX_NUM_TESTS >= test_num) && ((-1 * MIN_SELF_TEST_mV) > adc_voltage) &&
 		   ((-1 * MAX_SELF_TEST_mV) < adc_voltage)) {
@@ -51,7 +52,7 @@ static w_status_t adxrs649_self_test() {
 
 	// make sure self-test 1 is turned off. Make sure the command is sent regardless of previous
 	// status
-	if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST1,
+	if (W_SUCCESS != gpio_write(GPIO_PIN_RED_LED,
 								GPIO_LEVEL_LOW,
 								1)) { // TODO: create new GPIO pin for test
 		log_text(0, "ADXRS649", "ERROR: Failed to set ST1 to LOW");
@@ -67,7 +68,8 @@ static w_status_t adxrs649_self_test() {
 	test_num = 0;
 
 	status |=
-		gpio_write(GPIO_PIN_ADXRS649_ST2, GPIO_LEVEL_HIGH, 1); // TODO: create new GPIO pin for test
+		gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1); // TODO: create new GPIO pin for test
+	status |= ads1219_get_millivolts(&adc_handle, &adc_voltage);
 
 	while ((MAX_NUM_TESTS >= test_num) && ((MIN_SELF_TEST_mV) < adc_voltage) &&
 		   ((MAX_SELF_TEST_mV) > adc_voltage)) {
@@ -79,7 +81,7 @@ static w_status_t adxrs649_self_test() {
 
 	// make sure self-test 2 is turned off. Make sure the command is sent regardless of previous
 	// status
-	if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST2,
+	if (W_SUCCESS != gpio_write(GPIO_PIN_GREEN_LED,
 								GPIO_LEVEL_LOW,
 								1)) { // TODO: create new GPIO pin for test
 		log_text(0, "ADXRS649", "ERROR: Failed to set ST2 to LOW");
@@ -99,7 +101,7 @@ static w_status_t adxrs649_self_test() {
  */
 w_status_t adxrs649_init() {
 	if (W_SUCCESS != ads1219_init(&adc_handle,
-								  I2C_BUS_ADC,
+								  I2C_BUS_4,
 								  ADS1219_ADDR)) { // TODO: to be set once an I2C bus is determined
 		log_text(0, "ADXRS649", "ERROR: Unable to initialize the ADC.");
 		return W_FAILURE;
@@ -120,10 +122,10 @@ w_status_t adxrs649_init() {
 
 	if (W_SUCCESS != adxrs649_self_test()) {
 		// Make sure ST pins are low
-		if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_HIGH, 1)) {
+		if (W_SUCCESS != gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 1)) {
 			log_text(0, "ADXRS649", "ERROR: Failed to set ST1 to LOW");
 		}
-		if (W_SUCCESS != gpio_write(GPIO_PIN_ADXRS649_ST2, GPIO_LEVEL_HIGH, 1)) {
+		if (W_SUCCESS != gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_LOW, 1)) {
 			log_text(0, "ADXRS649", "ERROR: Failed to set ST2 to LOW");
 		}
 
@@ -136,7 +138,7 @@ w_status_t adxrs649_init() {
 		return W_FAILURE;
 	}
 
-	return W_SUCCESS
+	return W_SUCCESS;
 }
 
 /**
@@ -148,7 +150,7 @@ w_status_t adxrs649_get_gyro_data(float *data) {
 	bool data_ready = false;
 	gpio_level_t ndrdy; // NOT-DRDY
 
-	if (W_SUCCESS == gpio_read(GPIO_PIN_ADC_INT, &ndrdy, 0)) {
+	if (W_SUCCESS == gpio_read(GPIO_PIN_BLUE_LED, &ndrdy, 0)) { // TODO: to be changed to actual GPIO
 		data_ready = !ndrdy;
 
 	} else {
