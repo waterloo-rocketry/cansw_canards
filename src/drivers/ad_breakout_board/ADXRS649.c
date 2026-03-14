@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 // define addresses
-#define ADS1219_ADDR 0x00 // TODO: to be set once the address has been determind
+#define ADS1219_ADDR 0x40 // TODO: double check with Jason
 
 // sensor range
 static const float ADXRS649_GYRO_RANGE = 20000.0;
