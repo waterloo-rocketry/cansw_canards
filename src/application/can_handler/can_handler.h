@@ -1,6 +1,7 @@
 #ifndef CAN_HANDLER_H
 #define CAN_HANDLER_H
 
+#include "application/health_checks/health_checks.h"
 #include "canlib.h"
 #include "rocketlib/include/common.h"
 #include "stm32h7xx_hal.h"
@@ -78,6 +79,6 @@ void proc_handle_fatal_error(const char *errorMsg);
  *
  * @return CAN board specific err bitfield
  */
-uint32_t can_handler_get_status(void);
+health_status_t can_handler_get_status(void);
 
 #endif

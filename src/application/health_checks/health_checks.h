@@ -8,6 +8,54 @@
 #include <stdint.h>
 
 /**
+ * @brief Health severity levels
+ *
+ * Defines the severity of health check results:
+ * - HEALTH_OK: No issues
+ * - HEALTH_ERROR: Something is wrong, but can still fly safely
+ * - HEALTH_FATAL: Unrecoverable failure, unsafe flight
+ */
+typedef enum {
+	HEALTH_OK = 0,
+	HEALTH_ERROR,
+	HEALTH_FATAL
+} health_severity_t;
+
+typedef enum {
+	MODULE_I2C = 0,
+	MODULE_ADC,
+	MODULE_CAN_HANDLER,
+	MODULE_ESTIMATOR,
+	MODULE_CONTROLLER,
+	MODULE_SD_CARD,
+	MODULE_TIMER,
+	MODULE_GPIO,
+	MODULE_FLIGHT_PHASE,
+	MODULE_IMU_HANDLER,
+	MODULE_UART,
+	MODULE_LOGGER
+} module_id_t;
+
+// Any module can add more error codes
+typedef enum {
+	MODULE_ERR_NONE = 0,
+	MODULE_ERR_I2C_FAIL,
+	MODULE_ERR_I2C_NOT_INIT,
+	MODULE_ERR_LOGGER_NOT_INIT
+} module_error_code_t;
+
+/**
+ * @brief Health check result from a module
+ *
+ * Standard structure returned by all module health check functions
+ */
+typedef struct {
+	health_severity_t severity;
+	module_id_t module_id;
+	module_error_code_t error_code;
+} health_status_t;
+
+/**
  * @brief Initializes the health check module and watchdog registry
  *
  * Resets all watchdog task entries and initializes the watchdog counter.

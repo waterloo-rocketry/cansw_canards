@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
+
 #include "rocketlib/include/common.h"
 
 /**
@@ -56,6 +58,6 @@ w_status_t gpio_toggle(gpio_pin_t pin, uint32_t timeout);
  * Reports the current status of the GPIO module
  * @return CAN board status bitfield
  */
-uint32_t gpio_get_status(void);
+health_status_t gpio_get_status(void);
 
 #endif // GPIO_H

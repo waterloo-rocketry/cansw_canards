@@ -105,9 +105,7 @@ w_status_t adc_get_value(adc_channel_t channel, uint32_t *output, uint32_t timeo
 	return W_SUCCESS;
 }
 
-uint32_t adc_get_status(void) {
-	uint32_t status_bitfield = 0;
-
+health_status_t adc_get_status(void) {
 	// Log error statistics
 	log_text(0,
 			 "adc",
@@ -119,6 +117,6 @@ uint32_t adc_get_status(void) {
 			 adc_error_stats.invalid_channels,
 			 adc_error_stats.overflow_errors);
 
-	return status_bitfield;
+	return (health_status_t){HEALTH_OK, MODULE_ADC, 0};
 }
 
