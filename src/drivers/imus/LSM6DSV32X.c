@@ -4,6 +4,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/timer/timer.h"
 #include "drivers/imus/LSM6DSV32X_regmap.h"
 #include <limits.h>
 #include <stdio.h>
@@ -30,7 +31,7 @@ typedef struct {
 	uint8_t dual_buffer[2][12];
 	TaskHandle_t task_to_notify;
 	volatile bool stale_data;
-	volatile bool read_ready_buffer;
+	float timestamp[2];
 
 } imu_ctx_t;
 
@@ -48,12 +49,6 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
  */
 w_status_t lsm6dsv32x_init() {
 	w_status_t status = W_SUCCESS;
-
-	// status |= lsm6dsv32x_config_open();
-
-	lsm6dsv32x_ctx.read_ready_buffer = IMU_BUFFER_MAIN;
-
-	// dont attempt to write to registers if the handshake fails
 
 	// Drive addr sel pin HIGH to use each device's "default" i2c addr
 	status |= gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
@@ -111,15 +106,15 @@ w_status_t lsm6dsv32x_init() {
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == IMU_INT1_PIN) {
-		// flip the read ready buffer to the secondary buffer
-		lsm6dsv32x_ctx.read_ready_buffer = IMU_BUFFER_SECONDARY;
+
+		timer_get_ms(&lsm6dsv32x_ctx.timestamp[IMU_WRITE_BUFFER]);
 
 		// begin dma read to the main buffer
 		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c,
 							 LSM6DSV32X_ADDR,
 							 FIFO_READ_BEGIN,
 							 I2C_MEMADD_SIZE_8BIT,
-							 lsm6dsv32x_ctx.dual_buffer[IMU_BUFFER_MAIN],
+							 lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
 							 12);
 	}
 }
@@ -129,14 +124,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  */
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	if (hi2c == lsm6dsv32x_ctx.hi2c) {
-		// flip the read ready buffer to the main buffer
-		lsm6dsv32x_ctx.stale_data = IMU_DATA_READY;
-		lsm6dsv32x_ctx.read_ready_buffer = IMU_BUFFER_MAIN;
 
-		for (uint8_t i = 0; i < 12; i++) {
-			lsm6dsv32x_ctx.dual_buffer[IMU_BUFFER_SECONDARY][i] =
-				lsm6dsv32x_ctx.dual_buffer[IMU_BUFFER_MAIN][i];
-		}
+		memcpy(lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER],lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],12);
+		lsm6dsv32x_ctx.stale_data = IMU_DATA_READY;
+
 	}
 }
 
@@ -150,23 +141,24 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
  */
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
 										altimu_raw_imu_data_t *raw_acc,
-										altimu_raw_imu_data_t *raw_gyro) {
+										altimu_raw_imu_data_t *raw_gyro,float *timestamp) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
-	taskENTER_CRITICAL();
-
-	// enter a critical section while copying the data
-	for (uint8_t i = 0; i < 12; i++) {
-		raw_bytes[i] = lsm6dsv32x_ctx.dual_buffer[lsm6dsv32x_ctx.read_ready_buffer][i];
-	}
-
-	// set current data to stale once the buffer is read and coppied into the function
-	lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
-
-	taskEXIT_CRITICAL();
 
 	if (lsm6dsv32x_ctx.stale_data == IMU_DATA_READY) {
+
+		taskENTER_CRITICAL();
+
+		// enter a critical section while copying the data
+		memcpy(raw_bytes,lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER],12);
+		*timestamp = lsm6dsv32x_ctx.timestamp[IMU_READ_BUFFER];
+
+		// set current data to stale once the buffer is read and coppied into the function
+		lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
+
+		taskEXIT_CRITICAL();
+
 		// Parse gyroscope raw data (first 6 bytes)
 		raw_gyro->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
 		raw_gyro->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
@@ -188,8 +180,6 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 	} else {
 		return W_IO_ERROR;
 	}
-
-	lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
 
 	return W_SUCCESS;
 }
