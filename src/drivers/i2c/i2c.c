@@ -255,6 +255,50 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 	return handle->transfer_status; // Return the status set by callback
 }
 
+w_status_t i2c_send_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *data, uint8_t len) {
+	// Validate input parameters
+	if (bus >= I2C_BUS_COUNT || !data || !len) {
+		return W_INVALID_PARAM;
+	}
+
+	// Get bus handle and check initialization
+	i2c_bus_handle_t *handle = &i2c_buses[bus];
+	if (!handle->initialized) {
+		return W_FAILURE;
+	}
+
+	// Convert 7-bit device address to 8-bit HAL format by shifting left and setting R/W bit to 0
+	uint16_t hal_addr = (device_addr << 1) & 0xFE;
+
+	// Acquire bus mutex with timeout
+	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
+		i2c_error_stats[bus].timeouts++;
+		return W_IO_TIMEOUT;
+	}
+
+	// Clear transfer state and prepare for new transfer
+	handle->transfer_complete = false;
+	handle->transfer_status = W_SUCCESS; // Initialize with success status
+	xSemaphoreGive(handle->transfer_sem); // Give semaphore to ensure it's in a known state
+	xSemaphoreTake(handle->transfer_sem, 0); // Clear any pending signal
+
+	// Start non-blocking write operation
+	HAL_StatusTypeDef hal_status =
+		HAL_I2C_Master_Transmit_IT(handle->hal_handle, hal_addr, (uint8_t *)data, len);
+
+	// Handle HAL-level errors
+	if (hal_status != HAL_OK) {
+		i2c_error_stats[bus].bus_errors++;
+		xSemaphoreGive(handle->mutex);
+		return W_IO_ERROR;
+	}
+
+	// Wait for transfer completion and release mutex
+	wait_transfer_complete(handle, bus);
+	xSemaphoreGive(handle->mutex);
+	return handle->transfer_status; // Return the status set by callback
+}
+
 // Test-only reset function: Always compiled, but intended only for testing.
 void i2c_reset_all(void) {
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {

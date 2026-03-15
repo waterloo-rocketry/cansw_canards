@@ -82,6 +82,21 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 						 uint8_t len);
 
 /**
+ * @brief send arbitary data through i2c
+ *
+ * @param[in] bus Bus to use
+ * @param[in] device_addr 7-bit device address (raw, will be shifted left internally)
+ * @param[in] data Data to write
+ * @param[in] len Number of bytes to write (max 255)
+ * @retval W_SUCCESS Write completed successfully
+ * @retval W_INVALID_PARAM Invalid parameters
+ * @retval W_FAILURE Bus not initialized
+ * @retval W_IO_TIMEOUT Transfer timed out
+ * @retval W_IO_ERROR Bus error occurred (NACK, bus error, etc)
+ */
+w_status_t i2c_send_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *data, uint8_t len);
+
+/**
  * @brief Report I2C module health status
  *
  * Retrieves and reports I2C error statistics and initialization status
