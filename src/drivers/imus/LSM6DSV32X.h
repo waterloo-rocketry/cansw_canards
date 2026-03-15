@@ -8,8 +8,8 @@
 #include <stdio.h>
 
 enum {
-	IMU_BUFFER_MAIN = 0,
-	IMU_BUFFER_SECONDARY = 1,
+	IMU_READ_BUFFER = 0,
+	IMU_WRITE_BUFFER = 1,
 
 	IMU_DATA_STALE = 1,
 	IMU_DATA_READY = 0
@@ -22,6 +22,7 @@ typedef struct __attribute__((packed)) {
 	uint16_t x;
 	uint16_t y;
 	uint16_t z;
+	float timestamp;
 } lsm6dsv32x_raw_imu_data_t;
 
 /**
