@@ -1,3 +1,5 @@
+// This is Version 1 of the implementation for the ADC I2C implementation will be updated
+
 /**
  * @file ADS1219.c
  * @brief ADS1219 24-bit ADC driver -- STM32 C implementation
@@ -43,6 +45,8 @@
  */
 static w_status_t ads1219_send_cmd(ads1219_handle_t *handle, uint8_t cmd) {
 	uint8_t dummy_data = 0;
+	// this is sending some dummy data for now just to make sure it can use the existing I2C
+	// functions
 	return i2c_write_reg(handle->bus, handle->i2c_addr, cmd, &dummy_data, 1);
 }
 
