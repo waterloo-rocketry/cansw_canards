@@ -46,7 +46,8 @@ static w_status_t controller_send_can(float canard_angle) {
 		log_text(LOG_WAIT_MS, "controller", "actuator msg scale / encode failed");
 	}
 
-	build_analog_data_16bit_msg(PRIO_HIGHEST, can_timestamp, SENSOR_CANARD_SERVO_ANGLE, scaled_angle, &msg);
+	build_analog_data_16bit_msg(
+		PRIO_HIGHEST, can_timestamp, SENSOR_CANARD_SERVO_ANGLE, scaled_angle, &msg);
 
 	// Send this to can handler module's tx
 	can_tx_sts |= can_handler_transmit(&msg);

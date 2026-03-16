@@ -39,39 +39,39 @@ static QueueHandle_t controller_cmd_queue = NULL;
 
 // ---------- private static functions ----------
 
-// TODO: No longer needed with new CAN design due to scaling for every value
+// TODO: No longer needed with new CAN design due to scaling for every value?
 /**
  * callback to be registered with CAN handler for encoder msgs.
  * msg_type = MSG_SENSOR_ANALOG
  */
-static w_status_t can_encoder_msg_callback(const can_msg_t *msg) {
-	can_analog_sensor_id_t sensor_id;
-	uint16_t raw_data;
+// static w_status_t can_encoder_msg_callback(const can_msg_t *msg) {
+// 	can_analog_sensor_id_t sensor_id;
+// 	uint16_t raw_data;
 
-	if (get_analog_data(msg, &sensor_id, &raw_data) == false) {
-		log_text(1, "Estimator", "get_analog_data fail");
-		return W_FAILURE;
-	}
+// 	if (get_analog_data(msg, &sensor_id, &raw_data) == false) {
+// 		log_text(1, "Estimator", "get_analog_data fail");
+// 		return W_FAILURE;
+// 	}
 
-	if (SENSOR_CANARD_ENCODER_1 == sensor_id) {
-		// shift to [-10000, 10000] mdeg then convert to radians. raw is centered at 32768
-		int16_t angle_mdeg = (int16_t)(raw_data - 32768);
-		float encoder_val_rad = ((int32_t)angle_mdeg * (RAD_PER_DEG) / 1000.0f);
+// 	if (SENSOR_CANARD_ENCODER_1 == sensor_id) {
+// 		// shift to [-10000, 10000] mdeg then convert to radians. raw is centered at 32768
+// 		int16_t angle_mdeg = (int16_t)(raw_data - 32768);
+// 		float encoder_val_rad = ((int32_t)angle_mdeg * (RAD_PER_DEG) / 1000.0f);
 
-		// send to internal data queue
-		xQueueOverwrite(encoder_data_queue_rad, &encoder_val_rad);
-	}
-	return W_SUCCESS;
-}
+// 		// send to internal data queue
+// 		xQueueOverwrite(encoder_data_queue_rad, &encoder_val_rad);
+// 	}
+// 	return W_SUCCESS;
+// }
 
 // ---------- public functions ----------
 
 w_status_t estimator_init(void) {
+	// TODO: No longer needed with new CAN design due to scaling for every value?
 	// register the callback for the encoder can msgs
-	if (W_SUCCESS != can_handler_register_callback(MSG_SENSOR_ANALOG, can_encoder_msg_callback)) {
-		log_text(1, "adc", "initfailenc");
-		return W_FAILURE;
-	}
+	// if (W_SUCCESS != can_handler_register_callback(MSG_SENSOR_ANALOG, can_encoder_msg_callback))
+	// { 	log_text(1, "adc", "initfailenc"); 	return W_FAILURE;
+	// }
 
 	// create queues for imu data, encoder data, and controller cmd
 	imu_data_queue = xQueueCreate(1, sizeof(estimator_all_imus_input_t));
@@ -302,24 +302,24 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state) {
 
 	// TODO: Redo how messages are built and sent
 	// Iterate through all defined state IDs
-	for (can_state_est_id_t state_id = 0; state_id < STATE_ID_ENUM_MAX; ++state_id) {
-		// The x_state_t union maps directly to the enum order if accessed as an array
-		// Convert the doubles in x_state_t to floats for CAN message
-		float state_value = (float)current_state->array[state_id];
+	// for (can_state_est_id_t state_id = 0; state_id < STATE_ID_ENUM_MAX; ++state_id) {
+	// 	// The x_state_t union maps directly to the enum order if accessed as an array
+	// 	// Convert the doubles in x_state_t to floats for CAN message
+	// 	float state_value = (float)current_state->array[state_id];
 
-		if (!build_state_est_data_msg(PRIO_LOW, timestamp_16bit, state_id, &state_value, &msg)) {
-			log_text(0, "Estimator", "Failed to build CAN message for state ID %d", state_id);
-			estimator_error_stats.can_log_fails++;
-			status = W_FAILURE; // Mark as failure but continue trying other states
-			continue;
-		}
+	// 	if (!build_state_est_data_msg(PRIO_LOW, timestamp_16bit, state_id, &state_value, &msg)) {
+	// 		log_text(0, "Estimator", "Failed to build CAN message for state ID %d", state_id);
+	// 		estimator_error_stats.can_log_fails++;
+	// 		status = W_FAILURE; // Mark as failure but continue trying other states
+	// 		continue;
+	// 	}
 
-		if (W_SUCCESS != can_handler_transmit(&msg)) {
-			log_text(0, "Estimator", "Failed to transmit CAN message for state ID %d", state_id);
-			estimator_error_stats.can_log_fails++;
-			status = W_FAILURE; // Mark as failure but continue trying other states
-		}
-	}
+	// 	if (W_SUCCESS != can_handler_transmit(&msg)) {
+	// 		log_text(0, "Estimator", "Failed to transmit CAN message for state ID %d", state_id);
+	// 		estimator_error_stats.can_log_fails++;
+	// 		status = W_FAILURE; // Mark as failure but continue trying other states
+	// 	}
+	// }
 
 	return status;
 }

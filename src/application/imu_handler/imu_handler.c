@@ -61,6 +61,7 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	w_status_t encode_sts = W_SUCCESS;
 	w_status_t can_tx_sts = W_SUCCESS;
 
+	// TODO: Currently using incorrect sensor for testing
 	// Encode messages
 	int16_t acc_x = 0, acc_y = 0, acc_z = 0;
 	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
@@ -79,31 +80,16 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, &raw_data->raw_mag.z, &mag_z);
 
 	// Build and send messages
-	build_dem_analog_data_16bit_msg(PRIO_LOW,
-									(uint16_t)timestamp,
-									DEM_SENSOR_CANARD_MTI630_ACCEL,
-									acc_x,
-									acc_y,
-									acc_z,
-									&msg);
+	build_dem_analog_data_16bit_msg(
+		PRIO_LOW, (uint16_t)timestamp, DEM_SENSOR_CANARD_MTI630_ACCEL, acc_x, acc_y, acc_z, &msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
-	build_dem_analog_data_16bit_msg(PRIO_LOW,
-									(uint16_t)timestamp,
-									DEM_SENSOR_CANARD_MTI630_GYRO,
-									gyro_x,
-									gyro_y,
-									gyro_z,
-									&msg);
+	build_dem_analog_data_16bit_msg(
+		PRIO_LOW, (uint16_t)timestamp, DEM_SENSOR_CANARD_MTI630_GYRO, gyro_x, gyro_y, gyro_z, &msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
-	build_dem_analog_data_16bit_msg(PRIO_LOW,
-									(uint16_t)timestamp,
-									DEM_SENSOR_CANARD_MTI630_MAG,
-									mag_x,
-									mag_y,
-									mag_z,
-									&msg);
+	build_dem_analog_data_16bit_msg(
+		PRIO_LOW, (uint16_t)timestamp, DEM_SENSOR_CANARD_MTI630_MAG, mag_x, mag_y, mag_z, &msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
 	// Error handling
