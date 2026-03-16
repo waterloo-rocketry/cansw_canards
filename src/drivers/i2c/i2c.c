@@ -168,6 +168,13 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
 	if (HAL_OK != callback_status) {
 		handle->initialized = false;
 		log_text(10, "i2c", "ERROR: callbacks not resitered");
+
+		// delete semaphore and mutex
+		vSemaphoreDelete(handle->mutex);
+		vSemaphoreDelete(handle->transfer_sem);
+		handle->mutex = NULL;
+		handle->transfer_sem = NULL;
+
 		return W_FAILURE;
 	}
 
