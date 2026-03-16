@@ -13,6 +13,7 @@
 #include "drivers/timer/timer.h"
 
 #include "canlib.h"
+#include "queue.h"
 
 // Period of IMU sampling in milliseconds
 // slightly slower than 200 hz to always receive encoder which can be >5ms
@@ -29,9 +30,6 @@
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 #define IMU_HANDLER_CAN_TX_PERIOD_MS 100
 #define IMU_HANDLER_CAN_TX_RATE (IMU_HANDLER_CAN_TX_PERIOD_MS / IMU_SAMPLING_PERIOD_MS)
-
-// imu data global variable to be send to flight phase
-static estimator_all_imus_input_t g_all_imu_data = {0};
 
 // correct orientation from finn irl, may 4 2025
 // also default uncalibrated orientation until calibration module sets these
@@ -50,6 +48,8 @@ static w_status_t orientation_calibrated = W_FAILURE; // set to true once calibr
 
 // TODO: function to be set by the calibration module to update the calibration matrices once
 // calibrated
+
+static QueueHandle_t state_mailbox = NULL;
 
 // Module state tracking
 typedef struct {
@@ -226,6 +226,14 @@ static w_status_t read_movella_imu(estimator_imu_measurement_t *imu_data) {
 w_status_t imu_handler_init(void) {
 	// TODO: poll all imus to make sure theyre initialized alr or smth
 
+	// Create state mailbox for flight phase to read current state if needed
+	state_mailbox = xQueueCreate(1, sizeof(estimator_all_imus_input_t));
+
+	if (state_mailbox == NULL) {
+		log_text(1, "IMUHandler", "ERROR: State mailbox not initialized.");
+		return W_FAILURE;
+	}
+
 	// Set initialized flag directly here instead of calling initialize_all_imus()
 	imu_handler_state.initialized = true;
 
@@ -348,8 +356,10 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 		log_text(1, "IMUHandler", "ERROR: estimator update fail (status: %d).", estimator_status);
 	}
 
-	// Update global data for flight phase
-	g_all_imu_data = imu_data;
+	// update queue with current state for flight phase to read
+	if (xQueueOverwrite(state_mailbox, &imu_data) != pdPASS) {
+		log_text(1, "IMUHandler", "ERROR: state mailbox overwrite failed.");
+	}
 
 	imu_handler_state.sample_count++;
 
@@ -368,7 +378,10 @@ w_status_t imu_handler_get_data(estimator_all_imus_input_t *all_imu_data) {
 		return W_INVALID_PARAM;
 	}
 
-	*all_imu_data = g_all_imu_data;
+	if (xQueuePeek(state_mailbox, all_imu_data, 0) != pdPASS) {
+		log_text(1, "IMUHandler", "ERROR: Failed to get data from state mailbox.");
+		return W_FAILURE;
+	}
 
 	return W_SUCCESS;
 }
