@@ -162,8 +162,8 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
 	callback_status |= HAL_I2C_RegisterCallback(
 		hal_handle, HAL_I2C_MASTER_TX_COMPLETE_CB_ID, i2c_transfer_complete_callback);
 	// Register separate error callback to handle errors using HAL_I2C_GetError
-	callback_status |= HAL_I2C_RegisterCallback(hal_handle, HAL_I2C_ERROR_CB_ID, i2c_error_callback);
-
+	callback_status |=
+		HAL_I2C_RegisterCallback(hal_handle, HAL_I2C_ERROR_CB_ID, i2c_error_callback);
 
 	if (HAL_OK != callback_status) {
 		handle->initialized = false;
