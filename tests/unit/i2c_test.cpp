@@ -38,6 +38,7 @@ protected:
         RESET_FAKE(HAL_I2C_Mem_Write_IT);
         RESET_FAKE(HAL_I2C_RegisterCallback);
         RESET_FAKE(HAL_I2C_Master_Abort_IT);
+        RESET_FAKE(HAL_I2C_Master_Transmit_IT);
 
         // Reset FFF history
         FFF_RESET_HISTORY();
