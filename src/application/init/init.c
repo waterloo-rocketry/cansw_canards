@@ -24,6 +24,9 @@
 #include "task.h"
 #include "usart.h"
 
+extern I2C_HandleTypeDef hi2c2;
+extern I2C_HandleTypeDef hi2c4;
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
