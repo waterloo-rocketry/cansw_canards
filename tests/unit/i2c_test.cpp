@@ -59,7 +59,7 @@ protected:
 TEST_F(I2CTest, InitSuccess) {
     w_status_t status = i2c_init(I2C_BUS_2, &hi2c2, 100); // Updated to I2C2
     EXPECT_EQ(status, W_SUCCESS);
-    EXPECT_EQ(HAL_I2C_RegisterCallback_fake.call_count, 3);
+    EXPECT_EQ(HAL_I2C_RegisterCallback_fake.call_count, 4);
 }
 
 /**
@@ -229,4 +229,25 @@ TEST_F(I2CTest, HandlesLockedMutex) {
     w_status_t status = i2c_read_reg(I2C_BUS_2, 0x50, 0x10, data, sizeof(data));
 
     EXPECT_EQ(status, W_IO_TIMEOUT);
+}
+
+/**
+ * Test address shifting on write operation.
+ */
+TEST_F(I2CTest, AddressShiftingOnWriteData) {
+    // Initialize the bus
+    ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
+
+    // Set up for successful write
+    HAL_I2C_Mem_Write_IT_fake.return_val = HAL_OK;
+    xSemaphoreTake_fake.return_val = pdTRUE;
+
+    uint8_t data[4] = {0, 1};
+    uint8_t device_addr = 0x50; // 7-bit address
+    w_status_t status = i2c_write_data(I2C_BUS_2, device_addr, data, sizeof(data));
+
+    // Check that HAL was called with shifted address
+    ASSERT_GT(HAL_I2C_Mem_Write_IT_fake.call_count, 0);
+    uint16_t shifted_addr = (uint16_t)HAL_I2C_Mem_Write_IT_fake.arg1_val;
+    EXPECT_EQ(shifted_addr, (device_addr << 1) & 0xFE);
 }
