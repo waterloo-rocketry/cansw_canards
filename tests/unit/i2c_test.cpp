@@ -14,6 +14,7 @@ extern "C" {
 extern void i2c_transfer_complete_callback(I2C_HandleTypeDef *hi2c);
 extern i2c_error_data i2c_error_stats[I2C_BUS_COUNT];
 I2C_HandleTypeDef hi2c2;
+I2C_HandleTypeDef hi2c4;
 }
 
 /**
@@ -232,22 +233,133 @@ TEST_F(I2CTest, HandlesLockedMutex) {
 }
 
 /**
- * Test address shifting on write operation.
+ * Test not initialized on write_data operation.
+ */
+TEST_F(I2CTest, UninitOnWriteData) {
+    // Initialize the wrong bus.
+    ASSERT_EQ(i2c_init(I2C_BUS_4, &hi2c4, 100), W_SUCCESS);
+
+    uint8_t data[4] = {0};
+    uint8_t device_addr = 0x50; // 7-bit address
+    w_status_t status = i2c_write_data(I2C_BUS_2, device_addr, data, sizeof(data));
+
+    EXPECT_EQ(status, W_FAILURE);
+}
+
+/**
+ * Test behavior when the bus mutex cannot be acquired.
+ */
+TEST_F(I2CTest, HandlesLockedMutexWriteData) {
+    // Initialize the bus.
+    ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
+
+    // Simulate a timeout by having xSemaphoreTake for the mutex return pdFALSE.
+    xSemaphoreTake_fake.return_val = pdFALSE;
+
+    uint8_t data[4] = {0};
+    w_status_t status = i2c_write_data(I2C_BUS_2, 0x50, data, sizeof(data));
+
+    EXPECT_EQ(status, W_IO_TIMEOUT);
+}
+
+
+/**
+ * Test address shifting on write_data operation.
  */
 TEST_F(I2CTest, AddressShiftingOnWriteData) {
     // Initialize the bus
     ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
 
     // Set up for successful write
-    HAL_I2C_Mem_Write_IT_fake.return_val = HAL_OK;
+    HAL_I2C_Master_Transmit_IT_fake.return_val = HAL_OK;
     xSemaphoreTake_fake.return_val = pdTRUE;
 
-    uint8_t data[4] = {0, 1};
+    uint8_t data[4] = {0};
     uint8_t device_addr = 0x50; // 7-bit address
     w_status_t status = i2c_write_data(I2C_BUS_2, device_addr, data, sizeof(data));
 
     // Check that HAL was called with shifted address
-    ASSERT_GT(HAL_I2C_Mem_Write_IT_fake.call_count, 0);
-    uint16_t shifted_addr = (uint16_t)HAL_I2C_Mem_Write_IT_fake.arg1_val;
+    ASSERT_GT(HAL_I2C_Master_Transmit_IT_fake.call_count, 0);
+    uint16_t shifted_addr = (uint16_t)HAL_I2C_Master_Transmit_IT_fake.arg1_val;
     EXPECT_EQ(shifted_addr, (device_addr << 1) & 0xFE);
+}
+
+
+/**
+ * Test valid bus on write_data operation.
+ */
+TEST_F(I2CTest, CheckValidBusWriteData) {
+    // Initialize the bus
+    ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
+
+    // Set up for successful write
+    HAL_I2C_Master_Transmit_IT_fake.return_val = HAL_OK;
+    xSemaphoreTake_fake.return_val = pdTRUE;
+
+    uint8_t data[4] = {0};
+    uint8_t device_addr = 0x50; // 7-bit address
+    w_status_t status = i2c_write_data(I2C_BUS_COUNT, device_addr, data, sizeof(data));
+
+    EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
+
+/**
+ * Test NULL data ptr on write_data operation.
+ */
+TEST_F(I2CTest, CheckNullDataWriteData) {
+    // Initialize the bus
+    ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
+
+    // Set up for successful write
+    HAL_I2C_Master_Transmit_IT_fake.return_val = HAL_OK;
+    xSemaphoreTake_fake.return_val = pdTRUE;
+
+   
+    uint8_t device_addr = 0x50; // 7-bit address
+    w_status_t status = i2c_write_data(I2C_BUS_COUNT, device_addr, NULL, 4);
+
+    EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
+
+/**
+ * Test data length is zero on write_data operation.
+ */
+TEST_F(I2CTest, CheckZeroLengthWriteData) {
+    // Initialize the bus
+    ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
+
+    // Set up for successful write
+    HAL_I2C_Master_Transmit_IT_fake.return_val = HAL_OK;
+    xSemaphoreTake_fake.return_val = pdTRUE;
+
+   
+    uint8_t data[4] = {0};
+    uint8_t device_addr = 0x50; // 7-bit address
+    w_status_t status = i2c_write_data(I2C_BUS_COUNT, device_addr, data, 0);
+
+    EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
+/**
+ * Test a successful write operation.
+ */
+TEST_F(I2CTest, WriteDataSuccess) {
+    // Initialize the bus.
+    ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
+
+    // Set up the fake to return HAL_OK for write.
+    xSemaphoreTake_fake.return_val = pdTRUE;
+    HAL_I2C_Master_Transmit_IT_fake.return_val = HAL_OK;
+
+    uint8_t data[4] = {0xAA};
+    w_status_t status = i2c_write_data(I2C_BUS_2, 0x50, data, sizeof(data));
+
+    // Simulate a successful transfer completion.
+    hi2c2.ErrorCode = HAL_I2C_ERROR_NONE;
+    i2c_transfer_complete_callback(&hi2c2);
+
+    EXPECT_EQ(status, W_SUCCESS);
+    EXPECT_EQ(HAL_I2C_Master_Transmit_IT_fake.call_count, 1);
 }
