@@ -258,7 +258,7 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 	return handle->transfer_status; // Return the status set by callback
 }
 
-w_status_t i2c_send_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *data, uint8_t len) {
+w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *data, uint8_t len) {
 	// Validate input parameters
 	if (bus >= I2C_BUS_COUNT || !data || !len) {
 		return W_INVALID_PARAM;
