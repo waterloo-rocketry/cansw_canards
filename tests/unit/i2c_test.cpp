@@ -58,6 +58,8 @@ protected:
  * Test that initialization succeeds with valid parameters.
  */
 TEST_F(I2CTest, InitSuccess) {
+    HAL_I2C_RegisterCallback_fake.return_val = HAL_OK;
+
     w_status_t status = i2c_init(I2C_BUS_2, &hi2c2, 100); // Updated to I2C2
     EXPECT_EQ(status, W_SUCCESS);
     EXPECT_EQ(HAL_I2C_RegisterCallback_fake.call_count, 4);
@@ -235,7 +237,7 @@ TEST_F(I2CTest, HandlesLockedMutex) {
 /**
  * Test not initialized on write_data operation.
  */
-TEST_F(I2CTest, UninitOnWriteData) {
+TEST_F(I2CTest, NotInitOnWriteData) {
     // Initialize the wrong bus.
     ASSERT_EQ(i2c_init(I2C_BUS_4, &hi2c4, 100), W_SUCCESS);
 
@@ -286,9 +288,9 @@ TEST_F(I2CTest, AddressShiftingOnWriteData) {
 
 
 /**
- * Test valid bus on write_data operation.
+ * Test invalid bus on write_data operation.
  */
-TEST_F(I2CTest, CheckValidBusWriteData) {
+TEST_F(I2CTest, CheckInValidBusWriteData) {
     // Initialize the bus
     ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
 
@@ -317,7 +319,7 @@ TEST_F(I2CTest, CheckNullDataWriteData) {
 
    
     uint8_t device_addr = 0x50; // 7-bit address
-    w_status_t status = i2c_write_data(I2C_BUS_COUNT, device_addr, NULL, 4);
+    w_status_t status = i2c_write_data(I2C_BUS_2, device_addr, NULL, 4);
 
     EXPECT_EQ(status, W_INVALID_PARAM);
 }
@@ -337,7 +339,7 @@ TEST_F(I2CTest, CheckZeroLengthWriteData) {
    
     uint8_t data[4] = {0};
     uint8_t device_addr = 0x50; // 7-bit address
-    w_status_t status = i2c_write_data(I2C_BUS_COUNT, device_addr, data, 0);
+    w_status_t status = i2c_write_data(I2C_BUS_2, device_addr, data, 0);
 
     EXPECT_EQ(status, W_INVALID_PARAM);
 }
@@ -362,4 +364,14 @@ TEST_F(I2CTest, WriteDataSuccess) {
 
     EXPECT_EQ(status, W_SUCCESS);
     EXPECT_EQ(HAL_I2C_Master_Transmit_IT_fake.call_count, 1);
+}
+
+/**failed HAL_I2C_Master_Transmit_IT call
+ */
+TEST_F(I2CTest, CallbackInitFail) {
+    HAL_I2C_RegisterCallback_fake.return_val = HAL_ERROR;
+
+    w_status_t status = i2c_init(I2C_BUS_2, &hi2c2, 100); // Updated to I2C2
+    EXPECT_EQ(status, W_FAILURE);
+    EXPECT_EQ(HAL_I2C_RegisterCallback_fake.call_count, 4);
 }

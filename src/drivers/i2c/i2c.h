@@ -82,7 +82,7 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 						 uint8_t len);
 
 /**
- * @brief send arbitary data through i2c
+ * @brief send arbitrary data through I2C
  *
  * @param[in] bus Bus to use
  * @param[in] device_addr 7-bit device address (raw, will be shifted left internally)
