@@ -22,9 +22,9 @@ typedef enum {
 
 // Scaling factors
 #define MOTOR_POS_CMD_SCALE    10000.0f // Position: degrees * 10000
-#define MOTOR_POS_FB_SCALE     10.0f    // Feedback position: raw / 10.0 = degrees
-#define MOTOR_SPEED_FB_SCALE   10.0f    // speed feedback: raw / 10.0 = ERPM
-#define MOTOR_CURRENT_FB_SCALE 100.0f   // current feedback: raw / 100.0 = Amps
+#define MOTOR_POS_FB_SCALE     0.1f    // Feedback position: raw * 0.1 = degrees
+#define MOTOR_SPEED_FB_SCALE   10.0f    // speed feedback: raw * 10.0 = ERPM
+#define MOTOR_CURRENT_FB_SCALE 0.01f   // current feedback: raw * 0.01 = Amps
 
 static FDCAN_HandleTypeDef *motor_hfdcan = NULL;
 static QueueHandle_t feedback_queue = NULL;
@@ -54,7 +54,15 @@ static w_status_t motor_can_transmit_ext(uint32_t ext_id, const uint8_t *data, u
  * @param[out] fb     Decoded feedback struct
  */
 static void motor_parse_feedback(const uint8_t *data, motor_feedback_t *fb) {
-	
+	int16_t pos_raw = (data[0] << 8 | data[1]);
+	fb->position = pos_raw * MOTOR_POS_FB_SCALE;
+	int16_t speed_raw = (data[2] << 8 | data[3]);
+	fb->speed = speed_raw * MOTOR_SPEED_FB_SCALE;
+	int16_t current_raw = (data[4] << 8 | data[5]);
+	fb->current = current_raw * MOTOR_CURRENT_FB_SCALE;
+
+	fb->temperature = data[6];
+	fb->fault_code = data[7];
 }
 
 w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
@@ -82,9 +90,10 @@ w_status_t motor_send_disable_cmd(void) {
 bool motor_is_fatal_fault(motor_fault_code_t fault) {
 	switch (fault) {
 		case MOTOR_FAULT_OVERVOLTAGE:
-		case MOTOR_FAULT_ABS_OVERCURRENT:
+		case MOTOR_FAULT_OVERCURRENT:
 		case MOTOR_FAULT_OVERTEMP_FET:
 		case MOTOR_FAULT_OVERTEMP_MOTOR:
+		case MOTOR_FAULT_ENCODER_ERROR;
 			return true;
 		default:
 			return false;
