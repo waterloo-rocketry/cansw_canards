@@ -42,6 +42,35 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
 	return i2c_write_reg(I2C_BUS_4, addr, reg, &data, 1);
 }
 
+w_status_t lsm6dsv32x_check_sanity()
+
+{
+
+	w_status_t i2c_status = W_SUCCESS;
+	w_status_t device_status = W_SUCCESS;
+
+	uint8_t expected_lsm6dsv32x = 0x70;
+	uint8_t who_am_i;
+
+	i2c_status |= i2c_read_reg(I2C_BUS_4, LSM6DSV32X_ADDR, LSM6DSV32X_WHO_AM_I, &who_am_i, 1);
+	if (expected_lsm6dsv32x != who_am_i) {
+		device_status |= W_FAILURE;
+
+	}
+
+	if(device_status == W_SUCCESS && i2c_status == W_SUCCESS)
+
+	{return W_SUCCESS;}
+
+	else
+
+	{return W_FAILURE;}
+		
+
+}
+
+
+
 /**
  * @brief Initializes the bit registers for
  * @note Must be called after bit registers are configured, called before flight!!!
