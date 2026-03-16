@@ -13,8 +13,8 @@
 #define IMU_INT1_PORT GPIOD
 #define IMU_INT1_PIN GPIO_PIN_7
 
-// AltIMU device addresses and configuration
-#define LSM6DSV32X_ADDR 0x6B << 1 // addr sel pin HIGH IMU
+//device addresses and configuration
+#define LSM6DSV32X_ADDR 0x6B// addr sel pin HIGH IMU
 
 // sensor ranges. these must be selected using the i2c init regs
 static const double ACC_RANGE = 32.0; // g
