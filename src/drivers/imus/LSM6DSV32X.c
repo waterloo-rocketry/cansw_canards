@@ -13,8 +13,8 @@
 #define IMU_INT1_PORT GPIOD
 #define IMU_INT1_PIN GPIO_PIN_7
 
-//device addresses and configuration
-#define LSM6DSV32X_ADDR 0x6B// addr sel pin HIGH IMU
+// device addresses and configuration
+#define LSM6DSV32X_ADDR 0x6B // addr sel pin HIGH IMU
 
 // sensor ranges. these must be selected using the i2c init regs
 static const double ACC_RANGE = 32.0; // g
@@ -42,10 +42,7 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
 	return i2c_write_reg(I2C_BUS_4, addr, reg, &data, 1);
 }
 
-w_status_t lsm6dsv32x_check_sanity()
-
-{
-
+w_status_t lsm6dsv32x_check_sanity() {
 	w_status_t i2c_status = W_SUCCESS;
 	w_status_t device_status = W_SUCCESS;
 
@@ -55,21 +52,14 @@ w_status_t lsm6dsv32x_check_sanity()
 	i2c_status |= i2c_read_reg(I2C_BUS_4, LSM6DSV32X_ADDR, LSM6DSV32X_WHO_AM_I, &who_am_i, 1);
 	if (expected_lsm6dsv32x != who_am_i) {
 		device_status |= W_FAILURE;
-
 	}
 
-	if(device_status == W_SUCCESS && i2c_status == W_SUCCESS)
-
-	{return W_SUCCESS;}
-
-	else
-
-	{return W_FAILURE;}
-		
-
+	if (device_status == W_SUCCESS && i2c_status == W_SUCCESS) {
+		return W_SUCCESS;
+	} else {
+		return W_FAILURE;
+	}
 }
-
-
 
 /**
  * @brief Initializes the bit registers for
@@ -203,6 +193,89 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		acc_data->x = (int16_t)raw_acc->x * ACC_FS;
 		acc_data->y = (int16_t)raw_acc->y * ACC_FS;
 		acc_data->z = (int16_t)raw_acc->z * ACC_FS;
+	} else {
+		return W_IO_ERROR;
+	}
+
+	return W_SUCCESS;
+}
+
+/**
+ * @brief Retrives all 12 bytes of imu data
+ * @param[out] acc_data    Processed accelerometer data (gravities)
+ * @param[out] gyro_data   Processed gyroscope data (deg/s)
+ * @param[out] raw_acc     Raw accelerometer data
+ * @param[out] raw_gyro    Raw gyroscope data
+ * @return Status of the operation
+ */
+w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *raw_acc,
+								   float *timestamp) {
+	w_status_t status = W_SUCCESS;
+	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
+
+	if (lsm6dsv32x_ctx.stale_data == IMU_DATA_READY) {
+		taskENTER_CRITICAL();
+
+		// enter a critical section while copying the data
+		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER], 12);
+		*timestamp = lsm6dsv32x_ctx.timestamp[IMU_READ_BUFFER];
+
+		// set current data to stale once the buffer is read and coppied into the function
+		lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
+
+		taskEXIT_CRITICAL();
+
+		// Parse accelerometer raw data (next 6 bytes)
+		raw_acc->x = (uint16_t)(((uint16_t)raw_bytes[7] << 8) | raw_bytes[6]);
+		raw_acc->y = (uint16_t)(((uint16_t)raw_bytes[9] << 8) | raw_bytes[8]);
+		raw_acc->z = (uint16_t)(((uint16_t)raw_bytes[11] << 8) | raw_bytes[10]);
+
+		acc_data->x = (int16_t)raw_acc->x * ACC_FS;
+		acc_data->y = (int16_t)raw_acc->y * ACC_FS;
+		acc_data->z = (int16_t)raw_acc->z * ACC_FS;
+
+	} else {
+		return W_IO_ERROR;
+	}
+
+	return W_SUCCESS;
+}
+
+/**
+ * @brief Retrives all 12 bytes of imu data
+ * @param[out] acc_data    Processed accelerometer data (gravities)
+ * @param[out] gyro_data   Processed gyroscope data (deg/s)
+ * @param[out] raw_acc     Raw accelerometer data
+ * @param[out] raw_gyro    Raw gyroscope data
+ * @return Status of the operation
+ */
+w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_gyro,
+									float *timestamp) {
+	w_status_t status = W_SUCCESS;
+	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
+
+	if (lsm6dsv32x_ctx.stale_data == IMU_DATA_READY) {
+		taskENTER_CRITICAL();
+
+		// enter a critical section while copying the data
+		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER], 12);
+		*timestamp = lsm6dsv32x_ctx.timestamp[IMU_READ_BUFFER];
+
+		// set current data to stale once the buffer is read and coppied into the function
+		lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
+
+		taskEXIT_CRITICAL();
+
+		// Parse gyroscope raw data (first 6 bytes)
+		raw_gyro->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
+		raw_gyro->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
+		raw_gyro->z = (uint16_t)(((uint16_t)raw_bytes[5] << 8) | raw_bytes[4]);
+
+		// Convert to physical units
+		gyro_data->x = (int16_t)raw_gyro->x * GYRO_FS;
+		gyro_data->y = (int16_t)raw_gyro->y * GYRO_FS;
+		gyro_data->z = (int16_t)raw_gyro->z * GYRO_FS;
+
 	} else {
 		return W_IO_ERROR;
 	}
