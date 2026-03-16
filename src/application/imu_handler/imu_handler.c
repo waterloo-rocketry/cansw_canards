@@ -58,66 +58,66 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	can_msg_t msg;
 	float timestamp = 0.0f;
 	timer_get_ms(&timestamp);
-	bool build_sts = true;
+	w_status_t encode_sts = W_SUCCESS;
 	w_status_t can_tx_sts = W_SUCCESS;
 
-	// Build CAN message with raw data
-	build_sts &= build_imu_data_msg(PRIO_LOW,
+	// Encode messages
+	int16_t acc_x = 0, acc_y = 0, acc_z = 0;
+	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
+	int16_t mag_x = 0, mag_y = 0, mag_z = 0;
+
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, &raw_data->raw_acc.x, &acc_x);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, &raw_data->raw_acc.y, &acc_y);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, &raw_data->raw_acc.z, &acc_z);
+
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, &raw_data->raw_gyro.x, &gyro_x);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, &raw_data->raw_gyro.y, &gyro_y);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, &raw_data->raw_gyro.z, &gyro_z);
+
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, &raw_data->raw_mag.x, &mag_x);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, &raw_data->raw_mag.y, &mag_y);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, &raw_data->raw_mag.z, &mag_z);
+
+	// Build and send messages
+	build_dem_analog_data_16bit_msg(PRIO_LOW,
 									(uint16_t)timestamp,
-									'X',
-									IMU_PROC_ALTIMU10,
-									raw_data->raw_acc.x,
-									raw_data->raw_gyro.x,
+									DEM_SENSOR_CANARD_MTI630_ACCEL,
+									acc_x,
+									acc_y,
+									acc_z,
 									&msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
-	build_sts &= build_imu_data_msg(PRIO_LOW,
+	build_dem_analog_data_16bit_msg(PRIO_LOW,
 									(uint16_t)timestamp,
-									'Y',
-									IMU_PROC_ALTIMU10,
-									raw_data->raw_acc.y,
-									raw_data->raw_gyro.y,
+									DEM_SENSOR_CANARD_MTI630_GYRO,
+									gyro_x,
+									gyro_y,
+									gyro_z,
 									&msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
-	build_sts &= build_imu_data_msg(PRIO_LOW,
+	build_dem_analog_data_16bit_msg(PRIO_LOW,
 									(uint16_t)timestamp,
-									'Z',
-									IMU_PROC_ALTIMU10,
-									raw_data->raw_acc.z,
-									raw_data->raw_gyro.z,
+									DEM_SENSOR_CANARD_MTI630_MAG,
+									mag_x,
+									mag_y,
+									mag_z,
 									&msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
-	build_sts &= build_mag_data_msg(
-		PRIO_LOW, (uint16_t)timestamp, 'X', IMU_PROC_ALTIMU10, raw_data->raw_mag.x, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+	// Error handling
+	if (encode_sts == W_MATH_ERROR) {
+		log_text(0, "IMUHandler", "IMU raw msg encode math error (NaN or Inf)");
+	} else if (encode_sts != W_SUCCESS) {
+		log_text(0, "IMUHandler", "IMU raw msg scale / encode failed");
+	}
 
-	build_sts &= build_mag_data_msg(
-		PRIO_LOW, (uint16_t)timestamp, 'Y', IMU_PROC_ALTIMU10, raw_data->raw_mag.y, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
-
-	build_sts &= build_mag_data_msg(
-		PRIO_LOW, (uint16_t)timestamp, 'Z', IMU_PROC_ALTIMU10, raw_data->raw_mag.z, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
-
-	build_sts &= build_baro_data_msg(PRIO_LOW,
-									 (uint16_t)timestamp,
-									 IMU_PROC_ALTIMU10,
-									 raw_data->raw_baro.pressure,
-									 raw_data->raw_baro.temperature,
-									 &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
-
-	// Transmit CAN message
 	if (can_tx_sts != W_SUCCESS) {
-		log_text(0, "IMUHandler", "CAN tx failed");
-	}
-	if (!build_sts) {
-		log_text(0, "IMUHandler", "build raw CAN msg failed");
+		log_text(0, "IMUHandler", "IMU raw msg tx failed");
 	}
 
-	if ((can_tx_sts != W_SUCCESS) || !build_sts) {
+	if ((can_tx_sts != W_SUCCESS) || (encode_sts != W_SUCCESS)) {
 		imu_handler_state.error_count++;
 		return W_FAILURE;
 	}
@@ -313,6 +313,7 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	log_payload.raw_pololu_data_pt2.raw_baro = raw_pololu_data.raw_baro;
 	log_data(1, LOG_TYPE_POLOLU_RAW_PT2, &log_payload);
 
+	// TODO: update for new CAN
 	// do CAN logging as backup less frequently to avoid flooding can bus
 	if ((loop_count % IMU_HANDLER_CAN_TX_RATE) == 0) {
 		if (log_raw_to_can(&raw_pololu_data) != W_SUCCESS) {

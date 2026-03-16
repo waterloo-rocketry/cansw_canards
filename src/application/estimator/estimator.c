@@ -38,6 +38,8 @@ static QueueHandle_t encoder_data_queue_rad = NULL;
 static QueueHandle_t controller_cmd_queue = NULL;
 
 // ---------- private static functions ----------
+
+// TODO: No longer needed with new CAN design due to scaling for every value
 /**
  * callback to be registered with CAN handler for encoder msgs.
  * msg_type = MSG_SENSOR_ANALOG
@@ -298,6 +300,7 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state) {
 	}
 	uint16_t timestamp_16bit = (uint16_t)current_time_ms;
 
+	// TODO: Redo how messages are built and sent
 	// Iterate through all defined state IDs
 	for (can_state_est_id_t state_id = 0; state_id < STATE_ID_ENUM_MAX; ++state_id) {
 		// The x_state_t union maps directly to the enum order if accessed as an array

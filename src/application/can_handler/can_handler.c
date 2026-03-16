@@ -12,11 +12,11 @@
 #include "stm32h7xx_hal.h" // For __disable_irq, __NOP
 #include "third_party/canlib/message/msg_general.h" // For build_debug_raw_msg
 #include "third_party/canlib/message_types.h" // For MSG_DEBUG_RAW, PRIO_HIGH, etc.
-#include <stdint.h>
-#include <string.h>
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
 
 // TODO: calculate better. for now make excessively large and check dropped tx counter
 #define BUS_QUEUE_LENGTH 32
@@ -27,113 +27,6 @@ static uint32_t dropped_rx_counter = 0;
 static can_handler_status_t can_error_stats = {0};
 
 static can_callback_t callback_map[MSG_ID_ENUM_MAX] = {NULL};
-
-static void can_get_signed_limits(can_types_t type, int32_t *min_out, int32_t *max_out) {
-	switch (type) {
-		case TYPE_INT8:
-			*min_out = INT8_MIN;
-			*max_out = INT8_MAX;
-			break;
-		case TYPE_INT16:
-			*min_out = INT16_MIN;
-			*max_out = INT16_MAX;
-			break;
-		case TYPE_INT24:
-			*min_out = -(1 << 23);
-			*max_out = (1 << 23) - 1;
-			break;
-		case TYPE_INT32:
-			*min_out = INT32_MIN;
-			*max_out = INT32_MAX;
-			break;
-		default:
-			*min_out = 0;
-			*max_out = 0;
-			break;
-	}
-}
-
-static void can_get_unsigned_max(can_types_t type, uint32_t *max_out) {
-	switch (type) {
-		case TYPE_UINT8:
-			*max_out = UINT8_MAX;
-			 break;
-		case TYPE_UINT16:
-			*max_out = UINT16_MAX;
-			 break;
-		case TYPE_UINT24:
-			*max_out = (1U << 24) - 1U;
-			 break;
-		case TYPE_UINT32:
-			*max_out = UINT32_MAX;
-			 break;
-		default:
-			*max_out = 0;
-			break;
-	}
-}
-
-bool can_encode_scaled(can_scaling_types_t sensor, float input, void *out) {
-	// invalid numeric input (infinity & NaN) are encoded as zero
-	if (!isfinite(input)) {
-		if (scale_map[sensor].type == TYPE_UINT8   ||
-		    scale_map[sensor].type == TYPE_UINT16  ||
-		    scale_map[sensor].type == TYPE_UINT24  ||
-		    scale_map[sensor].type == TYPE_UINT32)
-		{
-			*((uint32_t *)out) = 0U;
-		} else {
-			*((int32_t *)out) = 0;
-				
-		}
-		return false;
-	}
-
-	float scaled = input * (float)scale_map[sensor].scale;
-	
-	// clamp according to target type
-	if (scale_map[sensor].type == TYPE_UINT8   ||
-		scale_map[sensor].type == TYPE_UINT16  ||
-		scale_map[sensor].type == TYPE_UINT24  ||
-		scale_map[sensor].type == TYPE_UINT32)
-	{
-		uint32_t maxv = 0U;
-		can_get_unsigned_max(scale_map[sensor].type, &maxv);
-
-		// clamp negative values to zero
-		if (scaled <= 0.0f) {
-			*((uint32_t *)out) = 0U;
-			return false;
-		}
-
-		// overflow is clamped to max
-		if (scaled > (float)maxv) {
-			*((uint32_t *)out) = maxv;
-			return false;
-		}
-
-		*((uint32_t *)out) = (uint32_t)scaled;
-
-	} else {
-		int32_t minv = 0, maxv = 0;
-		can_get_signed_limits(scale_map[sensor].type, &minv, &maxv);
-
-		// underflow is clamped to min
-		if (scaled < (float)minv) {
-			*((int32_t *)out) = minv;
-			return false;
-		}
-
-		// overflow is clamped to max
-		if (scaled > (float)maxv) {
-			*((int32_t *)out) = maxv;
-			return false;
-		}
-
-		*((int32_t *)out) = (int32_t)scaled;
-	}
-	return true;
-}
 
 static w_status_t can_reset_callback(const can_msg_t *msg) {
 	if (check_board_need_reset(msg)) {
@@ -183,6 +76,51 @@ static void can_handle_rx_isr(const can_msg_t *message) {
 	}
 	// request context switch if needed
 	portYIELD_FROM_ISR(higher_priority_task_woken);
+}
+
+static void can_get_signed_limits(can_types_t type, int32_t *min_out, int32_t *max_out) {
+	switch (type) {
+		case TYPE_INT8:
+			*min_out = INT8_MIN;
+			*max_out = INT8_MAX;
+			break;
+		case TYPE_INT16:
+			*min_out = INT16_MIN;
+			*max_out = INT16_MAX;
+			break;
+		case TYPE_INT24:
+			*min_out = -(1 << 23);
+			*max_out = (1 << 23) - 1;
+			break;
+		case TYPE_INT32:
+			*min_out = INT32_MIN;
+			*max_out = INT32_MAX;
+			break;
+		default:
+			*min_out = 0;
+			*max_out = 0;
+			break;
+	}
+}
+
+static void can_get_unsigned_max(can_types_t type, uint32_t *max_out) {
+	switch (type) {
+		case TYPE_UINT8:
+			*max_out = UINT8_MAX;
+			break;
+		case TYPE_UINT16:
+			*max_out = UINT16_MAX;
+			break;
+		case TYPE_UINT24:
+			*max_out = (1U << 24) - 1U;
+			break;
+		case TYPE_UINT32:
+			*max_out = UINT32_MAX;
+			break;
+		default:
+			*max_out = 0;
+			break;
+	}
 }
 
 w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
@@ -282,6 +220,85 @@ void can_handler_task_tx(void *argument) {
 	}
 }
 
+w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void *out) {
+	// handle NaN or +/-Inf with reserved sentinel codes near the limits of the target type
+	if (!isfinite(input)) {
+		if (scale_map[sensor].type == TYPE_UINT8 || scale_map[sensor].type == TYPE_UINT16 ||
+			scale_map[sensor].type == TYPE_UINT24 || scale_map[sensor].type == TYPE_UINT32) {
+			uint32_t maxv = 0U;
+			can_get_unsigned_max(scale_map[sensor].type, &maxv);
+
+			if (isinf(input)) {
+				if (signbit(input)) {
+					*((uint32_t *)out) = (maxv >= 2U) ? (maxv - 1U) : 0U; // -Inf
+				} else {
+					*((uint32_t *)out) = (maxv >= 2U) ? (maxv - 2U) : maxv; // +Inf
+				}
+			} else {
+				*((uint32_t *)out) = (maxv >= 3U) ? (maxv - 3U) : 0U; // NaN
+			}
+		} else {
+			int32_t minv = 0, maxv = 0;
+			can_get_signed_limits(scale_map[sensor].type, &minv, &maxv);
+
+			if (isinf(input)) {
+				if (signbit(input)) {
+					*((int32_t *)out) = (minv <= INT32_MAX - 2) ? (minv + 2) : minv; // -Inf
+				} else {
+					*((int32_t *)out) = (maxv >= 1) ? (maxv - 1) : maxv; // +Inf
+				}
+			} else {
+				*((int32_t *)out) = (minv <= INT32_MAX - 3) ? (minv + 3) : minv; // NaN
+			}
+		}
+		return W_MATH_ERROR;
+	}
+
+	float scaled = input * (float)scale_map[sensor].scale;
+
+	// clamp according to target type
+	if (scale_map[sensor].type == TYPE_UINT8 || scale_map[sensor].type == TYPE_UINT16 ||
+		scale_map[sensor].type == TYPE_UINT24 || scale_map[sensor].type == TYPE_UINT32) {
+		uint32_t maxv = 0U;
+		can_get_unsigned_max(scale_map[sensor].type, &maxv);
+
+		// Clamp scaled value to valid range for unsigned types
+		*((uint32_t *)out) = CLAMP(scaled, 0.0f, (float)maxv);
+
+	} else {
+		int32_t minv = 0, maxv = 0;
+		can_get_signed_limits(scale_map[sensor].type, &minv, &maxv);
+
+		// Clamp scaled value to valid range for signed types
+		*((int32_t *)out) = CLAMP(scaled, (float)minv, (float)maxv);
+	}
+	return W_SUCCESS;
+}
+
+w_status_t can_encode_scaled_int(can_scaling_types_t sensor, void *input, void *out) {
+	// Scale and clamp according to target type
+	if (scale_map[sensor].type == TYPE_UINT8 || scale_map[sensor].type == TYPE_UINT16 ||
+		scale_map[sensor].type == TYPE_UINT24 || scale_map[sensor].type == TYPE_UINT32) {
+		uint32_t scaled = *((uint32_t *)input) * scale_map[sensor].scale;
+
+		uint32_t maxv = 0U;
+		can_get_unsigned_max(scale_map[sensor].type, &maxv);
+
+		// Clamp scaled value to valid range for unsigned types
+		*((uint32_t *)out) = CLAMP(scaled, 0.0f, (float)maxv);
+
+	} else {
+		int32_t scaled = *((int32_t *)input) * scale_map[sensor].scale;
+
+		int32_t minv = 0, maxv = 0;
+		can_get_signed_limits(scale_map[sensor].type, &minv, &maxv);
+
+		// Clamp scaled value to valid range for signed types
+		*((int32_t *)out) = CLAMP(scaled, (float)minv, (float)maxv);
+	}
+	return W_SUCCESS;
+}
+
 // --- Fatal Error Handler Implementation ---
 
 // Note: All IDs (Board Type, Message Type, Instance ID)
@@ -310,7 +327,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 		// state)
 		build_debug_raw_msg(PRIO_HIGH, 0, data, &msg);
 		stm32h7_can_send(&msg);
-		
+
 		// scream a few times then attempt to reset.
 		// delay for ~1sec without using systick-based delays (no hal_delay)
 		volatile int dummy;
