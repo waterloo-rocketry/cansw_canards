@@ -27,4 +27,10 @@ uint32_t power_handler_get_status(void);
  */
 w_status_t power_handler_set_payload_power(bool enabled);
 
+/**
+ * Toggles low power mode via GPIO pin.
+ */
+w_status_t power_handler_set_low_power_mode(bool enabled);
+
+
 #endif
