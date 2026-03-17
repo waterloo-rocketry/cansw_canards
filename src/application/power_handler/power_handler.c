@@ -22,7 +22,6 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
  * Defaults everything to ON.
  */
 w_status_t power_handler_init(void) {
-    (void) power_actuator_callback;
     return W_SUCCESS;
 }
 
