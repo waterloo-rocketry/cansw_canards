@@ -7,18 +7,7 @@
 
 typedef enum {
     PROCESSOR_BOARD_VOLTAGE = 0,
-    ADC_CHANNEL_COUNT,
-	BAT_FLT1,
- 	BAT_FLT2,
-	VSENS_BAT1, 
- 	VSENS_BAT2,
- 	VSENS_RKT,
-	VSENS_CHG,
- 	VSENS_USB, 
- 	ISENS_BAT1,
- 	ISENS_BAT2,
- 	ISENS_3V3,
- 	ISENS_5V
+    ADC_CHANNEL_COUNT
 } adc_channel_t;
 
 typedef struct {
