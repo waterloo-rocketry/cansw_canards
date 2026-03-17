@@ -10,7 +10,17 @@
 
 typedef enum {
 	PROCESSOR_BOARD_VOLTAGE = 0,
-	ADC_CHANNEL_COUNT
+	ADC_CHANNEL_COUNT,
+	VSENS_BAT1 = 10, 
+ 	VSENS_BAT2 = 11,
+ 	VSENS_RKT = 12,
+	VSENS_CHG = 13,
+ 	VSENS_USB = 3, 
+ 	ISENS_BAT1 = 13,
+ 	ISENS_BAT2 = 12,
+ 	ISENS_3V3 = 12,
+ 	ISENS_5V = 11
+
 } adc_channel_t;
 
 /**
