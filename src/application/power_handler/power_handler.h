@@ -32,5 +32,4 @@ w_status_t power_handler_set_payload_power(bool enabled);
  */
 w_status_t power_handler_set_low_power_mode(bool enabled);
 
-
 #endif
