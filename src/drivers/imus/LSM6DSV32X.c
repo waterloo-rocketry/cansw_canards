@@ -17,12 +17,12 @@
 #define LSM6DSV32X_ADDR 0x6B // addr sel pin HIGH IMU
 
 // sensor ranges. these must be selected using the i2c init regs
-static const double ACC_RANGE = 32.0; // g
-static const double GYRO_RANGE = 4000.0; // dps
+static const float ACC_RANGE = 32.0; // g
+static const float GYRO_RANGE = 4000.0; // dps
 
 // AltIMU conversion factors - based on config settings below
-static const double ACC_FS = ACC_RANGE / INT16_MAX; // g / LSB
-static const double GYRO_FS = GYRO_RANGE / INT16_MAX; // dps / LSB
+static const float ACC_FS = ACC_RANGE / INT16_MAX; // g / LSB
+static const float GYRO_FS = GYRO_RANGE / INT16_MAX; // dps / LSB
 
 // struct to hold all context info about the state of the imu
 typedef struct {
@@ -54,7 +54,7 @@ w_status_t lsm6dsv32x_check_sanity() {
 		device_status |= W_FAILURE;
 	}
 
-	if (device_status == W_SUCCESS && i2c_status == W_SUCCESS) {
+	if (W_SUCCESS == device_status&& W_SUCCESS == i2c_status) {
 		return W_SUCCESS;
 	} else {
 		return W_FAILURE;
@@ -113,6 +113,8 @@ w_status_t lsm6dsv32x_init() {
 	// enable user accel user offset
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL9_XL, 0x29);
 
+	status |= lsm6dsv32x_check_sanity();
+
 	if (status != W_SUCCESS) {
 		log_text(1, "LSM6DSV32X", "initfail");
 	}
@@ -124,7 +126,7 @@ w_status_t lsm6dsv32x_init() {
  * @brief Interupt handler for the int1 pin
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (GPIO_Pin == IMU_INT1_PIN) {
+	if (IMU_INT1_PIN == GPIO_Pin) {
 		timer_get_ms(&lsm6dsv32x_ctx.timestamp[IMU_WRITE_BUFFER]);
 
 		// begin dma read to the main buffer
@@ -141,7 +143,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * @brief handler for after the DMA is completed
  */
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	if (hi2c == lsm6dsv32x_ctx.hi2c) {
+	if (lsm6dsv32x_ctx.hi2c = hi2c) {
 		memcpy(lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER],
 			   lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
 			   12);
@@ -163,7 +165,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
-	if (lsm6dsv32x_ctx.stale_data == IMU_DATA_READY) {
+	if (IMU_DATA_READY == lsm6dsv32x_ctx.stale_data) {
 		taskENTER_CRITICAL();
 
 		// enter a critical section while copying the data
@@ -213,7 +215,7 @@ w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
-	if (lsm6dsv32x_ctx.stale_data == IMU_DATA_READY) {
+	if (IMU_DATA_READY == lsm6dsv32x_ctx.stale_data) {
 		taskENTER_CRITICAL();
 
 		// enter a critical section while copying the data
@@ -254,7 +256,7 @@ w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, altimu_raw_imu_data_t
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
-	if (lsm6dsv32x_ctx.stale_data == IMU_DATA_READY) {
+	if (IMU_DATA_READY == lsm6dsv32x_ctx.stale_data) {
 		taskENTER_CRITICAL();
 
 		// enter a critical section while copying the data
