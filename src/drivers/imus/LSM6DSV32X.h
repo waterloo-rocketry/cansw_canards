@@ -54,8 +54,8 @@ w_status_t lsm6dsv32x_int1_isr_handler();
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
-										altimu_raw_imu_data_t *raw_acc,
-										altimu_raw_imu_data_t *raw_gyro);
+										lsm6dsv32x_raw_imu_data_t *raw_acc,
+										lsm6dsv32x_raw_imu_data_t *raw_gyro);
 
 /**
  * @brief Retrives all 6 bytes of gyro
@@ -63,7 +63,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  * @param[out] raw_gyro    Raw gyroscope data
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_gyro);
+w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, lsm6dsv32x_raw_imu_data_t *raw_gyro);
 
 /**
  * @brief Retrives all 12 bytes of gyro data
@@ -71,4 +71,4 @@ w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, altimu_raw_imu_data_t
  * @param[out] raw_acc     Raw accelerometer data
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *raw_acc);
+w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, lsm6dsv32x_raw_imu_data_t *raw_acc);
