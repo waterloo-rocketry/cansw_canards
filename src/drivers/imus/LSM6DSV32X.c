@@ -1,7 +1,7 @@
 #include "drivers/imus/LSM6DSV32X.h"
 #include "application/logger/log.h"
-//#include "drivers/altimu-10/LPS_regmap.h"
-//#include "drivers/altimu-10/altimu-10.h"
+// #include "drivers/altimu-10/LPS_regmap.h"
+// #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/imus/LSM6DSV32X_regmap.h"
@@ -70,7 +70,7 @@ w_status_t lsm6dsv32x_init() {
 	w_status_t status = W_SUCCESS;
 
 	// Drive addr sel pin HIGH to use each device's "default" i2c addr
-	//status |= gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
+	// status |= gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
 
 	// LSM6DSV32X: https://www.st.com/resource/en/datasheet/lsm6dsv32x.pdf
 
@@ -152,11 +152,15 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
  */
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	if (lsm6dsv32x_ctx.hi2c == hi2c) {
-		memcpy(lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER],
-			   lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
-			   12);
-		lsm6dsv32x_ctx.stale_data = IMU_DATA_READY;
+		lsm6dsv32x_dma_complete_handle();
 	}
+}
+
+w_status_t lsm6dsv32x_dma_complete_handle() {
+	memcpy(lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER],
+		   lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
+		   12);
+	lsm6dsv32x_ctx.stale_data = IMU_DATA_READY;
 }
 
 /**
