@@ -154,7 +154,7 @@ TEST_F(lsm6dsv32xTest, SanityCheckFailsIfI2CFails) {
     i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake2;
 
     // Act
-    w_status_t status = lsm6dsv32x_check_sainity();
+    w_status_t status = lsm6dsv32x_check_sanity();
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
