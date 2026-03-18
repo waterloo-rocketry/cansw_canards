@@ -169,7 +169,7 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
  */
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
 										altimu_raw_imu_data_t *raw_acc,
-										altimu_raw_imu_data_t *raw_gyro, float *timestamp) {
+										altimu_raw_imu_data_t *raw_gyro) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
@@ -178,7 +178,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 
 		// enter a critical section while copying the data
 		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER], 12);
-		*timestamp = lsm6dsv32x_ctx.timestamp[IMU_READ_BUFFER];
+		//*timestamp = lsm6dsv32x_ctx.timestamp[IMU_READ_BUFFER];
 
 		// set current data to stale once the buffer is read and coppied into the function
 		lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
@@ -216,8 +216,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  * @param[out] raw_acc     Raw accelerometer data
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *raw_acc,
-								   float *timestamp) {
+w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *raw_acc) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
@@ -226,7 +225,7 @@ w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *
 
 		// enter a critical section while copying the data
 		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER], 12);
-		*timestamp = lsm6dsv32x_ctx.timestamp[IMU_READ_BUFFER];
+		//*timestamp = lsm6dsv32x_ctx.timestamp[IMU_READ_BUFFER];
 
 		// set current data to stale once the buffer is read and coppied into the function
 		lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
@@ -255,8 +254,7 @@ w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *
  * @param[out] raw_gyro    Raw gyroscope data
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_gyro,
-									float *timestamp) {
+w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_gyro) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
@@ -265,7 +263,7 @@ w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, altimu_raw_imu_data_t
 
 		// enter a critical section while copying the data
 		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER], 12);
-		*timestamp = lsm6dsv32x_ctx.timestamp[IMU_READ_BUFFER];
+		//*timestamp = lsm6dsv32x_ctx.timestamp[IMU_READ_BUFFER];
 
 		// set current data to stale once the buffer is read and coppied into the function
 		lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
