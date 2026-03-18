@@ -19,16 +19,18 @@ FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t);
 
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 
+}
+
 #define LSM6DSV32X_ADDR 0x6B// addr sel pin HIGH IMU
 
 // Successful WHOMAI read
 static w_status_t i2c_read_reg_custom_fake1(
-    i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data, uint8_t len
-) {
+    i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data, uint8_t len) {
     if (device_addr == LSM6DSV32X_ADDR) {
         *data = 0x70;
-
+    }
     return W_SUCCESS;
+    
 };
 
 // Valid WHOAMI values but invalid i2c read
@@ -100,8 +102,8 @@ TEST_F(lsm6dsv32xTest, InitCallsI2CWriteNTimes) {
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
 
-    // There are currently 12 config registers we care about writing to when we initialize
-    // Checking that we do 12 writes is probably enough to detect if smth changes, I'm not going to
+    // There are currently 10 config registers we care about writing to when we initialize
+    // Checking that we do 10 writes is probably enough to detect if smth changes, I'm not going to
     // copy the current config into a test
     EXPECT_EQ(i2c_write_reg_fake.call_count, 10);
     EXPECT_EQ(i2c_write_reg_fake.arg0_val, I2C_BUS_4);
@@ -117,7 +119,7 @@ TEST_F(lsm6dsv32xTest, InitFailsIfI2CWriteFails) {
     i2c_write_reg_fake.return_val = W_FAILURE;
 
     // Act
-    w_status_t status = altimu_init();
+    w_status_t status = lsm6dsv32x_init();
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
@@ -130,7 +132,7 @@ TEST_F(lsm6dsv32xTest, InitFailsIfGpioWriteFails) {
     gpio_write_fake.return_val = W_FAILURE;
 
     // Act
-    w_status_t status = altimu_init();
+    w_status_t status = lsm6dsv32x_init();
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
@@ -141,7 +143,7 @@ TEST_F(lsm6dsv32xTest, SanityCheckPasses) {
     i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake1;
 
     // Act
-    w_status_t status = altimu_check_sanity();
+    w_status_t status = lsm6dsv32x_check_sanity();
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
@@ -152,7 +154,7 @@ TEST_F(lsm6dsv32xTest, SanityCheckFailsIfI2CFails) {
     i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake2;
 
     // Act
-    w_status_t status = altimu_check_sanity();
+    w_status_t status = lsm6dsv32x_check_sainity();
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
@@ -163,7 +165,7 @@ TEST_F(lsm6dsv32xTest, SanityCheckFailsIfWHOAMIInvalid) {
     i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake3;
 
     // Act
-    w_status_t status = altimu_check_sanity();
+    w_status_t status = lsm6dsv32x_check_sanity();
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
@@ -177,8 +179,8 @@ TEST_F(lsm6dsv32xTest, GetAccDataFailsIfI2CFails) {
 
     // Act
     vector3d_t data;
-    altimu_raw_imu_data_t raw_data;
-    w_status_t status = altimu_get_acc_data(&data, &raw_data);
+    lsm6dsv32x_raw_imu_data_t raw_data;
+    w_status_t status = lsm6dsv32x_get_acc_data(&data, &raw_data);
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
@@ -190,8 +192,8 @@ TEST_F(lsm6dsv32xTest, GetGyroDataFailsIfI2CFails) {
 
     // Act
     vector3d_t data;
-    altimu_raw_imu_data_t raw_data;
-    w_status_t status = altimu_get_gyro_data(&data, &raw_data);
+    lsm6dsv32x_raw_imu_data_t raw_data;
+    w_status_t status = lsm6dsv32x_get_gyro_data(&data, &raw_data);
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
@@ -205,8 +207,8 @@ TEST_F(lsm6dsv32xTest, GetAccDataConversion) {
 
     // Act
     vector3d_t data;
-    altimu_raw_imu_data_t raw_data;
-    w_status_t status = altimu_get_acc_data(&data, &raw_data);
+    lsm6dsv32x_raw_imu_data_t raw_data;
+    w_status_t status = lsm6dsv32x_get_acc_data(&data, &raw_data);
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
@@ -228,8 +230,8 @@ TEST_F(lsm6dsv32xTest, GetGyroDataConversion) {
 
     // Act
     vector3d_t data;
-    altimu_raw_imu_data_t raw_data;
-    w_status_t status = altimu_get_gyro_data(&data, &raw_data);
+    lsm6dsv32x_raw_imu_data_t raw_data;
+    w_status_t status = lsm6dsv32x_get_gyro_data(&data, &raw_data);
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
