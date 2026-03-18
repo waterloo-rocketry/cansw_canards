@@ -168,7 +168,6 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
 	}
 }
 
-
 /**
  * @brief Retrives all 12 bytes of imu data
  * @param[out] acc_data    Processed accelerometer data (gravities)
