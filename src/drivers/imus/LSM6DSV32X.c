@@ -161,6 +161,8 @@ w_status_t lsm6dsv32x_dma_complete_handle() {
 		   lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
 		   12);
 	lsm6dsv32x_ctx.stale_data = IMU_DATA_READY;
+
+	return W_SUCCESS;
 }
 
 /**
