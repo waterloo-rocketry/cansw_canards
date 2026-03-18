@@ -26,9 +26,52 @@ typedef struct __attribute__((packed)) {
 } lsm6dsv32x_raw_imu_data_t;
 
 /**
+ * @brief Sainity Checks the IMU
+ * @note only checks the WHO am I register
+ * @return Status of the operation
+ */
+w_status_t lsm6dsv32x_check_sanity();
+
+/**
  * @brief Initializes the bit registers for lsm6dsv32x
  * @note Must be called to wake up imu
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_init();
 
+/**
+ * @brief ISR for the interupt pin that begins DMA data transfor
+ * @return Status of the operation
+ */
+w_status_t lsm6dsv32x_int1_isr_handler();
+
+/**
+ * @brief Retrives all 12 bytes of imu data
+ * @param[out] acc_data    Processed accelerometer data (gravities)
+ * @param[out] gyro_data   Processed gyroscope data (deg/s)
+ * @param[out] raw_acc     Raw accelerometer data
+ * @param[out] raw_gyro    Raw gyroscope data
+ * @return Status of the operation
+ */
+w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
+										altimu_raw_imu_data_t *raw_acc,
+										altimu_raw_imu_data_t *raw_gyro, float *timestamp);
+
+
+/**
+ * @brief Retrives all 6 bytes of gyro
+ * @param[out] gyro_data   Processed gyroscope data (deg/s)
+ * @param[out] raw_gyro    Raw gyroscope data
+ * @return Status of the operation
+ */
+w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_gyro,
+									float *timestamp);
+
+/**
+ * @brief Retrives all 12 bytes of gyro data
+ * @param[out] acc_data    Processed accelerometer data (gravities)
+ * @param[out] raw_acc     Raw accelerometer data
+ * @return Status of the operation
+ */
+w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *raw_acc,
+								   float *timestamp);

@@ -54,7 +54,7 @@ w_status_t lsm6dsv32x_check_sanity() {
 		device_status |= W_FAILURE;
 	}
 
-	if (W_SUCCESS == device_status&& W_SUCCESS == i2c_status) {
+	if (W_SUCCESS == device_status && W_SUCCESS == i2c_status) {
 		return W_SUCCESS;
 	} else {
 		return W_FAILURE;
@@ -126,24 +126,32 @@ w_status_t lsm6dsv32x_init() {
  * @brief Interupt handler for the int1 pin
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (IMU_INT1_PIN == GPIO_Pin) {
-		timer_get_ms(&lsm6dsv32x_ctx.timestamp[IMU_WRITE_BUFFER]);
-
-		// begin dma read to the main buffer
-		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c,
-							 LSM6DSV32X_ADDR,
-							 FIFO_READ_BEGIN,
-							 I2C_MEMADD_SIZE_8BIT,
-							 lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
-							 12);
+	if (GPIO_Pin == IMU_INT1_PIN) {
+		lsm6dsv32x_int1_isr_handler();
 	}
+}
+
+w_status_t lsm6dsv32x_int1_isr_handler() {
+	w_status_t status = W_SUCCESS;
+
+	status |= timer_get_ms(&lsm6dsv32x_ctx.timestamp[IMU_WRITE_BUFFER]);
+
+	// begin dma read to the main buffer
+	status |= HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c,
+								   LSM6DSV32X_ADDR,
+								   FIFO_READ_BEGIN,
+								   I2C_MEMADD_SIZE_8BIT,
+								   lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
+								   12);
+
+	return status;
 }
 
 /**
  * @brief handler for after the DMA is completed
  */
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	if (lsm6dsv32x_ctx.hi2c = hi2c) {
+	if (lsm6dsv32x_ctx.hi2c == hi2c) {
 		memcpy(lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER],
 			   lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
 			   12);
@@ -203,11 +211,9 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 }
 
 /**
- * @brief Retrives all 12 bytes of imu data
+ * @brief Retrives all 12 bytes of gyro data
  * @param[out] acc_data    Processed accelerometer data (gravities)
- * @param[out] gyro_data   Processed gyroscope data (deg/s)
  * @param[out] raw_acc     Raw accelerometer data
- * @param[out] raw_gyro    Raw gyroscope data
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *raw_acc,
@@ -244,10 +250,8 @@ w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *
 }
 
 /**
- * @brief Retrives all 12 bytes of imu data
- * @param[out] acc_data    Processed accelerometer data (gravities)
+ * @brief Retrives all 6 bytes of gyro
  * @param[out] gyro_data   Processed gyroscope data (deg/s)
- * @param[out] raw_acc     Raw accelerometer data
  * @param[out] raw_gyro    Raw gyroscope data
  * @return Status of the operation
  */
