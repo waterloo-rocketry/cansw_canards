@@ -21,13 +21,19 @@ FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float*);
 
 //void HAL_GPIO_EXTI_Callback(uint16_t gpio_pin)
-FAKE_VALUE_FUNC(void, HAL_GPIO_EXTI_Callback, uint16_t);
+FAKE_VOID_FUNC(HAL_GPIO_EXTI_Callback, uint16_t);
 
 //void HAL_I2C_Mem_Read_DMA
-FAKE_VALUE_FUNC(void, HAL_I2C_Mem_Read_DMA, I2C_HandleTypeDef, uint16_t, uint16_t, uint8_t, uint16_t);
-
+FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_I2C_Mem_Read_DMA, 
+                I2C_HandleTypeDef *, // 1. Handle pointer
+                uint16_t,            // 2. Device Address
+                uint16_t,            // 3. Memory Address
+                uint16_t,            // 4. Memory Address Size
+                uint8_t *,           // 5. Data buffer pointer
+                uint16_t);
+                
 //void HAL_I2C_MemRxCpltCallback
-FAKE_VALUE_FUNC(void, HAL_I2C_MemRxCpltCallback, I2C_HandleTypeDef);
+FAKE_VOID_FUNC(HAL_I2C_MemRxCpltCallback, I2C_HandleTypeDef*);
 
 
 
@@ -236,6 +242,7 @@ TEST_F(lsm6dsv32xTest, GetGyroDataFailsIfI2CFails) {
 */
 
 // Data read conversion
+
 
 TEST_F(lsm6dsv32xTest, GetAllDataConversion) {
 
