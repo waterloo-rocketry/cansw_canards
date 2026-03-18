@@ -300,7 +300,7 @@ add_test_group(test_lsm6dsv32x
     # test file(s)
     ${UNIT_TESTS_DIR}/lsm6dsv32x_test.cpp
     # src file(s)
-    ${PROC_SRC_DIR}/drivers/imus/lsm6dsv32x.c
+    ${PROC_SRC_DIR}/drivers/imus/LSM6DSV32X.c
 )
 
 add_test_group(test_model_airdata
