@@ -57,7 +57,6 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 										altimu_raw_imu_data_t *raw_acc,
 										altimu_raw_imu_data_t *raw_gyro, float *timestamp);
 
-
 /**
  * @brief Retrives all 6 bytes of gyro
  * @param[out] gyro_data   Processed gyroscope data (deg/s)
