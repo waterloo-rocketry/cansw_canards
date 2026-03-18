@@ -101,7 +101,7 @@ static void HAL_I2C_Mem_Read_DMA_fake6(I2C_HandleTypeDef *h2ic,
     data[10] = 0x9A; // Z-axis low byte
     data[11] = 0xE5; // Z-axis high byte
 
-    HAL_I2C_MemRxCpltCallback(h2ic);
+    HAL_I2C_MemRxCpltCallback_fake7(h2ic);
 
     }
 
