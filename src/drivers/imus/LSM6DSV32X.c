@@ -1,7 +1,7 @@
 #include "drivers/imus/LSM6DSV32X.h"
 #include "application/logger/log.h"
-#include "drivers/altimu-10/LPS_regmap.h"
-#include "drivers/altimu-10/altimu-10.h"
+//#include "drivers/altimu-10/LPS_regmap.h"
+//#include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/imus/LSM6DSV32X_regmap.h"
@@ -70,7 +70,7 @@ w_status_t lsm6dsv32x_init() {
 	w_status_t status = W_SUCCESS;
 
 	// Drive addr sel pin HIGH to use each device's "default" i2c addr
-	status |= gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
+	//status |= gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
 
 	// LSM6DSV32X: https://www.st.com/resource/en/datasheet/lsm6dsv32x.pdf
 
@@ -168,8 +168,8 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
-										altimu_raw_imu_data_t *raw_acc,
-										altimu_raw_imu_data_t *raw_gyro) {
+										lsm6dsv32x_raw_imu_data_t *raw_acc,
+										lsm6dsv32x_raw_imu_data_t *raw_gyro) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
@@ -216,7 +216,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  * @param[out] raw_acc     Raw accelerometer data
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *raw_acc) {
+w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, lsm6dsv32x_raw_imu_data_t *raw_acc) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
@@ -254,7 +254,7 @@ w_status_t lsm6dsv32x_get_acc_data(vector3d_t *acc_data, altimu_raw_imu_data_t *
  * @param[out] raw_gyro    Raw gyroscope data
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, altimu_raw_imu_data_t *raw_gyro) {
+w_status_t lsm6dsv32x_get_gyro_data(vector3d_t *gyro_data, lsm6dsv32x_raw_imu_data_t *raw_gyro) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
