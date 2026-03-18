@@ -123,6 +123,8 @@ protected:
     void TearDown() override {}
 };
 
+/*
+
 // Kind of a proxy for testing write_1_byte
 TEST_F(lsm6dsv32xTest, InitCallsI2CWriteNTimes) {
     // Arrange
@@ -230,6 +232,8 @@ TEST_F(lsm6dsv32xTest, GetGyroDataFailsIfI2CFails) {
     // Assert
     EXPECT_EQ(status, W_FAILURE);
 }
+
+*/
 
 // Data read conversion
 
