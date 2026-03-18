@@ -122,15 +122,6 @@ w_status_t lsm6dsv32x_init() {
 	return status;
 }
 
-/**
- * @brief Interupt handler for the int1 pin
- */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (GPIO_Pin == IMU_INT1_PIN) {
-		lsm6dsv32x_int1_isr_handler();
-	}
-}
-
 w_status_t lsm6dsv32x_int1_isr_handler() {
 	w_status_t status = W_SUCCESS;
 
@@ -148,14 +139,17 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 }
 
 /**
- * @brief handler for after the DMA is completed
+ * @brief Interupt handler for the int1 pin
  */
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	if (lsm6dsv32x_ctx.hi2c == hi2c) {
-		lsm6dsv32x_dma_complete_handle();
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (GPIO_Pin == IMU_INT1_PIN) {
+		lsm6dsv32x_int1_isr_handler();
 	}
 }
 
+/**
+ * @brief handler for after the DMA is completed
+ */
 w_status_t lsm6dsv32x_dma_complete_handle() {
 	memcpy(lsm6dsv32x_ctx.dual_buffer[IMU_READ_BUFFER],
 		   lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
@@ -164,6 +158,16 @@ w_status_t lsm6dsv32x_dma_complete_handle() {
 
 	return W_SUCCESS;
 }
+
+/**
+ * @brief handler for after the DMA is completed
+ */
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
+	if (lsm6dsv32x_ctx.hi2c == hi2c) {
+		lsm6dsv32x_dma_complete_handle();
+	}
+}
+
 
 /**
  * @brief Retrives all 12 bytes of imu data
