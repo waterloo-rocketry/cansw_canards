@@ -17,6 +17,20 @@ FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *
 // w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout);
 FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t);
 
+// w_status_t timer_get_ms(float *ms);
+FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float*);
+
+//void HAL_GPIO_EXTI_Callback(uint16_t gpio_pin)
+FAKE_VALUE_FUNC(void, HAL_GPIO_EXTI_Callback, uint16_t);
+
+//void HAL_I2C_Mem_Read_DMA
+FAKE_VALUE_FUNC(void, HAL_I2C_Mem_Read_DMA, I2C_HandleTypeDef, uint16_t, uint16_t, uint8_t, uint16_t);
+
+//void HAL_I2C_MemRxCpltCallback
+FAKE_VALUE_FUNC(void, HAL_I2C_MemRxCpltCallback, I2C_HandleTypeDef);
+
+
+
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 
 }
@@ -51,32 +65,50 @@ static w_status_t i2c_read_reg_custom_fake3(
     return W_SUCCESS;
 };
 
-// Return fake acceleration data
-static w_status_t i2c_read_reg_custom_fake4(
-    i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data, uint8_t len
-) {
-    // 1.1g in X, 2.2g in Y, -3.3g in Z
-    data[0] = 0xCD; // X-axis low byte
-    data[1] = 0x08; // X-axis high byte
-    data[2] = 0x99; // Y-axis low byte
-    data[3] = 0x11; // Y-axis high byte
-    data[4] = 0x9A; // Z-axis low byte
-    data[5] = 0xE5; // Z-axis high byte
+static w_status_t timer_get_ms_fake4(float *ms)
+{
+    *ms = 212;
     return W_SUCCESS;
 }
 
-// Return fake gyro data
-static w_status_t i2c_read_reg_custom_fake5(
-    i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data, uint8_t len
-) {
-    // 550 dps in X, 1050 dps in Y, and -550 dps in Z
-    data[0] = 0x33; // X-axis low byte
-    data[1] = 0x23; // X-axis high byte
-    data[2] = 0x33; // Y-axis low byte
-    data[3] = 0x43; // Y-axis high byte
-    data[4] = 0xCD; // Z-axis low byte
-    data[5] = 0xDC; // Z-axis high byte
-    return W_SUCCESS;
+static void HAL_GPIO_EXTI_Callback_fake5(uint16_t gpio_pin){
+    if (GPIO_Pin == IMU_INT1_PIN) {
+		lsm6dsv32x_int1_isr_handler();
+	}
+
+}
+
+static void HAL_I2C_Mem_Read_DMA_fake6(I2C_HandleTypeDef *h2ic,
+								   uint8_t device_addr,
+								   uint8_t mem_addr,
+								   uint8_t mem_size,
+								   uint8_t *data,
+								   uint8_t write_size){
+
+    data[0] = 0xCD; // X-axis low byte
+    data[1] = 0x08; // X-axis high byte
+    data[2] = 0x99; // Y-axis low byte
+
+    data[3] = 0x11; // Y-axis high byte
+    data[4] = 0x9A; // Z-axis low byte
+    data[5] = 0xE5; // Z-axis high byte
+                                                                        
+    data[6] = 0xCD; // X-axis low byte
+    data[7] = 0x08; // X-axis high byte
+    data[8] = 0x99; // Y-axis low byte
+
+    data[9] = 0x11; // Y-axis high byte
+    data[10] = 0x9A; // Z-axis low byte
+    data[11] = 0xE5; // Z-axis high byte
+
+    HAL_I2C_MemRxCpltCallback(h2ic);
+
+    }
+
+static void HAL_I2C_MemRxCpltCallback_fake7(I2C_HandleTypeDef *hi2c) {
+	if (lsm6dsv32x_ctx.hi2c == hi2c) {
+		lsm6dsv32x_dma_complete_handle();
+	}
 }
 
 class lsm6dsv32xTest : public ::testing::Test {
@@ -201,50 +233,44 @@ TEST_F(lsm6dsv32xTest, GetGyroDataFailsIfI2CFails) {
 
 // Data read conversion
 
-TEST_F(lsm6dsv32xTest, GetAccDataConversion) {
-    // Arrange
-    i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake4;
+TEST_F(lsm6dsv32xTest, GetAllDataConversion) {
 
     // Act
-    vector3d_t data;
-    lsm6dsv32x_raw_imu_data_t raw_data;
-    w_status_t status = lsm6dsv32x_get_acc_data(&data, &raw_data);
+    vector3d_t acc_data;
+    vector3d_t gyro_data; 
+    lsm6dsv32x_raw_imu_data_t raw_acc;
+    lsm6dsv32x_raw_imu_data_t raw_gyro;
+
+    HAL_GPIO_EXTI_Callback(GPIO_PIN_7);
+    w_status_t status = lsm6dsv32x_get_gyro_acc_data(acc_data,gyro_data,raw_acc,raw_gyro);
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
+
     // Needs to be within 16 bit int rounding tolerance -> FS/2^15 ~> 0.000488296152 plus float
     // tolerance plus me rounding when I write these test cases
-    EXPECT_NEAR(data.x, 1.1f, 0.000488296152);
-    EXPECT_NEAR(data.y, 2.2f, 0.000488296152);
-    EXPECT_NEAR(data.z, -3.3f, 0.000488296152);
+    EXPECT_NEAR(acc_data.x, 1.1f, 0.000488296152);
+    EXPECT_NEAR(acc_data.y, 2.2f, 0.000488296152);
+    EXPECT_NEAR(acc_data.z, -3.3f, 0.000488296152);
 
     // Check raw data
-    EXPECT_EQ(raw_data.x, 0x08CD); // X-axis raw value
-    EXPECT_EQ(raw_data.y, 0x1199); // Y-axis raw value
-    EXPECT_EQ(raw_data.z, 0xE59A); // Z-axis raw value
-}
+    EXPECT_EQ(raw_acc.x, 0x08CD); // X-axis raw value
+    EXPECT_EQ(raw_acc.y, 0x1199); // Y-axis raw value
+    EXPECT_EQ(raw_acc.z, 0xE59A); // Z-axis raw value
 
-TEST_F(lsm6dsv32xTest, GetGyroDataConversion) {
-    // Arrange
-    i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake5;
-
-    // Act
-    vector3d_t data;
-    lsm6dsv32x_raw_imu_data_t raw_data;
-    w_status_t status = lsm6dsv32x_get_gyro_data(&data, &raw_data);
-
-    // Assert
-    EXPECT_EQ(status, W_SUCCESS);
-    // tolerance -> FS/2^15 ~> 0.06103701895f
-    EXPECT_NEAR(data.x, 550.0f, 0.06103701895);
-    EXPECT_NEAR(data.y, 1050.0f, 0.06103701895);
-    EXPECT_NEAR(data.z, -550.0f, 0.06103701895);
+    // Needs to be within 16 bit int rounding tolerance -> FS/2^15 ~> 0.000488296152 plus float
+    // tolerance plus me rounding when I write these test cases
+    EXPECT_NEAR(gyro_data.x, 1.1f, 0.000488296152);
+    EXPECT_NEAR(gryo_data.y, 2.2f, 0.000488296152);
+    EXPECT_NEAR(gyro_data.z, -3.3f, 0.000488296152);
 
     // Check raw data
-    EXPECT_EQ(raw_data.x, 0x2333); // X-axis raw value
-    EXPECT_EQ(raw_data.y, 0x4333); // Y-axis raw value
-    EXPECT_EQ(raw_data.z, 0xDCCD); // Z-axis raw value
+    EXPECT_EQ(raw_gyro.x, 0x08CD); // X-axis raw value
+    EXPECT_EQ(raw_gyro.y, 0x1199); // Y-axis raw value
+    EXPECT_EQ(raw_gyro.z, 0xE59A); // Z-axis raw value
 }
+
+
 
 
 
