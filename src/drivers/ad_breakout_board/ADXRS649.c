@@ -154,8 +154,8 @@ w_status_t adxrs649_get_gyro_data(float *data, int32_t *raw_data) {
 
 	if (W_SUCCESS ==
 		gpio_read(GPIO_PIN_BLUE_LED, &ndrdy, 0)) { // TODO: to be changed to actual GPIO
-		// data ready is on the negative-edge 
-		new_data = (GPIO_LEVEL_LOW == ndrdy)? true: false;
+		// data ready is on the negative-edge
+		new_data = (GPIO_LEVEL_LOW == ndrdy) ? true : false;
 
 	} else {
 		// use I2C to get value
