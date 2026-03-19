@@ -9,16 +9,20 @@
 
 typedef struct {
 	uint32_t timestamp_imu;
+	float z_rate; // rad/sec
+	bool is_dead;
+} ad_gyro_mesurement_t;
+
+typedef struct {
+	uint32_t timestamp_imu;
 	vector3d_t accelerometer; // TODO: based on the ADXL
 	float z_rate; // rad/sec
 	bool is_dead;
-} ad_breakout_board_mesurement_t;
+} ad_accelerometer_mesurement_t;
 
 typedef struct {
 	altimu_raw_imu_data_t accelerometer; // TODO: based on the ADXL
-	// TODO: check if need the raw version of the data
-	int32_t z_rate; // rad/sec
-} ad_breakout_board_raw_mesurement_t;
+} ad_accelerometer_raw_mesurement_t;
 
 /**
  * @brief initalize both the breakout board sensor drivers
@@ -37,6 +41,6 @@ void ad_breakout_board_task(void *argument);
  * @param raw_data pointer to raw data
  * @return the status of getting data
  */
-w_status_t ad_breakout_board_get_data(ad_breakout_board_mesurement_t *data,
-									  altimu_raw_imu_data_t *raw_data);
+w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *gyro_data,
+									  ad_accelerometer_mesurement_t *accel_data);
 #endif
