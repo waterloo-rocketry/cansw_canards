@@ -7,23 +7,21 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-typedef enum {
-	DATA_READY = 0,
-	DATA_STALE,
-	NO_DATA
-} data_state_t;
-
 // struct to hold task context
 typedef struct {
-	ad_breakout_board_mesurement_t dual_buffer[2];
-	ad_breakout_board_raw_mesurement_t dual_buffer_raw[2];
-	data_state_t data_state;
+	ad_gyro_mesurement_t gyro_dual_buffer[2];
+	int32_t gyro_raw_dual_buffer_z_rate[2]; // TODO: ignored for since logging is done locally
+	ad_accelerometer_mesurement_t accel_dual_buffer[2];
+	altimu_raw_imu_data_t
+		accel_raw_dual_buffer[2]; // TODO: Ignored for now since logging is done locally
 
-} task_ctx_t;
+} ad_task_ctx_t;
 
 static const uint8_t AD_BREAKOUT_BOARD_PERIOD_MS = 2;
-static const size_t AD_MEASUREMENT_SIZE = sizeof(ad_breakout_board_mesurement_t);
-static const size_t AD_MEASUREMENT_RAW_SIZE = sizeof(ad_breakout_board_raw_mesurement_t);
+static const size_t AD_GYRO_MEASUREMENT_SIZE = sizeof(ad_gyro_mesurement_t);
+static const size_t AD_GYRO_RAW_MEASUREMENT_SIZE = sizeof(int32_t);
+static const size_t AD_ACCEL_MEASUREMENT_SIZE = sizeof(ad_accelerometer_mesurement_t);
+static const size_t AD_ACCEL_RAW_MEASUREMENT_SIZE = sizeof(altimu_raw_imu_data_t);
 
 /* ADXRS */
 // SD Card Log
@@ -99,7 +97,7 @@ static const uint16_t PAD_ADXL_CAN_LOG_RATE =
 static const uint16_t FLIGHT_ADXL_CAN_LOG_RATE =
 	FLIGHT_ADXL_CAN_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
 
-static task_ctx_t task_ctx = {};
+static ad_task_ctx_t task_ctx = {};
 
 /**
  * @brief initalize both the breakout board sensor drivers
@@ -111,12 +109,11 @@ w_status_t ad_beakout_board_init() {
 	status |= adxrs649_init();
 	// TODO: add ADXL init
 
-	task_ctx.data_state = NO_DATA;
-
-    return status;
+	return status;
 }
 
-static w_status_t ad_breakout_board_data_logging(uint32_t loop_count) {
+static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, int32_t raw_gyro,
+												 altimu_raw_imu_data_t raw_accel) {
 	flight_phase_state_t flight_state = flight_phase_get_state();
 
 	// TODO: logging function
@@ -132,7 +129,7 @@ static w_status_t ad_breakout_board_data_logging(uint32_t loop_count) {
 			break;
 	}
 
-    return W_FAILURE; // TODO: change to something that actually makes sense
+	return W_FAILURE; // TODO: change to something that actually makes sense
 }
 
 /**
@@ -146,30 +143,32 @@ void ad_breakout_board_task(void *argument) {
 	const TickType_t period = pdMS_TO_TICKS(AD_BREAKOUT_BOARD_PERIOD_MS);
 	uint32_t loop_count = 0;
 
-	w_status_t sensor_status = W_SUCCESS;
+	int32_t raw_gyro = 0;
+	altimu_raw_imu_data_t raw_accel = {};
 
 	while (1) {
-		// reset dead state
-		task_ctx.dual_buffer[0].is_dead = false;
-
-		sensor_status |= adxrs649_get_gyro_data(&(task_ctx.dual_buffer[0].z_rate),
-												&(task_ctx.dual_buffer_raw[0].z_rate));
+		if (W_SUCCESS ==
+			adxrs649_get_gyro_data(&(task_ctx.gyro_dual_buffer[0].z_rate), &raw_gyro)) {
+			task_ctx.gyro_dual_buffer[0].is_dead = true;
+		} else {
+			task_ctx.gyro_dual_buffer[0].is_dead = false;
+		}
 		// TODO: add ADXL get acceleration
 
-		if (W_SUCCESS != sensor_status) {
-			task_ctx.dual_buffer[0].is_dead = true;
-			// TODO: add error logging
-		}
-
 		taskENTER_CRITICAL();
-		memcpy(&(task_ctx.dual_buffer[1]), &(task_ctx.dual_buffer[0]), AD_MEASUREMENT_SIZE);
-		memcpy(&(task_ctx.dual_buffer_raw[1]), &(task_ctx.dual_buffer_raw[0]), AD_MEASUREMENT_RAW_SIZE);
+		// Gyro
+		memcpy(&(task_ctx.gyro_dual_buffer[1]),
+			   &(task_ctx.gyro_dual_buffer[0]),
+			   AD_GYRO_MEASUREMENT_SIZE);
+
+		// Accelerometer
+		memcpy(&(task_ctx.accel_dual_buffer[1]),
+			   &(task_ctx.accel_dual_buffer[0]),
+			   AD_ACCEL_MEASUREMENT_SIZE);
 		taskEXIT_CRITICAL();
 
-		task_ctx.data_state = DATA_READY;
-
 		// LOG/TELEMETRY
-		ad_breakout_board_data_logging(loop_count);
+		ad_breakout_board_data_logging(loop_count, raw_gyro, raw_accel);
 
 		loop_count++;
 
@@ -179,24 +178,17 @@ void ad_breakout_board_task(void *argument) {
 
 /**
  * @brief to read both the accelerometer and gyro data
- * @param data this is a pointer to converted data
- * @param raw_data pointer to raw data
- * @param data_state pointer to state of our data 
+ * @param gyro_data this is a pointer to converted data
+ * @param accel_data pointer to state of our data
  * @return the status of getting data
  */
-w_status_t ad_breakout_board_get_data(ad_breakout_board_mesurement_t *data,
-									  ad_breakout_board_raw_mesurement_t *raw_data, data_state_t *data_state) {
-    
-    if (DATA_READY == task_ctx.data_state) {
+w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *gyro_data,
+									  ad_accelerometer_mesurement_t *accel_data) {
+	taskENTER_CRITICAL();
+	memcpy(gyro_data, &(task_ctx.gyro_dual_buffer[1]), AD_GYRO_MEASUREMENT_SIZE);
+	memcpy(accel_data, &(task_ctx.accel_dual_buffer[1]), AD_ACCEL_MEASUREMENT_SIZE);
+	taskEXIT_CRITICAL();
 
-	    taskENTER_CRITICAL();
-        memcpy(data, &(task_ctx.dual_buffer[1]), AD_MEASUREMENT_SIZE);
-        memcpy(raw_data, &(task_ctx.dual_buffer_raw[1]), AD_MEASUREMENT_RAW_SIZE);
-	    taskEXIT_CRITICAL();
-
-        task_ctx.data_state = DATA_STALE;
-    }
-
-    return W_FAILURE; // TODO: change to something that actually makes sense
+	return W_SUCCESS; // TODO: change to something that actually makes sense
 }
 
