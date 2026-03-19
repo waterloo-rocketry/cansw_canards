@@ -146,32 +146,34 @@ w_status_t adxrs649_init() {
  * @param data is a pointer to where the data will be stored (deg/sec)
  * @param raw_data is a pointer to the raw data of the gyro
  * @return the status of the get data function
+ * W_IO_ERROR - occours when fialed to read I2C or GPIO messages
  */
 w_status_t adxrs649_get_gyro_data(float *data, int32_t *raw_data) {
-	bool data_ready = false;
+	bool new_data = false;
 	gpio_level_t ndrdy; // NOT-DRDY
 
 	if (W_SUCCESS ==
 		gpio_read(GPIO_PIN_BLUE_LED, &ndrdy, 0)) { // TODO: to be changed to actual GPIO
-		data_ready = !ndrdy;
+		// data ready is on the negative-edge 
+		new_data = (GPIO_LEVEL_LOW == ndrdy)? true: false;
 
 	} else {
 		// use I2C to get value
-		if (W_SUCCESS != ads1219_conversion_ready(&ads_handle, &data_ready)) {
-			// TODO: Consider if will fail if can't read DRDY
+		if (W_SUCCESS != ads1219_conversion_ready(&ads_handle, &new_data)) {
+			return W_IO_ERROR;
 		}
 	}
 
-	if (!data_ready) {
-		// TODO: Consider if will just re-read rate data
-	}
-
-	if (W_SUCCESS != ads1219_read_value(&ads_handle, &raw_data)) {
+	if (!new_data) {
 		return W_FAILURE;
 	}
 
+	if (W_SUCCESS != ads1219_read_value(&ads_handle, raw_data)) {
+		return W_IO_ERROR;
+	}
+
 	float data_mv = 0;
-	if (W_SUCCESS != ads1219_millivolts(&ads_handle, raw_data, &data_mv)) {
+	if (W_SUCCESS != ads1219_millivolts(&ads_handle, *raw_data, &data_mv)) {
 		return W_FAILURE;
 	}
 
