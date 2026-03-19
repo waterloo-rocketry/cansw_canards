@@ -95,44 +95,6 @@ static w_status_t ads1219_modify_register(ads1219_handle_t *handle, uint8_t valu
 	return ads1219_write_register(handle, data);
 }
 
-/**
- * read_value -- issue RDATA then read 3 bytes and decode the 24-bit two's-
- * complement value.
- *
- * Original: ADS1219::_read_value
- *
- * The sign extension trick is the same: shift the MSB into the sign-bit
- * position of a 32-bit int and shift back.  In C this is implementation-
- * defined for negative values but works on every ARM GCC we target.
- */
-static w_status_t ads1219_read_value(ads1219_handle_t *handle, int32_t *value) {
-	uint8_t buf[3];
-
-	/*
-	 * RDATA is a two-phase command:  write the RDATA byte, then clock out
-	 * 3 data bytes.  i2c_read_reg maps perfectly:
-	 *     START | addr+W | RDATA | RSTART | addr+R | buf[0..2] | STOP
-	 */
-	w_status_t status = i2c_read_reg(handle->bus, handle->i2c_addr, ADS1219_CMD_RDATA, buf, 3);
-	if (W_SUCCESS != status) {
-		return status;
-	}
-
-	/* 24-bit two's-complement -> 32-bit int with sign extension */
-	int32_t raw = (((int32_t)buf[0] << 24) | ((int32_t)buf[1] << 16) | ((int32_t)buf[2] << 8)) >> 8;
-
-	*value = raw;
-
-	/* Over / underflow detection (full-scale codes) */
-	if ((int32_t)0x7FFFFF <= raw) {
-		return W_OVERFLOW;
-	}
-	if ((int32_t)0xFF800000 >= raw) { /* sign-extended 0x800000 */
-		return W_OVERFLOW;
-	}
-	return W_SUCCESS;
-}
-
 /* ── public API ────────────────────────────────────────────────────────── */
 
 /**
@@ -366,6 +328,40 @@ w_status_t ads1219_conversion_ready(ads1219_handle_t *handle, bool *ready) {
  */
 w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t mux) {
 	return ads1219_modify_register(handle, mux, ADS1219_CONFIG_MASK_MUX);
+}
+
+/**
+ * @brief reads the value of the ads1219 and return the raw value
+ * @param handle handle to the ADC data
+ * @param value is a pointer to where the raw value will be stored
+ * @return status of function
+ */
+w_status_t ads1219_read_value(ads1219_handle_t *handle, int32_t *value) {
+	uint8_t buf[3];
+
+	/*
+	 * RDATA is a two-phase command:  write the RDATA byte, then clock out
+	 * 3 data bytes.  i2c_read_reg maps perfectly:
+	 *     START | addr+W | RDATA | RSTART | addr+R | buf[0..2] | STOP
+	 */
+	w_status_t status = i2c_read_reg(handle->bus, handle->i2c_addr, ADS1219_CMD_RDATA, buf, 3);
+	if (W_SUCCESS != status) {
+		return status;
+	}
+
+	/* 24-bit two's-complement -> 32-bit int with sign extension */
+	int32_t raw = (((int32_t)buf[0] << 24) | ((int32_t)buf[1] << 16) | ((int32_t)buf[2] << 8)) >> 8;
+
+	*value = raw;
+
+	/* Over / underflow detection (full-scale codes) */
+	if ((int32_t)0x7FFFFF <= raw) {
+		return W_OVERFLOW;
+	}
+	if ((int32_t)0xFF800000 >= raw) { /* sign-extended 0x800000 */
+		return W_OVERFLOW;
+	}
+	return W_SUCCESS;
 }
 
 /**
