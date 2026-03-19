@@ -14,7 +14,8 @@ w_status_t adxrs649_init();
 /**
  * @brief get the spin rate data from the ADXRS649 Gyro
  * @param data is a pointer to where the data will be stored (deg/sec)
+ * @param raw_data is a pointer to the raw data of the gyro
  * @return the status of the get data function
  */
-w_status_t adxrs649_get_gyro_data(float *data);
+w_status_t adxrs649_get_gyro_data(float *data, int32_t *raw_data);
 #endif
