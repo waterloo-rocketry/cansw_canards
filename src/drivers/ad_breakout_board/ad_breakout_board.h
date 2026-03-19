@@ -9,16 +9,15 @@
 
 typedef struct __attribute__((packed)) {
 	uint32_t timestamp_imu;
-	vector3d_t accelerometer; // gravities
+	vector3d_t accelerometer; // TODO: based on the ADXL
 	float z_rate; // rad/sec
     bool is_dead;
 } ad_breakout_board_mesurement_t;
 
 typedef struct __attribute__((packed)) {
-	uint32_t timestamp_imu;
-	altimu_raw_imu_data_t accelerometer; // gravities
+	altimu_raw_imu_data_t accelerometer; // TODO: based on the ADXL
     // TODO: check if need the raw version of the data
-	float z_rate; // rad/sec
+	int32_t z_rate; // rad/sec
 } ad_breakout_board_raw_mesurement_t;
 
 
