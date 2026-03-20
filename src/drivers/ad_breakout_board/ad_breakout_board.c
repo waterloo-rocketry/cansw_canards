@@ -2,6 +2,8 @@
 #include "application/flight_phase/flight_phase.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "rocketlib/include/common.h"
+#include "application/logger/log.h"
+#include "drivers/timer/timer.h"
 #include <stdint.h>
 
 #include "FreeRTOS.h"
@@ -10,11 +12,7 @@
 // struct to hold task context
 typedef struct {
 	ad_gyro_mesurement_t gyro_dual_buffer[2];
-	int32_t gyro_raw_dual_buffer_z_rate[2]; // TODO: ignored for since logging is done locally
 	ad_accelerometer_mesurement_t accel_dual_buffer[2];
-	altimu_raw_imu_data_t
-		accel_raw_dual_buffer[2]; // TODO: Ignored for now since logging is done locally
-
 } ad_task_ctx_t;
 
 static const uint8_t AD_BREAKOUT_BOARD_PERIOD_MS = 2;
@@ -112,24 +110,8 @@ w_status_t ad_beakout_board_init() {
 	return status;
 }
 
-static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, int32_t raw_gyro,
-												 altimu_raw_imu_data_t raw_accel) {
-	flight_phase_state_t flight_state = flight_phase_get_state();
-
-	// TODO: logging function
-	switch (flight_state) {
-		case STATE_IDLE:
-		case STATE_RECOVERY:
-
-			if ((loop_count % IDLE_RECOVERY_ADXRS_SD_LOG_RATE) == 0) {}
-			if ((loop_count % IDLE_RECOVERY_ADXRS_SD_LOG_RATE) == 0) {}
-			if ((loop_count % IDLE_RECOVERY_ADXRS_SD_LOG_RATE) == 0) {}
-			break;
-		default:
-			break;
-	}
-
-	return W_FAILURE; // TODO: change to something that actually makes sense
+static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, const int32_t raw_gyro,
+												 const altimu_raw_imu_data_t *raw_accel) {
 }
 
 /**
@@ -145,12 +127,24 @@ void ad_breakout_board_task(void *argument) {
 
 	int32_t raw_gyro = 0;
 	altimu_raw_imu_data_t raw_accel = {};
+    float current_time_ms = 0;
+    uint32_t current_timestamp_ms = 0;
 
 	while (1) {
+        // get current timestamp
+        if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
+            current_time_ms = 0.0f;
+        }
+        uint32_t current_timestamp_ms = (uint32_t) current_time_ms;
+
+        task_ctx.gyro_dual_buffer[0].timestamp = current_timestamp_ms;
+        task_ctx.accel_dual_buffer[0].timestamp = current_timestamp_ms;
+
 		if (W_SUCCESS ==
 			adxrs649_get_gyro_data(&(task_ctx.gyro_dual_buffer[0].z_rate), &raw_gyro)) {
 			task_ctx.gyro_dual_buffer[0].is_dead = true;
 		} else {
+            // TODO: Error logging
 			task_ctx.gyro_dual_buffer[0].is_dead = false;
 		}
 		// TODO: add ADXL get acceleration
@@ -168,7 +162,7 @@ void ad_breakout_board_task(void *argument) {
 		taskEXIT_CRITICAL();
 
 		// LOG/TELEMETRY
-		ad_breakout_board_data_logging(loop_count, raw_gyro, raw_accel);
+		ad_breakout_board_data_logging(loop_count, raw_gyro, &raw_accel);
 
 		loop_count++;
 
@@ -191,4 +185,3 @@ w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *gyro_data,
 
 	return W_SUCCESS; // TODO: change to something that actually makes sense
 }
-
