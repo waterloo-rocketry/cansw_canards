@@ -8,13 +8,13 @@
 #include <stdint.h>
 
 typedef struct {
-	uint32_t timestamp_imu;
+	uint32_t timestamp;
 	float z_rate; // rad/sec
 	bool is_dead;
 } ad_gyro_mesurement_t;
 
 typedef struct {
-	uint32_t timestamp_imu;
+	uint32_t timestamp;
 	vector3d_t accelerometer; // TODO: based on the ADXL
 	float z_rate; // rad/sec
 	bool is_dead;
