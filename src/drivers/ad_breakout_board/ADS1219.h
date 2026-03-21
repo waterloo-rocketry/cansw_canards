@@ -213,7 +213,7 @@ w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t channel);
  * @param value is a pointer to where the raw value will be stored
  * @return status of function
  */
-w_status_t ads1219_read_value(ads1219_handle_t *handle, int32_t *value);
+w_status_t ads1219_read_value(ads1219_handle_t *handle, uint32_t *value);
 
 /**
  * @brief Convert a raw ADC count to millivolts.
