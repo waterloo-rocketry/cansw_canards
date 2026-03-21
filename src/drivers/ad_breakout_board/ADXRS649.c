@@ -148,7 +148,7 @@ w_status_t adxrs649_init() {
  * @return the status of the get data function
  * W_IO_ERROR - occours when fialed to read I2C or GPIO messages
  */
-w_status_t adxrs649_get_gyro_data(float *data, int32_t *raw_data) {
+w_status_t adxrs649_get_gyro_data(float *data, uint32_t *raw_data) {
 	bool new_data = false;
 	gpio_level_t ndrdy; // NOT-DRDY
 
@@ -173,7 +173,7 @@ w_status_t adxrs649_get_gyro_data(float *data, int32_t *raw_data) {
 	}
 
 	float data_mv = 0;
-	if (W_SUCCESS != ads1219_millivolts(&ads_handle, *raw_data, &data_mv)) {
+	if (W_SUCCESS != ads1219_millivolts(&ads_handle, (int32_t)*raw_data, &data_mv)) {
 		return W_FAILURE;
 	}
 

@@ -336,7 +336,7 @@ w_status_t ads1219_set_channel(ads1219_handle_t *handle, uint8_t mux) {
  * @param value is a pointer to where the raw value will be stored
  * @return status of function
  */
-w_status_t ads1219_read_value(ads1219_handle_t *handle, int32_t *value) {
+w_status_t ads1219_read_value(ads1219_handle_t *handle, uint32_t *value) {
 	uint8_t buf[3];
 
 	/*
@@ -349,16 +349,19 @@ w_status_t ads1219_read_value(ads1219_handle_t *handle, int32_t *value) {
 		return status;
 	}
 
-	/* 24-bit two's-complement -> 32-bit int with sign extension */
-	int32_t raw = (((int32_t)buf[0] << 24) | ((int32_t)buf[1] << 16) | ((int32_t)buf[2] << 8)) >> 8;
+	/* concat the raw data */
+	uint32_t raw = (((((uint32_t)buf[0] << 8) | (uint32_t)buf[1]) << 8) | (uint32_t)buf[2]);
+
+	// preserve two's-complement in 32 bit
+	raw = (raw ^ 0x00800000) - 0x00800000;
 
 	*value = raw;
 
 	/* Over / underflow detection (full-scale codes) */
-	if ((int32_t)0x7FFFFF <= raw) {
+	if ((uint32_t)0x7FFFFF <= raw) {
 		return W_OVERFLOW;
 	}
-	if ((int32_t)0xFF800000 >= raw) { /* sign-extended 0x800000 */
+	if ((uint32_t)0xFF800000 >= raw) { /* sign-extended 0x800000 */
 		return W_OVERFLOW;
 	}
 	return W_SUCCESS;
@@ -392,11 +395,11 @@ w_status_t ads1219_millivolts(ads1219_handle_t *handle, const int32_t adc_count,
  * @return status of function
  */
 w_status_t ads1219_get_millivolts(ads1219_handle_t *handle, float *data) {
-	int32_t value;
+	uint32_t value;
 
 	if (W_SUCCESS != ads1219_read_value(handle, &value)) {
 		return W_FAILURE;
 	}
 
-	return ads1219_millivolts(handle, value, data);
+	return ads1219_millivolts(handle, (int32_t)value, data);
 }
