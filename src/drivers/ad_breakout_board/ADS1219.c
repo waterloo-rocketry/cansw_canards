@@ -29,7 +29,6 @@
 
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/i2c/i2c.h"
-#include "stm32h7xx_hal.h"
 
 /* ── internal helpers (static, replace the C++ private methods) ────────── */
 
@@ -350,18 +349,15 @@ w_status_t ads1219_read_value(ads1219_handle_t *handle, uint32_t *value) {
 	}
 
 	/* concat the raw data */
-	uint32_t raw = (((((uint32_t)buf[0] << 8) | (uint32_t)buf[1]) << 8) | (uint32_t)buf[2]);
+	uint32_t raw = ((((uint32_t)buf[0] << 8) | (uint32_t)buf[1]) << 8) | (uint32_t)buf[2];
 
 	// preserve two's-complement in 32 bit
 	raw = (raw ^ 0x00800000) - 0x00800000;
 
 	*value = raw;
 
-	/* Over / underflow detection (full-scale codes) */
-	if ((uint32_t)0x7FFFFF <= raw) {
-		return W_OVERFLOW;
-	}
-	if ((uint32_t)0xFF800000 >= raw) { /* sign-extended 0x800000 */
+	/* TODO: double check */
+	if ((0x7FFFFF < raw) && (0xFF800001 > raw)) {
 		return W_OVERFLOW;
 	}
 	return W_SUCCESS;
