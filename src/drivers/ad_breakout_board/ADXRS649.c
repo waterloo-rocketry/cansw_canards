@@ -134,7 +134,7 @@ w_status_t adxrs649_init() {
 	}
 
 	if (W_SUCCESS != ads1219_start(&ads_handle)) {
-		log_text(0, "ADXRS649", "ERROR: Failed to continuous conversion for the ADC.");
+		log_text(0, "ADXRS649", "ERROR: Failed to start continuous conversion for the ADC.");
 		return W_FAILURE;
 	}
 
