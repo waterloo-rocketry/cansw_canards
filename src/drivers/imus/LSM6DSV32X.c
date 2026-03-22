@@ -9,10 +9,6 @@
 #include <limits.h>
 #include <stdio.h>
 
-// this probably should not go here, cant fing hardware map??
-#define IMU_INT1_PORT GPIOD
-#define IMU_INT1_PIN GPIO_PIN_7
-
 // device addresses and configuration
 #define LSM6DSV32X_ADDR 0x6B // addr sel pin HIGH IMU
 
