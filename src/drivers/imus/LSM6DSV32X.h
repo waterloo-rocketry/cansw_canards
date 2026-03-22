@@ -7,6 +7,9 @@
 #include <limits.h>
 #include <stdio.h>
 
+#define IMU_INT1_PORT GPIOD
+#define IMU_INT1_PIN GPIO_PIN_7
+
 enum {
 	IMU_READ_BUFFER = 0,
 	IMU_WRITE_BUFFER = 1,
