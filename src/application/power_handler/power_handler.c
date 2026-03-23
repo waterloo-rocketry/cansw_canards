@@ -86,7 +86,7 @@ static power_handler_status_t power_handler_status = {0};
  */
 static w_status_t power_actuator_callback(const can_msg_t *msg) {
 	// TO DO: Uncomment the code once 5V external and low power mode commands are merged to main
-	// TO DO: find out what pins to get information from in new board 
+	// TO DO: find out what pins to get information from in new board
 	// if (get_actuator_id(msg) == CANARD_5V_OUTPUT && get_cmd_actuator_state(msg) == ACT_STATE_ON)
 	// {
 	//     return power_handler_set_5V_external(true); // turn on 5V external
@@ -139,7 +139,7 @@ uint32_t power_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 	uint32_t adc_value = 0;
 
-	// TO DO: find what pins to read from 
+	// TO DO: find what pins to read from
 	// gpio_level_t flt1 = GPIO_LEVEL_HIGH;
 	// gpio_level_t flt2 = GPIO_LEVEL_HIGH;
 
@@ -157,7 +157,7 @@ uint32_t power_handler_get_status(void) {
 
 	if (adc_get_value(VSENS_BAT1, &adc_value, TASK_DELAY_MS) == W_SUCCESS) {
 		if (adc_value < VBAT_MIN || adc_value > VBAT_MAX) {
-			status_bitfield |= 1; 
+			status_bitfield |= 1;
 		}
 	}
 
