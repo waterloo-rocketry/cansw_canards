@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <string.h>
 
+const can_scale_data_t scale_map[SCALE_COUNT] = SCALE_MAP_INIT;
+
 // TODO: calculate better. for now make excessively large and check dropped tx counter
 #define BUS_QUEUE_LENGTH 32
 

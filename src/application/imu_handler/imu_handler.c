@@ -80,16 +80,16 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, &raw_data->raw_mag.z, &mag_z);
 
 	// Build and send messages
-	build_dem_analog_data_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp, DEM_SENSOR_CANARD_MTI630_ACCEL, acc_x, acc_y, acc_z, &msg);
+	build_3d_analog_sensor_16bit_msg(
+		PRIO_LOW, (uint16_t)timestamp, DEM_3D_SENSOR_CANARD_MTI630_ACCEL, acc_x, acc_y, acc_z, &msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
-	build_dem_analog_data_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp, DEM_SENSOR_CANARD_MTI630_GYRO, gyro_x, gyro_y, gyro_z, &msg);
+	build_3d_analog_sensor_16bit_msg(
+		PRIO_LOW, (uint16_t)timestamp, DEM_3D_SENSOR_CANARD_MTI630_GYRO, gyro_x, gyro_y, gyro_z, &msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
-	build_dem_analog_data_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp, DEM_SENSOR_CANARD_MTI630_MAG, mag_x, mag_y, mag_z, &msg);
+	build_3d_analog_sensor_16bit_msg(
+		PRIO_LOW, (uint16_t)timestamp, DEM_3D_SENSOR_CANARD_MTI630_MAG, mag_x, mag_y, mag_z, &msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
 	// Error handling
