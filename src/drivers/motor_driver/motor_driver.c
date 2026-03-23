@@ -43,6 +43,22 @@ static w_status_t motor_can_transmit_ext(uint32_t ext_id, const uint8_t *data, u
 	if (motor_hfdcan == NULL || data == NULL || len > 8) {
 		return W_FAILURE;
 	}
+	
+	FDCAN_TxHeaderTypeDef tx_header = {0};
+	tx_header.Identifier = ext_id;
+	tx_header.IdType = FDCAN_EXTENDED_ID;
+	tx_header.TxFrameType = FDCAN_DATA_FRAME;
+	tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	tx_header.BitRateSwitch = FDCAN_BRS_OFF;
+	tx_header.FDFormat = FDCAN_CLASSIC_CAN;
+	tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+	tx_header.MessageMarker = 0;
+	tx_header.DataLength = len;
+
+	if (HAL_FDCAN_AddMessageToTxFifoQ(motor_hfdcan, &tx_header, data) != HAL_OK) {
+		tx_errors++;
+		return W_FAILURE;
+	}
 
 	return W_SUCCESS;
 }
@@ -82,6 +98,7 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 	// feedback queue with length 1
 	feedback_queue = xQueueCreate(1, sizeof(motor_feedback_t));
 	if (feedback_queue == NULL){
+		log_text(LOG_WAIT_MS, "motor", "Lack of memory to create feedback queue");
 		return W_FAILURE;
 	}
 
@@ -94,12 +111,14 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 	motor_filter.FilterID2 = 0x1FFFFFFF;
 
 	if (HAL_FDCAN_ConfigFilter(motor_hfdcan, &motor_filter) != HAL_OK) {
+		log_text(LOG_WAIT_MS, "motor", "FDCAN filter config failed");
 		return W_FAILURE;
 	}
 
 	tx_errors = 0;
 	is_init = true;
 
+	log_text(LOG_WAIT_MS, "motor", "Init successful");
 	return W_SUCCESS;
 }
 
@@ -135,11 +154,15 @@ bool motor_is_fatal_fault(motor_fault_code_t fault) {
 }
 
 w_status_t motor_get_latest_feedback(motor_feedback_t *fb) {
-	if (fb == NULL) {
+	if (fb == NULL || !is_init) {
 		return W_FAILURE;
 	}
 	
-	return W_SUCCESS
+	if (xQueuePeek(feedback_queue, fb, 0) == pdPASS) {
+		return W_SUCCESS;
+	}
+	
+	return W_FAILURE; //empty queue or no feedback yet
 }
 
 uint32_t motor_get_tx_errors(void) {
