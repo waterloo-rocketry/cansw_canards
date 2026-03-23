@@ -3,10 +3,10 @@
 #include "application/logger/log.h"
 #include "canlib.h"
 // #include "fatfs.h"
-#include "lfs.h"
+#include "littlefs/lfs.h"
 #include "semphr.h"
 // #include "stm32h7xx_hal_sd.h"
-#include "littlefs_sd_shim.h"
+#include "rocketlib/include/littlefs_sd_shim.h"
 
 // FATFS g_fs_obj;
 
@@ -25,6 +25,27 @@ w_status_t sd_card_init(void) {
     // attempting to init the module >1 time is fine
     if (sd_card_health.is_init) {
         return W_SUCCESS;
+    }
+
+    int err = lfsshim_sd_mount_mbr(&g_fs_obj, &hsd1); 
+
+    if (err < 0) { 
+        printf("Mount failed, formatitng SD Card now \n");
+
+        err = lfs_format(&g_fs_obj, &cfg); 
+
+        if (err < 0) { 
+            printf("Could not format sd card \n");
+            return W_FAILURE;
+        }
+
+        printf("Formatted SD Card! \n");
+        err = lfsshim_sd_mount_mbr(&g_fs_obj, &hsd1); 
+
+        if (err < 0) { 
+            printf("Remount failed");
+            return W_FAILURE; 
+        }
     }
     /*
      * Mount the filesystem.
@@ -82,6 +103,8 @@ w_status_t sd_card_file_read(
     /* Open the file in read mode. */
     res = lfs_file_open(&g_fs_obj, &file, file_name, LFS_O_RDONLY);
     if (res != 0) { // != FR_OK before
+        
+        printf("lfs_file_open failed with error code: %d\n", res);
         xSemaphoreGive(sd_mutex);
         sd_card_health.err_count++;
         return W_FAILURE;
