@@ -11,7 +11,7 @@
 
 /**
  * Initializes power handler.
- * Registers CAN callbacks for payload 5V and low power mode commands.
+ * Registers CAN callbacks for 5V external power and low power mode commands.
  * Defaults everything to ON.
  */
 w_status_t power_handler_init(void);
@@ -23,9 +23,9 @@ w_status_t power_handler_init(void);
 uint32_t power_handler_get_status(void);
 
 /**
- * Toggles 5V payloads power rail via a GPIO pin.
+ * Toggles 5V external power rail via a GPIO pin.
  */
-w_status_t power_handler_set_payload_power(bool enabled);
+w_status_t power_handler_set_5V_external(bool enabled);
 
 /**
  * Toggles low power mode via GPIO pin.
