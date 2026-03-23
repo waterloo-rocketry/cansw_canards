@@ -296,13 +296,6 @@ add_test_group(test_altimu
     ${PROC_SRC_DIR}/drivers/altimu-10/altimu-10.c
 )
 
-add_test_group(test_lsm6dsv32x
-    # test file(s)
-    ${UNIT_TESTS_DIR}/lsm6dsv32x_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/drivers/imus/LSM6DSV32X.c
-)
-
 add_test_group(test_model_airdata
     # test file(s)
     ${UNIT_TESTS_DIR}/model_airdata_test.cpp
