@@ -176,7 +176,27 @@ uint32_t motor_get_tx_errors(void) {
  * is received. Parses the feedback and puts it in the queue.
  */
 static void motor_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
-	if (RxFifo1ITs == 0) {
+	if ((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) == 0) {
 		return;
 	}
+
+	FDCAN_RxHeaderTypeDef rx_header;
+	uint8_t rx_data[8];
+
+	if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) != HAL_OK){
+		return;
+	}
+
+	uint32_t expected_id = ((uint32_t)CAN_PACKET_FEEDBACK << 8) | MOTOR_DRIVER_ID;
+	if (rx_header.IdType != FDCAN_EXTENDED_ID || rx_header.Identifier != expected_id){
+		return;
+	}
+
+	motor_feedback_t fb = {0};
+	motor_parse_feedback(rx_data, &fb);
+
+	//overwrite stale data if newer data is available
+	BaseType_t higher_priority_task_woken = pdFALSE;
+	xQueueOverwriteFromISR(feedback_queue, &fb, &higher_priority_task_woken);
+	portYIELD_FROM_ISR(higher_priority_task_woken);
 }
