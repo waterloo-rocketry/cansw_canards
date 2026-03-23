@@ -22,9 +22,9 @@ typedef enum {
 
 // Scaling factors
 #define MOTOR_POS_CMD_SCALE    10000.0f // Position: degrees * 10000
-#define MOTOR_POS_FB_SCALE     10.0f    // Feedback position: raw / 10.0 = degrees
-#define MOTOR_SPEED_FB_SCALE   10.0f    // speed feedback: raw / 10.0 = ERPM
-#define MOTOR_CURRENT_FB_SCALE 100.0f   // current feedback: raw / 100.0 = Amps
+#define MOTOR_POS_FB_SCALE     0.1f    // Feedback position: raw * 0.1 = degrees
+#define MOTOR_SPEED_FB_SCALE   10.0f    // speed feedback: raw * 10.0 = ERPM
+#define MOTOR_CURRENT_FB_SCALE 0.01f   // current feedback: raw * 0.01 = Amps
 
 static FDCAN_HandleTypeDef *motor_hfdcan = NULL;
 static QueueHandle_t feedback_queue = NULL;
@@ -54,7 +54,22 @@ static w_status_t motor_can_transmit_ext(uint32_t ext_id, const uint8_t *data, u
  * @param[out] fb     Decoded feedback struct
  */
 static void motor_parse_feedback(const uint8_t *data, motor_feedback_t *fb) {
-	
+	int16_t raw_pos = ((data[0] << 8) | data[1]);
+	fb->position_deg = (float)raw_pos * MOTOR_POS_FB_SCALE;
+
+	int16_t raw_speed = ((data[2] << 8) | data[3]);
+	fb->speed_erpm = (float)raw_speed * MOTOR_SPEED_FB_SCALE;
+
+	int16_t raw_current = ((data[4] << 8) | data[5]);
+	fb->current_a = (float)raw_current * MOTOR_CURRENT_FB_SCALE;
+
+	fb->temperature_c = (float)data[6];
+	fb->fault_code = (motor_fault_code_t)data[7];
+
+	float ms = 0.0f
+	if (timer_get_time_ms(&ms) == W_SUCCESS) {
+		fb->timestamp_ms = (uint32_t)ms;
+	}
 }
 
 w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
@@ -64,18 +79,46 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 
 	motor_hfdcan = hfdcan;
 
-	//todo: create queuue and fdcan filter
+	// feedback queue with length 1
+	feedback_queue = xQueueCreate(1, sizeof(motor_feedback_t));
+	if (feedback_queue == NULL){
+		return W_FAILURE;
+	}
+
+	FDCAN_FilterTypeDef motor_filter = {0};
+	motor_filter.IdType = FDCAN_EXTENDED_ID;
+	motor_filter.FilterIndex = 0;
+	motor_filter.FilterType = FDCAN_FILTER_MASK;
+	motor_filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
+	motor_filter.FilterID1 = MOTOR_DRIVER_ID | (uint32_t)(CAN_PACKET_FEEDBACK << 8);
+	motor_filter.FilterID2 = 0x1FFFFFFF;
+
+	if (HAL_FDCAN_ConfigFilter(motor_hfdcan, &motor_filter) != HAL_OK) {
+		return W_FAILURE;
+	}
+
+	tx_errors = 0;
+	is_init = true;
 
 	return W_SUCCESS;
 }
 
 w_status_t motor_send_position_cmd(float angle_deg) {
-	//todo: define ext id and data
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | MOTOR_DRIVER_ID;
+
+	int32_t pos_raw = (int32_t)(angle_deg * MOTOR_POS_CMD_SCALE);
+	uint8_t data[4];
+	data[0] = (uint8_t)((pos_raw >> 24) & 0xFF);
+	data[1] = (uint8_t)((pos_raw >> 16) & 0xFF);
+	data[2] = (uint8_t)((pos_raw >> 8) & 0xFF);
+	data[3] = (uint8_t)(pos_raw & 0xFF);
+
 	return motor_can_transmit_ext(ext_id, data, 4);
 }
 
 w_status_t motor_send_disable_cmd(void) {
-	//todo: define ext id and data
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT << 8) | MOTOR_DRIVER_ID;
+	uint8_t data[4] = {0, 0, 0, 0};
 	return motor_can_transmit_ext(ext_id, data, 4);
 }
 

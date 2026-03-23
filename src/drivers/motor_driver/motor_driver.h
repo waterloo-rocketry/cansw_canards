@@ -28,7 +28,7 @@ typedef struct {
 	float position_deg;
 	float speed_erpm;
 	float current_a;
-	int8_t temperature_c;
+	float temperature_c;
 	motor_fault_code_t fault_code;
 	uint32_t timestamp_ms; // Time of last received feedback
 } motor_feedback_t;
