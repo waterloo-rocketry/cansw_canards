@@ -7,9 +7,6 @@
 #include <limits.h>
 #include <stdio.h>
 
-#define IMU_INT1_PORT GPIOD
-#define IMU_INT1_PIN GPIO_PIN_7
-
 enum {
 	IMU_READ_BUFFER = 0,
 	IMU_WRITE_BUFFER = 1,
@@ -17,6 +14,16 @@ enum {
 	IMU_DATA_STALE = 1,
 	IMU_DATA_READY = 0
 };
+
+typedef struct {
+	I2C_HandleTypeDef *hi2c;
+	uint8_t dev_addr;
+	uint8_t dual_buffer[2][12];
+	TaskHandle_t task_to_notify;
+	volatile bool stale_data;
+	float timestamp[2];
+
+} imu_ctx_t;
 
 /**
  * raw data from imu/mag registers
