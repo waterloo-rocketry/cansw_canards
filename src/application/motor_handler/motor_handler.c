@@ -16,7 +16,7 @@ static motor_handler_error_data_t motor_error_stats = {0};
 static motor_feedback_t latest_feedback = {0};
 
 w_status_t motor_handler_init(FDCAN_HandleTypeDef *hfdcan) {
-	if (hfdcan == NULL) {
+	if (NULL = hfdcan) {
 		return W_INVALID_PARAM;
 	}
 
@@ -101,7 +101,7 @@ void motor_handler_task(void *argument) {
 }
 
 w_status_t motor_handler_get_latest_feedback(motor_feedback_t *fb) {
-	if (fb == NULL) {
+	if (NULL == fb) {
 		return W_INVALID_PARAM;
 	}
 

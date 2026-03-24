@@ -40,7 +40,7 @@ static bool is_init = false;
  * @return W_SUCCESS on success, W_FAILURE on error
  */
 static w_status_t motor_can_transmit_ext(uint32_t ext_id, const uint8_t *data, uint8_t len) {
-	if (motor_hfdcan == NULL || data == NULL || len > 8) {
+	if ((NULL == motor_hfdcan) || (NULL == data) || (len > 8)) {
 		return W_FAILURE;
 	}
 	
@@ -89,7 +89,7 @@ static void motor_parse_feedback(const uint8_t *data, motor_feedback_t *fb) {
 }
 
 w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
-	if (hfdcan == NULL) {
+	if (NULL == hfdcan) {
 		return W_INVALID_PARAM;
 	}
 
@@ -154,7 +154,7 @@ bool motor_is_fatal_fault(motor_fault_code_t fault) {
 }
 
 w_status_t motor_get_latest_feedback(motor_feedback_t *fb) {
-	if (fb == NULL || !is_init) {
+	if ((NULL == fb) || (!is_init)) {
 		return W_FAILURE;
 	}
 	
@@ -176,7 +176,7 @@ uint32_t motor_get_tx_errors(void) {
  * is received. Parses the feedback and puts it in the queue.
  */
 static void motor_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
-	if ((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) == 0) {
+	if (0 == (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)) {
 		return;
 	}
 
