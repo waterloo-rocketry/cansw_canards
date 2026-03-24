@@ -15,6 +15,9 @@ FAKE_VALUE_FUNC(w_status_t, i2c_write_reg, i2c_bus_t, uint8_t, uint8_t, const ui
 FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *, uint8_t)
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...)
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float *)
+FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_I2C_Mem_Read_DMA,
+    I2C_HandleTypeDef*, uint16_t, uint16_t,
+    uint16_t, uint8_t*, uint16_t)
 }
 
 #define LSM6DSV32X_ADDR 0x6B
@@ -58,7 +61,7 @@ protected:
 
         ASSERT_EQ(lsm6dsv32x_init(&ctx), W_SUCCESS);
         ctx.stale_data = IMU_DATA_STALE;
-        
+
     }
 
     void TearDown() override {}
