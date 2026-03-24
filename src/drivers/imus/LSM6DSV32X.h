@@ -47,7 +47,7 @@ w_status_t lsm6dsv32x_check_sanity();
  * @note Must be called to wake up imu
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_init();
+w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx);
 
 /**
  * @brief ISR for the interupt pin that begins DMA data transfor
