@@ -227,7 +227,7 @@ w_status_t imu_handler_init(void) {
 	// Create state mailbox for flight phase to read current state if needed
 	state_mailbox = xQueueCreate(1, sizeof(estimator_all_imus_input_t));
 
-	if (state_mailbox == NULL) {
+	if (NULL == state_mailbox) {
 		log_text(1, "IMUHandler", "ERROR: State mailbox not initialized.");
 		return W_FAILURE;
 	}
