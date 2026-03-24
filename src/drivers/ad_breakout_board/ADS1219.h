@@ -7,25 +7,17 @@ ACK: https://github.com/binomaiheu/ADS1219
  * @brief ADS1219 24-bit ADC driver for STM32 (C port)
  *
  * C port of the Arduino ADS1219 C++ library, adapted to use the project's
- * I2C bus abstraction (drivers/i2c/i2c.h) and w_status_t error codes.
+ * I2C bus abstraction and w_status_t error codes.
  *
  * Key changes from the original Arduino C++ version:
- *   - Language: C instead of C++ -- no classes, constructors, or destructors.
- *   - I2C layer: Uses the project i2c_read_reg / i2c_write_reg helpers instead
- *     of the Arduino Wire library.  The ADS1219 doesn't use a register-address
- *     byte in the normal sense, so the *command byte* is passed as the "reg"
- *     argument.
+ *   - Language: C instead of C++
+ *   - I2C layer: Uses the project i2c_read_reg / i2c_write_reg helpers
  *   - Error codes: Returns w_status_t (W_SUCCESS, W_IO_ERROR, W_INVALID_PARAM,
- *     W_IO_TIMEOUT, W_OVERFLOW) instead of the custom ADS1219_OK / ADS1219_*
- *     integer codes.
- *   - State: All per-device state lives in an ads1219_handle_t struct that the
- *     caller allocates and passes to every function (replaces C++ "this").
- *   - Delays: Uses HAL_Delay / HAL_GetTick (FreeRTOS-safe via the HAL tick
- *     override) instead of Arduino delay / millis.
- *   - Naming: snake_case throughout, matching the rest of the project.
+ *     W_IO_TIMEOUT, W_OVERFLOW)
+ *   - State: All per-device state lives in an ads1219_handle_t struct
+ *   - Delays: Uses vTaskDelay() (FreeRTOS-safe).
  *   - Header guard: #ifndef instead of #pragma once.
- *   - Removed: maxBufferSize(), detect(), drdy_pin -- these are Arduino /
- *     architecture-specific and not needed on STM32 with the project I2C layer.
+ *   - Removed: Arduino architecture-specifics.
  */
 
 #ifndef ADS1219_H
