@@ -136,7 +136,8 @@ w_status_t sd_card_file_write(
      * Use LFS_O_WRONLY | LFS_O_APPEND to open always for safety in case file wasn't created
      * successfully for some reason. This is a failsafe
      */
-    res = lfs_file_open(&g_fs_obj, &file, file_name, LFS_O_WRONLY | LFS_O_APPEND | LFS_O_CREAT);
+    int flags = LFS_O_WRONLY | LFS_O_CREAT | (append ? LFS_O_APPEND : 0);
+    res = lfs_file_open(&g_fs_obj, &file, file_name, flags);
     if (res != 0) {
         lfs_unmount(&g_fs_obj);
         lfsshim_sd_mount(&g_fs_obj, &hsd1, 0);
@@ -145,9 +146,9 @@ w_status_t sd_card_file_write(
         return W_FAILURE;
     }
 
-    // must deliberately move r/w ptr to start of file if not appending
-    if (false == append) {
-        if (lfs_file_seek(&g_fs_obj, &file, 0, LFS_SEEK_SET) < 0) {
+    // when not appending, truncate to zero so the write fully replaces the file contents
+    if (!append) {
+        if (lfs_file_truncate(&g_fs_obj, &file, 0) < 0) {
             lfs_file_close(&g_fs_obj, &file);
             xSemaphoreGive(sd_mutex);
             sd_card_health.err_count++;
