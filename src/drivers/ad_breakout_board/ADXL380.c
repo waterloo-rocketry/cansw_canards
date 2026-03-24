@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-static uint8_t ADXL_ADDRS = 0x00;
+static uint8_t ADXL_ADDRS = 0x1D;
 static uint8_t ADXL_PDM_AUDIO_MASK = 0x20;
 
 static uint8_t ADXL_SOFT_RESET_DELAY = 1;
@@ -23,7 +23,7 @@ adxl38x_dev_t adx380_handle = {};
 w_status_t adxl380_init() {
 	// init the handle
 	adx380_handle.i2c_addr = ADXL_ADDRS;
-	adx380_handle.i2c_bus = I2C_BUS_4;
+	adx380_handle.i2c_bus = I2C_BUS_4; // TODO: To be corrected
 
 	if (W_SUCCESS != adxl38x_init(&adx380_handle)) {
 		log_text(0, "ADXL380", "ERROR: NO-OS based driver failed to init.");
