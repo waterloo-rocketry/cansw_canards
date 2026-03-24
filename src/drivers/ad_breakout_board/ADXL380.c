@@ -1,4 +1,5 @@
 #include "drivers/ad_breakout_board/ADXL380.h"
+#include "application/logger/log.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/i2c/i2c.h"
@@ -84,17 +85,6 @@ w_status_t adxl380_get_raw_accel(altimu_raw_imu_data_t *raw_data) {
 }
 
 /**
- * @brief Converts raw acceleration code to scaled g numerator.
- */
-static int64_t adxl380_accel_int64_conv(uint16_t raw_accel) {
-	int64_t accel_data;
-
-	accel_data = (int64_t)((((uint64_t)raw_accel) ^ 0x8000) - 0x8000);
-
-	return accel_data;
-}
-
-/**
  * @brief this gets the acceleration data (raw and processed) from the ADXL380
  * @param data pointer to the vector form of the acceleration
  * @param raw_data pointer to all of the raw data for each access
@@ -106,12 +96,9 @@ w_status_t adxl380_get_accel_data(vector3d_t *data, altimu_raw_imu_data_t *raw_d
 		return W_FAILURE;
 	}
 
-	data->x =
-		((double) ((int16_t) raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
-	data->y =
-		((double) ((int16_t) raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
-	data->z =
-		((double) ((int16_t) raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+	data->x = ((double)((int16_t)raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+	data->y = ((double)((int16_t)raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+	data->z = ((double)((int16_t)raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 
 	return W_SUCCESS;
 }
