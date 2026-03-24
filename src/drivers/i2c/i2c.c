@@ -303,11 +303,7 @@ health_status_t i2c_get_status(void) {
 				 i2c_error_stats[i].bus_errors);
 	}
 
-	health_status_t status = {
-		.severity = HEALTH_OK, 
-		.module_id = MODULE_I2C, 
-		.error_code = 0
-	};
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_I2C, .error_code = 0};
 
 	return status;
 }

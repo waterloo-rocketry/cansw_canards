@@ -337,10 +337,7 @@ health_status_t estimator_get_status(void) {
 			 estimator_error_stats.invalid_phase_errors);
 
 	health_status_t status = {
-		.severity = HEALTH_OK, 
-		.module_id = MODULE_ESTIMATOR, 
-		.error_code = 0
-	};
+		.severity = HEALTH_OK, .module_id = MODULE_ESTIMATOR, .error_code = 0};
 
 	return status;
 }

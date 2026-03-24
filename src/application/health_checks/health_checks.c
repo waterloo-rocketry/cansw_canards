@@ -142,7 +142,7 @@ static void process_module_status(health_status_t status, const char *module_nam
 
 		*status_bitfield |= (1 << status.module_id);
 
-		if (status.severity == HEALTH_FATAL) {
+		if (HEALTH_FATAL == status.severity) {
 			proc_handle_fatal_error("app module fatal");
 		}
 	}
