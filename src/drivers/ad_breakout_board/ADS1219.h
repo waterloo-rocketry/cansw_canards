@@ -1,3 +1,7 @@
+/*
+ACK: https://github.com/binomaiheu/ADS1219
+*/
+
 /**
  * @file ADS1219.h
  * @brief ADS1219 24-bit ADC driver for STM32 (C port)

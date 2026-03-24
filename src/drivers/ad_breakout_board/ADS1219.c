@@ -1,3 +1,8 @@
+/*
+ACK: https://github.com/binomaiheu/ADS1219
+Based on above repository
+*/
+
 // This is Version 1 of the implementation for the ADC I2C implementation will be updated
 
 /**
