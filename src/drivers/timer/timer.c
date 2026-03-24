@@ -71,5 +71,6 @@ health_status_t timer_get_status(void) {
 				 timer_health.timer_invalid);
 	}
 
-	return (health_status_t){HEALTH_OK, MODULE_TIMER, 0};
+	health_status_t status = {HEALTH_OK, MODULE_TIMER, 0};
+	return status;
 }

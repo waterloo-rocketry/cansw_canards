@@ -384,5 +384,6 @@ health_status_t imu_handler_get_status(void) {
 			 imu_handler_state.movella_stats.success_count,
 			 imu_handler_state.movella_stats.failure_count);
 
-	return (health_status_t){HEALTH_OK, MODULE_IMU_HANDLER, 0};
+	health_status_t status = {HEALTH_OK, MODULE_IMU_HANDLER, 0};
+	return status;
 }

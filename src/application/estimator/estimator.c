@@ -336,7 +336,8 @@ health_status_t estimator_get_status(void) {
 			 estimator_error_stats.can_log_fails,
 			 estimator_error_stats.invalid_phase_errors);
 
-	return (health_status_t){HEALTH_OK, MODULE_ESTIMATOR, 0};
+	health_status_t status = {HEALTH_OK, MODULE_ESTIMATOR, 0};
+	return status;
 }
 
 void estimator_task(void *argument) {

@@ -164,5 +164,6 @@ health_status_t gpio_get_status(void) {
 			 gpio_status.accesses,
 			 gpio_status.access_fails);
 
-	return (health_status_t){HEALTH_OK, MODULE_GPIO, 0};
+	health_status_t status = {HEALTH_OK, MODULE_GPIO, 0};
+	return status;
 }

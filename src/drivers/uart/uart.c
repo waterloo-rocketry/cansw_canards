@@ -350,5 +350,6 @@ health_status_t uart_get_status(void) {
 				 stats->overflows);
 	}
 
-	return (health_status_t){HEALTH_OK, MODULE_UART, 0};
+	health_status_t status = {HEALTH_OK, MODULE_UART, 0};
+	return status;
 }
