@@ -151,7 +151,10 @@ static w_status_t movella_get_data_success(movella_data_t *data, uint32_t timeou
     data->acc = INPUT_ACC;
     data->gyr = INPUT_GYRO;
     data->mag = INPUT_MAG;
-    data->euler = INPUT_EULER;
+     data->quat.w = 1.0f;  // identity quaternion
+    data->quat.x = 0.0f;
+    data->quat.y = 0.0f;
+    data->quat.z = 0.0f;
     data->pres = INPUT_BARO;
     data->temp = 25.0;
     return W_SUCCESS;

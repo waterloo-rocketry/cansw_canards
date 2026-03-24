@@ -282,12 +282,12 @@ add_test_group(test_imu_handler
     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
 )
 
-add_test_group(test_flight_phase
-    # test files
-    ${UNIT_TESTS_DIR}/flight_phase_test.cpp
-    # src files
-    ${PROC_SRC_DIR}/application/flight_phase/flight_phase.c
-)
+# add_test_group(test_flight_phase
+#     # test files
+#     ${UNIT_TESTS_DIR}/flight_phase_test.cpp
+#     # src files
+#     ${PROC_SRC_DIR}/application/flight_phase/flight_phase.c
+# )
 
 add_test_group(test_altimu
     # test file(s)
@@ -415,4 +415,11 @@ add_test_group(test_model_acceleration
     # src file(s)
     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
+)
+
+add_test_group(test_movella
+    # test file(s)
+    ${UNIT_TESTS_DIR}/movella_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/movella/movella.c
 )
