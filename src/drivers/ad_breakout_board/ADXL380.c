@@ -25,16 +25,13 @@ w_status_t adxl380_init() {
 	adx380_handle.i2c_bus = I2C_BUS_4;
 
 	if (W_SUCCESS != adxl38x_init(&adx380_handle)) {
-		// TODO: log error
+		log_text(0, "ADXL380", "ERROR: NO-OS based driver failed to init.");
 		return W_FAILURE;
 	}
 
 	w_status_t init_setting_status = W_SUCCESS;
 
-	/*
-	Confirmed
-	Filters (All HP filters) (to be clarified)
-	*/
+	// re-zero all register to make sure no old setting will be carried over
 	init_setting_status |= adxl38x_soft_reset(&adx380_handle);
 	vTaskDelay(pdMS_TO_TICKS(ADXL_SOFT_RESET_DELAY));
 
@@ -59,7 +56,7 @@ w_status_t adxl380_init() {
 		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, ADXL38X_CH_EN_XYZ));
 
 	if (W_SUCCESS != init_setting_status) {
-		// TODO: Error logging
+		log_text(0, "ADXL380", "ERROR: Failed to set up the correct inital register bit.");
 	}
 
 	return init_setting_status;
@@ -75,7 +72,7 @@ w_status_t adxl380_get_raw_accel(altimu_raw_imu_data_t *raw_data) {
 
 	if (W_SUCCESS !=
 		adxl38x_read_device_data(&adx380_handle, ADXL38X_XDATA_H, 6, (uint8_t *)raw_data_array)) {
-		// TODO: Error logging
+		log_text(0, "ADXL380", "ERROR: Failed to read data from I2C.");
 		return W_FAILURE;
 	}
 
@@ -105,16 +102,16 @@ static int64_t adxl380_accel_int64_conv(uint16_t raw_accel) {
  */
 w_status_t adxl380_get_accel_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data) {
 	if (W_SUCCESS != adxl380_get_raw_accel(raw_data)) {
-		// TODO: Error logging
+		log_text(0, "ADXL380", "ERROR: Failed to get raw acceleration.");
 		return W_FAILURE;
 	}
 
 	data->x =
-		adxl380_accel_int64_conv(raw_data->x) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+		((int64_t) ((int16_t) raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 	data->y =
-		adxl380_accel_int64_conv(raw_data->y) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+		((int64_t) ((int16_t) raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 	data->z =
-		adxl380_accel_int64_conv(raw_data->z) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+		((int64_t) ((int16_t) raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 
 	return W_SUCCESS;
 }
