@@ -4,7 +4,7 @@
 #include "queue.h"
 #include <string.h>
 
-#define LOGGER_WAIT_MS 10
+#define LOG_WAIT_MS 10
 
 // CAN command IDs
 typedef enum {
