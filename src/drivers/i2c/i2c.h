@@ -12,6 +12,7 @@
 #define I2C_H
 
 #include "FreeRTOS.h"
+#include "application/health_checks/health_checks.h"
 #include "rocketlib/include/common.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
@@ -89,7 +90,7 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
  *
  * @return CAN board specific err bitfield
  */
-uint32_t i2c_get_status(void);
+health_status_t i2c_get_status(void);
 
 /* For testing only: Resets internal I2C driver state. */
 void i2c_reset_all(void);
