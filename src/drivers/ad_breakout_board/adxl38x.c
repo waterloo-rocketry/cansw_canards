@@ -35,7 +35,7 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*******************************************************************************/
+ *******************************************************************************/
 
 #include <limits.h>
 #include <stdbool.h>
@@ -82,7 +82,7 @@ static uint8_t adxl38x_mask_shift_u8(uint8_t mask) {
 	return shift;
 }
 
-static uint8_t adxl38x_field_prep_u8(uint8_t mask, uint8_t value) {
+uint8_t adxl38x_field_prep_u8(uint8_t mask, uint8_t value) {
 	return (uint8_t)((value << adxl38x_mask_shift_u8(mask)) & mask);
 }
 
@@ -107,7 +107,7 @@ static int32_t adxl38x_sign_extend16(uint16_t value) {
  * @brief Reads from the device over project I2C API.
  */
 w_status_t adxl38x_read_device_data(struct adxl38x_dev *dev, uint8_t base_address, uint16_t size,
-					uint8_t *read_data) {
+									uint8_t *read_data) {
 	if ((dev == NULL) || (read_data == NULL) || (size == 0) || (size > ADXL38X_MAX_XFER_LEN)) {
 		return W_INVALID_PARAM;
 	}
@@ -119,7 +119,7 @@ w_status_t adxl38x_read_device_data(struct adxl38x_dev *dev, uint8_t base_addres
  * @brief Writes to the device over project I2C API.
  */
 w_status_t adxl38x_write_device_data(struct adxl38x_dev *dev, uint8_t base_address, uint16_t size,
-					 uint8_t *write_data) {
+									 uint8_t *write_data) {
 	if ((dev == NULL) || (write_data == NULL) || (size == 0) || (size > ADXL38X_MAX_XFER_LEN)) {
 		return W_INVALID_PARAM;
 	}
@@ -131,7 +131,7 @@ w_status_t adxl38x_write_device_data(struct adxl38x_dev *dev, uint8_t base_addre
  * @brief Updates masked bits in a register.
  */
 w_status_t adxl38x_register_update_bits(struct adxl38x_dev *dev, uint8_t reg_addr, uint8_t mask,
-					uint8_t update_val) {
+										uint8_t update_val) {
 	w_status_t ret;
 	uint8_t data;
 
@@ -230,10 +230,11 @@ w_status_t adxl38x_soft_reset(struct adxl38x_dev *dev) {
 w_status_t adxl38x_set_op_mode(struct adxl38x_dev *dev, enum adxl38x_op_mode op_mode) {
 	w_status_t ret;
 
-	ret = adxl38x_register_update_bits(dev,
-					   ADXL38X_OP_MODE,
-					   ADXL38X_MASK_OP_MODE,
-					   adxl38x_field_prep_u8(ADXL38X_MASK_OP_MODE, (uint8_t)op_mode));
+	ret =
+		adxl38x_register_update_bits(dev,
+									 ADXL38X_OP_MODE,
+									 ADXL38X_MASK_OP_MODE,
+									 adxl38x_field_prep_u8(ADXL38X_MASK_OP_MODE, (uint8_t)op_mode));
 	if (ret == W_SUCCESS) {
 		dev->op_mode = op_mode;
 	}
@@ -274,10 +275,11 @@ w_status_t adxl38x_set_range(struct adxl38x_dev *dev, enum adxl38x_range range_v
 		return W_INVALID_PARAM;
 	}
 
-	ret = adxl38x_register_update_bits(dev,
-					   ADXL38X_OP_MODE,
-					   ADXL38X_MASK_RANGE,
-					   adxl38x_field_prep_u8(ADXL38X_MASK_RANGE, (uint8_t)range_val));
+	ret =
+		adxl38x_register_update_bits(dev,
+									 ADXL38X_OP_MODE,
+									 ADXL38X_MASK_RANGE,
+									 adxl38x_field_prep_u8(ADXL38X_MASK_RANGE, (uint8_t)range_val));
 	if (ret == W_SUCCESS) {
 		dev->range = range_val;
 	}
@@ -310,7 +312,7 @@ w_status_t adxl38x_get_range(struct adxl38x_dev *dev, enum adxl38x_range *range_
  * @brief Sets self-test control bits.
  */
 w_status_t adxl38x_set_self_test_registers(struct adxl38x_dev *dev, bool st_mode, bool st_force,
-					   bool st_dir) {
+										   bool st_dir) {
 	w_status_t ret;
 	uint8_t st_fields_value = 0;
 
@@ -349,8 +351,7 @@ w_status_t adxl38x_clear_self_test_registers(struct adxl38x_dev *dev) {
 /**
  * @brief Reads status0..status3 into a 32-bit packed value.
  */
-w_status_t adxl38x_get_sts_reg(struct adxl38x_dev *dev,
-			       union adxl38x_sts_reg_flags *status_flags) {
+w_status_t adxl38x_get_sts_reg(struct adxl38x_dev *dev, union adxl38x_sts_reg_flags *status_flags) {
 	w_status_t ret;
 	uint8_t status_value[4];
 
@@ -371,7 +372,7 @@ w_status_t adxl38x_get_sts_reg(struct adxl38x_dev *dev,
  * @brief Reads raw X/Y/Z outputs.
  */
 w_status_t adxl38x_get_raw_xyz(struct adxl38x_dev *dev, uint16_t *raw_x, uint16_t *raw_y,
-			       uint16_t *raw_z) {
+							   uint16_t *raw_z) {
 	w_status_t ret;
 	uint8_t array_raw_data[6] = {0};
 	enum adxl38x_op_mode op_mode;
@@ -451,8 +452,8 @@ w_status_t adxl38x_get_temp(struct adxl38x_dev *dev, float *temp_degC) {
 
 	temp_raw_lsb = (int32_t)(adxl38x_get_unaligned_be16(array_raw_data) >> 4);
 	temp_raw_lsb -= ADXL38X_TEMP_OFFSET;
-	*temp_degC = ((float)temp_raw_lsb * (float)ADXL38X_TEMP_SCALE_DEN) /
-		    (float)ADXL38X_TEMP_SCALE_NUM;
+	*temp_degC =
+		((float)temp_raw_lsb * (float)ADXL38X_TEMP_SCALE_DEN) / (float)ADXL38X_TEMP_SCALE_NUM;
 	return W_SUCCESS;
 }
 
@@ -460,8 +461,8 @@ w_status_t adxl38x_get_temp(struct adxl38x_dev *dev, float *temp_degC) {
  * @brief Reads selected raw channels (TZYX mapping).
  */
 w_status_t adxl38x_get_raw_data(struct adxl38x_dev *dev, enum adxl38x_ch_select channels,
-				uint16_t *raw_x, uint16_t *raw_y, uint16_t *raw_z,
-				uint16_t *raw_temp) {
+								uint16_t *raw_x, uint16_t *raw_y, uint16_t *raw_z,
+								uint16_t *raw_temp) {
 	uint8_t array_raw_data[8] = {0};
 	uint8_t array_rearranged_data[8] = {0};
 	w_status_t ret;
@@ -475,10 +476,11 @@ w_status_t adxl38x_get_raw_data(struct adxl38x_dev *dev, enum adxl38x_ch_select 
 		return W_INVALID_PARAM;
 	}
 
-	ret = adxl38x_register_update_bits(dev,
-					   ADXL38X_DIG_EN,
-					   ADXL38X_MASK_CHEN_DIG_EN,
-					   adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, (uint8_t)channels));
+	ret = adxl38x_register_update_bits(
+		dev,
+		ADXL38X_DIG_EN,
+		ADXL38X_MASK_CHEN_DIG_EN,
+		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, (uint8_t)channels));
 	if (ret != W_SUCCESS) {
 		return ret;
 	}
@@ -548,10 +550,8 @@ w_status_t adxl38x_get_raw_data(struct adxl38x_dev *dev, enum adxl38x_ch_select 
 /**
  * @brief Reads selected acceleration channels and converts to g.
  */
-w_status_t adxl38x_get_xyz_gees(struct adxl38x_dev *dev, enum adxl38x_ch_select channels,
-				float *x,
-				float *y,
-				float *z) {
+w_status_t adxl38x_get_xyz_gees(struct adxl38x_dev *dev, enum adxl38x_ch_select channels, float *x,
+								float *y, float *z) {
 	w_status_t ret;
 	uint16_t raw_accel_x;
 	uint16_t raw_accel_y;
@@ -590,7 +590,7 @@ static int64_t adxl38x_accel_conv(struct adxl38x_dev *dev, uint16_t raw_accel) {
 	}
 
 	return (int64_t)accel_data * (int64_t)ADXL380_ACC_SCALE_FACTOR_GEE_MUL *
-	       (int64_t)adxl38x_scale_mul[dev->range];
+		   (int64_t)adxl38x_scale_mul[dev->range];
 }
 
 /**
@@ -612,8 +612,8 @@ static w_status_t adxl38x_set_to_standby(struct adxl38x_dev *dev) {
 	op_mode_reg_val = (uint8_t)(op_mode_reg_val & (uint8_t)(~ADXL38X_MASK_OP_MODE));
 	ret = adxl38x_write_device_data(dev, ADXL38X_OP_MODE, ADXL38X_ONE_BYTE, &op_mode_reg_val);
 	if (ret == W_SUCCESS) {
-		dev->op_mode = (enum adxl38x_op_mode)adxl38x_field_get_u8(ADXL38X_MASK_OP_MODE,
-								   op_mode_reg_val);
+		dev->op_mode =
+			(enum adxl38x_op_mode)adxl38x_field_get_u8(ADXL38X_MASK_OP_MODE, op_mode_reg_val);
 	}
 
 	return ret;
@@ -623,7 +623,7 @@ static w_status_t adxl38x_set_to_standby(struct adxl38x_dev *dev) {
  * @brief Executes self-test and returns per-axis pass/fail.
  */
 w_status_t adxl38x_selftest(struct adxl38x_dev *dev, enum adxl38x_op_mode op_mode, bool *st_x,
-			    bool *st_y, bool *st_z) {
+							bool *st_y, bool *st_z) {
 	w_status_t ret;
 	uint8_t array_raw_data[6] = {0};
 	int32_t low_limit_xy;
@@ -720,10 +720,8 @@ w_status_t adxl38x_selftest(struct adxl38x_dev *dev, enum adxl38x_op_mode op_mod
 		st_delta_data[k] = st_delta_data[k] * ADXL38X_ST_LIMIT_DENOMINATOR;
 	}
 
-	low_limit_xy =
-		(ADXL380_XY_ST_LIMIT_MIN * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(dev->range);
-	up_limit_xy =
-		(ADXL380_XY_ST_LIMIT_MAX * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(dev->range);
+	low_limit_xy = (ADXL380_XY_ST_LIMIT_MIN * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(dev->range);
+	up_limit_xy = (ADXL380_XY_ST_LIMIT_MAX * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(dev->range);
 	low_limit_z = (ADXL380_Z_ST_LIMIT_MIN * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(dev->range);
 	up_limit_z = (ADXL380_Z_ST_LIMIT_MAX * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(dev->range);
 
@@ -749,10 +747,8 @@ w_status_t adxl38x_selftest(struct adxl38x_dev *dev, enum adxl38x_op_mode op_mod
  * @brief Configures FIFO.
  */
 w_status_t adxl38x_accel_set_FIFO(struct adxl38x_dev *dev, uint16_t num_samples,
-				  bool external_trigger,
-				  enum adxl38x_fifo_mode fifo_mode,
-				  bool ch_ID_enable,
-				  bool read_reset) {
+								  bool external_trigger, enum adxl38x_fifo_mode fifo_mode,
+								  bool ch_ID_enable, bool read_reset) {
 	w_status_t ret;
 	uint8_t write_data = 0;
 	uint8_t fifo_samples_low;
@@ -773,8 +769,8 @@ w_status_t adxl38x_accel_set_FIFO(struct adxl38x_dev *dev, uint16_t num_samples,
 		return W_INVALID_PARAM;
 	}
 	if ((num_samples > ADXL38X_MAX_FIFO_SAMPLES_XYZ_OR_YZT) &&
-	    ((set_channels == 0) || (set_channels == (uint8_t)ADXL38X_CH_EN_XYZ) ||
-	     (set_channels == (uint8_t)ADXL38X_CH_EN_YZT))) {
+		((set_channels == 0) || (set_channels == (uint8_t)ADXL38X_CH_EN_XYZ) ||
+		 (set_channels == (uint8_t)ADXL38X_CH_EN_YZT))) {
 		return W_INVALID_PARAM;
 	}
 
@@ -800,17 +796,14 @@ w_status_t adxl38x_accel_set_FIFO(struct adxl38x_dev *dev, uint16_t num_samples,
 		write_data |= BIT(3);
 	}
 
-	return adxl38x_write_device_data(dev,
-					 ADXL38X_FIFO_CFG0,
-					 ADXL38X_ONE_BYTE,
-					 &write_data);
+	return adxl38x_write_device_data(dev, ADXL38X_FIFO_CFG0, ADXL38X_ONE_BYTE, &write_data);
 }
 
 /**
  * @brief Converts raw 2-byte accel sample to fractional g.
  */
 w_status_t adxl38x_data_raw_to_gees(struct adxl38x_dev *dev, uint8_t *raw_accel_data,
-				    float *data_frac) {
+									float *data_frac) {
 	uint16_t data;
 
 	if ((dev == NULL) || (raw_accel_data == NULL) || (data_frac == NULL)) {
