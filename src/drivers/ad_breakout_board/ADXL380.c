@@ -97,8 +97,8 @@ w_status_t adxl380_get_accel_data(vector3d_t *data, altimu_raw_imu_data_t *raw_d
 	}
 
 	data->x = ((double)((int16_t)raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
-	data->y = ((double)((int16_t)raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
-	data->z = ((double)((int16_t)raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+	data->y = ((double)((int16_t)raw_data->y)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+	data->z = ((double)((int16_t)raw_data->z)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 
 	return W_SUCCESS;
 }
