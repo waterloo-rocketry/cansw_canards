@@ -3,33 +3,11 @@ ACK: https://github.com/binomaiheu/ADS1219
 Based on above repository
 */
 
-// This is Version 1 of the implementation for the ADC I2C implementation will be updated
-
 /**
  * @file ADS1219.c
  * @brief ADS1219 24-bit ADC driver -- STM32 C implementation
  *
  * C port of ADS1219.cpp (Arduino / Wire) adapted for the project's I2C layer.
- *
- * ## How the I2C mapping works
- *
- * The project helper i2c_write_reg(bus, addr, reg, data, len) issues:
- *     START | addr+W | reg | data[0..len-1] | STOP
- *
- * and i2c_read_reg(bus, addr, reg, data, len) issues:
- *     START | addr+W | reg | REPEATED-START | addr+R | data[0..len-1] | STOP
- *
- * The ADS1219 protocol is command-oriented -- every operation starts with a
- * single command byte, optionally followed by data.  We map the command byte
- * to the `reg` parameter of the I2C helpers.  For "send command only" we use
- * i2c_write_reg with len=0 (no data bytes after the command), and for
- * "read after command" we use i2c_read_reg with the command as `reg`.
- *
- * ## Delay / tick
- *
- * HAL_Delay is used for the conversion wait.  In a FreeRTOS environment the
- * SysTick is overridden so HAL_Delay yields properly.  HAL_GetTick provides
- * the monotonic ms counter for the timeout loop (replaces Arduino millis()).
  */
 
 #include "drivers/ad_breakout_board/ADS1219.h"
@@ -37,16 +15,6 @@ Based on above repository
 
 /* ── internal helpers (static, replace the C++ private methods) ────────── */
 
-/**
- * send_cmd -- send a bare command byte (RESET, START, POWERDOWN, RDATA, RREG)
- *
- * Original: ADS1219::send_cmd  ->  _write(&cmd, 1)
- *           which did beginTransmission / write(cmd) / endTransmission.
- *
- * We use i2c_write_reg with the command as the "register address" and zero
- * data bytes, which produces: START | addr+W | cmd | STOP -- identical on
- * the wire.
- */
 static w_status_t ads1219_send_cmd(ads1219_handle_t *handle, uint8_t cmd) {
 	uint8_t dummy_data = 0;
 	// this is sending some dummy data for now just to make sure it can use the existing I2C
@@ -54,40 +22,14 @@ static w_status_t ads1219_send_cmd(ads1219_handle_t *handle, uint8_t cmd) {
 	return i2c_write_reg(handle->bus, handle->i2c_addr, cmd, &dummy_data, 1);
 }
 
-/**
- * read_register -- send a RREG command then read one byte back.
- *
- * Original: ADS1219::_read_register  ->  send_cmd(reg) ; _read(data, 1)
- *
- * i2c_read_reg(bus, addr, reg, buf, 1) produces:
- *     START | addr+W | reg | RSTART | addr+R | buf[0] | STOP
- * which is exactly the two-phase sequence the ADS1219 expects for RREG.
- */
 static w_status_t ads1219_read_register(ads1219_handle_t *handle, uint8_t reg, uint8_t *data) {
 	return i2c_read_reg(handle->bus, handle->i2c_addr, reg, data, 1);
 }
 
-/**
- * write_register -- write the config register (WREG + 1 data byte).
- *
- * Original: ADS1219::_write_register  ->  _write(&data, 1, true, &WREG, 1)
- *           which did beginTransmission / write(WREG) / write(data) / end.
- *
- * i2c_write_reg(bus, addr, WREG, &data, 1) produces:
- *     START | addr+W | WREG | data | STOP
- */
 static w_status_t ads1219_write_register(ads1219_handle_t *handle, uint8_t data) {
 	return i2c_write_reg(handle->bus, handle->i2c_addr, ADS1219_CMD_WREG, &data, 1);
 }
 
-/**
- * modify_register -- read-modify-write a field in the config register.
- *
- * Original: ADS1219::_modify_register
- *
- * @param value  New field value, already shifted to its bit position.
- * @param mask   Mask with 1s everywhere *except* the field bits.
- */
 static w_status_t ads1219_modify_register(ads1219_handle_t *handle, uint8_t value, uint8_t mask) {
 	uint8_t data;
 	w_status_t status = ads1219_read_register(handle, ADS1219_CMD_RREG_CONFIG, &data);
