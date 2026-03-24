@@ -17,19 +17,19 @@
 
 // Period of IMU sampling in milliseconds
 // slightly slower than 200 hz to always receive encoder which can be >5ms
-#define IMU_SAMPLING_PERIOD_MS 6
+static const int IMU_SAMPLING_PERIOD_MS = 6;
 
 // Timeout values for freshness check (in milliseconds)
-#define GYRO_FRESHNESS_TIMEOUT_MS 5
-#define MAG_FRESHNESS_TIMEOUT_MS 10
-#define ACCEL_FRESHNESS_TIMEOUT_MS 5
-#define BARO_FRESHNESS_TIMEOUT_MS 25
-#define ERROR_THRESHOLD 10
-#define MIN_SUCCESS_RATE 90.0f
+static const int GYRO_FRESHNESS_TIMEOUT_MS = 5;
+static const int MAG_FRESHNESS_TIMEOUT_MS = 10;
+static const int ACCEL_FRESHNESS_TIMEOUT_MS = 5;
+static const int BARO_FRESHNESS_TIMEOUT_MS = 25;
+static const int ERROR_THRESHOLD = 10;
+static const double MIN_SUCCESS_RATE = 90.0f;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
-#define IMU_HANDLER_CAN_TX_PERIOD_MS 100
-#define IMU_HANDLER_CAN_TX_RATE (IMU_HANDLER_CAN_TX_PERIOD_MS / IMU_SAMPLING_PERIOD_MS)
+static const int IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
+static const int IMU_HANDLER_CAN_TX_RATE = (IMU_HANDLER_CAN_TX_PERIOD_MS / IMU_SAMPLING_PERIOD_MS);
 
 // correct orientation from finn irl, may 4 2025
 // also default uncalibrated orientation until calibration module sets these
@@ -148,8 +148,6 @@ static w_status_t read_pololu_imu(estimator_imu_measurement_t *imu_data,
 	w_status_t status = W_SUCCESS;
 
 	// Read accelerometer, gyro, and magnetometer data
-	// status |= altimu_get_acc_data(&imu_data->accelerometer, &raw_data->raw_acc);
-	// status |= altimu_get_gyro_data(&imu_data->gyroscope, &raw_data->raw_gyro);
 	status |= altimu_get_gyro_acc_data(
 		&imu_data->accelerometer, &imu_data->gyroscope, &raw_data->raw_acc, &raw_data->raw_gyro);
 	status |= altimu_get_mag_data(&imu_data->magnetometer, &raw_data->raw_mag);
