@@ -6,6 +6,12 @@
 #include <stdint.h>
 
 /**
+ * @brief perform the self-test on the ADXRS649. Unstaticed for unit test
+ * @return the status of the self-test
+ */
+w_status_t adxrs649_self_test();
+
+/**
  * @brief initialize and start up the ADXRS649 AD Gyro and ADS1219
  * @return the status at which the ADXRS649 initalization goes
  */
