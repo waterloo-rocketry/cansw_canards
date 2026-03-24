@@ -20,3 +20,9 @@ rm -rf ThreadSafe
 rm -f .cproject
 rm -f .project
 rm -f STM32*_RAM.ld
+
+# sort .ioc file alphabetically (in-place). makes it way easier to review the git diff
+IOC_FILE=$(find ../ -maxdepth 1 -name "*.ioc" | head -n 1)
+if [ -n "$IOC_FILE" ]; then
+    sort "$IOC_FILE" -o "$IOC_FILE"
+fi
