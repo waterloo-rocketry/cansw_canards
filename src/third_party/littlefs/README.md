@@ -54,6 +54,14 @@ const struct lfs_config cfg = {
     .cache_size = 16,
     .lookahead_size = 16,
     .block_cycles = 500,
+    
+    __attribute__((aligned(32))) static uint8_t lfs_read_buf[512];
+    __attribute__((aligned(32))) static uint8_t lfs_prog_buf[512];
+    __attribute__((aligned(32))) static uint8_t lfs_lookahead_buf[512];
+    .read_buffer = lfs_read_buf,
+    .prog_buffer = lfs_prog_buf,
+    .lookahead_buffer = lfs_lookahead_buf,
+    
 };
 
 // entry point

@@ -176,9 +176,11 @@ w_status_t log_init(void) {
 
 	int err = lfs_stat(&g_fs_obj, LOG_RUN_COUNT_FILENAME, &info);
 
-	if (err == LFS_ERR_NOENT) { 
-		lfs_file_t file; 
-		int open_err = lfs_file_open(&g_fs_obj, &file, LOG_RUN_COUNT_FILENAME, LFS_O_WRONLY | LFS_O_CREAT);
+	if (err == LFS_ERR_NOENT) {
+		lfs_file_t file;
+		if (lfs_file_open(&g_fs_obj, &file, LOG_RUN_COUNT_FILENAME, LFS_O_WRONLY | LFS_O_CREAT) == 0) {
+			lfs_file_close(&g_fs_obj, &file);
+		}
 	}
 
 	full_buffers_queue =
