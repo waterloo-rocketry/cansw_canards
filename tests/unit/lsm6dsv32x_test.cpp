@@ -14,9 +14,19 @@ extern "C" {
 FAKE_VALUE_FUNC(w_status_t, i2c_write_reg, i2c_bus_t, uint8_t, uint8_t, const uint8_t *, uint8_t)
 FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *, uint8_t)
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...)
+FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float *)
 }
 
 #define LSM6DSV32X_ADDR 0x6B
+
+static w_status_t timer_get_ms_custom_fake(float *ms) {
+    if (ms == NULL) {
+        return W_INVALID_PARAM;
+    }
+
+    *ms = 1234.5f; // arbitrary deterministic timestamp
+    return W_SUCCESS;
+}
 
 static w_status_t i2c_read_reg_custom_fake_whoami(
     i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data, uint8_t len
@@ -36,6 +46,7 @@ protected:
     void SetUp() override {
         RESET_FAKE(i2c_write_reg);
         RESET_FAKE(i2c_read_reg);
+        RESET_FAKE(timer_get_ms);
         RESET_FAKE(log_text);
         FFF_RESET_HISTORY();
 
@@ -43,10 +54,11 @@ protected:
 
         i2c_write_reg_fake.return_val = W_SUCCESS;
         i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake_whoami;
+        timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
 
-        // Initialize driver so its internal static context points at our test ctx
         ASSERT_EQ(lsm6dsv32x_init(&ctx), W_SUCCESS);
         ctx.stale_data = IMU_DATA_STALE;
+        
     }
 
     void TearDown() override {}
