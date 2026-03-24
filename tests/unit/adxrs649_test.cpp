@@ -30,11 +30,12 @@ FAKE_VALUE_FUNC(w_status_t, ads1219_start, ads1219_handle_t *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_conversion_ready, ads1219_handle_t *, bool *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_read_value, ads1219_handle_t *, uint32_t *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_millivolts, ads1219_handle_t *, int32_t, float *);
+FAKE_VALUE_FUNC(w_status_t, adxrs649_self_test);
 
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 }
 
-class ADS1219Test : public ::testing::Test {
+class ADXRS649 : public ::testing::Test {
 protected:
     void SetUp() override {
         RESET_FAKE(gpio_read);
@@ -50,6 +51,7 @@ protected:
         RESET_FAKE(ads1219_conversion_ready);
         RESET_FAKE(ads1219_read_value);
         RESET_FAKE(ads1219_millivolts);
+        RESET_FAKE(adxrs649_self_test);
 
         RESET_FAKE(log_text);
         FFF_RESET_HISTORY();
@@ -58,14 +60,119 @@ protected:
     void TearDown() override {}
 };
 
-TEST_F(ADS1219Test, readValueTestBitConcate0){
+TEST_F(ADXRS649, initSuccess){
 
-    // set up the i2c value
-    i2c_test_input = 0;
-    i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_output;
+    // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
 
-    uint32_t result_num = 1;
-    w_status_t status= ads1219_read_value(&test_handle, &result_num);
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // self-test
+    adxrs649_self_test_fake.return_val = W_SUCCESS;
+    gpio_write_fake.return_val = W_SUCCESS;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    w_status_t status= adxrs649_init();
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_EQ(i2c_test_input, (int32_t) result_num);
+};
+
+TEST_F(ADXRS649, initFailAfterADS1219InitFail){
+
+    // set up function returns
+    ads1219_init_fake.return_val = W_FAILURE;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // self-test
+    adxrs649_self_test_fake.return_val = W_SUCCESS;
+    gpio_write_fake.return_val = W_SUCCESS;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    w_status_t status= adxrs649_init();
+    EXPECT_EQ(W_FAILURE, status);
+};
+
+TEST_F(ADXRS649, initFailAfterSetUpFail){
+
+    // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_FAILURE;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // self-test
+    adxrs649_self_test_fake.return_val = W_SUCCESS;
+    gpio_write_fake.return_val = W_SUCCESS;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    w_status_t status= adxrs649_init();
+    EXPECT_NE(W_SUCCESS, status);
+};
+
+TEST_F(ADXRS649, initFailAfterSelfTestFail){
+
+    // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // self-test
+    adxrs649_self_test_fake.return_val = W_FAILURE;
+    gpio_write_fake.return_val = W_SUCCESS;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    w_status_t status= adxrs649_init();
+    EXPECT_EQ(W_FAILURE, status);
+    EXPECT_EQ(2, gpio_write_fake.call_count);
+};
+
+TEST_F(ADXRS649, initFailAfterSelfTestFailWithGPIO){
+
+    // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // self-test
+    adxrs649_self_test_fake.return_val = W_FAILURE;
+    gpio_write_fake.return_val = W_FAILURE;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    w_status_t status= adxrs649_init();
+    EXPECT_EQ(W_FAILURE, status);
+    EXPECT_EQ(2, gpio_write_fake.call_count);
 };
