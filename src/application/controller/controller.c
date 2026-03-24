@@ -260,7 +260,12 @@ health_status_t controller_get_status(void) {
 			 controller_state.can_send_errors,
 			 controller_state.data_miss_counter);
 
-	health_status_t status = {HEALTH_OK, MODULE_CONTROLLER, 0};
+	health_status_t status = {
+		.severity = HEALTH_OK, 
+		.module_id = MODULE_CONTROLLER, 
+		.error_code = 0
+	};
+
 	return status;
 }
 

@@ -358,6 +358,11 @@ health_status_t flight_phase_get_status(void) {
 			 current_state,
 			 flight_phase_status.event_queue_full_count);
 
-	health_status_t status = {HEALTH_OK, MODULE_FLIGHT_PHASE, 0};
+	health_status_t status = {
+		.severity = HEALTH_OK, 
+		.module_id = MODULE_FLIGHT_PHASE, 
+		.error_code = 0
+	};
+
 	return status;
 }

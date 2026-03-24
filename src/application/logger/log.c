@@ -442,7 +442,12 @@ void log_task(void *argument) {
 
 health_status_t logger_get_status(void) {
 	if (!logger_health.is_init) {
-		health_status_t status = {HEALTH_ERROR, MODULE_I2C, MODULE_ERR_LOGGER_NOT_INIT};
+		health_status_t status = {
+			.severity = HEALTH_FATAL, 
+			.module_id = MODULE_LOGGER, 
+			.error_code = MODULE_ERR_LOGGER_NOT_INIT
+		};
+
 		return status;
 	}
 
@@ -467,6 +472,11 @@ health_status_t logger_get_status(void) {
 			 logger_health.buffer_flush_fails,
 			 logger_health.unsafe_buffer_flushes);
 
-	health_status_t status = {HEALTH_OK, MODULE_LOGGER, 0};
+	health_status_t status = {
+		.severity = HEALTH_OK, 
+		.module_id = MODULE_LOGGER, 
+		.error_code = 0
+	};
+
 	return status;
 }
