@@ -15,6 +15,7 @@ static const float ADXRS649_GYRO_RANGE = 20000.0;
 
 // conversion factors
 static const float ADXRS649_CONV_mV_DEG_S = 0.1; // from datasheet
+static const float ADXRS649_NULL_BIAS_mv = 2.5 * 1000;
 
 // self-test constants
 static const float MIN_SELF_TEST_mV = 130; // magnitude
@@ -177,7 +178,7 @@ w_status_t adxrs649_get_gyro_data(float *data, uint32_t *raw_data) {
 		return W_FAILURE;
 	}
 
-	*data = data_mv / ADXRS649_CONV_mV_DEG_S;
+	*data = (data_mv - ADXRS649_NULL_BIAS_mv) / ADXRS649_CONV_mV_DEG_S;
 
 	return W_SUCCESS;
 }
