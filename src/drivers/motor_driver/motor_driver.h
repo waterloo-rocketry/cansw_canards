@@ -2,8 +2,8 @@
 #define MOTOR_DRIVER_H
 
 #include "FreeRTOS.h"
-#include "third_party/rocketlib/include/common.h"
 #include "stm32h7xx_hal.h"
+#include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -12,14 +12,14 @@
 
 // Servo fault codes
 typedef enum {
-	MOTOR_FAULT_NONE              = 0,
-	MOTOR_FAULT_OVERTEMP_MOTOR    = 1,
-	MOTOR_FAULT_OVERCURRENT       = 2,
-	MOTOR_FAULT_OVERVOLTAGE       = 3,
-	MOTOR_FAULT_UNDERVOLTAGE      = 4,
-	MOTOR_FAULT_ENCODER_ERROR     = 5,
-	MOTOR_FAULT_OVERTEMP_FET      = 6,
-	MOTOR_FAULT_LOCKUP			  = 7,
+	MOTOR_FAULT_NONE = 0,
+	MOTOR_FAULT_OVERTEMP_MOTOR = 1,
+	MOTOR_FAULT_OVERCURRENT = 2,
+	MOTOR_FAULT_OVERVOLTAGE = 3,
+	MOTOR_FAULT_UNDERVOLTAGE = 4,
+	MOTOR_FAULT_ENCODER_ERROR = 5,
+	MOTOR_FAULT_OVERTEMP_FET = 6,
+	MOTOR_FAULT_LOCKUP = 7
 } motor_fault_code_t;
 
 /**

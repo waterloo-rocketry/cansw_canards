@@ -2,9 +2,9 @@
 #define MOTOR_HANDLER_H
 
 #include "FreeRTOS.h"
-#include "third_party/rocketlib/include/common.h"
-#include "stm32h7xx_hal.h"
 #include "drivers/motor_driver/motor_driver.h"
+#include "stm32h7xx_hal.h"
+#include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 

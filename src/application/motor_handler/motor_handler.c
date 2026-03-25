@@ -9,8 +9,8 @@
 #include <math.h>
 #include <string.h>
 
-#define MOTOR_TASK_PERIOD_MS  10  // 100 Hz command rate (poll slower when not actuating?)
-#define LOG_WAIT_MS           10
+#define MOTOR_TASK_PERIOD_MS 10 // 100 Hz command rate (poll slower when not actuating?)
+#define LOG_WAIT_MS 10
 
 static motor_handler_error_data_t motor_error_stats = {0};
 static motor_feedback_t latest_feedback = {0};
@@ -20,14 +20,14 @@ w_status_t motor_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 		return W_INVALID_PARAM;
 	}
 
-	//todo: init motor driver
+	// todo: init motor driver
 
 	return W_SUCCESS;
 }
 
 void motor_handler_task(void *argument) {
-	//todo: check flight phase, send commands, read feedback,
-	//check for fatal faults, log errors, check for timeouts
+	// todo: check flight phase, send commands, read feedback,
+	// check for fatal faults, log errors, check for timeouts
 
 	// Kick watchdog
 	watchdog_kick();

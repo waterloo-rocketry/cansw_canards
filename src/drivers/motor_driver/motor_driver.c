@@ -8,23 +8,23 @@
 
 // CAN command IDs
 typedef enum {
-	CAN_PACKET_SET_DUTY         = 0, // Duty cycle mode
-	CAN_PACKET_SET_CURRENT      = 1, // Current loop mode
+	CAN_PACKET_SET_DUTY = 0, // Duty cycle mode
+	CAN_PACKET_SET_CURRENT = 1, // Current loop mode
 	CAN_PACKET_SET_CURRENT_BRAKE = 2, // Current brake mode
-	CAN_PACKET_SET_RPM          = 3, // Velocity mode
-	CAN_PACKET_SET_POS          = 4, // Position mode (likely most optimal)
-	CAN_PACKET_SET_ORIGIN_HERE  = 5, // Set origin mode
-	CAN_PACKET_SET_POS_SPD      = 6, // Position velocity loop mode
+	CAN_PACKET_SET_RPM = 3, // Velocity mode
+	CAN_PACKET_SET_POS = 4, // Position mode (likely most optimal)
+	CAN_PACKET_SET_ORIGIN_HERE = 5, // Set origin mode
+	CAN_PACKET_SET_POS_SPD = 6 // Position velocity loop mode
 } can_packet_id_t;
 
 // Feedback message mode ID
 #define CAN_PACKET_FEEDBACK 0x10
 
 // Scaling factors
-#define MOTOR_POS_CMD_SCALE    10000.0f // Position: degrees * 10000
-#define MOTOR_POS_FB_SCALE     0.1f    // Feedback position: raw * 0.1 = degrees
-#define MOTOR_SPEED_FB_SCALE   10.0f    // speed feedback: raw * 10.0 = ERPM
-#define MOTOR_CURRENT_FB_SCALE 0.01f   // current feedback: raw * 0.01 = Amps
+#define MOTOR_POS_CMD_SCALE 10000.0f // Position: degrees * 10000
+#define MOTOR_POS_FB_SCALE 0.1f // Feedback position: raw * 0.1 = degrees
+#define MOTOR_SPEED_FB_SCALE 10.0f // speed feedback: raw * 10.0 = ERPM
+#define MOTOR_CURRENT_FB_SCALE 0.01f // current feedback: raw * 0.01 = Amps
 
 static FDCAN_HandleTypeDef *motor_hfdcan = NULL;
 static QueueHandle_t feedback_queue = NULL;
@@ -72,18 +72,18 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 
 	motor_hfdcan = hfdcan;
 
-	//todo: create queuue and fdcan filter
+	// todo: create queuue and fdcan filter
 
 	return W_SUCCESS;
 }
 
 w_status_t motor_send_position_cmd(float angle_deg) {
-	//todo: define ext id and data
+	// todo: define ext id and data
 	return motor_can_transmit_ext(ext_id, data, 4);
 }
 
 w_status_t motor_send_disable_cmd(void) {
-	//todo: define ext id and data
+	// todo: define ext id and data
 	return motor_can_transmit_ext(ext_id, data, 4);
 }
 
@@ -93,9 +93,7 @@ bool motor_is_fatal_fault(motor_fault_code_t fault) {
 		case MOTOR_FAULT_OVERCURRENT:
 		case MOTOR_FAULT_OVERTEMP_FET:
 		case MOTOR_FAULT_OVERTEMP_MOTOR:
-		case MOTOR_FAULT_ENCODER_ERROR;
-			return true;
-		default:
+		case MOTOR_FAULT_ENCODER_ERROR; return true; default:
 			return false;
 	}
 }
@@ -104,7 +102,7 @@ w_status_t motor_get_latest_feedback(motor_feedback_t *fb) {
 	if (NULL == fb) {
 		return W_FAILURE;
 	}
-	
+
 	return W_SUCCESS
 }
 
