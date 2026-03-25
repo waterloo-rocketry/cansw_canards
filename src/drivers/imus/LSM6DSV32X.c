@@ -90,8 +90,12 @@ w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx) {
 	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x20);
 
 	// set gyro range to +-4000dps
-	// set LPF bandwith to 100
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL6_G, 0x4C);
+	// set LPF bandwith to 241 (ODR/4)
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL6_G, 0x0C);
+
+	//enable gryro LPF
+	//dont touch imput impedance
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL7_G, 0x01);
 
 	// Disable 2 channel mode
 	// Accel full scale range +-32g
@@ -100,7 +104,7 @@ w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx) {
 
 	// accel slope filter: low pass
 	// accel user offset bit weight: 2^-10 g/LSB
-	// enable user accel user offset
+	// disable offset, untill imu calibration
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL9_XL, 0x29);
 
 	status |= lsm6dsv32x_check_sanity();
@@ -148,6 +152,8 @@ w_status_t lsm6dsv32x_dma_complete_handle() {
 
 	return W_SUCCESS;
 }
+
+//TODO: make below function into a seperate module, interupts or gpio or dma
 
 /**
  * @brief handler for after the DMA is completed

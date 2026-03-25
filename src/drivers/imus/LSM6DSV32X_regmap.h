@@ -14,7 +14,7 @@ enum LSM6DSV32X_reg {
 	CTRL3 = 0x12,
 	CTRL5 = 0x14,
 	CTRL6_G = 0x15,
-	CTRL7 = 0x16,
+	CTRL7_G = 0x16,
 	CTRL8_XL = 0x17,
 	CTRL9_XL = 0X18,
 
