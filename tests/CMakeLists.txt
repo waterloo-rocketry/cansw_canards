@@ -423,3 +423,10 @@ add_test_group(test_ads1219
     # src file(s)
     ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADS1219.c
 )
+
+add_test_group(test_adxrs649
+    # test file(s)
+    ${UNIT_TESTS_DIR}/adxrs649_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXRS649.c
+)
