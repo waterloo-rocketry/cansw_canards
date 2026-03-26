@@ -14,17 +14,17 @@ w_status_t adxl380_init();
 
 /**
  * @brief this gets the raw acceleration data from the ADXL380
- * @param raw_data pointer to all of the raw data for each access
+ * @param p_raw_data pointer to all of the raw data for each access
  * @return the status of the function call
  */
-w_status_t adxl380_get_raw_accel(altimu_raw_imu_data_t *raw_data);
+w_status_t adxl380_get_raw_accel(altimu_raw_imu_data_t *p_raw_data);
 
 /**
  * @brief this gets the acceleration data (raw and processed) from the ADXL380
  * @param data pointer to the vector form of the acceleration
- * @param raw_data pointer to all of the raw data for each access
+ * @param p_raw_data pointer to all of the raw data for each access
  * @return the status of the function call
  */
-w_status_t adxl380_get_accel_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data);
+w_status_t adxl380_get_accel_data(vector3d_t *data, altimu_raw_imu_data_t *p_raw_data);
 
 #endif
