@@ -460,9 +460,8 @@ w_status_t adxl38x_get_temp(adxl38x_dev_t *dev, float *temp_degC) {
 /**
  * @brief Reads selected raw channels (TZYX mapping).
  */
-w_status_t adxl38x_get_raw_data(adxl38x_dev_t *dev, adxl38x_ch_select_t channels,
-								uint16_t *raw_x, uint16_t *raw_y, uint16_t *raw_z,
-								uint16_t *raw_temp) {
+w_status_t adxl38x_get_raw_data(adxl38x_dev_t *dev, adxl38x_ch_select_t channels, uint16_t *raw_x,
+								uint16_t *raw_y, uint16_t *raw_z, uint16_t *raw_temp) {
 	uint8_t array_raw_data[8] = {0};
 	uint8_t array_rearranged_data[8] = {0};
 	w_status_t ret;
@@ -622,8 +621,8 @@ static w_status_t adxl38x_set_to_standby(adxl38x_dev_t *dev) {
 /**
  * @brief Executes self-test and returns per-axis pass/fail.
  */
-w_status_t adxl38x_selftest(adxl38x_dev_t *dev, adxl38x_op_mode_t op_mode, bool *st_x,
-							bool *st_y, bool *st_z) {
+w_status_t adxl38x_selftest(adxl38x_dev_t *dev, adxl38x_op_mode_t op_mode, bool *st_x, bool *st_y,
+							bool *st_z) {
 	w_status_t ret;
 	uint8_t array_raw_data[6] = {0};
 	int32_t low_limit_xy;
@@ -746,9 +745,9 @@ w_status_t adxl38x_selftest(adxl38x_dev_t *dev, adxl38x_op_mode_t op_mode, bool 
 /**
  * @brief Configures FIFO.
  */
-w_status_t adxl38x_accel_set_FIFO(adxl38x_dev_t *dev, uint16_t num_samples,
-								  bool external_trigger, adxl38x_fifo_mode_t fifo_mode,
-								  bool ch_ID_enable, bool read_reset) {
+w_status_t adxl38x_accel_set_FIFO(adxl38x_dev_t *dev, uint16_t num_samples, bool external_trigger,
+								  adxl38x_fifo_mode_t fifo_mode, bool ch_ID_enable,
+								  bool read_reset) {
 	w_status_t ret;
 	uint8_t write_data = 0;
 	uint8_t fifo_samples_low;
@@ -802,8 +801,7 @@ w_status_t adxl38x_accel_set_FIFO(adxl38x_dev_t *dev, uint16_t num_samples,
 /**
  * @brief Converts raw 2-byte accel sample to fractional g.
  */
-w_status_t adxl38x_data_raw_to_gees(adxl38x_dev_t *dev, uint8_t *raw_accel_data,
-									float *data_frac) {
+w_status_t adxl38x_data_raw_to_gees(adxl38x_dev_t *dev, uint8_t *raw_accel_data, float *data_frac) {
 	uint16_t data;
 
 	if ((dev == NULL) || (raw_accel_data == NULL) || (data_frac == NULL)) {

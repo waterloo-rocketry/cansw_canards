@@ -265,5 +265,5 @@ typedef struct {
 	uint8_t EFUSE_BUSY_REGERR_STICKY : 1;
 	uint8_t NVM_DONE : 1;
 	uint8_t NVM_BUSY_STATUS : 1;
-}_adxl38x_sts_reg_flags_t;
+} _adxl38x_sts_reg_flags_t;
 #endif
