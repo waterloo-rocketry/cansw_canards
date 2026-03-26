@@ -8,28 +8,29 @@ extern "C" {
 #include "application/logger/log.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/gpio/gpio.h"
 
 extern w_status_t adxrs649_init();
-extern w_status_t adxrs649_get_gyro_data(float *data, uint32_t *raw_data);
+extern w_status_t adxrs649_get_gyro_data(float64_t *data, uint32_t *raw_data);
 
 FAKE_VALUE_FUNC(w_status_t, gpio_read, gpio_pin_t, gpio_level_t*, uint32_t);
 FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t);
 
-FAKE_VALUE_FUNC(w_status_t, ads1219_get_millivolts, ads1219_handle_t *, float *);
+FAKE_VALUE_FUNC(w_status_t, ads1219_get_millivolts, ads1219_handle_t *, float64_t *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_init, ads1219_handle_t *, i2c_bus_t, uint8_t);
 FAKE_VALUE_FUNC(w_status_t, ads1219_set_channel, ads1219_handle_t *, uint8_t);
 FAKE_VALUE_FUNC(w_status_t, ads1219_set_conversion_mode, ads1219_handle_t *, uint8_t);
 FAKE_VALUE_FUNC(w_status_t, ads1219_set_gain, ads1219_handle_t *, uint8_t);
 FAKE_VALUE_FUNC(w_status_t, ads1219_set_data_rate, ads1219_handle_t *, uint8_t);
-FAKE_VALUE_FUNC(w_status_t, ads1219_set_vref, ads1219_handle_t *, uint8_t, float, float);
+FAKE_VALUE_FUNC(w_status_t, ads1219_set_vref, ads1219_handle_t *, uint8_t, float64_t, float64_t);
 FAKE_VALUE_FUNC(w_status_t, ads1219_start, ads1219_handle_t *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_conversion_ready, ads1219_handle_t *, bool *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_read_value, ads1219_handle_t *, uint32_t *);
-FAKE_VALUE_FUNC(w_status_t, ads1219_millivolts, ads1219_handle_t *, int32_t, float *);
+FAKE_VALUE_FUNC(w_status_t, ads1219_millivolts, ads1219_handle_t *, int32_t, float64_t *);
 
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 }
@@ -49,9 +50,9 @@ w_status_t ads1219_set_conversion_ready(ads1219_handle_t *handle, bool *ready) {
     return ads1219_conversion_ready_return;
 }
 
-float global_adc_output_mv = 0;
+float64_t global_adc_output_mv = 0;
 w_status_t ads1219_set_millivolts_return = W_SUCCESS;
-w_status_t ads1219_set_millivolts(ads1219_handle_t *handle, const int32_t adc_count, float *mv) {
+w_status_t ads1219_set_millivolts(ads1219_handle_t *handle, const int32_t adc_count, float64_t *mv) {
     *mv = global_adc_output_mv;
     return ads1219_set_millivolts_return;
 }
@@ -191,7 +192,7 @@ TEST_F(ADXRS649, getGyroDataFailByBothDRDYFail){
     ads1219_read_value_fake.return_val = W_SUCCESS;
     ads1219_millivolts_fake.return_val = W_SUCCESS;
 
-    float data = 0;
+    float64_t data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_IO_ERROR, status);
@@ -210,7 +211,7 @@ TEST_F(ADXRS649, getGyroDataFailByGPIORead0){
     ads1219_read_value_fake.return_val = W_SUCCESS;
     ads1219_millivolts_fake.return_val = W_SUCCESS;
 
-    float data = 0;
+    float64_t data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_FAILURE, status);
@@ -230,7 +231,7 @@ TEST_F(ADXRS649, getGyroDataFailWithGPIOFailADS1219SuceessNotReady){
 
     ads1219_millivolts_fake.return_val = W_SUCCESS;
 
-    float data = 0;
+    float64_t data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(1, ads1219_conversion_ready_fake.call_count);
@@ -249,7 +250,7 @@ TEST_F(ADXRS649, getGyroDataFailByReadValFail){
     ads1219_read_value_fake.return_val = W_FAILURE;
     ads1219_millivolts_fake.return_val = W_SUCCESS;
 
-    float data = 0;
+    float64_t data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_IO_ERROR, status);
@@ -267,7 +268,7 @@ TEST_F(ADXRS649, getGyroDataFailByConvFail){
     ads1219_read_value_fake.return_val = W_SUCCESS;
     ads1219_millivolts_fake.return_val = W_FAILURE;
 
-    float data = 0;
+    float64_t data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_FAILURE, status);
@@ -290,11 +291,11 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMax){
 
     ads1219_read_value_fake.custom_fake = ads1219_read_value_set_data;
 
-    float data = 0;
+    float64_t data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_FLOAT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
     EXPECT_EQ(1, raw_data);
 };
 
@@ -315,11 +316,11 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMin){
 
     ads1219_read_value_fake.custom_fake = ads1219_read_value_set_data;
 
-    float data = 0;
+    float64_t data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_FLOAT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
     EXPECT_EQ(1, raw_data);
 };
 
@@ -340,11 +341,11 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorZero){
 
     ads1219_read_value_fake.custom_fake = ads1219_read_value_set_data;
 
-    float data = 0;
+    float64_t data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_FLOAT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
     EXPECT_EQ(1, raw_data);
 };
 
@@ -365,10 +366,10 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorRegular){
 
     ads1219_read_value_fake.custom_fake = ads1219_read_value_set_data;
 
-    float data = 0;
+    float64_t data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_FLOAT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
     EXPECT_EQ(1, raw_data);
 };
