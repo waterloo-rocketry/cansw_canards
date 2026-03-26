@@ -13,24 +13,15 @@ extern "C" {
 #include "drivers/i2c/i2c.h"
 #include "drivers/gpio/gpio.h"
 
-extern w_status_t adxrs649_init();
-extern w_status_t adxrs649_get_gyro_data(float *data, uint32_t *raw_data);
+extern w_status_t adxl380_init();
+extern w_status_t adxl380_get_raw_accel(altimu_raw_imu_data_t *raw_data);
+extern w_status_t adxl380_get_accel_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data);
 
-FAKE_VALUE_FUNC(w_status_t, gpio_read, gpio_pin_t, gpio_level_t*, uint32_t);
-FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t);
-
-FAKE_VALUE_FUNC(w_status_t, ads1219_get_millivolts, ads1219_handle_t *, float *);
-FAKE_VALUE_FUNC(w_status_t, ads1219_init, ads1219_handle_t *, i2c_bus_t, uint8_t);
-FAKE_VALUE_FUNC(w_status_t, ads1219_set_channel, ads1219_handle_t *, uint8_t);
-FAKE_VALUE_FUNC(w_status_t, ads1219_set_conversion_mode, ads1219_handle_t *, uint8_t);
-FAKE_VALUE_FUNC(w_status_t, ads1219_set_gain, ads1219_handle_t *, uint8_t);
-FAKE_VALUE_FUNC(w_status_t, ads1219_set_data_rate, ads1219_handle_t *, uint8_t);
-FAKE_VALUE_FUNC(w_status_t, ads1219_set_vref, ads1219_handle_t *, uint8_t, float, float);
-FAKE_VALUE_FUNC(w_status_t, ads1219_start, ads1219_handle_t *);
-FAKE_VALUE_FUNC(w_status_t, ads1219_conversion_ready, ads1219_handle_t *, bool *);
-FAKE_VALUE_FUNC(w_status_t, ads1219_read_value, ads1219_handle_t *, uint32_t *);
-FAKE_VALUE_FUNC(w_status_t, ads1219_millivolts, ads1219_handle_t *, int32_t, float *);
-FAKE_VALUE_FUNC(w_status_t, adxrs649_self_test);
+FAKE_VALUE_FUNC(w_status_t, adxl38x_init, adxl38x_dev_t *);
+FAKE_VALUE_FUNC(w_status_t, adxl38x_soft_reset, adxl38x_dev_t *);
+FAKE_VALUE_FUNC(w_status_t, adxl38x_set_op_mode, adxl38x_dev_t *, adxl38x_op_mode_t);
+FAKE_VALUE_FUNC(w_status_t, adxl38x_set_range, adxl38x_dev_t *, adxl38x_range_t);
+FAKE_VALUE_FUNC(w_status_t, adxl38x_register_update_bits, adxl38x_dev_t *, uint8_t, uint8_t, uint8_t);
 
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 }

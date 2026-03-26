@@ -8,16 +8,16 @@
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
 
-typedef union adxl38x_sts_reg_flags {
-	struct _adxl38x_sts_reg_flags flags;
+typedef union  {
+	_adxl38x_sts_reg_flags_t flags;
 	uint32_t value;
 } adxl38x_sts_reg_flags_t;
 
-typedef struct adxl38x_dev {
+typedef struct  {
 	i2c_bus_t i2c_bus;
 	uint8_t i2c_addr;
-	enum adxl38x_range range;
-	enum adxl38x_op_mode op_mode;
+	adxl38x_range_t range;
+	adxl38x_op_mode_t op_mode;
 } adxl38x_dev_t;
 
 // HELPER
@@ -37,13 +37,13 @@ w_status_t adxl38x_init(adxl38x_dev_t *dev);
 
 w_status_t adxl38x_soft_reset(adxl38x_dev_t *dev);
 
-w_status_t adxl38x_set_op_mode(adxl38x_dev_t *dev, enum adxl38x_op_mode op_mode);
+w_status_t adxl38x_set_op_mode(adxl38x_dev_t *dev, adxl38x_op_mode_t op_mode);
 
-w_status_t adxl38x_get_op_mode(adxl38x_dev_t *dev, enum adxl38x_op_mode *op_mode);
+w_status_t adxl38x_get_op_mode(adxl38x_dev_t *dev, adxl38x_op_mode_t *op_mode);
 
-w_status_t adxl38x_set_range(adxl38x_dev_t *dev, enum adxl38x_range range_val);
+w_status_t adxl38x_set_range(adxl38x_dev_t *dev, adxl38x_range_t range_val);
 
-w_status_t adxl38x_get_range(adxl38x_dev_t *dev, enum adxl38x_range *range_val);
+w_status_t adxl38x_get_range(adxl38x_dev_t *dev, adxl38x_range_t *range_val);
 
 w_status_t adxl38x_set_self_test_registers(adxl38x_dev_t *dev, bool st_mode, bool st_force,
 										   bool st_dir);
@@ -57,18 +57,18 @@ w_status_t adxl38x_get_raw_xyz(adxl38x_dev_t *dev, uint16_t *raw_x, uint16_t *ra
 
 w_status_t adxl38x_get_temp(adxl38x_dev_t *dev, float *temp_degC);
 
-w_status_t adxl38x_get_raw_data(adxl38x_dev_t *dev, enum adxl38x_ch_select channels,
+w_status_t adxl38x_get_raw_data(adxl38x_dev_t *dev, adxl38x_ch_select_t channels,
 								uint16_t *raw_x, uint16_t *raw_y, uint16_t *raw_z,
 								uint16_t *raw_temp);
 
-w_status_t adxl38x_get_xyz_gees(adxl38x_dev_t *dev, enum adxl38x_ch_select channels, float *x,
+w_status_t adxl38x_get_xyz_gees(adxl38x_dev_t *dev, adxl38x_ch_select_t channels, float *x,
 								float *y, float *z);
 
-w_status_t adxl38x_selftest(adxl38x_dev_t *dev, enum adxl38x_op_mode op_mode, bool *st_x,
+w_status_t adxl38x_selftest(adxl38x_dev_t *dev, adxl38x_op_mode_t op_mode, bool *st_x,
 							bool *st_y, bool *st_z);
 
 w_status_t adxl38x_accel_set_FIFO(adxl38x_dev_t *dev, uint16_t num_samples, bool external_trigger,
-								  enum adxl38x_fifo_mode fifo_mode, bool ch_ID_enable,
+								  adxl38x_fifo_mode_t fifo_mode, bool ch_ID_enable,
 								  bool read_reset);
 
 w_status_t adxl38x_data_raw_to_gees(adxl38x_dev_t *dev, uint8_t *raw_accel_data, float *data_frac);
