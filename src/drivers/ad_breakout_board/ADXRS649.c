@@ -28,7 +28,7 @@ static float V_EXTERNAL_REF_P_mV = 5000.0f;
 static float V_EXTERNAL_REF_N_mV = 0.0f;
 
 // global adc handle
-static ads1219_handle_t ads_handle = {};
+static ads1219_handle_t g_ads_handle = {};
 
 /**
  * @brief perform the self-test on the ADXRS649
@@ -42,13 +42,13 @@ static w_status_t adxrs649_self_test() {
 	// SELF-TEST 1
 	status |=
 		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1); // TODO: create new GPIO pin for test
-	status |= ads1219_get_millivolts(&ads_handle, &adc_voltage);
+	status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
 
 	while ((MAX_NUM_TESTS >= test_num) && ((-1 * MIN_SELF_TEST_mV) > adc_voltage) &&
 		   ((-1 * MAX_SELF_TEST_mV) < adc_voltage)) {
 		// wait and retest
 		vTaskDelay(pdMS_TO_TICKS(2));
-		status |= ads1219_get_millivolts(&ads_handle, &adc_voltage);
+		status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
 		test_num++;
 	}
 
@@ -71,13 +71,13 @@ static w_status_t adxrs649_self_test() {
 
 	status |=
 		gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1); // TODO: create new GPIO pin for test
-	status |= ads1219_get_millivolts(&ads_handle, &adc_voltage);
+	status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
 
 	while ((MAX_NUM_TESTS >= test_num) && ((MIN_SELF_TEST_mV) < adc_voltage) &&
 		   ((MAX_SELF_TEST_mV) > adc_voltage)) {
 		// wait and retest
 		vTaskDelay(pdMS_TO_TICKS(2));
-		status |= ads1219_get_millivolts(&ads_handle, &adc_voltage);
+		status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
 		test_num++;
 	}
 
@@ -102,7 +102,7 @@ static w_status_t adxrs649_self_test() {
  * @return the status at which the ADXRS649 initalization goes
  */
 w_status_t adxrs649_init() {
-	if (W_SUCCESS != ads1219_init(&ads_handle,
+	if (W_SUCCESS != ads1219_init(&g_ads_handle,
 								  I2C_BUS_4,
 								  ADS1219_ADDR)) { // TODO: to be set once an I2C bus is determined
 		log_text(0, "ADXRS649", "ERROR: Unable to initialize the ADC.");
@@ -110,12 +110,12 @@ w_status_t adxrs649_init() {
 	}
 
 	// set up ADC
-	w_status_t adc_setup_status = ads1219_set_channel(&ads_handle, ADS1219_MUX_SINGLE_1);
-	adc_setup_status |= ads1219_set_conversion_mode(&ads_handle, ADS1219_CM_CONTINUOUS);
-	adc_setup_status |= ads1219_set_gain(&ads_handle, ADS1219_GAIN_ONE);
-	adc_setup_status |= ads1219_set_data_rate(&ads_handle, ADS1219_DATARATE_1000SPS);
+	w_status_t adc_setup_status = ads1219_set_channel(&g_ads_handle, ADS1219_MUX_SINGLE_1);
+	adc_setup_status |= ads1219_set_conversion_mode(&g_ads_handle, ADS1219_CM_CONTINUOUS);
+	adc_setup_status |= ads1219_set_gain(&g_ads_handle, ADS1219_GAIN_ONE);
+	adc_setup_status |= ads1219_set_data_rate(&g_ads_handle, ADS1219_DATARATE_1000SPS);
 	adc_setup_status |= ads1219_set_vref(
-		&ads_handle, ADS1219_VREF_EXTERNAL, V_EXTERNAL_REF_N_mV, V_EXTERNAL_REF_P_mV);
+		&g_ads_handle, ADS1219_VREF_EXTERNAL, V_EXTERNAL_REF_N_mV, V_EXTERNAL_REF_P_mV);
 
 	if (W_SUCCESS != adc_setup_status) {
 		log_text(0, "ADXRS649", "ERROR: Failed to write settings ADC for gyro.");
@@ -135,7 +135,7 @@ w_status_t adxrs649_init() {
 		return W_FAILURE;
 	}
 
-	if (W_SUCCESS != ads1219_start(&ads_handle)) {
+	if (W_SUCCESS != ads1219_start(&g_ads_handle)) {
 		log_text(0, "ADXRS649", "ERROR: Failed to start continuous conversion for the ADC.");
 		return W_FAILURE;
 	}
@@ -145,12 +145,12 @@ w_status_t adxrs649_init() {
 
 /**
  * @brief get the spin rate data from the ADXRS649 Gyro
- * @param data is a pointer to where the data will be stored (deg/sec)
- * @param raw_data is a pointer to the raw data of the gyro
+ * @param p_data is a pointer to where the data will be stored (deg/sec)
+ * @param p_raw_data is a pointer to the raw data of the gyro
  * @return the status of the get data function
  * W_IO_ERROR - occours when fialed to read I2C or GPIO messages
  */
-w_status_t adxrs649_get_gyro_data(float *data, uint32_t *raw_data) {
+w_status_t adxrs649_get_gyro_data(float *p_data, uint32_t *p_raw_data) {
 	bool new_data = false;
 	gpio_level_t ndrdy; // NOT-DRDY
 
@@ -161,7 +161,7 @@ w_status_t adxrs649_get_gyro_data(float *data, uint32_t *raw_data) {
 
 	} else {
 		// use I2C to get value
-		if (W_SUCCESS != ads1219_conversion_ready(&ads_handle, &new_data)) {
+		if (W_SUCCESS != ads1219_conversion_ready(&g_ads_handle, &new_data)) {
 			return W_IO_ERROR;
 		}
 	}
@@ -170,16 +170,16 @@ w_status_t adxrs649_get_gyro_data(float *data, uint32_t *raw_data) {
 		return W_FAILURE;
 	}
 
-	if (W_SUCCESS != ads1219_read_value(&ads_handle, raw_data)) {
+	if (W_SUCCESS != ads1219_read_value(&g_ads_handle, p_raw_data)) {
 		return W_IO_ERROR;
 	}
 
 	float data_mv = 0;
-	if (W_SUCCESS != ads1219_millivolts(&ads_handle, (int32_t)*raw_data, &data_mv)) {
+	if (W_SUCCESS != ads1219_millivolts(&g_ads_handle, (int32_t)*p_raw_data, &data_mv)) {
 		return W_FAILURE;
 	}
 
-	*data = (data_mv - ADXRS649_NULL_BIAS_mv) / ADXRS649_CONV_mV_DEG_S;
+	*p_data = (data_mv - ADXRS649_NULL_BIAS_mv) / ADXRS649_CONV_mV_DEG_S;
 
 	return W_SUCCESS;
 }
