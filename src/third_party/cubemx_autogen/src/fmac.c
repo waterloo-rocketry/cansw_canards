@@ -83,3 +83,4 @@ void HAL_FMAC_MspDeInit(FMAC_HandleTypeDef* fmacHandle)
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
+

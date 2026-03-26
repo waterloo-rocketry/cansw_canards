@@ -18,7 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
+#include "FreeRTOS.h"
+#include "cmsis_os2.h"
 #include "adc.h"
 #include "cordic.h"
 #include "dma.h"
