@@ -4,6 +4,7 @@
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "task.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -33,7 +34,7 @@ static ads1219_handle_t ads_handle = {};
  * @brief perform the self-test on the ADXRS649
  * @return the status of the self-test
  */
-w_status_t adxrs649_self_test() {
+static w_status_t adxrs649_self_test() {
 	w_status_t status = W_SUCCESS;
 	float adc_voltage; // will be mV
 	uint32_t test_num = 0;
