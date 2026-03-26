@@ -4,6 +4,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
+#include "task.h"
 #include <stdbool.h>
 #include <stdint.h>
 

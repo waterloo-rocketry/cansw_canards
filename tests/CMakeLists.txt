@@ -416,3 +416,10 @@ add_test_group(test_model_acceleration
     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
 )
+
+add_test_group(test_adxl380
+    # test file(s)
+    ${UNIT_TESTS_DIR}/adxl380_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXL380.c
+)
