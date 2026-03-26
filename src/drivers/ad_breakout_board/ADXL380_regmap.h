@@ -179,17 +179,17 @@
  * @struct adxl38x_range
  * @brief ADXL38X Range (OP MODE[7:6]).
  */
-enum adxl38x_range {
+typedef enum {
 	ADXL380_RANGE_4G = 0,
 	ADXL380_RANGE_8G = 1,
 	ADXL380_RANGE_16G = 2
-};
+} adxl38x_range_t;
 
 /**
  * @struct adxl38x_op_mode
  * @brief ADXL38X Operating modes (OP MODE[3:0]).
  */
-enum adxl38x_op_mode {
+typedef enum {
 	ADXL38X_MODE_STDBY = 0,
 	ADXL38X_MODE_HRT_SND = 1,
 	ADXL38X_MODE_ULP = 2,
@@ -203,13 +203,13 @@ enum adxl38x_op_mode {
 	ADXL38X_MODE_HP = 12,
 	ADXL38X_MODE_HP_SERIAL_ULP_OP = 14,
 	ADXL38X_MODE_HP_SERIAL_VLP_OP = 15
-};
+} adxl38x_op_mode_t;
 
 /**
  * @struct adxl38x_channel_slct
  * @brief ADXL38X Channel enable (DIG_EN[7:4] - TZYX).
  */
-enum adxl38x_ch_select {
+typedef enum {
 	ADXL38X_CH_DSB_ALL = 0,
 	ADXL38X_CH_EN_X = 1,
 	ADXL38X_CH_EN_Y = 2,
@@ -221,20 +221,20 @@ enum adxl38x_ch_select {
 	ADXL38X_CH_EN_ZT = 12,
 	ADXL38X_CH_EN_YZT = 14,
 	ADXL38X_CH_EN_XYZT = 15
-};
+} adxl38x_ch_select_t;
 
 /**
  * @struct adxl38x_fifo_mode
  * @brief ADXL38X FIFO mode (FIFO_CFG1[5:4]).
  */
-enum adxl38x_fifo_mode {
+typedef enum {
 	ADXL38X_FIFO_DISABLE = 0,
 	ADXL38X_FIFO_NORMAL = 1,
 	ADXL38X_FIFO_STREAM = 2,
 	ADXL38X_FIFO_TRIGGER = 3
-};
+} adxl38x_fifo_mode_t;
 
-struct _adxl38x_sts_reg_flags {
+typedef struct {
 	// Status 3
 	uint8_t DATA_READY : 1;
 	uint8_t RESERVED2 : 7;
@@ -265,5 +265,5 @@ struct _adxl38x_sts_reg_flags {
 	uint8_t EFUSE_BUSY_REGERR_STICKY : 1;
 	uint8_t NVM_DONE : 1;
 	uint8_t NVM_BUSY_STATUS : 1;
-};
+}_adxl38x_sts_reg_flags_t;
 #endif
