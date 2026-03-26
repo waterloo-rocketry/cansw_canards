@@ -16,7 +16,6 @@ typedef struct {
 typedef struct {
 	uint32_t timestamp;
 	vector3d_t accelerometer; // TODO: based on the ADXL
-	float z_rate; // rad/sec
 	bool is_dead;
 } ad_accelerometer_mesurement_t;
 
@@ -37,10 +36,10 @@ void ad_breakout_board_task(void *argument);
 
 /**
  * @brief to read both the accelerometer and gyro data
- * @param data this is a pointer to converted data
- * @param raw_data pointer to raw data
+ * @param g_gyro_data this is a pointer to converted gyro data
+ * @param g_accel_data pointer to state of converted accel data
  * @return the status of getting data
  */
-w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *gyro_data,
-									  ad_accelerometer_mesurement_t *accel_data);
+w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *g_gyro_data,
+									  ad_accelerometer_mesurement_t *g_accel_data);
 #endif

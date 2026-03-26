@@ -1,6 +1,7 @@
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
+#include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/timer/timer.h"
 #include "rocketlib/include/common.h"
@@ -95,7 +96,7 @@ static const uint16_t PAD_ADXL_CAN_LOG_RATE =
 static const uint16_t FLIGHT_ADXL_CAN_LOG_RATE =
 	FLIGHT_ADXL_CAN_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
 
-static ad_task_ctx_t task_ctx = {};
+static ad_task_ctx_t g_task_ctx = {};
 
 /**
  * @brief initalize both the breakout board sensor drivers
@@ -105,7 +106,7 @@ w_status_t ad_beakout_board_init() {
 	w_status_t status = W_SUCCESS;
 
 	status |= adxrs649_init();
-	// TODO: add ADXL init
+	status |= adxl380_init();
 
 	if (W_SUCCESS != status) {
 		log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to initalize the drivers.");
@@ -115,7 +116,7 @@ w_status_t ad_beakout_board_init() {
 }
 
 static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, const int32_t raw_gyro,
-												 const altimu_raw_imu_data_t *raw_accel) {
+												 const altimu_raw_imu_data_t *g_raw_accel) {
 	return W_FAILURE;
 }
 
@@ -142,27 +143,34 @@ void ad_breakout_board_task(void *argument) {
 		}
 		uint32_t current_timestamp_ms = (uint32_t)current_time_ms;
 
-		task_ctx.gyro_dual_buffer[0].timestamp = current_timestamp_ms;
-		task_ctx.accel_dual_buffer[0].timestamp = current_timestamp_ms;
+		g_task_ctx.gyro_dual_buffer[0].timestamp = current_timestamp_ms;
+		g_task_ctx.accel_dual_buffer[0].timestamp = current_timestamp_ms;
 
 		if (W_SUCCESS ==
-			adxrs649_get_gyro_data(&(task_ctx.gyro_dual_buffer[0].z_rate), &raw_gyro)) {
-			task_ctx.gyro_dual_buffer[0].is_dead = true;
+			adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[0].z_rate), &raw_gyro)) {
+			g_task_ctx.gyro_dual_buffer[0].is_dead = true;
 		} else {
-			task_ctx.gyro_dual_buffer[0].is_dead = false;
+			g_task_ctx.gyro_dual_buffer[0].is_dead = false;
 			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
 		}
-		// TODO: add ADXL get acceleration
+
+		if (W_SUCCESS ==
+			adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[0].accelerometer), &raw_accel)) {
+			g_task_ctx.accel_dual_buffer[0].is_dead = true;
+		} else {
+			g_task_ctx.accel_dual_buffer[0].is_dead = false;
+			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
+		}
 
 		taskENTER_CRITICAL();
 		// Gyro
-		memcpy(&(task_ctx.gyro_dual_buffer[1]),
-			   &(task_ctx.gyro_dual_buffer[0]),
+		memcpy(&(g_task_ctx.gyro_dual_buffer[1]),
+			   &(g_task_ctx.gyro_dual_buffer[0]),
 			   AD_GYRO_MEASUREMENT_SIZE);
 
 		// Accelerometer
-		memcpy(&(task_ctx.accel_dual_buffer[1]),
-			   &(task_ctx.accel_dual_buffer[0]),
+		memcpy(&(g_task_ctx.accel_dual_buffer[1]),
+			   &(g_task_ctx.accel_dual_buffer[0]),
 			   AD_ACCEL_MEASUREMENT_SIZE);
 		taskEXIT_CRITICAL();
 
@@ -179,15 +187,15 @@ void ad_breakout_board_task(void *argument) {
 
 /**
  * @brief to read both the accelerometer and gyro data
- * @param gyro_data this is a pointer to converted data
- * @param accel_data pointer to state of our data
+ * @param g_gyro_data this is a pointer to converted gyro data
+ * @param g_accel_data pointer to state of converted accel data
  * @return the status of getting data
  */
-w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *gyro_data,
-									  ad_accelerometer_mesurement_t *accel_data) {
+w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *g_gyro_data,
+									  ad_accelerometer_mesurement_t *g_accel_data) {
 	taskENTER_CRITICAL();
-	memcpy(gyro_data, &(task_ctx.gyro_dual_buffer[1]), AD_GYRO_MEASUREMENT_SIZE);
-	memcpy(accel_data, &(task_ctx.accel_dual_buffer[1]), AD_ACCEL_MEASUREMENT_SIZE);
+	memcpy(g_gyro_data, &(g_task_ctx.gyro_dual_buffer[1]), AD_GYRO_MEASUREMENT_SIZE);
+	memcpy(g_accel_data, &(g_task_ctx.accel_dual_buffer[1]), AD_ACCEL_MEASUREMENT_SIZE);
 	taskEXIT_CRITICAL();
 
 	return W_SUCCESS;
