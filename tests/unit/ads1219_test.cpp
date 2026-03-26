@@ -4,6 +4,7 @@
 
 extern "C" {
 #include <stdint.h>
+#include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/i2c/i2c.h"
 
@@ -11,6 +12,7 @@ extern w_status_t ads1219_read_value(ads1219_handle_t *handle, uint32_t *value);
 
 FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *, uint8_t);
 FAKE_VALUE_FUNC(w_status_t, i2c_write_reg, i2c_bus_t, uint8_t, uint8_t, const uint8_t *, uint8_t);
+FAKE_VALUE_FUNC(w_status_t, i2c_write_data, i2c_bus_t, uint8_t, const uint8_t *, uint8_t);
 
 }
 
