@@ -30,7 +30,6 @@ FAKE_VALUE_FUNC(w_status_t, ads1219_start, ads1219_handle_t *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_conversion_ready, ads1219_handle_t *, bool *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_read_value, ads1219_handle_t *, uint32_t *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_millivolts, ads1219_handle_t *, int32_t, float *);
-FAKE_VALUE_FUNC(w_status_t, adxrs649_self_test);
 
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 }
@@ -43,10 +42,10 @@ w_status_t gpio_set_read(gpio_pin_t pin, gpio_level_t *level, uint32_t timeout) 
 }
 
 
-gpio_level_t global_ads1219_conversion_ready = false;
+bool global_ads1219_conversion_ready = false;
 w_status_t ads1219_conversion_ready_return = W_SUCCESS;
 w_status_t ads1219_set_conversion_ready(ads1219_handle_t *handle, bool *ready) {
-    *level = global_gpio_value;
+    *ready = global_ads1219_conversion_ready;
     return ads1219_conversion_ready_return;
 }
 
@@ -73,7 +72,6 @@ protected:
         RESET_FAKE(ads1219_conversion_ready);
         RESET_FAKE(ads1219_read_value);
         RESET_FAKE(ads1219_millivolts);
-        RESET_FAKE(adxrs649_self_test);
 
         RESET_FAKE(log_text);
         FFF_RESET_HISTORY();
@@ -101,7 +99,6 @@ TEST_F(ADXRS649, initSuccess){
     ads1219_set_vref_fake.return_val = W_SUCCESS;
 
     // self-test
-    adxrs649_self_test_fake.return_val = W_SUCCESS;
     gpio_write_fake.return_val = W_SUCCESS;
 
     // start
@@ -124,7 +121,6 @@ TEST_F(ADXRS649, initFailAfterADS1219InitFail){
     ads1219_set_vref_fake.return_val = W_SUCCESS;
 
     // self-test
-    adxrs649_self_test_fake.return_val = W_SUCCESS;
     gpio_write_fake.return_val = W_SUCCESS;
 
     // start
@@ -147,7 +143,6 @@ TEST_F(ADXRS649, initFailAfterSetUpFail){
     ads1219_set_vref_fake.return_val = W_SUCCESS;
 
     // self-test
-    adxrs649_self_test_fake.return_val = W_SUCCESS;
     gpio_write_fake.return_val = W_SUCCESS;
 
     // start
@@ -157,54 +152,7 @@ TEST_F(ADXRS649, initFailAfterSetUpFail){
     EXPECT_NE(W_SUCCESS, status);
 };
 
-TEST_F(ADXRS649, initFailAfterSelfTestFail){
-
-    // set up function returns
-    ads1219_init_fake.return_val = W_SUCCESS;
-
-    // set up
-    ads1219_set_channel_fake.return_val = W_SUCCESS;
-    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
-    ads1219_set_gain_fake.return_val = W_SUCCESS;
-    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
-    ads1219_set_vref_fake.return_val = W_SUCCESS;
-
-    // self-test
-    adxrs649_self_test_fake.return_val = W_FAILURE;
-    gpio_write_fake.return_val = W_SUCCESS;
-
-    // start
-    ads1219_start_fake.return_val = W_SUCCESS;
-
-    w_status_t status= adxrs649_init();
-    EXPECT_EQ(W_FAILURE, status);
-    EXPECT_EQ(2, gpio_write_fake.call_count);
-};
-
-TEST_F(ADXRS649, initFailAfterSelfTestFailWithGPIO){
-
-    // set up function returns
-    ads1219_init_fake.return_val = W_SUCCESS;
-
-    // set up
-    ads1219_set_channel_fake.return_val = W_SUCCESS;
-    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
-    ads1219_set_gain_fake.return_val = W_SUCCESS;
-    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
-    ads1219_set_vref_fake.return_val = W_SUCCESS;
-
-    // self-test
-    adxrs649_self_test_fake.return_val = W_FAILURE;
-    gpio_write_fake.return_val = W_FAILURE;
-
-    // start
-    ads1219_start_fake.return_val = W_SUCCESS;
-
-    w_status_t status= adxrs649_init();
-    EXPECT_EQ(W_FAILURE, status);
-    EXPECT_EQ(2, gpio_write_fake.call_count);
-};
-
+// unable to fake self-test since it's static function
 
 TEST_F(ADXRS649, initFailAfterStartFail){
 
@@ -219,7 +167,6 @@ TEST_F(ADXRS649, initFailAfterStartFail){
     ads1219_set_vref_fake.return_val = W_SUCCESS;
 
     // self-test
-    adxrs649_self_test_fake.return_val = W_SUCCESS;
     gpio_write_fake.return_val = W_SUCCESS;
 
     // start
@@ -248,9 +195,9 @@ TEST_F(ADXRS649, getGyroDataFailByBothDRDYFail){
 TEST_F(ADXRS649, getGyroDataFailByGPIORead0){
 
     // read DRDY
-    gpio_set_read_fake.custome_fake = gpio_set_read;
     global_gpio_value = GPIO_LEVEL_HIGH;
     gpio_return_value = W_SUCCESS; 
+    gpio_read_fake.custom_fake = gpio_set_read;
 
     ads1219_conversion_ready_fake.return_val = W_SUCCESS;
 
@@ -267,7 +214,7 @@ TEST_F(ADXRS649, getGyroDataFailByGPIORead0){
 TEST_F(ADXRS649, getGyroDataFailWithGPIOFailADS1219SuceessNotReady){
 
     // read DRDY
-    gpio_read_fake.return_val = W_SUCCESS;
+    gpio_read_fake.return_val = W_FAILURE;
 
     global_ads1219_conversion_ready = false;
     ads1219_conversion_ready_return = W_SUCCESS;
@@ -281,13 +228,16 @@ TEST_F(ADXRS649, getGyroDataFailWithGPIOFailADS1219SuceessNotReady){
     float data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
+    EXPECT_EQ(1, ads1219_conversion_ready_fake.call_count);
     EXPECT_EQ(W_FAILURE, status);
 };
 
 TEST_F(ADXRS649, getGyroDataFailByReadValFail){
 
     // read DRDY
-    gpio_read_fake.return_val = W_SUCCESS;
+    global_gpio_value = GPIO_LEVEL_LOW;
+    gpio_return_value = W_SUCCESS; 
+    gpio_read_fake.custom_fake = gpio_set_read;
     ads1219_conversion_ready_fake.return_val = W_SUCCESS;
 
     // read value
@@ -303,7 +253,9 @@ TEST_F(ADXRS649, getGyroDataFailByReadValFail){
 TEST_F(ADXRS649, getGyroDataFailByConvFail){
 
     // read DRDY
-    gpio_read_fake.return_val = W_SUCCESS;
+    global_gpio_value = GPIO_LEVEL_LOW;
+    gpio_return_value = W_SUCCESS; 
+    gpio_read_fake.custom_fake = gpio_set_read;
     ads1219_conversion_ready_fake.return_val = W_SUCCESS;
 
     // read value
@@ -319,7 +271,9 @@ TEST_F(ADXRS649, getGyroDataFailByConvFail){
 TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMax){
 
     // read DRDY
-    gpio_read_fake.return_val = W_SUCCESS;
+    global_gpio_value = GPIO_LEVEL_LOW;
+    gpio_return_value = W_SUCCESS; 
+    gpio_read_fake.custom_fake = gpio_set_read;
     ads1219_conversion_ready_fake.return_val = W_SUCCESS;
 
     // read value
