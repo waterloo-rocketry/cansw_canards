@@ -56,6 +56,11 @@ w_status_t ads1219_set_millivolts(ads1219_handle_t *handle, const int32_t adc_co
     return ads1219_set_millivolts_return;
 }
 
+w_status_t ads1219_read_value_set_data(ads1219_handle_t *handle, uint32_t *value) {
+    *value = 1;
+    return W_SUCCESS;
+}
+
 class ADXRS649 : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -283,9 +288,87 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMax){
     ads1219_set_millivolts_return = W_SUCCESS;
     ads1219_millivolts_fake.custom_fake = ads1219_set_millivolts;
 
+    ads1219_read_value_fake.custom_fake = ads1219_read_value_set_data;
+
     float data = 0;
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
     EXPECT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_EQ(1, raw_data);
+};
+
+TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMin){
+
+    // read DRDY
+    global_gpio_value = GPIO_LEVEL_LOW;
+    gpio_return_value = W_SUCCESS; 
+    gpio_read_fake.custom_fake = gpio_set_read;
+    ads1219_conversion_ready_fake.return_val = W_SUCCESS;
+
+    // read value
+    ads1219_read_value_fake.return_val = W_SUCCESS;
+
+    global_adc_output_mv = 500;
+    ads1219_set_millivolts_return = W_SUCCESS;
+    ads1219_millivolts_fake.custom_fake = ads1219_set_millivolts;
+
+    ads1219_read_value_fake.custom_fake = ads1219_read_value_set_data;
+
+    float data = 0;
+    uint32_t raw_data = 0;
+    w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
+    EXPECT_EQ(W_SUCCESS, status);
+    EXPECT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_EQ(1, raw_data);
+};
+
+TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorZero){
+
+    // read DRDY
+    global_gpio_value = GPIO_LEVEL_LOW;
+    gpio_return_value = W_SUCCESS; 
+    gpio_read_fake.custom_fake = gpio_set_read;
+    ads1219_conversion_ready_fake.return_val = W_SUCCESS;
+
+    // read value
+    ads1219_read_value_fake.return_val = W_SUCCESS;
+
+    global_adc_output_mv = 0;
+    ads1219_set_millivolts_return = W_SUCCESS;
+    ads1219_millivolts_fake.custom_fake = ads1219_set_millivolts;
+
+    ads1219_read_value_fake.custom_fake = ads1219_read_value_set_data;
+
+    float data = 0;
+    uint32_t raw_data = 0;
+    w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
+    EXPECT_EQ(W_SUCCESS, status);
+    EXPECT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_EQ(1, raw_data);
+};
+
+TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorRegular){
+
+    // read DRDY
+    global_gpio_value = GPIO_LEVEL_LOW;
+    gpio_return_value = W_SUCCESS; 
+    gpio_read_fake.custom_fake = gpio_set_read;
+    ads1219_conversion_ready_fake.return_val = W_SUCCESS;
+
+    // read value
+    ads1219_read_value_fake.return_val = W_SUCCESS;
+
+    global_adc_output_mv = 1000;
+    ads1219_set_millivolts_return = W_SUCCESS;
+    ads1219_millivolts_fake.custom_fake = ads1219_set_millivolts;
+
+    ads1219_read_value_fake.custom_fake = ads1219_read_value_set_data;
+
+    float data = 0;
+    uint32_t raw_data = 0;
+    w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
+    EXPECT_EQ(W_SUCCESS, status);
+    EXPECT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_EQ(1, raw_data);
 };
