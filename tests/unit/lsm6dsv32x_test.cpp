@@ -23,7 +23,7 @@ FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_I2C_Mem_Read_DMA,
 #define LSM6DSV32X_ADDR 0x6B
 
 static w_status_t timer_get_ms_custom_fake(float *ms) {
-    if (ms == NULL) {
+    if (NULL == ms) {
         return W_INVALID_PARAM;
     }
 

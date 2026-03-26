@@ -35,14 +35,14 @@ w_status_t lsm6dsv32x_check_sanity() {
 	w_status_t device_status = W_SUCCESS;
 
 	uint8_t expected_lsm6dsv32x = 0x70;
-	uint8_t who_am_i;
+	uint8_t who_am_i = 0;
 
 	i2c_status |= i2c_read_reg(I2C_BUS_4, LSM6DSV32X_ADDR, LSM6DSV32X_WHO_AM_I, &who_am_i, 1);
 	if (expected_lsm6dsv32x != who_am_i) {
 		device_status |= W_FAILURE;
 	}
 
-	if (W_SUCCESS == device_status && W_SUCCESS == i2c_status) {
+	if ((W_SUCCESS == device_status) && (W_SUCCESS == i2c_status)) {
 		return W_SUCCESS;
 	} else {
 		return W_FAILURE;
@@ -93,8 +93,8 @@ w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx) {
 	// set LPF bandwith to 241 (ODR/4)
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL6_G, 0x0C);
 
-	//enable gryro LPF
-	//dont touch imput impedance
+	// enable gryro LPF
+	// dont touch imput impedance
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL7_G, 0x01);
 
 	// Disable 2 channel mode
@@ -153,7 +153,7 @@ w_status_t lsm6dsv32x_dma_complete_handle() {
 	return W_SUCCESS;
 }
 
-//TODO: make below function into a seperate module, interupts or gpio or dma
+// TODO: make below function into a seperate module, interupts or gpio or dma
 
 /**
  * @brief handler for after the DMA is completed
