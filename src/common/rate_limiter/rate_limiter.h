@@ -11,9 +11,13 @@
  * @return if it's time to run the call
  */
 static inline bool rate_limiter(const uint16_t freq, double current_ms, double * p_last_ms) {
-    if ((current_ms - (*p_last_ms)) >= (1000 / freq)) {
-        *p_last_ms = current_ms;
-        return true;
+    // make sure the data is within reason
+    if ((0 <= current_ms) && (0 <= (*p_last_ms)) && (current_ms > (*p_last_ms))) {
+        
+        if ((current_ms - (*p_last_ms)) >= (1000 / freq)) {
+            *p_last_ms = current_ms;
+            return true;
+        }
     }
     return false;
 }
