@@ -14,9 +14,14 @@ extern TIM_HandleTypeDef htim2;
 // Error tracking
 static timer_health_t timer_health = {0};
 
-w_status_t timer_get_ms(float *ms) {
+/**
+ * @brief provides time with accuracy of a ms
+ * @param p_ms the pointer to the time (ms)
+ * @return status of function call
+ */
+w_status_t timer_get_ms(uint32_t *p_ms) {
 	// check if there exists a valid locatiton to store the time
-	if (ms == NULL) {
+	if (p_ms == NULL) {
 		timer_health.invalid_param++;
 		return W_INVALID_PARAM;
 	}
@@ -38,7 +43,42 @@ w_status_t timer_get_ms(float *ms) {
 
 	// convert the timer count to milliseconds
 	// each tick is 0.1 ms, so we multiply by 0.1
-	*ms = (float)timer_count * 0.1f;
+	*p_ms = (uint32_t)(timer_count / 10);
+
+	timer_health.valid_calls++;
+	return W_SUCCESS;
+}
+
+/**
+ * @brief provides time with accuracy of a tenth of a ms
+ * @param p_time the pointer to the time (units tenth of a ms)
+ * @return status of function call
+ */
+w_status_t timer_get_tenth_ms(uint32_t *p_time) {
+	// check if there exists a valid locatiton to store the time
+	if (p_time == NULL) {
+		timer_health.invalid_param++;
+		return W_INVALID_PARAM;
+	}
+	// check the timer handle pointer to ensure it is valid
+	if (htim2.Instance == NULL) {
+		timer_health.timer_invalid++;
+		return W_FAILURE;
+	}
+
+	// check and validate whether the timer is alive
+	HAL_TIM_StateTypeDef state = HAL_TIM_IC_GetState(&htim2);
+	if (state == HAL_TIM_STATE_RESET || state == HAL_TIM_STATE_ERROR) {
+		timer_health.timer_stopped++;
+		return W_FAILURE;
+	}
+
+	// retrieve the current timer count (in clock ticks)
+	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+
+	// convert the timer count to milliseconds
+	// each tick is 0.1 ms, so we multiply by 0.1
+	*p_time = timer_count;
 
 	timer_health.valid_calls++;
 	return W_SUCCESS;
