@@ -105,3 +105,80 @@ TEST_F(TimerTest, GetMsMaxCounterValue) {
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
     EXPECT_EQ(ms, UINT32_MAX / 10);
 }
+
+
+// TENTH_MS
+// test timer_get_tenth_ms with NULL pointer
+TEST_F(TimerTest, GetTenthMsNullPointerFails) {
+    // Act
+    w_status_t status = timer_get_tenth_ms(NULL);
+
+    // Assert
+    EXPECT_EQ(status, W_INVALID_PARAM);
+    EXPECT_EQ(HAL_TIM_IC_GetState_fake.call_count, 0);
+    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
+}
+
+// test timer_get_tenth_ms with invalid timer instance
+TEST_F(TimerTest, GetTenthMsInvalidTimerInstanceFails) {
+    // Arrange
+    uint32_t tenth_ms;
+    htim2.Instance = NULL;
+
+    // Act
+    w_status_t status = timer_get_tenth_ms(&tenth_ms);
+
+    // Assert
+    EXPECT_EQ(status, W_FAILURE);
+    EXPECT_EQ(HAL_TIM_IC_GetState_fake.call_count, 0);
+    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
+}
+
+// test timer_get_tenth_ms with timer not running
+TEST_F(TimerTest, GetTenthMsTimerNotRunningFails) {
+    // Arrange
+    uint32_t tenth_ms;
+    HAL_TIM_IC_GetState_fake.return_val = HAL_TIM_STATE_ERROR;
+
+    // Act
+    w_status_t status = timer_get_tenth_ms(&tenth_ms);
+
+    // Assert
+    EXPECT_EQ(status, W_FAILURE);
+    EXPECT_EQ(HAL_TIM_IC_GetState_fake.call_count, 1);
+    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
+}
+
+// test timer_get_tenth_ms successful operation
+TEST_F(TimerTest, GetTenthMsSuccessful) {
+    // Arrange
+    uint32_t tenth_ms;
+    HAL_TIM_IC_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
+    __HAL_TIM_GET_COUNTER_fake.return_val = 1000; // 1000 ticks
+
+    // Act
+    w_status_t status = timer_get_tenth_ms(&tenth_ms);
+
+    // Assert
+    EXPECT_EQ(status, W_SUCCESS);
+    EXPECT_EQ(HAL_TIM_IC_GetState_fake.call_count, 1);
+    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
+    EXPECT_EQ(tenth_ms, 1000); // 1000 ticks = 100 tenth of a ms
+}
+
+// test timer_get_tenth_ms with maximum counter value
+TEST_F(TimerTest, GetTenthMsMaxCounterValue) {
+    // Arrange
+    uint32_t tenth_ms;
+    HAL_TIM_IC_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
+    __HAL_TIM_GET_COUNTER_fake.return_val = UINT32_MAX;
+
+    // Act
+    w_status_t status = timer_get_tenth_ms(&tenth_ms);
+
+    // Assert
+    EXPECT_EQ(status, W_SUCCESS);
+    EXPECT_EQ(HAL_TIM_IC_GetState_fake.call_count, 1);
+    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
+    EXPECT_EQ(tenth_ms, UINT32_MAX);
+}
