@@ -7,12 +7,21 @@
 #include "drivers/timer/timer.h"
 #include "application/logger/log.h"
 #include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_tim.h"
 
 // external timer handle declaration
 extern TIM_HandleTypeDef htim2;
 
 // Error tracking
 static timer_health_t timer_health = {0};
+
+w_status_t timer_init() {
+	if (HAL_OK != HAL_TIM_IC_Start(&htim2, TIM_CHANNEL_2)) {
+		log_text(0, "timer", "ERROR: Failed to start TIM CHANNEL 2.");
+		return W_FAILURE;
+	}
+	return W_SUCCESS;
+}
 
 /**
  * @brief tracks system time since program startup
