@@ -56,3 +56,21 @@ TEST_F(RateLimiterTest, RateLimiterFailureLastTimeLarger) {
     EXPECT_EQ(false, rate_limiter(4, 100.2, &last_time));
     EXPECT_FLOAT_EQ(230, last_time);
 }
+
+TEST_F(RateLimiterTest, RateLimiterFailureNeg1) {
+    double last_time = 230;
+    EXPECT_EQ(false, rate_limiter(4, -100.2, &last_time));
+    EXPECT_FLOAT_EQ(230, last_time);
+}
+
+TEST_F(RateLimiterTest, RateLimiterFailureNeg2) {
+    double last_time = -230;
+    EXPECT_EQ(false, rate_limiter(4, 100.2, &last_time));
+    EXPECT_FLOAT_EQ(-230, last_time);
+}
+
+TEST_F(RateLimiterTest, RateLimiterFailureNeg3) {
+    double last_time = -230;
+    EXPECT_EQ(false, rate_limiter(1000, -228.5, &last_time));
+    EXPECT_FLOAT_EQ(-230, last_time);
+}
