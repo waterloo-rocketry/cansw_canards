@@ -119,37 +119,34 @@ static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, const int3
 												 const altimu_raw_imu_data_t *raw_accel) {
 	flight_phase_state_t flight_state = flight_phase_get_state();
 
-    log_data_container_t log_payload_gyro = {.imu_reading_pt1 = {.accelerometer = {.x = raw_accel->x, .y = raw_accel->y, .z = raw_accel->z}}};
+	log_data_container_t log_payload_gyro = {
+		.imu_reading_pt1 = {
+			.accelerometer = {.x = raw_accel->x, .y = raw_accel->y, .z = raw_accel->z}}};
 
-    log_data_container_t log_payload_accel = {.imu_reading_pt2 = {.gyroscope = {.z = raw_gyro}}};
+	log_data_container_t log_payload_accel = {.imu_reading_pt2 = {.gyroscope = {.z = raw_gyro}}};
 
 	// TODO: CHANGE LOGGING TO MATCH CORRECT TYPE
 	switch (flight_state) {
 		case STATE_IDLE:
 		case STATE_RECOVERY:
-            //ADXRS
+			// ADXRS
 			if ((loop_count % IDLE_RECOVERY_ADXRS_SD_LOG_RATE) == 0) {
-                // TODO: CHANGE LOGGING TO MATCH SD CARD
-                log_data(0, LOG_TYPE_POLOLU_READING_PT2, &log_payload_gyro);
-            }
+				// TODO: CHANGE LOGGING TO MATCH SD CARD
+				log_data(0, LOG_TYPE_POLOLU_READING_PT2, &log_payload_gyro);
+			}
 			if ((loop_count % IDLE_RECOVERY_ADXRS_FLASH_LOG_RATE) == 0) {
-                // TODO: CHANGE LOGGING TO MATCH FLASH
-                log_data(0, LOG_TYPE_POLOLU_READING_PT2, &log_payload_gyro);
-            }
+				// TODO: CHANGE LOGGING TO MATCH FLASH
+				log_data(0, LOG_TYPE_POLOLU_READING_PT2, &log_payload_gyro);
+			}
 			if ((loop_count % IDLE_ADXRS_CAN_LOG_RATE) == 0) {
-                // TODO: CHANGE TO MATCH NEW TELEMETRY STANDARD
-                log_data(0, LOG_TYPE_POLOLU_READING_PT2, &log_payload_gyro);
-            }
+				// TODO: CHANGE TO MATCH NEW TELEMETRY STANDARD
+				log_data(0, LOG_TYPE_POLOLU_READING_PT2, &log_payload_gyro);
+			}
 
-            //ADXL
-			if ((loop_count % IDLE_RECOVERY_ADXL_SD_LOG_RATE) == 0) {
-            }
-			if ((loop_count % IDLE_RECOVERY_ADXL_FLASH_LOG_RATE) == 0) {
-
-            }
-			if ((loop_count % IDLE_ADXL_CAN_LOG_RATE) == 0) {
-
-            }
+			// ADXL
+			if ((loop_count % IDLE_RECOVERY_ADXL_SD_LOG_RATE) == 0) {}
+			if ((loop_count % IDLE_RECOVERY_ADXL_FLASH_LOG_RATE) == 0) {}
+			if ((loop_count % IDLE_ADXL_CAN_LOG_RATE) == 0) {}
 			break;
 		default:
 			break;
@@ -169,7 +166,7 @@ void ad_breakout_board_task(void *argument) {
 	const TickType_t period = pdMS_TO_TICKS(AD_BREAKOUT_BOARD_PERIOD_MS);
 	uint32_t loop_count = 0;
 
-	int32_t raw_gyro = 0;
+	uint32_t raw_gyro = 0;
 	altimu_raw_imu_data_t raw_accel = {};
 	float current_time_ms = 0;
 	uint32_t current_timestamp_ms = 0;
