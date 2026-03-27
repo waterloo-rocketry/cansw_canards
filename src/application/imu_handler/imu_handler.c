@@ -56,7 +56,7 @@ static imu_handler_state_t imu_handler_state = {0};
 static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	// Log raw data to CAN
 	can_msg_t msg;
-	float timestamp = 0.0f;
+	uint32_t timestamp = 0;
 	timer_get_ms(&timestamp);
 	bool build_sts = true;
 	w_status_t can_tx_sts = W_SUCCESS;
@@ -231,12 +231,12 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	estimator_all_imus_input_t imu_data = {.pololu = {.is_dead = false},
 										   .movella = {.is_dead = false}};
 	raw_pololu_data_t raw_pololu_data = {0};
-	float current_time_ms;
+	uint32_t current_time_ms;
 	w_status_t status = W_SUCCESS;
 
 	// Get current timestamp
 	if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
-		current_time_ms = 0.0f;
+		current_time_ms = 0;
 	}
 	uint32_t now_ms = (uint32_t)current_time_ms;
 

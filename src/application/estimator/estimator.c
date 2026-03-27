@@ -357,7 +357,7 @@ void estimator_task(void *argument) {
 	if (timer_get_ms(&init_time_ms) != W_SUCCESS) {
 		proc_handle_fatal_error("estini");
 	}
-	g_estimator_ctx.t = ((double) init_time_ms) / 1000.0f; // convert ms to seconds
+	g_estimator_ctx.t = ((double)init_time_ms) / 1000.0f; // convert ms to seconds
 
 	// initialize ctx to reasonable values in case pad filter never runs
 	g_estimator_ctx.x.attitude.w = 1.0;
