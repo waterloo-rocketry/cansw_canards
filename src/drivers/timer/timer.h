@@ -14,6 +14,8 @@ typedef struct {
 	uint32_t timer_invalid; /**< Count of calls when timer was invalid */
 } timer_health_t;
 
+w_status_t timer_init();
+
 /**
  * @brief tracks system time since program startup
  * @details retrieves time passed in the form of clock ticks, timer resolution set to 0.1ms (10000Hz
