@@ -10,16 +10,16 @@
  * @param p_last_ms pointer to the last operated time (this will be updated automatically)
  * @return if it's time to run the call
  */
-static inline bool rate_limiter(const uint16_t freq, double current_ms, double * p_last_ms) {
-    // make sure the data is within reason
-    if ((0 <= current_ms) && (0 <= (*p_last_ms)) && (current_ms > (*p_last_ms))) {
-        
-        if ((current_ms - (*p_last_ms)) >= (1000 / freq)) {
-            *p_last_ms = current_ms;
-            return true;
-        }
-    }
-    return false;
+static inline bool rate_limiter(const uint16_t freq, uint32_t current_ms, uint32_t *p_last_ms) {
+	// make sure the data is within reason
+	if (current_ms > (*p_last_ms)) { // Overflow should never occur, since the clock would overflow
+									 // first before uint32
+		if (((current_ms - (*p_last_ms)) * freq) >= 1000) {
+			*p_last_ms = current_ms;
+			return true;
+		}
+	}
+	return false;
 }
 
 #endif
