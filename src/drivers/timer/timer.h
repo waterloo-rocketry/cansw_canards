@@ -16,8 +16,8 @@ typedef struct {
 
 /**
  * @brief tracks system time since program startup
- * @details retrieves time passed in the form of clock ticks, timer resolution set to 1ms (1000Hz
- * frequency)
+ * @details retrieves time passed in the form of clock ticks, timer resolution set to 0.1ms (10000Hz
+ * frequency), however rounded to 1 ms resolution
  * @param p_ms the pointer to the time (ms)
  * @return status of function call
  */
@@ -27,7 +27,7 @@ w_status_t timer_get_ms(uint32_t *ms);
  * @brief tracks system time since program startup
  * @details retrieves time passed in the form of clock ticks, timer resolution set to 0.1ms (10000Hz
  * frequency)
- * @param p_ms the pointer to the time (tenth of a ms)
+ * @param p_time the pointer to the time (tenth of a ms)
  * @return status of function call
  */
 w_status_t timer_get_tenth_ms(uint32_t *p_time);
