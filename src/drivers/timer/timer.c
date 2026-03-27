@@ -15,7 +15,9 @@ extern TIM_HandleTypeDef htim2;
 static timer_health_t timer_health = {0};
 
 /**
- * @brief provides time with accuracy of a ms
+ * @brief tracks system time since program startup
+ * @details retrieves time passed in the form of clock ticks, timer resolution set to 1ms (1000Hz
+ * frequency)
  * @param p_ms the pointer to the time (ms)
  * @return status of function call
  */
@@ -50,8 +52,10 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 }
 
 /**
- * @brief provides time with accuracy of a tenth of a ms
- * @param p_time the pointer to the time (units tenth of a ms)
+ * @brief tracks system time since program startup
+ * @details retrieves time passed in the form of clock ticks, timer resolution set to 0.1ms (10000Hz
+ * frequency)
+ * @param p_ms the pointer to the time (tenth of a ms)
  * @return status of function call
  */
 w_status_t timer_get_tenth_ms(uint32_t *p_time) {
