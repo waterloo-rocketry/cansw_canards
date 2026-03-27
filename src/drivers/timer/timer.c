@@ -16,13 +16,13 @@ static timer_health_t timer_health = {0};
 
 /**
  * @brief tracks system time since program startup
- * @details retrieves time passed in the form of clock ticks, timer resolution set to 1ms (1000Hz
- * frequency)
+ * @details retrieves time passed in the form of clock ticks, timer resolution set to 0.1ms (10000Hz
+ * frequency), however rounded to 1 ms resolution
  * @param p_ms the pointer to the time (ms)
  * @return status of function call
  */
 w_status_t timer_get_ms(uint32_t *p_ms) {
-	// check if there exists a valid locatiton to store the time
+	// check if there exists a valid location to store the time
 	if (p_ms == NULL) {
 		timer_health.invalid_param++;
 		return W_INVALID_PARAM;
@@ -44,7 +44,7 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
 
 	// convert the timer count to milliseconds
-	// each tick is 0.1 ms, so we multiply by 0.1
+	// each tick is 0.1 ms, so we divide by 10 to truncate to ms accuracy
 	*p_ms = (uint32_t)(timer_count / 10);
 
 	timer_health.valid_calls++;
@@ -55,11 +55,11 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
  * @brief tracks system time since program startup
  * @details retrieves time passed in the form of clock ticks, timer resolution set to 0.1ms (10000Hz
  * frequency)
- * @param p_ms the pointer to the time (tenth of a ms)
+ * @param p_time the pointer to the time (tenth of a ms)
  * @return status of function call
  */
 w_status_t timer_get_tenth_ms(uint32_t *p_time) {
-	// check if there exists a valid locatiton to store the time
+	// check if there exists a valid location to store the time
 	if (p_time == NULL) {
 		timer_health.invalid_param++;
 		return W_INVALID_PARAM;
@@ -81,7 +81,7 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
 
 	// convert the timer count to milliseconds
-	// each tick is 0.1 ms, so we multiply by 0.1
+	// each tick is 0.1 ms, so whe just keep the same value for a tenth of ms accuracy
 	*p_time = timer_count;
 
 	timer_health.valid_calls++;

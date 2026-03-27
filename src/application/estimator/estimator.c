@@ -109,7 +109,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 	controller_output_t latest_controller_cmd = {0};
 	controller_input_t output_to_controller = {0};
 	float latest_encoder_rad = 0;
-	uint32_t curr_time_ms = 0.0f;
+	uint32_t curr_time_ms = 0;
 	bool encoder_is_dead = false;
 
 	// get latest imu data, transform into estimator data structs.
@@ -157,10 +157,12 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 	// get current time. as failsafe: default to 5ms period
 	uint32_t curr_time_ms_get = 0;
 	if (timer_get_ms(&curr_time_ms_get) == W_SUCCESS) {
-		curr_time_ms = curr_time_ms_get; // convert ms to seconds
+		curr_time_ms = curr_time_ms_get;
 	} else {
 		log_text(10, "Estimator", "timer_get_ms fail");
-		curr_time_ms = 1000 * (ctx->t + 0.005);
+		curr_time_ms =
+			(uint32_t)(1000 *
+					   (ctx->t + 0.005)); // assuming the time will be less then the UINT32_MAX
 	}
 
 	// run estimator module with all the inputs and ctx

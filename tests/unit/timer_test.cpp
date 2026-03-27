@@ -163,7 +163,7 @@ TEST_F(TimerTest, GetTenthMsSuccessful) {
     EXPECT_EQ(status, W_SUCCESS);
     EXPECT_EQ(HAL_TIM_IC_GetState_fake.call_count, 1);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
-    EXPECT_EQ(tenth_ms, 1000); // 1000 ticks = 100 tenth of a ms
+    EXPECT_EQ(tenth_ms, 1000); // 1000 ticks = 1000 tenth of a ms
 }
 
 // test timer_get_tenth_ms with maximum counter value

@@ -141,8 +141,8 @@ static void log_reset_buffer(log_buffer_t *buffer) {
 		log_data_container_t data = {0};
 		data.header.version = LOG_DATA_FORMAT_VERSION;
 		data.header.index = total_data_log_buffers;
-		// Use dummy timestamp of -1.0f if failed to get timestamp, as in log_text()
-		uint32_t timestamp = -1;
+		// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
+		uint32_t timestamp = 0;
 		(void)timer_get_ms(&timestamp);
 		log_data_write_to_region(buffer, 0, LOG_TYPE_HEADER, timestamp, &data);
 		total_data_log_buffers++;
@@ -242,10 +242,10 @@ w_status_t log_init(void) {
 
 w_status_t log_text(uint32_t timeout, const char *source, const char *format, ...) {
 	// Get timestamp as close to time of call as possible
-	// If we fail to get a timestamp, use a dummy value of -1.0f and continue to write the log
+	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log
 	// message anyway. We're trying to log as much as possible and a missing timestamp does not
 	// inherently critically affect the ability to write the log message
-	uint32_t timestamp = -1;
+	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
 	// Validate arguments
@@ -296,7 +296,7 @@ w_status_t log_text(uint32_t timeout, const char *source, const char *format, ..
 	// Write log message header to region
 	chars_written += snprintf_(msg_dest + chars_written,
 							   MAX_TEXT_MSG_LENGTH - chars_written,
-							   "[%ld] %s;",
+							   "[%" PRIu32 "] %s;",
 							   timestamp,
 							   source);
 	// If truncated, set first char to '!'
@@ -337,8 +337,8 @@ w_status_t log_text(uint32_t timeout, const char *source, const char *format, ..
 
 w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_container_t *data) {
 	// Get timestamp as close to time of call as possible
-	// Use dummy timestamp of -1.0f if failed to get timestamp, as in log_text()
-	uint32_t timestamp = -1;
+	// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
+	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
 	// Validate arguments

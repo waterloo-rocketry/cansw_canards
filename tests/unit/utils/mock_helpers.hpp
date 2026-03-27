@@ -16,7 +16,7 @@ extern "C" {
 
 // helpers for the timer_get_ms function
 
-// w_status_t timer_get_ms(float *time_ms);
+// w_status_t timer_get_ms(uint32_t *time_ms);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 
 // static makes this accessible to only the *_test.cpp file that includes this header.
