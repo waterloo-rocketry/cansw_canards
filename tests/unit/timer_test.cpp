@@ -45,7 +45,7 @@ TEST_F(TimerTest, GetMsNullPointerFails) {
 // test timer_get_ms with invalid timer instance
 TEST_F(TimerTest, GetMsInvalidTimerInstanceFails) {
     // Arrange
-    float ms;
+    uint32_t ms;
     htim2.Instance = NULL;
 
     // Act
@@ -60,7 +60,7 @@ TEST_F(TimerTest, GetMsInvalidTimerInstanceFails) {
 // test timer_get_ms with timer not running
 TEST_F(TimerTest, GetMsTimerNotRunningFails) {
     // Arrange
-    float ms;
+    uint32_t ms;
     HAL_TIM_IC_GetState_fake.return_val = HAL_TIM_STATE_ERROR;
 
     // Act
@@ -75,7 +75,7 @@ TEST_F(TimerTest, GetMsTimerNotRunningFails) {
 // test timer_get_ms successful operation
 TEST_F(TimerTest, GetMsSuccessful) {
     // Arrange
-    float ms;
+    uint32_t ms;
     HAL_TIM_IC_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
     __HAL_TIM_GET_COUNTER_fake.return_val = 1000; // 1000 ticks
 
@@ -86,13 +86,13 @@ TEST_F(TimerTest, GetMsSuccessful) {
     EXPECT_EQ(status, W_SUCCESS);
     EXPECT_EQ(HAL_TIM_IC_GetState_fake.call_count, 1);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
-    EXPECT_FLOAT_EQ(ms, 100.0f); // 1000 ticks * 0.1ms = 100ms
+    EXPECT_EQ(ms, 100); // 1000 ticks * 0.1ms = 100ms
 }
 
 // test timer_get_ms with maximum counter value
 TEST_F(TimerTest, GetMsMaxCounterValue) {
     // Arrange
-    float ms;
+    uint32_t ms;
     HAL_TIM_IC_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
     __HAL_TIM_GET_COUNTER_fake.return_val = UINT32_MAX;
 
@@ -103,5 +103,5 @@ TEST_F(TimerTest, GetMsMaxCounterValue) {
     EXPECT_EQ(status, W_SUCCESS);
     EXPECT_EQ(HAL_TIM_IC_GetState_fake.call_count, 1);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
-    EXPECT_FLOAT_EQ(ms, UINT32_MAX * 0.1f);
+    EXPECT_EQ(ms, UINT32_MAX / 10);
 }
