@@ -7,7 +7,6 @@
 #include "drivers/timer/timer.h"
 #include "application/logger/log.h"
 #include "stm32h7xx_hal.h"
-#include "stm32h7xx_hal_tim.h"
 
 // external timer handle declaration
 extern TIM_HandleTypeDef htim2;
@@ -15,11 +14,21 @@ extern TIM_HandleTypeDef htim2;
 // Error tracking
 static timer_health_t timer_health = {0};
 
+// make sure to report error if not initalized
+static bool g_timer_initalized = NULL;
+
+/**
+ * @brief initalize the HAL TIM for the timer
+ * @details Use TIM CHANNEL 2. Without initalization any timer call will be invalid
+ * @return the status of the initalization
+ */
 w_status_t timer_init() {
+	g_timer_initalized = false;
 	if (HAL_OK != HAL_TIM_IC_Start(&htim2, TIM_CHANNEL_2)) {
 		log_text(0, "timer", "ERROR: Failed to start TIM CHANNEL 2.");
 		return W_FAILURE;
 	}
+	g_timer_initalized = true;
 	return W_SUCCESS;
 }
 
@@ -38,6 +47,11 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 	}
 	// check the timer handle pointer to ensure it is valid
 	if (htim2.Instance == NULL) {
+		timer_health.timer_invalid++;
+		return W_FAILURE;
+	}
+	// check initalization
+	if (!g_timer_initalized) {
 		timer_health.timer_invalid++;
 		return W_FAILURE;
 	}
@@ -75,6 +89,11 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 	}
 	// check the timer handle pointer to ensure it is valid
 	if (htim2.Instance == NULL) {
+		timer_health.timer_invalid++;
+		return W_FAILURE;
+	}
+	// check initalization
+	if (!g_timer_initalized) {
 		timer_health.timer_invalid++;
 		return W_FAILURE;
 	}
