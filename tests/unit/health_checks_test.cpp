@@ -20,7 +20,7 @@ extern w_status_t get_adc_current(uint32_t *adc_current_mA);
 extern w_status_t check_watchdog_tasks(void);
 
 FAKE_VALUE_FUNC(w_status_t, adc_get_value, adc_channel_t, uint32_t *, uint32_t);
-FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float *);
+FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
 FAKE_VALUE_FUNC(
     bool, build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, uint16_t, can_msg_t *
@@ -47,7 +47,7 @@ FAKE_VALUE_FUNC(uint32_t, imu_handler_get_status);
 FAKE_VALUE_FUNC(uint32_t, uart_get_status);
 
 // Mocked global variables
-static float timer_ms_value_mock;
+static uint32_t timer_ms_value_mock;
 static uint32_t adc_value_mock;
 }
 
@@ -55,7 +55,7 @@ DEFINE_FFF_GLOBALS;
 
 // Mocked functions for helping with unit testing
 // check if having extra static functions is good or not for unit testing
-static w_status_t timer_get_ms_mock(float *out_time) {
+static w_status_t timer_get_ms_mock(uint32_t *out_time) {
     *out_time = timer_ms_value_mock;
     return W_SUCCESS;
 }
@@ -119,7 +119,7 @@ protected:
     void TearDown() override {}
 
     // Helper functions to set up the test environment
-    void SetTimerMs(float time_ms) {
+    void SetTimerMs(uint32_t time_ms) {
         timer_ms_value_mock = time_ms;
         timer_get_ms_fake.custom_fake = timer_get_ms_mock;
     }
@@ -173,7 +173,7 @@ TEST_F(HealthChecksTest, GetAdcCurrentFailing) {
 
 TEST_F(HealthChecksTest, NominalHealthCheck) {
     // Arrange
-    SetTimerMs(1000.0f);
+    SetTimerMs(1000);
     uint32_t nominal_current = 300; // example current
     SetAdcValue(
         // +1 for integer rounding
@@ -198,7 +198,7 @@ TEST_F(HealthChecksTest, NominalHealthCheck) {
 
 TEST_F(HealthChecksTest, OvercurrentHealthCheck) {
     // Arrange
-    SetTimerMs(1000.0f);
+    SetTimerMs(1000);
     uint32_t over_current = 5000; // example too much current
     // +1 for integer rounding
     SetAdcValue(
@@ -223,7 +223,7 @@ TEST_F(HealthChecksTest, OvercurrentHealthCheck) {
 
 TEST_F(HealthChecksTest, FailureHealthCheck) {
     // Arrange
-    SetTimerMs(1000.0f);
+    SetTimerMs(1000);
     uint32_t nominal_current = 300;
     // +1 for integer rounding
     SetAdcValue(
@@ -247,7 +247,7 @@ TEST_F(HealthChecksTest, WatchdogRegisterAndKick) {
     // Arrange
     TaskHandle_t fake_task = (TaskHandle_t)0x12345678; // bs address
     uint32_t timeout_ticks = pdMS_TO_TICKS(100);
-    SetTimerMs(1000.0f);
+    SetTimerMs(1000);
     xTaskGetCurrentTaskHandle_fake.return_val = fake_task;
 
     // Act
@@ -259,7 +259,7 @@ TEST_F(HealthChecksTest, WatchdogRegisterAndKick) {
     EXPECT_EQ(xTaskGetCurrentTaskHandle_fake.call_count, 1);
 
     // Advance time but still within timeout becuase timout was earlier set to 100ms
-    SetTimerMs(1050.0f);
+    SetTimerMs(1050);
     w_status_t result = check_watchdog_tasks();
 
     // Assert
@@ -271,7 +271,7 @@ TEST_F(HealthChecksTest, WatchdogTimeout) {
     // Arrange
     TaskHandle_t fake_task = (TaskHandle_t)0x12345678;
     uint32_t timeout_ticks = pdMS_TO_TICKS(100);
-    SetTimerMs(1000.0f);
+    SetTimerMs(1000);
     xTaskGetCurrentTaskHandle_fake.return_val = fake_task;
 
     watchdog_register_task(fake_task, timeout_ticks); // skip kicking to get to the timeout logic
@@ -282,7 +282,7 @@ TEST_F(HealthChecksTest, WatchdogTimeout) {
     can_handler_transmit_fake.return_val = W_SUCCESS;
 
     // Advance time beyond timeout
-    SetTimerMs(1200.0f); // 200ms later, should trigger timeout
+    SetTimerMs(1200); // 200ms later, should trigger timeout
 
     // Act
     uint32_t result = check_watchdog_tasks();
@@ -297,13 +297,13 @@ TEST_F(HealthChecksTest, WatchdogMaxTasksLimit) {
     for (uint32_t i = 0; i < 15; i++) {
         fake_tasks[i] = (TaskHandle_t)(uintptr_t)(0x10000 + i); // filling up with bs addresses
     }
-    SetTimerMs(1000.0f);
+    SetTimerMs(1000);
 
     // Act
     for (int i = 0; i < 15; i++) {
         watchdog_register_task(fake_tasks[i], 100); // never would take more than 10 anyway
     }
-    SetTimerMs(1050.0f);
+    SetTimerMs(1050);
 
     w_status_t result = check_watchdog_tasks();
 
