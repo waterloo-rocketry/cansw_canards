@@ -56,6 +56,8 @@ w_status_t lsm6dsv32x_check_sanity() {
  */
 w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx) {
 	lsm6dsv32x_ctx = new_imu_ctx;
+	lsm6dsv32x_ctx->bus_status = IMU_BUS_FREE;
+
 
 	w_status_t status = W_SUCCESS;
 
@@ -119,6 +121,8 @@ w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx) {
 w_status_t lsm6dsv32x_int1_isr_handler() {
 	w_status_t status = W_SUCCESS;
 
+	lsm6dsv32x_ctx->bus_status = IMU_BUS_BUSY;
+
 	status |= timer_get_ms(&lsm6dsv32x_ctx->timestamp[IMU_WRITE_BUFFER]);
 
 	// begin dma read to the main buffer
@@ -136,7 +140,7 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
  * @brief Interupt handler for the int1 pin
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (GPIO_Pin == IMU_INT1_PIN) {
+	if ((GPIO_Pin == IMU_INT1_PIN) && (IMU_BUS_FREE == lsm6dsv32x_ctx->bus_status)) {
 		lsm6dsv32x_int1_isr_handler();
 	}
 }
@@ -145,6 +149,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * @brief handler for after the DMA is completed
  */
 w_status_t lsm6dsv32x_dma_complete_handle() {
+
+	lsm6dsv32x_ctx->bus_status = IMU_BUS_FREE; 
+
 	memcpy(lsm6dsv32x_ctx->dual_buffer[IMU_READ_BUFFER],
 		   lsm6dsv32x_ctx->dual_buffer[IMU_WRITE_BUFFER],
 		   12);
@@ -159,7 +166,7 @@ w_status_t lsm6dsv32x_dma_complete_handle() {
  * @brief handler for after the DMA is completed
  */
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
-	if (lsm6dsv32x_ctx->hi2c == hi2c) {
+	if ((lsm6dsv32x_ctx->hi2c == hi2c)) {
 		lsm6dsv32x_dma_complete_handle();
 	}
 }

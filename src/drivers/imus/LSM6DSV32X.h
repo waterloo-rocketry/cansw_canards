@@ -12,7 +12,10 @@ enum {
 	IMU_WRITE_BUFFER = 1,
 
 	IMU_DATA_STALE = 1,
-	IMU_DATA_READY = 0
+	IMU_DATA_READY = 0,
+
+	IMU_BUS_BUSY = 0,
+	IMU_BUS_FREE = 1,
 };
 
 typedef struct {
@@ -21,6 +24,7 @@ typedef struct {
 	uint8_t dual_buffer[2][12];
 	TaskHandle_t task_to_notify;
 	volatile bool stale_data;
+	volatile bool bus_status; 
 	float timestamp[2];
 
 } imu_ctx_t;
