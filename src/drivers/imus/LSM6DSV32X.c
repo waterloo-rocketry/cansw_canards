@@ -15,6 +15,9 @@
 #define IMU_INT1_PORT GPIOD
 #define IMU_INT1_PIN GPIO_PIN_7
 
+//external definition of h2ic for the i2c bus 1;
+extern I2C_HandleTypeDef hi2c1;
+
 // sensor ranges. these must be selected using the i2c init regs
 static const float ACC_RANGE = 32.0; // g
 static const float GYRO_RANGE = 4000.0; // dps
@@ -24,6 +27,8 @@ static const float ACC_FS = ACC_RANGE / INT16_MAX; // g / LSB
 static const float GYRO_FS = GYRO_RANGE / INT16_MAX; // dps / LSB
 
 static imu_ctx_t *lsm6dsv32x_ctx;
+
+//TODO: update to use the proper i2c bus
 
 // Helper function for writing config (passing value as literal)
 static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
@@ -57,6 +62,7 @@ w_status_t lsm6dsv32x_check_sanity() {
 w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx) {
 	lsm6dsv32x_ctx = new_imu_ctx;
 	lsm6dsv32x_ctx->bus_status = IMU_BUS_FREE;
+	lsm6dsv32x_ctx->hi2c = &hi2c1; 
 
 	w_status_t status = W_SUCCESS;
 
@@ -120,6 +126,7 @@ w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx) {
 w_status_t lsm6dsv32x_int1_isr_handler() {
 	w_status_t status = W_SUCCESS;
 
+	//set the bus to occupied
 	lsm6dsv32x_ctx->bus_status = IMU_BUS_BUSY;
 
 	status |= timer_get_ms(&lsm6dsv32x_ctx->timestamp[IMU_WRITE_BUFFER]);
@@ -148,6 +155,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * @brief handler for after the DMA is completed
  */
 w_status_t lsm6dsv32x_dma_complete_handle() {
+	//allow access to the buss
 	lsm6dsv32x_ctx->bus_status = IMU_BUS_FREE;
 
 	memcpy(lsm6dsv32x_ctx->dual_buffer[IMU_READ_BUFFER],
