@@ -222,8 +222,7 @@ w_status_t health_check_exec() {
 
 	// send status CAN msg
 	can_msg_t msg = {0};
-	build_general_board_status_msg(
-		PRIO_LOW, xTaskGetTickCount(), status_bitfield, &msg);
+	build_general_board_status_msg(PRIO_LOW, xTaskGetTickCount(), status_bitfield, &msg);
 
 	if (can_handler_transmit(&msg) != W_SUCCESS) {
 		log_text(0, "health_checks", "CAN send failure for status msg");

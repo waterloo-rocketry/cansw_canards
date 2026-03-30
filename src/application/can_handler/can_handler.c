@@ -91,8 +91,8 @@ static void can_get_signed_limits(can_types_t type, int32_t *min_out, int32_t *m
 			*max_out = INT16_MAX;
 			break;
 		case TYPE_INT24:
-			*min_out = -(1 << 23);
-			*max_out = (1 << 23) - 1;
+			*min_out = INT24_MIN;
+			*max_out = INT24_MAX;
 			break;
 		case TYPE_INT32:
 			*min_out = INT32_MIN;
@@ -114,7 +114,7 @@ static void can_get_unsigned_max(can_types_t type, uint32_t *max_out) {
 			*max_out = UINT16_MAX;
 			break;
 		case TYPE_UINT24:
-			*max_out = (1U << 24) - 1U;
+			*max_out = UINT24_MAX;
 			break;
 		case TYPE_UINT32:
 			*max_out = UINT32_MAX;
@@ -122,6 +122,65 @@ static void can_get_unsigned_max(can_types_t type, uint32_t *max_out) {
 		default:
 			*max_out = 0;
 			break;
+	}
+}
+
+static bool can_type_is_unsigned(can_types_t type) {
+	return (type == TYPE_UINT8) || (type == TYPE_UINT16) || (type == TYPE_UINT24) ||
+		   (type == TYPE_UINT32);
+}
+
+static w_status_t can_store_unsigned(can_types_t type, uint32_t value, void *out) {
+	if (out == NULL) {
+		return W_INVALID_PARAM;
+	}
+
+	switch (type) {
+		case TYPE_UINT8: {
+			uint8_t encoded = (uint8_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		case TYPE_UINT16: {
+			uint16_t encoded = (uint16_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		case TYPE_UINT24:
+		case TYPE_UINT32: {
+			uint32_t encoded = (uint32_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		default:
+			return W_INVALID_PARAM;
+	}
+}
+
+static w_status_t can_store_signed(can_types_t type, int32_t value, void *out) {
+	if (out == NULL) {
+		return W_INVALID_PARAM;
+	}
+
+	switch (type) {
+		case TYPE_INT8: {
+			int8_t encoded = (int8_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		case TYPE_INT16: {
+			int16_t encoded = (int16_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		case TYPE_INT24:
+		case TYPE_INT32: {
+			int32_t encoded = (int32_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		default:
+			return W_INVALID_PARAM;
 	}
 }
 
@@ -223,80 +282,92 @@ void can_handler_task_tx(void *argument) {
 }
 
 w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void *out) {
+	if ((sensor >= SCALE_COUNT) || (out == NULL)) {
+		return W_INVALID_PARAM;
+	}
+
+	can_types_t target_type = scale_map[sensor].type;
+	bool is_unsigned = can_type_is_unsigned(target_type);
+
 	// handle NaN or +/-Inf with reserved sentinel codes near the limits of the target type
 	if (!isfinite(input)) {
-		if (scale_map[sensor].type == TYPE_UINT8 || scale_map[sensor].type == TYPE_UINT16 ||
-			scale_map[sensor].type == TYPE_UINT24 || scale_map[sensor].type == TYPE_UINT32) {
+		if (is_unsigned) {
 			uint32_t maxv = 0U;
-			can_get_unsigned_max(scale_map[sensor].type, &maxv);
+			can_get_unsigned_max(target_type, &maxv);
+			uint64_t encoded = 0U;
 
 			if (isinf(input)) {
 				if (signbit(input)) {
-					*((uint32_t *)out) = (maxv >= 2U) ? (maxv - 1U) : 0U; // -Inf
+					encoded = (maxv >= 2U) ? (maxv - 1U) : 0U; // -Inf
 				} else {
-					*((uint32_t *)out) = (maxv >= 2U) ? (maxv - 2U) : maxv; // +Inf
+					encoded = (maxv >= 2U) ? (maxv - 2U) : maxv; // +Inf
 				}
 			} else {
-				*((uint32_t *)out) = (maxv >= 3U) ? (maxv - 3U) : 0U; // NaN
+				encoded = (maxv >= 3U) ? (maxv - 3U) : 0U; // NaN
 			}
+
+			w_status_t store_status = can_store_unsigned(target_type, encoded, out);
+			return (store_status == W_SUCCESS) ? W_MATH_ERROR : store_status;
 		} else {
 			int32_t minv = 0, maxv = 0;
-			can_get_signed_limits(scale_map[sensor].type, &minv, &maxv);
+			can_get_signed_limits(target_type, &minv, &maxv);
+			int64_t encoded = 0;
 
 			if (isinf(input)) {
 				if (signbit(input)) {
-					*((int32_t *)out) = (minv <= INT32_MAX - 2) ? (minv + 2) : minv; // -Inf
+					encoded = (minv <= INT32_MAX - 2) ? (minv + 2) : minv; // -Inf
 				} else {
-					*((int32_t *)out) = (maxv >= 1) ? (maxv - 1) : maxv; // +Inf
+					encoded = (maxv >= 1) ? (maxv - 1) : maxv; // +Inf
 				}
 			} else {
-				*((int32_t *)out) = (minv <= INT32_MAX - 3) ? (minv + 3) : minv; // NaN
+				encoded = (minv <= INT32_MAX - 3) ? (minv + 3) : minv; // NaN
 			}
+
+			w_status_t store_status = can_store_signed(target_type, encoded, out);
+			return (store_status == W_SUCCESS) ? W_MATH_ERROR : store_status;
 		}
-		return W_MATH_ERROR;
 	}
 
 	float scaled = input * (float)scale_map[sensor].scale;
 
 	// clamp according to target type
-	if (scale_map[sensor].type == TYPE_UINT8 || scale_map[sensor].type == TYPE_UINT16 ||
-		scale_map[sensor].type == TYPE_UINT24 || scale_map[sensor].type == TYPE_UINT32) {
+	if (is_unsigned) {
 		uint32_t maxv = 0U;
-		can_get_unsigned_max(scale_map[sensor].type, &maxv);
+		can_get_unsigned_max(target_type, &maxv);
 
-		// Clamp scaled value to valid range for unsigned types
-		*((uint32_t *)out) = CLAMP(scaled, 0.0f, (float)maxv);
+		return can_store_unsigned(target_type, CLAMP(scaled, 0.0f, (float)maxv), out);
 
 	} else {
 		int32_t minv = 0, maxv = 0;
-		can_get_signed_limits(scale_map[sensor].type, &minv, &maxv);
+		can_get_signed_limits(target_type, &minv, &maxv);
 
-		// Clamp scaled value to valid range for signed types
-		*((int32_t *)out) = CLAMP(scaled, (float)minv, (float)maxv);
+		return can_store_signed(target_type, (int64_t)CLAMP(scaled, (float)minv, (float)maxv), out);
 	}
 	return W_SUCCESS;
 }
 
-w_status_t can_encode_scaled_int(can_scaling_types_t sensor, void *input, void *out) {
+w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void *out) {
+	if ((sensor >= SCALE_COUNT) || (out == NULL)) {
+		return W_INVALID_PARAM;
+	}
+
+	can_types_t target_type = scale_map[sensor].type;
+	bool is_unsigned = can_type_is_unsigned(target_type);
+
+	int64_t scaled = input * scale_map[sensor].scale;
+
 	// Scale and clamp according to target type
-	if (scale_map[sensor].type == TYPE_UINT8 || scale_map[sensor].type == TYPE_UINT16 ||
-		scale_map[sensor].type == TYPE_UINT24 || scale_map[sensor].type == TYPE_UINT32) {
-		uint32_t scaled = *((uint32_t *)input) * scale_map[sensor].scale;
-
+	if (is_unsigned) {
 		uint32_t maxv = 0U;
-		can_get_unsigned_max(scale_map[sensor].type, &maxv);
+		can_get_unsigned_max(target_type, &maxv);
 
-		// Clamp scaled value to valid range for unsigned types
-		*((uint32_t *)out) = CLAMP(scaled, 0.0f, (float)maxv);
+		return can_store_unsigned(target_type, CLAMP(scaled, 0U, maxv), out);
 
 	} else {
-		int32_t scaled = *((int32_t *)input) * scale_map[sensor].scale;
-
 		int32_t minv = 0, maxv = 0;
-		can_get_signed_limits(scale_map[sensor].type, &minv, &maxv);
+		can_get_signed_limits(target_type, &minv, &maxv);
 
-		// Clamp scaled value to valid range for signed types
-		*((int32_t *)out) = CLAMP(scaled, (float)minv, (float)maxv);
+		return can_store_signed(target_type, CLAMP(scaled, minv, maxv), out);
 	}
 	return W_SUCCESS;
 }

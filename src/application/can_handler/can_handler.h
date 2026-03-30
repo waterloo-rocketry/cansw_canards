@@ -7,9 +7,9 @@
 #include "stm32h7xx_hal.h"
 #include <stdint.h>
 
-#define UINT24_MAX (2 << 24) - 1
-#define INT24_MIN (-(2 << 23))
-#define INT24_MAX (2 << 23) - 1
+#define UINT24_MAX (1U << 24) - 1U
+#define INT24_MIN -(1 << 23)
+#define INT24_MAX (1 << 23) - 1
 
 /**
  * @brief Structure to track CAN handler stats, errors and status
@@ -78,7 +78,7 @@ void can_handler_task_tx(void *argument);
  * +Inf -> max - 1.
  *
  * @param scale The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
- * @param input The raw telemetry value to encode
+ * @param input The raw telemetry integer value to encode
  * @param out Pointer to the output variable where the encoded value will be stored
  *
  * @param errorMsg A descriptive string for the error (only the first ~6 chars will be sent).
@@ -95,7 +95,7 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void
  *
  * @param errorMsg A descriptive string for the error (only the first ~6 chars will be sent).
  */
-w_status_t can_encode_scaled_int(can_scaling_types_t sensor, void *input, void *out);
+w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void *out);
 
 /**
  * @brief Handles a fatal system error by sending a CAN message.

@@ -67,25 +67,35 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
 	int16_t mag_x = 0, mag_y = 0, mag_z = 0;
 
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, &raw_data->raw_acc.x, &acc_x);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, &raw_data->raw_acc.y, &acc_y);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, &raw_data->raw_acc.z, &acc_z);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.x, &acc_x);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.y, &acc_y);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.z, &acc_z);
 
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, &raw_data->raw_gyro.x, &gyro_x);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, &raw_data->raw_gyro.y, &gyro_y);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, &raw_data->raw_gyro.z, &gyro_z);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.x, &gyro_x);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.y, &gyro_y);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.z, &gyro_z);
 
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, &raw_data->raw_mag.x, &mag_x);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, &raw_data->raw_mag.y, &mag_y);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, &raw_data->raw_mag.z, &mag_z);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.x, &mag_x);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.y, &mag_y);
+	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.z, &mag_z);
 
 	// Build and send messages
-	build_3d_analog_sensor_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp, DEM_3D_SENSOR_CANARD_MTI630_ACCEL, acc_x, acc_y, acc_z, &msg);
+	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+									 (uint16_t)timestamp,
+									 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
+									 acc_x,
+									 acc_y,
+									 acc_z,
+									 &msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
-	build_3d_analog_sensor_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp, DEM_3D_SENSOR_CANARD_MTI630_GYRO, gyro_x, gyro_y, gyro_z, &msg);
+	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+									 (uint16_t)timestamp,
+									 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
+									 gyro_x,
+									 gyro_y,
+									 gyro_z,
+									 &msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
 	build_3d_analog_sensor_16bit_msg(
