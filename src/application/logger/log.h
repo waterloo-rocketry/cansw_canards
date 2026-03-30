@@ -160,7 +160,7 @@ typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t magnetometer; // mgauss (pololu) or arbitrary units (movella)
 		float barometer; // Pa
-		uint32_t timestamp_imu;
+		uint32_t timestamp_imu_ms;
 		bool is_dead;
 
 	} imu_reading_pt3;
@@ -186,7 +186,7 @@ typedef union __attribute__((packed)) {
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t velocity;
-		float t;
+		double t_sec;
 
 	} estimator_ctx_pt3;
 
