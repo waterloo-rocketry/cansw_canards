@@ -162,11 +162,11 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 		log_text(10, "Estimator", "timer_get_ms fail");
 		curr_time_ms =
 			(uint32_t)(1000 *
-					   (ctx->t + 0.005)); // assuming the time will be less then the UINT32_MAX
+					   (ctx->t_sec + 0.005)); // assuming the time will be less then the UINT32_MAX
 	}
 
 	// run estimator module with all the inputs and ctx
-	estimator_module_input_t estimator_input = {.timestamp = curr_time_ms,
+	estimator_module_input_t estimator_input = {.timestamp_ms = curr_time_ms,
 												.movella = movella,
 												.pololu = pololu,
 												.movella_is_dead = latest_imu_data.movella.is_dead,
@@ -239,7 +239,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 		log_payload.estimator_ctx_pt3.velocity.y = (float)ctx->x.velocity.y;
 		log_payload.estimator_ctx_pt3.velocity.z = (float)ctx->x.velocity.z;
 
-		log_payload.estimator_ctx_pt3.t = (float)ctx->t;
+		log_payload.estimator_ctx_pt3.t_sec = (float)ctx->t_sec;
 
 		log_data(1, LOG_TYPE_ESTIMATOR_CTX_PT3, &log_payload);
 
@@ -359,7 +359,7 @@ void estimator_task(void *argument) {
 	if (timer_get_ms(&init_time_ms) != W_SUCCESS) {
 		proc_handle_fatal_error("estini");
 	}
-	g_estimator_ctx.t = ((double)init_time_ms) / 1000.0f; // convert ms to seconds
+	g_estimator_ctx.t_sec = ((double)init_time_ms) / 1000.0f; // convert ms to seconds
 
 	// initialize ctx to reasonable values in case pad filter never runs
 	g_estimator_ctx.x.attitude.w = 1.0;

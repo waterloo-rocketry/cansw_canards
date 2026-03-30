@@ -234,8 +234,8 @@ TEST_F(ImuHandlerTest, RunSuccessful) {
     EXPECT_EQ(1, movella_get_data_fake.call_count);
 
     // Verify timestamps
-    EXPECT_EQ(1000, captured_data.pololu.timestamp_imu);
-    EXPECT_EQ(1000, captured_data.movella.timestamp_imu);
+    EXPECT_EQ(1000, captured_data.pololu.timestamp_imu_ms);
+    EXPECT_EQ(1000, captured_data.movella.timestamp_imu_ms);
 
     // Verify data values for Pololu
     assert_vec_eq(EXPECTED_ACC_POLOLU, captured_data.pololu.accelerometer, tolerance);
@@ -363,8 +363,8 @@ TEST_F(ImuHandlerTest, RunWithTimerFailure) {
     EXPECT_EQ(W_SUCCESS, result);
 
     // Verify timestamps are zero
-    EXPECT_EQ(0, captured_data.pololu.timestamp_imu);
-    EXPECT_EQ(0, captured_data.movella.timestamp_imu);
+    EXPECT_EQ(0, captured_data.pololu.timestamp_imu_ms);
+    EXPECT_EQ(0, captured_data.movella.timestamp_imu_ms);
 
     // But IMU data should still be valid and not dead
     assert_vec_eq(EXPECTED_ACC_POLOLU, captured_data.pololu.accelerometer, tolerance);
