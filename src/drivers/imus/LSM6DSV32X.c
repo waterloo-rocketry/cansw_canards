@@ -58,7 +58,6 @@ w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx) {
 	lsm6dsv32x_ctx = new_imu_ctx;
 	lsm6dsv32x_ctx->bus_status = IMU_BUS_FREE;
 
-
 	w_status_t status = W_SUCCESS;
 
 	// Drive addr sel pin HIGH to use each device's "default" i2c addr
@@ -149,8 +148,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * @brief handler for after the DMA is completed
  */
 w_status_t lsm6dsv32x_dma_complete_handle() {
-
-	lsm6dsv32x_ctx->bus_status = IMU_BUS_FREE; 
+	lsm6dsv32x_ctx->bus_status = IMU_BUS_FREE;
 
 	memcpy(lsm6dsv32x_ctx->dual_buffer[IMU_READ_BUFFER],
 		   lsm6dsv32x_ctx->dual_buffer[IMU_WRITE_BUFFER],
