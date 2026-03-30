@@ -335,13 +335,14 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
 
-		return can_store_unsigned(target_type, CLAMP(scaled, 0.0f, (float)maxv), out);
+		return can_store_unsigned(target_type, clamp_float(scaled, 0.0f, (float)maxv), out);
 
 	} else {
 		int32_t minv = 0, maxv = 0;
 		can_get_signed_limits(target_type, &minv, &maxv);
 
-		return can_store_signed(target_type, (int64_t)CLAMP(scaled, (float)minv, (float)maxv), out);
+		return can_store_signed(
+			target_type, (int64_t)clamp_float(scaled, (float)minv, (float)maxv), out);
 	}
 	return W_SUCCESS;
 }
@@ -361,13 +362,13 @@ w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
 
-		return can_store_unsigned(target_type, CLAMP(scaled, 0U, maxv), out);
+		return can_store_unsigned(target_type, clamp_uint32(scaled, 0U, maxv), out);
 
 	} else {
 		int32_t minv = 0, maxv = 0;
 		can_get_signed_limits(target_type, &minv, &maxv);
 
-		return can_store_signed(target_type, CLAMP(scaled, minv, maxv), out);
+		return can_store_signed(target_type, clamp_uint32(scaled, minv, maxv), out);
 	}
 	return W_SUCCESS;
 }
