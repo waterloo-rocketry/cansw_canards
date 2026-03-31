@@ -1,7 +1,7 @@
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "application/logger/log.h"
+#include "common/math/math.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
-#include "drivers/altimu-10/altimu-10.h"
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
 #include "task.h"
@@ -12,7 +12,7 @@ static uint8_t ADXL_ADDRS = 0x1D;
 static uint8_t ADXL_PDM_AUDIO_MASK = 0x20;
 
 static uint8_t ADXL_SOFT_RESET_DELAY = 1;
-static float ADXL_16G_SCALE_FACTOR_MICRO_G_LSB = 533.3;
+static float32_t ADXL_16G_SCALE_FACTOR_MICRO_G_LSB = 533.3;
 static int32_t ADXL_MICRO_G_G = 1000000;
 
 adxl38x_dev_t g_adx380_handle = {};
@@ -98,11 +98,11 @@ w_status_t adxl380_get_accel_data(vector3d_t *data, adxl380_raw_accel_data_t *p_
 	}
 
 	data->x =
-		((double)((int16_t)p_raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+		((float64_t)((int16_t)p_raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 	data->y =
-		((double)((int16_t)p_raw_data->y)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+		((float64_t)((int16_t)p_raw_data->y)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 	data->z =
-		((double)((int16_t)p_raw_data->z)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
+		((float64_t)((int16_t)p_raw_data->z)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 
 	return W_SUCCESS;
 }
