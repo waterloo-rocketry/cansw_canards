@@ -1,6 +1,7 @@
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
+#include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/timer/timer.h"
@@ -20,7 +21,7 @@ static const uint8_t AD_BREAKOUT_BOARD_PERIOD_MS = 2;
 static const size_t AD_GYRO_MEASUREMENT_SIZE = sizeof(ad_gyro_mesurement_t);
 static const size_t AD_GYRO_RAW_MEASUREMENT_SIZE = sizeof(int32_t);
 static const size_t AD_ACCEL_MEASUREMENT_SIZE = sizeof(ad_accelerometer_mesurement_t);
-static const size_t AD_ACCEL_RAW_MEASUREMENT_SIZE = sizeof(altimu_raw_imu_data_t);
+static const size_t AD_ACCEL_RAW_MEASUREMENT_SIZE = sizeof(adxl380_raw_accel_data_t);
 
 /* ADXRS */
 // SD Card Log
@@ -116,7 +117,7 @@ w_status_t ad_beakout_board_init() {
 }
 
 static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, const int32_t raw_gyro,
-												 const altimu_raw_imu_data_t *g_raw_accel) {
+												 const adxl380_raw_accel_data_t *g_raw_accel) {
 	return W_FAILURE;
 }
 
@@ -131,9 +132,9 @@ void ad_breakout_board_task(void *argument) {
 	const TickType_t period = pdMS_TO_TICKS(AD_BREAKOUT_BOARD_PERIOD_MS);
 	uint32_t loop_count = 0;
 
-	int32_t raw_gyro = 0;
-	altimu_raw_imu_data_t raw_accel = {};
-	float current_time_ms = 0;
+	uint32_t raw_gyro = 0;
+	adxl380_raw_accel_data_t raw_accel = {};
+	float32_t current_time_ms = 0;
 	uint32_t current_timestamp_ms = 0;
 
 	while (1) {
