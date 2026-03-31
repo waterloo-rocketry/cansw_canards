@@ -239,7 +239,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 		log_payload.estimator_ctx_pt3.velocity.y = (float)ctx->x.velocity.y;
 		log_payload.estimator_ctx_pt3.velocity.z = (float)ctx->x.velocity.z;
 
-		log_payload.estimator_ctx_pt3.t_sec = (float)ctx->t_sec;
+		log_payload.estimator_ctx_pt3.t_sec = ctx->t_sec;
 
 		log_data(1, LOG_TYPE_ESTIMATOR_CTX_PT3, &log_payload);
 
