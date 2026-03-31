@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380_regmap.h"
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
@@ -55,14 +56,14 @@ w_status_t adxl38x_get_sts_reg(adxl38x_dev_t *p_dev, adxl38x_sts_reg_flags_t *p_
 w_status_t adxl38x_get_raw_xyz(adxl38x_dev_t *p_dev, uint16_t *p_raw_x, uint16_t *p_raw_y,
 							   uint16_t *p_raw_z);
 
-w_status_t adxl38x_get_temp(adxl38x_dev_t *p_dev, float *p_temp_degC);
+w_status_t adxl38x_get_temp(adxl38x_dev_t *p_dev, float32_t *p_temp_degC);
 
 w_status_t adxl38x_get_raw_data(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channels,
 								uint16_t *p_raw_x, uint16_t *p_raw_y, uint16_t *p_raw_z,
 								uint16_t *p_raw_temp);
 
-w_status_t adxl38x_get_xyz_gees(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channels, float *p_x,
-								float *p_y, float *p_z);
+w_status_t adxl38x_get_xyz_gees(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channels, float32_t *p_x,
+								float32_t *p_y, float32_t *p_z);
 
 w_status_t adxl38x_selftest(adxl38x_dev_t *p_dev, adxl38x_op_mode_t op_mode, bool *p_st_x,
 							bool *p_st_y, bool *p_st_z);
@@ -72,6 +73,6 @@ w_status_t adxl38x_accel_set_FIFO(adxl38x_dev_t *p_dev, uint16_t num_samples, bo
 								  bool read_reset);
 
 w_status_t adxl38x_data_raw_to_gees(adxl38x_dev_t *p_dev, uint8_t *p_raw_accel_data,
-									float *p_data_frac);
+									float32_t *p_data_frac);
 
 #endif // ADXL38X_H

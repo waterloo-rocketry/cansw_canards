@@ -1,7 +1,7 @@
 #ifndef ADXL380_H
 #define ADXL380_H
 
-#include "drivers/altimu-10/altimu-10.h"
+#include "common/math/math.h"
 #include "rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
