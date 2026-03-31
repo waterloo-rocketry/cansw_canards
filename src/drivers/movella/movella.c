@@ -63,13 +63,13 @@ static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtd
 				break;
 
 			case XSENS_EVT_QUATERNION:
-    			if (mtdata->type == XSENS_EVT_TYPE_FLOAT4) {
-        			s_movella.latest_data.quat.w = mtdata->data.f4x4[0];
-        			s_movella.latest_data.quat.x = mtdata->data.f4x4[1];
-        			s_movella.latest_data.quat.y = mtdata->data.f4x4[2];
-        			s_movella.latest_data.quat.z = mtdata->data.f4x4[3];
-    			}
-    			break;
+				if (mtdata->type == XSENS_EVT_TYPE_FLOAT4) {
+					s_movella.latest_data.quat.w = mtdata->data.f4x4[0];
+					s_movella.latest_data.quat.x = mtdata->data.f4x4[1];
+					s_movella.latest_data.quat.y = mtdata->data.f4x4[2];
+					s_movella.latest_data.quat.z = mtdata->data.f4x4[3];
+				}
+				break;
 
 			case XSENS_EVT_PRESSURE:
 				if (mtdata->type == XSENS_EVT_TYPE_U32) {
