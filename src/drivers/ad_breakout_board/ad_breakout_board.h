@@ -1,15 +1,14 @@
-
-
 #ifndef AD_BREAKOUT_BOARD_H
 #define AD_BREAKOUT_BOARD_H
 
-#include "drivers/altimu-10/altimu-10.h"
+#include "common/math/math.h"
+#include "drivers/ad_breakout_board/ADXL380.h"
 #include "rocketlib/include/common.h"
 #include <stdint.h>
 
 typedef struct {
 	uint32_t timestamp;
-	float z_rate; // rad/sec
+	float64_t z_rate; // rad/sec
 	bool is_dead;
 } ad_gyro_mesurement_t;
 
@@ -20,7 +19,7 @@ typedef struct {
 } ad_accelerometer_mesurement_t;
 
 typedef struct {
-	altimu_raw_imu_data_t accelerometer; // TODO: based on the ADXL
+	adxl380_raw_accel_data_t accelerometer; // TODO: based on the ADXL
 } ad_accelerometer_raw_mesurement_t;
 
 /**

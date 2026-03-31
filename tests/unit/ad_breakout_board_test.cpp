@@ -15,8 +15,8 @@ extern "C" {
 
     FAKE_VALUE_FUNC(w_status_t, adxrs649_init);
     FAKE_VALUE_FUNC(w_status_t, adxl380_init);
-    FAKE_VALUE_FUNC(w_status_t, adxrs649_get_gyro_data, float*, int32_t*);
-    FAKE_VALUE_FUNC(w_status_t, adxl380_get_accel_data, vector3d_t *, altimu_raw_imu_data_t *);
+    FAKE_VALUE_FUNC(w_status_t, adxrs649_get_gyro_data, float*, uint32_t*);
+    FAKE_VALUE_FUNC(w_status_t, adxl380_get_accel_data, vector3d_t *, adxl380_raw_accel_data_t *);
     FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float*);
     FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 
