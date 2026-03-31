@@ -134,16 +134,22 @@ uint32_t check_watchdog_tasks(void) {
 	return status_bitfield;
 }
 
-static void process_module_status(health_status_t status, const char *module_name,
-								  uint32_t *status_bitfield) {
+static void process_module_status(health_status_t status, uint32_t *status_bitfield) {
 	if (status.severity != HEALTH_OK) {
-		log_text(
-			0, "health", "%s: sev=%d, err=%d", module_name, status.severity, status.error_code);
+		log_text(0,
+				 "health",
+				 "%s: sev=%d, err=%d",
+				 status.module_id,
+				 status.severity,
+				 status.error_code);
 
 		*status_bitfield |= (1 << status.module_id);
 
 		if (HEALTH_FATAL == status.severity) {
-			proc_handle_fatal_error("app module fatal");
+			char error_msg[6];
+			// send error msg in the form "module id:error code"
+			snprintf_(error_msg, sizeof(error_msg), "%d:%d", status.module_id, status.error_code);
+			proc_handle_fatal_error(error_msg);
 		}
 	}
 }
@@ -157,18 +163,18 @@ static uint32_t check_modules_status(void) {
 	// CAN error bitfield
 	uint32_t status_bitfield = 0;
 
-	process_module_status(i2c_get_status(), "I2C", &status_bitfield);
-	process_module_status(adc_get_status(), "ADC", &status_bitfield);
-	process_module_status(can_handler_get_status(), "CAN Handler", &status_bitfield);
-	process_module_status(estimator_get_status(), "Estimator", &status_bitfield);
-	process_module_status(controller_get_status(), "Controller", &status_bitfield);
-	process_module_status(sd_card_get_status(), "SD Card", &status_bitfield);
-	process_module_status(timer_get_status(), "Timer", &status_bitfield);
-	process_module_status(gpio_get_status(), "GPIO", &status_bitfield);
-	process_module_status(flight_phase_get_status(), "Flight Phase", &status_bitfield);
-	process_module_status(imu_handler_get_status(), "IMU Handler", &status_bitfield);
-	process_module_status(uart_get_status(), "UART", &status_bitfield);
-	process_module_status(logger_get_status(), "Logger", &status_bitfield);
+	process_module_status(i2c_get_status(), &status_bitfield);
+	process_module_status(adc_get_status(), &status_bitfield);
+	process_module_status(can_handler_get_status(), &status_bitfield);
+	process_module_status(estimator_get_status(), &status_bitfield);
+	process_module_status(controller_get_status(), &status_bitfield);
+	process_module_status(sd_card_get_status(), &status_bitfield);
+	process_module_status(timer_get_status(), &status_bitfield);
+	process_module_status(gpio_get_status(), &status_bitfield);
+	process_module_status(flight_phase_get_status(), &status_bitfield);
+	process_module_status(imu_handler_get_status(), &status_bitfield);
+	process_module_status(uart_get_status(), &status_bitfield);
+	process_module_status(logger_get_status(), &status_bitfield);
 
 	return status_bitfield;
 }
