@@ -42,6 +42,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "common/math/math.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
 #include "stm32h7xx_hal.h"
 
@@ -416,7 +417,7 @@ w_status_t adxl38x_get_raw_xyz(adxl38x_dev_t *p_dev, uint16_t *p_raw_x, uint16_t
 /**
  * @brief Reads and converts temperature output.
  */
-w_status_t adxl38x_get_temp(adxl38x_dev_t *p_dev, float *p_temp_degC) {
+w_status_t adxl38x_get_temp(adxl38x_dev_t *p_dev, float32_t *p_temp_degC) {
 	w_status_t ret;
 	adxl38x_op_mode_t op_mode;
 	uint8_t array_raw_data[2] = {0};
@@ -453,8 +454,8 @@ w_status_t adxl38x_get_temp(adxl38x_dev_t *p_dev, float *p_temp_degC) {
 
 	temp_raw_lsb = (int32_t)(adxl38x_get_unaligned_be16(array_raw_data) >> 4);
 	temp_raw_lsb -= ADXL38X_TEMP_OFFSET;
-	*p_temp_degC =
-		((float)temp_raw_lsb * (float)ADXL38X_TEMP_SCALE_DEN) / (float)ADXL38X_TEMP_SCALE_NUM;
+	*p_temp_degC = ((float32_t)temp_raw_lsb * (float32_t)ADXL38X_TEMP_SCALE_DEN) /
+				   (float32_t)ADXL38X_TEMP_SCALE_NUM;
 	return W_SUCCESS;
 }
 
@@ -551,8 +552,8 @@ w_status_t adxl38x_get_raw_data(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channe
 /**
  * @brief Reads selected acceleration channels and converts to g.
  */
-w_status_t adxl38x_get_xyz_gees(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channels, float *p_x,
-								float *p_y, float *p_z) {
+w_status_t adxl38x_get_xyz_gees(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channels, float32_t *p_x,
+								float32_t *p_y, float32_t *p_z) {
 	w_status_t ret;
 	uint16_t raw_accel_x;
 	uint16_t raw_accel_y;
@@ -567,9 +568,12 @@ w_status_t adxl38x_get_xyz_gees(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channe
 		return ret;
 	}
 
-	*p_x = (float)adxl38x_accel_conv(p_dev, raw_accel_x) / (float)ADXL38X_ACC_SCALE_FACTOR_GEE_DIV;
-	*p_y = (float)adxl38x_accel_conv(p_dev, raw_accel_y) / (float)ADXL38X_ACC_SCALE_FACTOR_GEE_DIV;
-	*p_z = (float)adxl38x_accel_conv(p_dev, raw_accel_z) / (float)ADXL38X_ACC_SCALE_FACTOR_GEE_DIV;
+	*p_x = (float32_t)adxl38x_accel_conv(p_dev, raw_accel_x) /
+		   (float32_t)ADXL38X_ACC_SCALE_FACTOR_GEE_DIV;
+	*p_y = (float32_t)adxl38x_accel_conv(p_dev, raw_accel_y) /
+		   (float32_t)ADXL38X_ACC_SCALE_FACTOR_GEE_DIV;
+	*p_z = (float32_t)adxl38x_accel_conv(p_dev, raw_accel_z) /
+		   (float32_t)ADXL38X_ACC_SCALE_FACTOR_GEE_DIV;
 
 	return W_SUCCESS;
 }
@@ -804,7 +808,7 @@ w_status_t adxl38x_accel_set_FIFO(adxl38x_dev_t *p_dev, uint16_t num_samples, bo
  * @brief Converts raw 2-byte accel sample to fractional g.
  */
 w_status_t adxl38x_data_raw_to_gees(adxl38x_dev_t *p_dev, uint8_t *p_raw_accel_data,
-									float *p_data_frac) {
+									float32_t *p_data_frac) {
 	uint16_t data;
 
 	if ((p_dev == NULL) || (p_raw_accel_data == NULL) || (p_data_frac == NULL)) {
@@ -812,7 +816,8 @@ w_status_t adxl38x_data_raw_to_gees(adxl38x_dev_t *p_dev, uint8_t *p_raw_accel_d
 	}
 
 	data = adxl38x_get_unaligned_be16(p_raw_accel_data);
-	*p_data_frac = (float)adxl38x_accel_conv(p_dev, data) / (float)ADXL38X_ACC_SCALE_FACTOR_GEE_DIV;
+	*p_data_frac =
+		(float32_t)adxl38x_accel_conv(p_dev, data) / (float32_t)ADXL38X_ACC_SCALE_FACTOR_GEE_DIV;
 
 	return W_SUCCESS;
 }
