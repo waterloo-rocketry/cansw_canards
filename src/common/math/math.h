@@ -13,6 +13,20 @@
 #define M_PI 3.14159265
 #endif
 
+// these typedefs work for stm32 arm toolchain because float is 32-bit and double is 64-bit.
+// asserts below verify that for good measure.
+typedef float float32_t;
+typedef double float64_t;
+
+#if defined(__cplusplus)
+#define STATIC_ASSERT static_assert
+#else
+#define STATIC_ASSERT _Static_assert
+#endif
+
+STATIC_ASSERT(sizeof(float32_t) == 4, "float32_t must be 32 bits");
+STATIC_ASSERT(sizeof(float64_t) == 8, "float64_t must be 64 bits");
+
 static inline bool float_equal(double a, double b) {
 	return fabs(a - b) < 0.00001;
 }
