@@ -59,7 +59,7 @@ FORMATS = {
         "rates_x", "rates_y", "rates_z",
         "CL", "delta", 
     ]),
-    M(0x15): Spec("ekf_ctx_pt3", "<fffL",
+    M(0x15): Spec("ekf_ctx_pt3", "<fffd",
     [
         "velocity_x", "velocity_y", "velocity_z",
          "t"
@@ -107,7 +107,7 @@ def main(argv=None):
     # Loop through message regions
     for pos in range(0, len(data), MAX_MSG_DATA_LENGTH):
         type_int, timestamp = struct.unpack_from("<LL", data, pos)
-        print(f"[{timestamp:.1f}] ", end="")
+        print(f"[{timestamp}] ", end="")
         try:
             spec = FORMATS[type_int]
             print(f"{spec.name} (type ", end="")

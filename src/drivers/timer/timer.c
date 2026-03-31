@@ -14,21 +14,21 @@ extern TIM_HandleTypeDef htim2;
 // Error tracking
 static timer_health_t timer_health = {0};
 
-// make sure to report error if not initalized
-static bool g_timer_initalized = NULL;
+// make sure to report error if not initialized
+static bool g_timer_initialized = false;
 
 /**
- * @brief initalize the HAL TIM for the timer
- * @details Use TIM CHANNEL 2. Without initalization any timer call will be invalid
- * @return the status of the initalization
+ * @brief initialize the HAL TIM for the timer
+ * @details Use TIM CHANNEL 2. Without initialization any timer call will be invalid
+ * @return the status of the initialization
  */
 w_status_t timer_init() {
-	g_timer_initalized = false;
+	g_timer_initialized = false;
 	if (HAL_OK != HAL_TIM_IC_Start(&htim2, TIM_CHANNEL_2)) {
 		log_text(0, "timer", "ERROR: Failed to start TIM CHANNEL 2.");
 		return W_FAILURE;
 	}
-	g_timer_initalized = true;
+	g_timer_initialized = true;
 	return W_SUCCESS;
 }
 
@@ -50,15 +50,15 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 		timer_health.timer_invalid++;
 		return W_FAILURE;
 	}
-	// check initalization
-	if (!g_timer_initalized) {
+	// check initialization
+	if (!g_timer_initialized) {
 		timer_health.timer_invalid++;
 		return W_FAILURE;
 	}
 
 	// check and validate whether the timer is alive
 	HAL_TIM_StateTypeDef state = HAL_TIM_IC_GetState(&htim2);
-	if (state == HAL_TIM_STATE_RESET || state == HAL_TIM_STATE_ERROR) {
+	if ((HAL_TIM_STATE_RESET == state) || (HAL_TIM_STATE_ERROR == state)) {
 		timer_health.timer_stopped++;
 		return W_FAILURE;
 	}
@@ -92,15 +92,15 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 		timer_health.timer_invalid++;
 		return W_FAILURE;
 	}
-	// check initalization
-	if (!g_timer_initalized) {
+	// check initialization
+	if (!g_timer_initialized) {
 		timer_health.timer_invalid++;
 		return W_FAILURE;
 	}
 
 	// check and validate whether the timer is alive
 	HAL_TIM_StateTypeDef state = HAL_TIM_IC_GetState(&htim2);
-	if (state == HAL_TIM_STATE_RESET || state == HAL_TIM_STATE_ERROR) {
+	if ((HAL_TIM_STATE_RESET == state) || (HAL_TIM_STATE_ERROR == state)) {
 		timer_health.timer_stopped++;
 		return W_FAILURE;
 	}
@@ -109,7 +109,7 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
 
 	// convert the timer count to milliseconds
-	// each tick is 0.1 ms, so whe just keep the same value for a tenth of ms accuracy
+	// each tick is 0.1 ms, so we just keep the same value for a tenth of ms accuracy
 	*p_time = timer_count;
 
 	timer_health.valid_calls++;

@@ -64,6 +64,7 @@ static w_status_t send_cmd(double cmd) {
 	controller_output_t controller_output = {0};
 
 	// get current timestamp
+	// TODO: potentially change to timer_get_tenth_ms unsigned integer
 	if (W_SUCCESS != timer_get_ms(&timestamp)) {
 		timestamp = 0;
 		log_text(LOG_WAIT_MS, "controller", "get_ms fail");

@@ -155,6 +155,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 	}
 
 	// get current time. as failsafe: default to 5ms period
+	// TODO: Change to timer_get_tenth_ms unsigned integer
 	uint32_t curr_time_ms_get = 0;
 	if (timer_get_ms(&curr_time_ms_get) == W_SUCCESS) {
 		curr_time_ms = curr_time_ms_get;
@@ -356,6 +357,7 @@ void estimator_task(void *argument) {
 
 	// initialize ctx timestamp to current time
 	uint32_t init_time_ms = 0;
+	// TODO: Change to timer_get_tenth_ms unsigned integer
 	if (timer_get_ms(&init_time_ms) != W_SUCCESS) {
 		proc_handle_fatal_error("estini");
 	}
