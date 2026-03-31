@@ -23,7 +23,7 @@ w_status_t timer_init();
  * @param p_ms the pointer to the time (ms)
  * @return status of function call
  */
-w_status_t timer_get_ms(uint32_t *ms);
+w_status_t timer_get_ms(uint32_t *p_ms);
 
 /**
  * @brief tracks system time since program startup
