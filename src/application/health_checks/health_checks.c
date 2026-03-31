@@ -32,7 +32,7 @@
 typedef struct {
 	TaskHandle_t task_handle;
 	bool is_kicked;
-	uint32_t last_kick_timestamp; // ms
+	uint32_t last_kick_timestamp_ms; // ms
 	uint32_t timeout_ticks;
 } watchdog_task_t;
 
@@ -98,7 +98,7 @@ w_status_t watchdog_kick(void) {
 	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
 		if (watchdog_tasks[i].task_handle == current_task) {
 			watchdog_tasks[i].is_kicked = true;
-			watchdog_tasks[i].last_kick_timestamp = current_time;
+			watchdog_tasks[i].last_kick_timestamp_ms = current_time;
 			return W_SUCCESS;
 		}
 	}
@@ -130,7 +130,7 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
 
 	watchdog_tasks[num_watchdog_tasks].task_handle = task_handle;
 	watchdog_tasks[num_watchdog_tasks].is_kicked = true;
-	watchdog_tasks[num_watchdog_tasks].last_kick_timestamp = current_time;
+	watchdog_tasks[num_watchdog_tasks].last_kick_timestamp_ms = current_time;
 	watchdog_tasks[num_watchdog_tasks].timeout_ticks = timeout_ticks;
 
 	num_watchdog_tasks++; // incriminent the watchdog task count for future ref
@@ -158,7 +158,7 @@ uint32_t check_watchdog_tasks(void) {
 	}
 
 	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
-		uint32_t time_elapsed = current_time - watchdog_tasks[i].last_kick_timestamp;
+		uint32_t time_elapsed = current_time - watchdog_tasks[i].last_kick_timestamp_ms;
 		uint32_t ticks_elapsed = pdMS_TO_TICKS((uint32_t)time_elapsed); // time to ticks
 
 		if (watchdog_tasks[i].is_kicked || (ticks_elapsed <= watchdog_tasks[i].timeout_ticks)) {
