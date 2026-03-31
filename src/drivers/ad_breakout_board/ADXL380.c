@@ -69,7 +69,7 @@ w_status_t adxl380_init() {
  * @param p_raw_data pointer to all of the raw data for each access
  * @return the status of the function call
  */
-w_status_t adxl380_get_raw_accel(altimu_raw_imu_data_t *p_raw_data) {
+w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
 	uint8_t raw_data_array[6] = {0};
 
 	if (W_SUCCESS !=
@@ -91,7 +91,7 @@ w_status_t adxl380_get_raw_accel(altimu_raw_imu_data_t *p_raw_data) {
  * @param p_raw_data pointer to all of the raw data for each access
  * @return the status of the function call
  */
-w_status_t adxl380_get_accel_data(vector3d_t *data, altimu_raw_imu_data_t *p_raw_data) {
+w_status_t adxl380_get_accel_data(vector3d_t *data, adxl380_raw_accel_data_t *p_raw_data) {
 	if (W_SUCCESS != adxl380_get_raw_accel(p_raw_data)) {
 		log_text(0, "ADXL380", "ERROR: Failed to get raw acceleration.");
 		return W_FAILURE;

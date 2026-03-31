@@ -14,8 +14,8 @@ extern "C" {
 #include "drivers/gpio/gpio.h"
 
 extern w_status_t adxl380_init();
-extern w_status_t adxl380_get_raw_accel(altimu_raw_imu_data_t *raw_data);
-extern w_status_t adxl380_get_accel_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data);
+extern w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *raw_data);
+extern w_status_t adxl380_get_accel_data(vector3d_t *data, adxl380_raw_accel_data_t *raw_data);
 
 FAKE_VALUE_FUNC(w_status_t, adxl38x_init, adxl38x_dev_t *);
 FAKE_VALUE_FUNC(w_status_t, adxl38x_soft_reset, adxl38x_dev_t *);
@@ -28,7 +28,7 @@ FAKE_VALUE_FUNC(uint8_t, adxl38x_field_prep_u8, uint8_t, uint8_t);
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 }
 
-altimu_raw_imu_data_t g_test_device_data_raw;
+adxl380_raw_accel_data_t g_test_device_data_raw;
 w_status_t adxl38x_set_raw_read_device_data(adxl38x_dev_t *dev, uint8_t base_address, uint16_t size, uint8_t *read_data){
 
     uint8_t test_num_array[6] = {(uint8_t) ((g_test_device_data_raw.x & 0xFF00) >> 8), (uint8_t) (g_test_device_data_raw.x & 0xFF), (uint8_t) ((g_test_device_data_raw.y & 0xFF00) >> 8), (uint8_t) (g_test_device_data_raw.y & 0xFF), (uint8_t) ((g_test_device_data_raw.z & 0xFF00) >> 8), (uint8_t) (g_test_device_data_raw.z & 0xFF)};
@@ -140,7 +140,7 @@ TEST_F(ADXL380, getRawAccelFail){
     // set up function returns
     adxl38x_read_device_data_fake.return_val = W_FAILURE;
 
-    altimu_raw_imu_data_t raw_data = {0};
+    adxl380_raw_accel_data_t raw_data = {0};
 
     w_status_t status= adxl380_get_raw_accel(&raw_data);
     EXPECT_EQ(W_FAILURE, status);
@@ -154,7 +154,7 @@ TEST_F(ADXL380, getRawAccelSuccessRegular){
     g_test_device_data_raw.z = 0x1;
     adxl38x_read_device_data_fake.custom_fake = adxl38x_set_raw_read_device_data;
 
-    altimu_raw_imu_data_t raw_data = {0};
+    adxl380_raw_accel_data_t raw_data = {0};
 
     w_status_t status= adxl380_get_raw_accel(&raw_data);
     EXPECT_EQ(W_SUCCESS, status);
@@ -171,7 +171,7 @@ TEST_F(ADXL380, getRawAccelSuccessEdgeCase){
     g_test_device_data_raw.z = 0x0;
     adxl38x_read_device_data_fake.custom_fake = adxl38x_set_raw_read_device_data;
 
-    altimu_raw_imu_data_t raw_data = {0};
+    adxl380_raw_accel_data_t raw_data = {0};
 
     w_status_t status= adxl380_get_raw_accel(&raw_data);
     EXPECT_EQ(W_SUCCESS, status);
@@ -188,7 +188,7 @@ TEST_F(ADXL380, getConvAccelFail){
     adxl38x_read_device_data_fake.return_val = W_FAILURE;
 
     vector3d_t data = {0};
-    altimu_raw_imu_data_t raw_data = {0};
+    adxl380_raw_accel_data_t raw_data = {0};
 
     w_status_t status= adxl380_get_accel_data(&data, &raw_data);
     EXPECT_EQ(W_FAILURE, status);
@@ -203,7 +203,7 @@ TEST_F(ADXL380, getConvAccelSuccessRegular){
     adxl38x_read_device_data_fake.custom_fake = adxl38x_set_raw_read_device_data;
 
     vector3d_t data = {0};
-    altimu_raw_imu_data_t raw_data = {0};
+    adxl380_raw_accel_data_t raw_data = {0};
 
     w_status_t status= adxl380_get_accel_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
@@ -221,7 +221,7 @@ TEST_F(ADXL380, getConvAccelSuccessEdgeCase){
     adxl38x_read_device_data_fake.custom_fake = adxl38x_set_raw_read_device_data;
 
     vector3d_t data = {0};
-    altimu_raw_imu_data_t raw_data = {0};
+    adxl380_raw_accel_data_t raw_data = {0};
 
     w_status_t status= adxl380_get_accel_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
