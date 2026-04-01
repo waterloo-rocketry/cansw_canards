@@ -1,4 +1,4 @@
-#include "drivers/motor_driver/motor_driver.h"
+#include "drivers/ak45-10/ak45-10.h"
 #include "application/logger/log.h"
 #include "drivers/timer/timer.h"
 #include "queue.h"
@@ -21,12 +21,12 @@ typedef enum {
 #define CAN_PACKET_FEEDBACK 0x10
 
 // Scaling factors
-#define MOTOR_POS_CMD_SCALE 10000.0f // Position: degrees * 10000
-#define MOTOR_POS_FB_SCALE 0.1f // Feedback position: raw * 0.1 = degrees
-#define MOTOR_SPEED_FB_SCALE 10.0f // speed feedback: raw * 10.0 = ERPM
-#define MOTOR_CURRENT_FB_SCALE 0.01f // current feedback: raw * 0.01 = Amps
+#define AK45_POS_CMD_SCALE 10000.0f // Position: degrees * 10000
+#define AK45_POS_FB_SCALE 0.1f // Feedback position: raw * 0.1 = degrees
+#define AK45_SPEED_FB_SCALE 10.0f // speed feedback: raw * 10.0 = ERPM
+#define AK45_CURRENT_FB_SCALE 0.01f // current feedback: raw * 0.01 = Amps
 
-static FDCAN_HandleTypeDef *motor_hfdcan = NULL;
+static FDCAN_HandleTypeDef *ak45_hfdcan = NULL;
 static QueueHandle_t feedback_queue = NULL;
 static uint32_t tx_errors = 0;
 static bool is_init = false;
@@ -39,8 +39,8 @@ static bool is_init = false;
  * @param[in] len     Payload length
  * @return W_SUCCESS on success, W_FAILURE on error
  */
-static w_status_t motor_can_transmit_ext(uint32_t ext_id, const uint8_t *data, uint8_t len) {
-	if ((NULL == motor_hfdcan) || (NULL == data) || (len > 8)) {
+static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, uint8_t len) {
+	if ((NULL == ak45_hfdcan) || (NULL == data) || (len > 8)) {
 		return W_FAILURE;
 	}
 
@@ -53,60 +53,62 @@ static w_status_t motor_can_transmit_ext(uint32_t ext_id, const uint8_t *data, u
  * @param[in]  data   8-byte feedback payload
  * @param[out] fb     Decoded feedback struct
  */
-static void motor_parse_feedback(const uint8_t *data, motor_feedback_t *fb) {
-	int16_t pos_raw = (data[0] << 8 | data[1]);
-	fb->position = pos_raw * MOTOR_POS_FB_SCALE;
-	int16_t speed_raw = (data[2] << 8 | data[3]);
-	fb->speed = speed_raw * MOTOR_SPEED_FB_SCALE;
-	int16_t current_raw = (data[4] << 8 | data[5]);
-	fb->current = current_raw * MOTOR_CURRENT_FB_SCALE;
+static void ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
+	int16_t raw_pos = ((data[0] << 8) | data[1]);
+	int16_t raw_speed = ((data[2] << 8) | data[3]);
+	int16_t raw_current = ((data[4] << 8) | data[5]);
 
-	fb->temperature = data[6];
-	fb->fault_code = data[7];
+	fb->position_deg = (float)raw_pos * AK45_POS_FB_SCALE;
+	fb->speed_erpm = (float)raw_speed * AK45_SPEED_FB_SCALE;
+	fb->current_a = (float)raw_current * AK45_CURRENT_FB_SCALE;
+
+	fb->temperature_c = (float)data[6];
+	fb->fault_code = (ak45_fault_code_t)data[7];
 }
 
-w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
+w_status_t ak45_init(FDCAN_HandleTypeDef *hfdcan) {
 	if (NULL == hfdcan) {
 		return W_INVALID_PARAM;
 	}
 
-	motor_hfdcan = hfdcan;
+	ak45_hfdcan = hfdcan;
 
 	// todo: create queuue and fdcan filter
 
 	return W_SUCCESS;
 }
 
-w_status_t motor_send_position_cmd(float angle_deg) {
+w_status_t ak45_send_position_cmd(float angle_deg) {
 	// todo: define ext id and data
-	return motor_can_transmit_ext(ext_id, data, 4);
+	return ak45_can_transmit_ext(ext_id, data, 4);
 }
 
-w_status_t motor_send_disable_cmd(void) {
+w_status_t ak45_send_disable_cmd(void) {
 	// todo: define ext id and data
-	return motor_can_transmit_ext(ext_id, data, 4);
+	return ak45_can_transmit_ext(ext_id, data, 4);
 }
 
-bool motor_is_fatal_fault(motor_fault_code_t fault) {
+bool ak45_is_fatal_fault(ak45_fault_code_t fault) {
 	switch (fault) {
-		case MOTOR_FAULT_OVERVOLTAGE:
-		case MOTOR_FAULT_OVERCURRENT:
-		case MOTOR_FAULT_OVERTEMP_FET:
-		case MOTOR_FAULT_OVERTEMP_MOTOR:
-		case MOTOR_FAULT_ENCODER_ERROR; return true; default:
+		case AK45_FAULT_OVERVOLTAGE:
+		case AK45_FAULT_ABS_OVERCURRENT:
+		case AK45_FAULT_OVERTEMP_FET:
+		case AK45_FAULT_OVERTEMP_MOTOR:
+			return true;
+		default:
 			return false;
 	}
 }
 
-w_status_t motor_get_latest_feedback(motor_feedback_t *fb) {
+w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
 	if (NULL == fb) {
 		return W_FAILURE;
 	}
 
-	return W_SUCCESS
+	return W_SUCCESS;
 }
 
-uint32_t motor_get_tx_errors(void) {
+uint32_t ak45_get_tx_errors(void) {
 	return tx_errors;
 }
 
@@ -116,7 +118,7 @@ uint32_t motor_get_tx_errors(void) {
  * Called from ISR context when a message matching the servo feedback filter
  * is received. Parses the feedback and puts it in the queue.
  */
-static void motor_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
+static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
 	if (0 == RxFifo1ITs) {
 		return;
 	}

@@ -2,7 +2,7 @@
 #define MOTOR_HANDLER_H
 
 #include "FreeRTOS.h"
-#include "drivers/motor_driver/motor_driver.h"
+#include "drivers/ak45-10/ak45-10.h"
 #include "stm32h7xx_hal.h"
 #include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
@@ -18,7 +18,7 @@ typedef struct {
 	bool is_init;
 	uint32_t feedback_timeouts;
 	uint32_t fault_count;
-	motor_fault_code_t last_fault; // Most recent fault code
+	ak45_fault_code_t last_fault; // Most recent fault code
 } motor_handler_error_data_t;
 
 /**
@@ -45,7 +45,7 @@ void motor_handler_task(void *argument);
  * @param[out] fb Pointer to store data
  * @return W_SUCCESS if feedback is available, W_FAILURE otherwise
  */
-w_status_t motor_handler_get_latest_feedback(motor_feedback_t *fb);
+w_status_t motor_handler_get_latest_feedback(ak45_feedback_t *fb);
 
 /**
  * @brief Report motor handler health status
