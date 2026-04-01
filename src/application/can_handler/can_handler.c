@@ -5,6 +5,7 @@
 
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
+#include "common/math/math.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
 
@@ -281,7 +282,7 @@ void can_handler_task_tx(void *argument) {
 	}
 }
 
-w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void *out) {
+w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, void *out) {
 	if ((sensor >= SCALE_COUNT) || (out == NULL)) {
 		return W_INVALID_PARAM;
 	}
@@ -328,21 +329,21 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void
 		}
 	}
 
-	float scaled = input * (float)scale_map[sensor].scale;
+	float32_t scaled = input * (float32_t)scale_map[sensor].scale;
 
 	// clamp according to target type
 	if (is_unsigned) {
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
 
-		return can_store_unsigned(target_type, clamp_float(scaled, 0.0f, (float)maxv), out);
+		return can_store_unsigned(target_type, value_clamp_float(scaled, 0.0f, (float32_t)maxv), out);
 
 	} else {
 		int32_t minv = 0, maxv = 0;
 		can_get_signed_limits(target_type, &minv, &maxv);
 
 		return can_store_signed(
-			target_type, (int64_t)clamp_float(scaled, (float)minv, (float)maxv), out);
+			target_type, (int64_t)value_clamp_float(scaled, (float32_t)minv, (float32_t)maxv), out);
 	}
 	return W_SUCCESS;
 }
@@ -362,13 +363,13 @@ w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
 
-		return can_store_unsigned(target_type, clamp_uint32(scaled, 0U, maxv), out);
+		return can_store_unsigned(target_type, value_clamp_uint32(scaled, 0U, maxv), out);
 
 	} else {
 		int32_t minv = 0, maxv = 0;
 		can_get_signed_limits(target_type, &minv, &maxv);
 
-		return can_store_signed(target_type, clamp_uint32(scaled, minv, maxv), out);
+		return can_store_signed(target_type, value_clamp_uint32(scaled, minv, maxv), out);
 	}
 	return W_SUCCESS;
 }
