@@ -79,12 +79,17 @@ w_status_t ak45_init(FDCAN_HandleTypeDef *hfdcan) {
 }
 
 w_status_t ak45_send_position_cmd(float angle_deg) {
-	// todo: define ext id and data
+	// todo: define data
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | AK45_10_ID;
+	uint8_t data[4] = {0}; //placeholder data
+
 	return ak45_can_transmit_ext(ext_id, data, 4);
 }
 
 w_status_t ak45_send_disable_cmd(void) {
-	// todo: define ext id and data
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT << 8) | AK45_10_ID;
+	uint8_t data[4] = {0, 0, 0, 0};
+
 	return ak45_can_transmit_ext(ext_id, data, 4);
 }
 
@@ -122,4 +127,18 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 	if (0 == RxFifo1ITs) {
 		return;
 	}
+
+	//Placeholder struct and data for feedback parsing function
+	uint8_t rx_data[8] = {0};
+	ak45_feedback_t fb = {0};
+	ak45_parse_feedback(rx_data, &fb);
+}
+
+/**
+ * @brief Override weak HAL FDCAN RX FIFO1 callback
+ *
+ * Called by HAL when a new message arrives in RX FIFO1.
+ */
+void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
+	ak45_fdcan_rx_callback(hfdcan, RxFifo1ITs);
 }
