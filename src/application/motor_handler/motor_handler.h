@@ -11,12 +11,16 @@
 // Feedback timeout
 #define MOTOR_FEEDBACK_TIMEOUT_MS 500
 
+//Controller timeout
+#define CONTROLLER_TIMEOUT_MS = 100
+
 /**
  * @brief Error tracking for motor handler module
  */
 typedef struct {
 	bool is_init;
 	uint32_t feedback_timeouts;
+	uint32_t controller_timeouts;
 	uint32_t fault_count;
 	ak45_fault_code_t last_fault; // Most recent fault code
 } motor_handler_error_data_t;
@@ -38,6 +42,18 @@ w_status_t motor_handler_init(FDCAN_HandleTypeDef *hfdcan);
  * Reads feedback and checks for fatal faults
  */
 void motor_handler_task(void *argument);
+
+/**
+ * @brief Set the commanded motor angle, called by the controller module
+ *
+ * Pushes a new angle command into the motor handler. 
+ * The motor_handler_task will transmit this command to the servo 
+ * on its next iteration.
+ *
+ * @param[in] angle_deg  Desired angle in degrees
+ * @return W_SUCCESS on success, W_INVALID_PARAM if motor handler is not init
+ */
+w_status_t motor_handler_set_angle_cmd(float angle_deg);
 
 /**
  * @brief Get the latest motor feedback

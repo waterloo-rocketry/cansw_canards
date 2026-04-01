@@ -1,10 +1,10 @@
 #include "application/motor_handler/motor_handler.h"
 #include "application/can_handler/can_handler.h"
-#include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "drivers/timer/timer.h"
+#include "queue.h"
 #include "task.h"
 #include <math.h>
 #include <string.h>
@@ -20,7 +20,19 @@ w_status_t motor_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 		return W_INVALID_PARAM;
 	}
 
-	// todo: init ak45 driver
+	// todo: init ak45 driver, create angle command queue
+	angle_cmd_queue = NULL; //placeholder
+
+	return W_SUCCESS;
+}
+
+w_status_t motor_handler_set_angle_cmd(float angle_deg) {
+	if (NULL == angle_cmd_queue) {
+		return W_INVALID_PARAM;
+	}
+
+	//todo: update timestamp so the task knows when the command arrived,
+	//overwrite the current command in the angle cmd queue
 
 	return W_SUCCESS;
 }
@@ -28,6 +40,7 @@ w_status_t motor_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 void motor_handler_task(void *argument) {
 	// todo: check flight phase, send commands, read feedback,
 	// check for fatal faults, log errors, check for timeouts
+	// from both controller and motor, log error stats
 
 	// Kick watchdog
 	watchdog_kick();
