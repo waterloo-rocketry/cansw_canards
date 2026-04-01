@@ -11,7 +11,7 @@
 // Feedback timeout
 #define MOTOR_FEEDBACK_TIMEOUT_MS 500
 
-//Controller timeout
+// Controller timeout
 #define CONTROLLER_TIMEOUT_MS = 100
 
 /**
@@ -46,8 +46,8 @@ void motor_handler_task(void *argument);
 /**
  * @brief Set the commanded motor angle, called by the controller module
  *
- * Pushes a new angle command into the motor handler. 
- * The motor_handler_task will transmit this command to the servo 
+ * Pushes a new angle command into the motor handler.
+ * The motor_handler_task will transmit this command to the servo
  * on its next iteration.
  *
  * @param[in] angle_deg  Desired angle in degrees
