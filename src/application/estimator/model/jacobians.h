@@ -21,34 +21,37 @@
 // MATRIX DEFS
 // rotation matrix
 typedef union {
-    double flat[SIZE_VECTOR_3D * SIZE_QUAT];
-    struct {
-        double s11, s12, s13, s14;
-        double s21, s22, s23, s24;
-        double s31, s32, s33, s34;
-    };
+	double flat[SIZE_VECTOR_3D * SIZE_QUAT];
+
+	struct {
+		double s11, s12, s13, s14;
+		double s21, s22, s23, s24;
+		double s31, s32, s33, s34;
+	};
 } rotation_jacobian_t;
 
 // quaternion update 4x4 matrix
 typedef union {
-    double flat[SIZE_QUAT * SIZE_QUAT];
-    struct {
-        double q11, q12, q13, q14;
-        double q21, q22, q23, q24;
-        double q31, q32, q33, q34;
-        double q41, q42, q43, q44;
-    };
+	double flat[SIZE_QUAT * SIZE_QUAT];
+
+	struct {
+		double q11, q12, q13, q14;
+		double q21, q22, q23, q24;
+		double q31, q32, q33, q34;
+		double q41, q42, q43, q44;
+	};
 } quaternion_update_matrix_q_t;
 
 // quaternion update 4x3 matrix
 typedef union {
-    double flat[SIZE_QUAT * SIZE_VECTOR_3D];
-    struct {
-        double q11, q12, q13;
-        double q21, q22, q23;
-        double q31, q32, q33;
-        double q41, q42, q43;
-    };
+	double flat[SIZE_QUAT * SIZE_VECTOR_3D];
+
+	struct {
+		double q11, q12, q13;
+		double q21, q22, q23;
+		double q31, q32, q33;
+		double q41, q42, q43;
+	};
 } quaternion_update_matrix_w_t;
 
 /**
@@ -64,9 +67,7 @@ typedef union {
  *
  * CAUTIOUS only writes structures of pData with width of 13
  */
-void write_pData(
-    double *jacobian_flat, int start_coor_x, int start_coor_y, int num_row, int num_col,
-    const double *flat_data
-);
+void write_pData(double *jacobian_flat, int start_coor_x, int start_coor_y, int num_row,
+				 int num_col, const double *flat_data);
 
 #endif
