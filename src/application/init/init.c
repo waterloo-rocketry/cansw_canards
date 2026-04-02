@@ -103,6 +103,9 @@ static w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *par
 }
 
 static void system_init_task(void *arg) {
+	// DEBUG ONLY: disable write buffer to convert imprecise bus faults to precise ones
+	SCnSCB->ACTLR |= 2;
+
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready

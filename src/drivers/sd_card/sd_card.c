@@ -18,6 +18,13 @@ sd_card_health_t sd_card_health = {0};
 // Only 1 SD card mutex is needed because only 1 sd card exists
 SemaphoreHandle_t sd_mutex = NULL;
 
+// Static 32-byte aligned file buffer for lfs_file_opencfg.
+// Prevents LittleFS from heap-allocating an unaligned per-file cache which
+// causes SDMMC IDMA to fault when it targets a non-DMA-accessible address.
+// Safe to share: the mutex guarantees only one file is open at a time.
+static uint8_t __attribute__((aligned(32))) sd_file_buf[512];
+static const struct lfs_file_config sd_file_cfg = {.buffer = sd_file_buf};
+
 w_status_t sd_card_init(void) {
     // attempting to init the module >1 time is fine
     if (sd_card_health.is_init) {
@@ -88,7 +95,7 @@ w_status_t sd_card_file_read(
     int res;
 
     /* Open the file in read mode. */
-    res = lfs_file_open(&g_fs_obj, &file, file_name, LFS_O_RDONLY);
+    res = lfs_file_opencfg(&g_fs_obj, &file, file_name, LFS_O_RDONLY, &sd_file_cfg);
     if (res != 0) {
         printf("lfs_file_open failed with error code: %d\n", res);
         xSemaphoreGive(sd_mutex);
@@ -137,7 +144,7 @@ w_status_t sd_card_file_write(
      * successfully for some reason. This is a failsafe
      */
     int flags = LFS_O_WRONLY | LFS_O_CREAT | (append ? LFS_O_APPEND : 0);
-    res = lfs_file_open(&g_fs_obj, &file, file_name, flags);
+    res = lfs_file_opencfg(&g_fs_obj, &file, file_name, flags, &sd_file_cfg);
     if (res != 0) {
         lfs_unmount(&g_fs_obj);
         lfsshim_sd_mount(&g_fs_obj, &hsd1, 0);
@@ -190,7 +197,7 @@ w_status_t sd_card_file_create(const char *file_name) {
 
     /* Create a new file. The LFS_O_CREAT flag causes the function to fail if the file already
      * exists. */
-    res = lfs_file_open(&g_fs_obj, &file, file_name, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_EXCL);
+    res = lfs_file_opencfg(&g_fs_obj, &file, file_name, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_EXCL, &sd_file_cfg);
     if (res != 0) {
         xSemaphoreGive(sd_mutex);
         sd_card_health.err_count++;
