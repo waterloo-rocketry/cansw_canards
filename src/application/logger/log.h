@@ -186,7 +186,7 @@ typedef union __attribute__((packed)) {
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t velocity;
-		double t_sec;
+		uint32_t t_tenth_ms;
 
 	} estimator_ctx_pt3;
 

@@ -18,7 +18,7 @@ typedef struct {
 	double P_flat[SIZE_STATE * SIZE_STATE];
 	y_imu_t bias_movella;
 	y_imu_t bias_pololu;
-	double t_sec; // previous timestamp
+	uint32_t t_tenth_ms; // previous timestamp in tenth ms
 	// estimator ctx must have exactly 1 pad filter ctx
 	pad_filter_ctx_t pad_filter_ctx;
 } estimator_module_ctx_t;
@@ -27,7 +27,7 @@ typedef struct {
  * input to estimator_module function
  */
 typedef struct {
-	uint32_t timestamp_ms; // new timestamp (ms)
+	uint32_t timestamp_tenth_ms; // new timestamp (tenth ms)
 	y_imu_t movella; // latest movella data
 	y_imu_t pololu; // latest pololu data
 	bool movella_is_dead; // true if movella is dead

@@ -9,9 +9,9 @@ w_status_t estimator_module(const estimator_module_input_t *input,
 	w_status_t status = W_SUCCESS;
 
 	// calculate dt regardless of flight phase
-	double dt = (((double)input->timestamp_ms) / 1000) - ctx->t_sec;
+	double dt_sec = (double)(input->timestamp_tenth_ms - ctx->t_tenth_ms) / 10000;
 	// record current time
-	ctx->t_sec = (((double)input->timestamp_ms) / 1000);
+	ctx->t_tenth_ms = input->timestamp_tenth_ms;
 
 	// store persistent alive values in case an imu happens to die the moment pad_filter_init
 	// runs, it can still use the older value. better than init to 0.
@@ -71,7 +71,7 @@ w_status_t estimator_module(const estimator_module_input_t *input,
 						  &ctx->bias_pololu,
 						  input->cmd.commanded_angle,
 						  input->encoder,
-						  dt,
+						  dt_sec,
 						  input->movella_is_dead,
 						  input->pololu_is_dead,
 						  input->encoder_is_dead);

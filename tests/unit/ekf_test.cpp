@@ -1049,6 +1049,7 @@ TEST_F(EstimatorEKFTest, EKFAlgorithmSelectIMU1) {
     const double cmd = 0.547870901214845;
     const double encoder = 0.431651170248720; // this is unused
     const double dt = 1.038711463665142;
+    const uint32_t dt_tenth_ms = (uint32_t)((int32_t)(dt*10000));
     const bool is_dead_mti = false;
     const bool is_dead_altimu = true;
     const bool is_dead_encoder = false;
@@ -1260,6 +1261,7 @@ TEST_F(EstimatorEKFTest, EKFAlgorithmSelectIMU2) {
     const double cmd = 0.547870901214845;
     const double encoder = 0.431651170248720; // this is unused
     const double dt = 1.038711463665142;
+    const uint32_t dt_tenth_ms = (uint32_t)((int32_t)(dt*10000));
     const bool is_dead_mti = true;
     const bool is_dead_altimu = false;
     const bool is_dead_encoder = false;
@@ -1600,6 +1602,7 @@ TEST_F(EstimatorEKFTest, EKFAlgorithmSelectBoth) {
     const double cmd = 0.547870901214845;
     const double encoder = 0.431651170248720;
     const double dt = 1.038711463665142;
+    const uint32_t dt_tenth_ms = (uint32_t)((int32_t)(dt*10000));
     const bool is_dead_mti = false;
     const bool is_dead_altimu = false;
     const bool is_dead_encoder = false;

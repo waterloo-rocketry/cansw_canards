@@ -30,7 +30,7 @@ w_status_t ekf_init(void);
  * @param imu_altimu movella imu measurement
  * @param bias_altimu movella bias
  * @param encoder encoder measurement
- * @param dt time step
+ * @param dt time step in ms
  * @param is_dead_MTI true if movella is dead
  * @param is_dead_ALTIMU true if pololu is dead
  */
@@ -48,7 +48,7 @@ void ekf_algorithm(x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE],
  * @param x_state state pointer to new state to be altered
  * @param P_flat P pointer to store new covariance
  * @param u_input input imu inputs
- * @param dt time step
+ * @param dt time step in ms
  */
 void ekf_matrix_predict(x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_STATE],
 						const u_dynamics_t *u_input, double dt);

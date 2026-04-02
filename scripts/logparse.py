@@ -59,10 +59,10 @@ FORMATS = {
         "rates_x", "rates_y", "rates_z",
         "CL", "delta", 
     ]),
-    M(0x15): Spec("ekf_ctx_pt3", "<fffd",
+    M(0x15): Spec("ekf_ctx_pt3", "<fffL",
     [
         "velocity_x", "velocity_y", "velocity_z",
-         "t"
+         "t_tenth_ms"
     ]),
     
     M(0x16): Spec("pololu_pt1", "<fff",

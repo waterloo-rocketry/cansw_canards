@@ -74,14 +74,14 @@ fprintf('%.9f}\n', bias_2(end));
 TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseOnce) {
     // Arrange
     estimator_module_input_t input = {0};
-    input.timestamp_ms = 0.005 * 1000;
+    input.timestamp_tenth_ms = 0.005 * 10000;
     input.movella = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25};
     input.pololu = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30};
     input.movella_is_dead = false;
     input.pololu_is_dead = false;
 
     // Commanded angle and timestamp for the controller
-    controller_output_t cmd = {0, 5}; // commanded_angle in radians, timestamp in ms
+    controller_output_t cmd = {0, 50}; // commanded_angle in radians, timestamp in ms
     input.cmd = cmd;
     input.encoder = 0.03;
 
@@ -220,13 +220,13 @@ fprintf('%.9f}\n', bias_2(end));
 TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
     // Arrange - First iteration
     estimator_module_input_t input = {0};
-    input.timestamp_ms = 0.005 * 1000;
+    input.timestamp_tenth_ms = 0.005 * 10000;
     input.movella = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25};
     input.pololu = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30};
     input.movella_is_dead = false;
     input.pololu_is_dead = false;
 
-    controller_output_t cmd = {0.1, 5}; // Commanded angle in radians, timestamp in ms
+    controller_output_t cmd = {0.1, 50}; // Commanded angle in radians, timestamp in ms
     input.cmd = cmd;
     input.encoder = 0.03;
 
@@ -308,7 +308,7 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
     // }
 
     // --- Second iteration setup ---
-    input.timestamp_ms = 0.01 * 1000;
+    input.timestamp_tenth_ms = 0.01 * 10000;
     input.movella = {0.06, 0.1, -9.99, 0.001, -0.002, 0.0005, 0.5, 0.4, 0.4, 1010.25};
     input.pololu = {-0.03, 0.08, -9.1, 0.005, 0.01, -0.001, 0.31, -0.01, 0.99, 1014.30};
     input.cmd = {0.0, 10}; // Dummy cmd.angle = 0, timestamp = 100ms
@@ -466,13 +466,13 @@ fprintf('%.9f };\n', P_c(end));
 TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
     // Arrange
     estimator_module_input_t input = {0};
-    input.timestamp_ms = 0.1 * 1000;
+    input.timestamp_tenth_ms = 0.1 * 10000;
     input.movella = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25};
     input.pololu = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30};
     input.movella_is_dead = false;
     input.pololu_is_dead = false;
 
-    controller_output_t cmd = {0.1, 5}; // commanded_angle, timestamp (ms)
+    controller_output_t cmd = {0.1, 50}; // commanded_angle, timestamp (ms)
     input.cmd = cmd;
     input.encoder = 0.03;
 
@@ -494,7 +494,7 @@ TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
                   25762.842421,
                   3.627599,
                   0.000000}},
-        .t_sec = 0.005
+        .t_tenth_ms = (uint32_t)(0.005 * 10000)
     };
     controller_input_t controller_input = {0};
 

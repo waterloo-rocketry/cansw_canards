@@ -34,7 +34,7 @@ typedef struct {
 // Output of controller: latest commanded canard angle
 typedef struct {
 	double commanded_angle; // radians
-	uint32_t timestamp; // ms
+	uint32_t timestamp_tenth_ms; // ms
 } controller_output_t;
 
 // main controller state using in task
