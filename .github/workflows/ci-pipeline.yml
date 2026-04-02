@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout this repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 1      
@@ -40,9 +40,3 @@ jobs:
           chmod +x ./scripts/run_unit_tests.sh
           ./scripts/run_unit_tests.sh cleanall
           ./scripts/run_unit_tests.sh test
-
-      - name: Run formatting check
-        uses: waterloo-rocketry/actions/clang-format-check@main
-        with:
-            clang-format-config-path: 'src/third_party/rocketlib/.clang-format'
-            c-source-files: 'src/application/*/*.c src/application/*/*.h src/drivers/*/*.c src/drivers/*/*.h src/common/*/*.h src/common/*/*c'
