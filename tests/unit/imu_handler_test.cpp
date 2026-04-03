@@ -473,7 +473,7 @@ TEST_F(ImuHandlerTest, ImuHandlerRun_CanLogNominal) {
 TEST_F(ImuHandlerTest, ImuHandlerRun_CalibrationWarning) {
 	// Arrange
 	// Simulate uncalibrated orientation by setting the flag to failure
-	w_status_t orientation_calibrated = W_FAILURE;
+	bool orientation_calibrated = false;
 
 	// Act
 	w_status_t result = imu_handler_init();

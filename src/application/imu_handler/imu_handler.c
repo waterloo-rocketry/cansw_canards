@@ -25,7 +25,6 @@ static const int MAG_FRESHNESS_TIMEOUT_MS = 10;
 static const int ACCEL_FRESHNESS_TIMEOUT_MS = 5;
 static const int BARO_FRESHNESS_TIMEOUT_MS = 25;
 static const int ERROR_THRESHOLD = 10;
-static const double MIN_SUCCESS_RATE = 90.0f;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 static const int IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
@@ -40,16 +39,13 @@ static const matrix3d_t g_movella_upd_mat = {
 static const matrix3d_t g_pololu_upd_mat = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
 
-// using w_status_t to handle potential math errors in orientation correction and to track if
-// orientation is calibrated yet flag to indicate if the orientation correction matrices have been
-// set by the calibration module
-static w_status_t orientation_calibrated = W_FAILURE; // set to true once calibrated, initialized to
-													  // false to prevent use before calibration
+// set to true once calibrated, initialized to false to prevent use before calibration
+static bool orientation_calibrated = false;
 
 // TODO: function to be set by the calibration module to update the calibration matrices once
-// calibrated
+// calibrated (low priority)
 
-static QueueHandle_t state_mailbox = NULL;
+static QueueHandle_t imu_data_mailbox = NULL;
 
 // Module state tracking
 typedef struct {
@@ -224,18 +220,18 @@ static w_status_t read_movella_imu(estimator_imu_measurement_t *imu_data) {
 w_status_t imu_handler_init(void) {
 	// TODO: poll all imus to make sure theyre initialized alr or smth
 
-	// Create state mailbox for flight phase to read current state if needed
-	state_mailbox = xQueueCreate(1, sizeof(estimator_all_imus_input_t));
+	// Create mailbox queue for flight phase to read current data if needed
+	imu_data_mailbox = xQueueCreate(1, sizeof(estimator_all_imus_input_t));
 
-	if (NULL == state_mailbox) {
-		log_text(1, "IMUHandler", "ERROR: State mailbox not initialized.");
+	if (NULL == imu_data_mailbox) {
+		log_text(1, "IMUHandler", "ERROR: IMU data mailbox not initialized.");
 		return W_FAILURE;
 	}
 
 	// Set initialized flag directly here instead of calling initialize_all_imus()
 	imu_handler_state.initialized = true;
 
-	if (orientation_calibrated != W_SUCCESS) {
+	if (orientation_calibrated != true) {
 		log_text(1,
 				 "IMUHandler",
 				 "WARN: IMU orientation correction matrices not calibrated yet, using default "
@@ -354,9 +350,9 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 		log_text(1, "IMUHandler", "ERROR: estimator update fail (status: %d).", estimator_status);
 	}
 
-	// update queue with current state for flight phase to read
-	if (xQueueOverwrite(state_mailbox, &imu_data) != pdPASS) {
-		log_text(1, "IMUHandler", "ERROR: state mailbox overwrite failed.");
+	// update queue with current IMU data for flight phase to read
+	if (xQueueOverwrite(imu_data_mailbox, &imu_data) != pdPASS) {
+		log_text(1, "IMUHandler", "ERROR: IMU data mailbox overwrite failed.");
 	}
 
 	imu_handler_state.sample_count++;
@@ -376,7 +372,7 @@ w_status_t imu_handler_get_data(estimator_all_imus_input_t *all_imu_data) {
 		return W_INVALID_PARAM;
 	}
 
-	if (xQueuePeek(state_mailbox, all_imu_data, 0) != pdPASS) {
+	if (xQueuePeek(imu_data_mailbox, all_imu_data, 0) != pdPASS) {
 		log_text(1, "IMUHandler", "ERROR: Failed to get data from state mailbox.");
 		return W_FAILURE;
 	}
