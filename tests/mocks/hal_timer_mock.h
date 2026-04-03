@@ -28,9 +28,9 @@ typedef struct {
 #define TIM_CHANNEL_2                      0x00000004U                          /*!< Capture/compare channel 2 identifier      */
 
 // mock function declarations
-DECLARE_FAKE_VALUE_FUNC(HAL_TIM_StateTypeDef, HAL_TIM_IC_GetState, TIM_HandleTypeDef *);
+DECLARE_FAKE_VALUE_FUNC(HAL_TIM_StateTypeDef, HAL_TIM_Base_GetState, TIM_HandleTypeDef *);
 DECLARE_FAKE_VALUE_FUNC(uint32_t, __HAL_TIM_GET_COUNTER, TIM_HandleTypeDef *);
-DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_TIM_IC_Start, TIM_HandleTypeDef *, uint32_t);
+DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_TIM_Base_Start, TIM_HandleTypeDef *);
 
 // timer handle mock
 extern TIM_HandleTypeDef htim2;

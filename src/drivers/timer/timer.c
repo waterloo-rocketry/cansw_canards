@@ -24,7 +24,7 @@ static bool g_timer_initialized = false;
  */
 w_status_t timer_init() {
 	g_timer_initialized = false;
-	if (HAL_OK != HAL_TIM_IC_Start(&htim2, TIM_CHANNEL_2)) {
+	if (HAL_OK != HAL_TIM_Base_Start(&htim2)) {
 		log_text(0, "timer", "ERROR: Failed to start TIM CHANNEL 2.");
 		return W_FAILURE;
 	}
@@ -57,7 +57,7 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 	}
 
 	// check and validate whether the timer is alive
-	HAL_TIM_StateTypeDef state = HAL_TIM_IC_GetState(&htim2);
+	HAL_TIM_StateTypeDef state = HAL_TIM_Base_GetState(&htim2);
 	if ((HAL_TIM_STATE_RESET == state) || (HAL_TIM_STATE_ERROR == state)) {
 		timer_health.timer_stopped++;
 		return W_FAILURE;
@@ -99,7 +99,7 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 	}
 
 	// check and validate whether the timer is alive
-	HAL_TIM_StateTypeDef state = HAL_TIM_IC_GetState(&htim2);
+	HAL_TIM_StateTypeDef state = HAL_TIM_Base_GetState(&htim2);
 	if ((HAL_TIM_STATE_RESET == state) || (HAL_TIM_STATE_ERROR == state)) {
 		timer_health.timer_stopped++;
 		return W_FAILURE;

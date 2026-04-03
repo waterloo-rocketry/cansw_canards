@@ -5,6 +5,6 @@
 TIM_HandleTypeDef htim2;
 
 // define mocks for timer functions
-DEFINE_FAKE_VALUE_FUNC(HAL_TIM_StateTypeDef, HAL_TIM_IC_GetState, TIM_HandleTypeDef *);
+DEFINE_FAKE_VALUE_FUNC(HAL_TIM_StateTypeDef, HAL_TIM_Base_GetState, TIM_HandleTypeDef *);
 DEFINE_FAKE_VALUE_FUNC(uint32_t, __HAL_TIM_GET_COUNTER, TIM_HandleTypeDef *);
-DEFINE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_TIM_IC_Start, TIM_HandleTypeDef *, uint32_t);
+DEFINE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_TIM_Base_Start, TIM_HandleTypeDef *);
