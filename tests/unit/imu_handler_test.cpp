@@ -489,7 +489,7 @@ TEST_F(ImuHandlerTest, ImuHandlerRun_CalibrationWarning) {
 TEST_F(ImuHandlerTest, ImuGetData_NullPointerReturnsInvalidParam) {
 	// Arrange - no setup needed since we're passing NULL
 	// Act
-	w_status_t status = imu_handler_get_data(NULL);
+	w_status_t status = imu_handler_get_data_for_flight_phase(NULL);
 
 	// Assert
 	EXPECT_EQ(status, W_INVALID_PARAM);
@@ -511,7 +511,7 @@ TEST_F(ImuHandlerTest, ImuGetData_ImuDataIsPassedCorrectly) {
 	// Run the function under test with loop_count = 1
 	w_status_t result = imu_handler_run(1);
 	estimator_all_imus_input_t all_imu_data;
-	w_status_t status = imu_handler_get_data(&all_imu_data);
+	w_status_t status = imu_handler_get_data_for_flight_phase(&all_imu_data);
 
 	// Assert
 	EXPECT_EQ(result, W_SUCCESS);
