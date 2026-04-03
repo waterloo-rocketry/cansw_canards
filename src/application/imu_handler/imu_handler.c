@@ -366,7 +366,7 @@ w_status_t imu_handler_run(uint32_t loop_count) {
  * @param all_imu_data Pointer to store the output data
  * @return Status of the execution
  */
-w_status_t imu_handler_get_data(estimator_all_imus_input_t *all_imu_data) {
+w_status_t imu_handler_get_data_for_flight_phase(estimator_all_imus_input_t *all_imu_data) {
 	if (NULL == all_imu_data) {
 		log_text(1, "IMUHandler", "ERROR: Get imu data failed - imu data cannot be null pointers.");
 		return W_INVALID_PARAM;
