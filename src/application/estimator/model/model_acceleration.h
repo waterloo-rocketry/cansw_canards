@@ -13,9 +13,7 @@
  * @param is_dead_2 true if altimu is dead
  * @return average acceleration vector
  */
-vector3d_t model_acceleration(
-    const x_state_t *state, const y_imu_t *IMU_1, const bool is_dead_1, const y_imu_t *IMU_2,
-    const bool is_dead_2
-);
+vector3d_t model_acceleration(const x_state_t *state, const y_imu_t *IMU_1, const bool is_dead_1,
+							  const y_imu_t *IMU_2, const bool is_dead_2);
 
 #endif // MODEL_ACCELERATION_H
