@@ -19,6 +19,9 @@ extern "C" {
 // w_status_t timer_get_ms(uint32_t *time_ms);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 
+// w_status_t timer_get_tenth_ms(uint32_t *time_tenth_ms);
+FAKE_VALUE_FUNC(w_status_t, timer_get_tenth_ms, uint32_t *);
+
 // static makes this accessible to only the *_test.cpp file that includes this header.
 // test file should modify this variable to set the timer value as needed
 static uint32_t mock_timer_ms = 0;
