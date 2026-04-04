@@ -56,13 +56,6 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 		return W_FAILURE;
 	}
 
-	// check and validate whether the timer is alive
-	HAL_TIM_StateTypeDef state = HAL_TIM_Base_GetState(&htim2);
-	if ((HAL_TIM_STATE_RESET == state) || (HAL_TIM_STATE_ERROR == state)) {
-		timer_health.timer_stopped++;
-		return W_FAILURE;
-	}
-
 	// retrieve the current timer count (in clock ticks)
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
 
@@ -95,13 +88,6 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 	// check initialization
 	if (!g_timer_initialized) {
 		timer_health.timer_invalid++;
-		return W_FAILURE;
-	}
-
-	// check and validate whether the timer is alive
-	HAL_TIM_StateTypeDef state = HAL_TIM_Base_GetState(&htim2);
-	if ((HAL_TIM_STATE_RESET == state) || (HAL_TIM_STATE_ERROR == state)) {
-		timer_health.timer_stopped++;
 		return W_FAILURE;
 	}
 

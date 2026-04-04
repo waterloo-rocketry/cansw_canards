@@ -11,7 +11,7 @@ extern "C" {
 }
 
 static void set_successful_init() {
-     HAL_TIM_Base_Start_fake.return_val = HAL_OK;
+    HAL_TIM_Base_Start_fake.return_val = HAL_OK;
     timer_init();
 }
 
@@ -19,7 +19,6 @@ static void set_successful_init() {
 class TimerTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        RESET_FAKE(HAL_TIM_Base_GetState);
         RESET_FAKE(__HAL_TIM_GET_COUNTER);
         RESET_FAKE(HAL_TIM_Base_Start);
         FFF_RESET_HISTORY();
@@ -30,7 +29,6 @@ protected:
         htim2.State = HAL_TIM_STATE_BUSY;
 
         // set default return values for the mocks
-        HAL_TIM_Base_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
         __HAL_TIM_GET_COUNTER_fake.return_val = 1000; // Will give 100ms by default
         HAL_TIM_Base_Start_fake.return_val = HAL_ERROR;
     }
@@ -99,7 +97,6 @@ TEST_F(TimerTest, GetMsNullPointerFails) {
 
     // Assert
     EXPECT_EQ(status, W_INVALID_PARAM);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 0);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
 }
 
@@ -116,24 +113,6 @@ TEST_F(TimerTest, GetMsInvalidTimerInstanceFails) {
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 0);
-    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
-}
-
-// test timer_get_ms with timer not running
-TEST_F(TimerTest, GetMsTimerNotRunningFails) {
-    set_successful_init();
-    
-    // Arrange
-    uint32_t ms;
-    HAL_TIM_Base_GetState_fake.return_val = HAL_TIM_STATE_ERROR;
-
-    // Act
-    w_status_t status = timer_get_ms(&ms);
-
-    // Assert
-    EXPECT_EQ(status, W_FAILURE);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 1);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
 }
 
@@ -143,7 +122,6 @@ TEST_F(TimerTest, GetMsSuccessful) {
     
     // Arrange
     uint32_t ms;
-    HAL_TIM_Base_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
     __HAL_TIM_GET_COUNTER_fake.return_val = 1000; // 1000 ticks
 
     // Act
@@ -151,7 +129,6 @@ TEST_F(TimerTest, GetMsSuccessful) {
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 1);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
     EXPECT_EQ(ms, 100); // 1000 ticks * 0.1ms = 100ms
 }
@@ -162,7 +139,6 @@ TEST_F(TimerTest, GetMsMaxCounterValue) {
     
     // Arrange
     uint32_t ms;
-    HAL_TIM_Base_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
     __HAL_TIM_GET_COUNTER_fake.return_val = UINT32_MAX;
 
     // Act
@@ -170,7 +146,6 @@ TEST_F(TimerTest, GetMsMaxCounterValue) {
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 1);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
     EXPECT_EQ(ms, UINT32_MAX / 10);
 }
@@ -182,7 +157,6 @@ TEST_F(TimerTest, GetMsFailedInitFails) {
 
     // Arrange
     uint32_t ms;
-    HAL_TIM_Base_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
     __HAL_TIM_GET_COUNTER_fake.return_val = 1000; // 1000 ticks
 
     // Act
@@ -190,7 +164,6 @@ TEST_F(TimerTest, GetMsFailedInitFails) {
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 0);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
 }
 
@@ -205,7 +178,6 @@ TEST_F(TimerTest, GetTenthMsNullPointerFails) {
 
     // Assert
     EXPECT_EQ(status, W_INVALID_PARAM);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 0);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
 }
 
@@ -222,24 +194,6 @@ TEST_F(TimerTest, GetTenthMsInvalidTimerInstanceFails) {
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 0);
-    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
-}
-
-// test timer_get_tenth_ms with timer not running
-TEST_F(TimerTest, GetTenthMsTimerNotRunningFails) {
-    set_successful_init();
-    
-    // Arrange
-    uint32_t tenth_ms;
-    HAL_TIM_Base_GetState_fake.return_val = HAL_TIM_STATE_ERROR;
-
-    // Act
-    w_status_t status = timer_get_tenth_ms(&tenth_ms);
-
-    // Assert
-    EXPECT_EQ(status, W_FAILURE);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 1);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
 }
 
@@ -249,7 +203,6 @@ TEST_F(TimerTest, GetTenthMsSuccessful) {
     
     // Arrange
     uint32_t tenth_ms;
-    HAL_TIM_Base_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
     __HAL_TIM_GET_COUNTER_fake.return_val = 1000; // 1000 ticks
 
     // Act
@@ -257,7 +210,6 @@ TEST_F(TimerTest, GetTenthMsSuccessful) {
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 1);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
     EXPECT_EQ(tenth_ms, 1000); // 1000 ticks = 1000 tenth of a ms
 }
@@ -268,7 +220,6 @@ TEST_F(TimerTest, GetTenthMsMaxCounterValue) {
     
     // Arrange
     uint32_t tenth_ms;
-    HAL_TIM_Base_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
     __HAL_TIM_GET_COUNTER_fake.return_val = UINT32_MAX;
 
     // Act
@@ -276,7 +227,6 @@ TEST_F(TimerTest, GetTenthMsMaxCounterValue) {
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 1);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
     EXPECT_EQ(tenth_ms, UINT32_MAX);
 }
@@ -288,7 +238,6 @@ TEST_F(TimerTest, GetTenthMsFailedInitFails) {
     
     // Arrange
     uint32_t tenth_ms;
-    HAL_TIM_Base_GetState_fake.return_val = HAL_TIM_STATE_BUSY;
     __HAL_TIM_GET_COUNTER_fake.return_val = 1000; // 1000 ticks
 
     // Act
@@ -296,6 +245,5 @@ TEST_F(TimerTest, GetTenthMsFailedInitFails) {
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
-    EXPECT_EQ(HAL_TIM_Base_GetState_fake.call_count, 0);
     EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 0);
 }
