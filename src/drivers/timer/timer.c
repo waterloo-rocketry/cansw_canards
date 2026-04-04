@@ -44,7 +44,7 @@ w_status_t timer_get_ms(float *ms) {
 	return W_SUCCESS;
 }
 
-uint32_t timer_get_status(void) {
+health_status_t timer_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Calculate total calls
@@ -71,5 +71,7 @@ uint32_t timer_get_status(void) {
 				 timer_health.timer_invalid);
 	}
 
-	return status_bitfield;
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_TIMER, .error_code = 0};
+
+	return status;
 }
