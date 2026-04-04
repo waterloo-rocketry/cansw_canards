@@ -85,7 +85,7 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseOnce) {
     input.cmd = cmd;
     input.encoder = 0.03;
 
-    flight_phase_state_t flight_phase = STATE_SE_INIT;
+    flight_phase_state_t flight_phase = STATE_PAD_FILTER;
 
     // Initializing the context
     estimator_module_ctx_t ctx = {0};
@@ -230,7 +230,7 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
     input.cmd = cmd;
     input.encoder = 0.03;
 
-    flight_phase_state_t flight_phase = STATE_SE_INIT;
+    flight_phase_state_t flight_phase = STATE_PAD_FILTER;
 
     estimator_module_ctx_t ctx = {0};
     controller_input_t controller_input = {0};

@@ -32,7 +32,7 @@ w_status_t estimator_module(const estimator_module_input_t *input,
 			break;
 
 		// ------- after SE-init CAN msg received: run pad filter -------
-		case STATE_SE_INIT:
+		case STATE_PAD_FILTER:
 			// initialize the pad filter if it hasn't been done yet
 			if (false == ctx->pad_filter_ctx.is_initialized) {
 				status |= pad_filter_init(&ctx->pad_filter_ctx, &last_movella, &last_pololu);
