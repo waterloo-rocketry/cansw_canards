@@ -116,6 +116,7 @@ static void system_init_task(void *arg) {
 	w_status_t status = W_SUCCESS;
 
 	// INIT REQUIRED MODULES
+	status |= timer_init();
 	status |= gpio_init();
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0);
 	status |= i2c_init(I2C_BUS_4, &hi2c4, 0);

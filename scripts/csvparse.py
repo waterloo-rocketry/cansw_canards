@@ -25,7 +25,7 @@ FORMATS = {
     M(0x12): Spec("movella_pt3", "<ffffL?", ["movella_mag_x", "movella_mag_y", "movella_mag_z", "movella_bar", "movella_time", "movella_is_dead"]),
     M(0x13): Spec("ekf_ctx_pt1", "<fffff", ["attitude_w", "attitude_x", "attitude_y", "attitude_z", "altitude"]),
     M(0x14): Spec("ekf_ctx_pt2", "<fffff", ["rates_x", "rates_y", "rates_z", "CL", "delta"]),
-    M(0x15): Spec("ekf_ctx_pt3", "<ffff", ["velocity_x", "velocity_y", "velocity_z", "t"]),
+    M(0x15): Spec("ekf_ctx_pt3", "<fffd", ["velocity_x", "velocity_y", "velocity_z", "t"]),
     M(0x16): Spec("pololu_pt1", "<fff", ["pololu_acc_x", "pololu_acc_y", "pololu_acc_z"]),
     M(0x17): Spec("pololu_pt2", "<fff", ["pololu_gyr_x", "pololu_gyr_y", "pololu_gyr_z"]),
     M(0x18): Spec("pololu_pt3", "<ffffL?", ["pololu_mag_x", "pololu_mag_y", "pololu_mag_z", "pololu_bar", "pololu_time", "pololu_is_dead"]),
@@ -52,7 +52,7 @@ def main(argv=None):
 
     for pos in range(0, len(data), MAX_MSG_DATA_LENGTH):
         try:
-            type_int, timestamp = struct.unpack_from("<Lf", data, pos)
+            type_int, timestamp = struct.unpack_from("<LL", data, pos)
             spec = FORMATS[type_int]
             values = struct.unpack_from(spec.format, data, pos + 8)
             row = {"timestamp": timestamp}
