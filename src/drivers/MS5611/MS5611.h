@@ -1,17 +1,17 @@
 #ifndef MS5611_H
 #define MS5611_H
 
+#include "application/logger/log.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
-#include "application/logger/log.h"
 #include "rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 
 /* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
 typedef enum {
-    MS5611_ADDRESS_CSB_LOW  = 0x77,
-    MS5611_ADDRESS_CSB_HIGH = 0x76,
+	MS5611_ADDRESS_CSB_LOW = 0x77,
+	MS5611_ADDRESS_CSB_HIGH = 0x76
 } ms5611_address_t;
 
 // reset command
@@ -36,11 +36,11 @@ typedef enum {
 #define MS5611_CMD_PROM_READ_BASE 0xA0 /* OR with (addr << 1) for addr 0..7 */
 
 // calibration coefficient indices in PROM readout
-#define MS5611_COEFF_SENS     1
-#define MS5611_COEFF_OFF      2
-#define MS5611_COEFF_TCS      3
-#define MS5611_COEFF_TCO      4
-#define MS5611_COEFF_TREF     5
+#define MS5611_COEFF_SENS 1
+#define MS5611_COEFF_OFF 2
+#define MS5611_COEFF_TCS 3
+#define MS5611_COEFF_TCO 4
+#define MS5611_COEFF_TREF 5
 #define MS5611_COEFF_TEMPSENS 6
 
 // osr index in command arrays
@@ -56,7 +56,7 @@ typedef struct {
 	/* Calibration coefficients read from PROM */
 	uint16_t C[8]; /* C[1]..C[6] used; C[0] = factory reserved empty space */
 
-	i2c_bus_t       bus;
+	i2c_bus_t bus;
 	ms5611_address_t addr;
 
 	/* Selected OSR for pressure and temperature conversions */
