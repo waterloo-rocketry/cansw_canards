@@ -36,19 +36,35 @@ static ms5611_handle_t handle = {.C = {0}, // will be populated by prom read
 								 .osr = MS5611_OSR_1024,
 								 .initialized = false};
 
+/**
+ * @brief Delays for a specified number of microseconds.
+ * @param us The number of microseconds to delay.
+ */
 static void delay_us(uint32_t us) {
 	/* Round up to nearest ms tick — FreeRTOS resolution is 1ms */
 	vTaskDelay(pdMS_TO_TICKS((us + 999) / 1000));
 }
 
+/**
+ * @brief Reads one byte of data from the MS5611 sensor over I2C.
+ * @param cmd The command to read from the sensor.
+ */
 static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
 	return i2c_read_reg(handle.bus, (uint8_t)handle.addr, reg, data, len);
 }
 
+/**
+ * @brief Writes a command to the MS5611 sensor.
+ * @param cmd The command to write.
+ */
 static w_status_t a_write_cmd(uint8_t cmd) {
 	return i2c_write_reg(handle.bus, (uint8_t)handle.addr, cmd, NULL, 0);
 }
 
+/**
+ * @brief Reads the ADC value from the MS5611 sensor.
+ * @param out Pointer to store the read ADC value.
+ */
 static w_status_t a_read_adc(uint32_t *out) {
 	uint8_t buf[3];
 	if (a_read(MS5611_CMD_ADC_READ, buf, 3) != W_SUCCESS) {
@@ -58,8 +74,11 @@ static w_status_t a_read_adc(uint32_t *out) {
 	return W_SUCCESS;
 }
 
-// ensure that the calibration coefficients stored in the PROM are read correctly by the
-// microcontroller. Reference repo in the design doc.
+/**
+ * @brief Perfroms the CRC check on the PROM coefficients readout.
+ * @param n_prom Array of 8 uint16_t values read from the PROM (C[0]..C[7])
+ * @param crc The CRC value read from the PROM (lower 4 bits of C[7])
+ */
 static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	uint8_t cnt;
 	uint8_t n_bit;
@@ -100,6 +119,10 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	}
 }
 
+/**
+ * @brief Reads calibration coefficients from the PROM, performs CRC check, and stores them in the
+ * handle struct.
+ */
 static w_status_t ms5611_prom_read(void) {
 	uint8_t i, buf[2];
 	uint16_t C[8];
@@ -135,7 +158,10 @@ static w_status_t ms5611_prom_read(void) {
 	return status;
 }
 
-// check iic and sanity of prom coefficients by doing crc checks
+/**
+ * @brief Performs a sanity check on the sensor by re-reading the PROM coefficients and verifying
+ * with CRC.
+ */
 w_status_t ms5611_check_sanity(void) {
 	w_status_t status = W_SUCCESS;
 
@@ -167,7 +193,10 @@ w_status_t ms5611_check_sanity(void) {
 	return W_SUCCESS;
 }
 
-// init by reseting and read
+/**
+ * @brief Initialized the sensor by resetting it, reading calibration coeff from PROM, and perform
+ * crc check on the coefficients.
+ */
 w_status_t ms5611_init(void) {
 	w_status_t status = W_SUCCESS;
 
@@ -193,6 +222,13 @@ w_status_t ms5611_init(void) {
 	return status;
 }
 
+/**
+ * @brief Reads raw pressure and temperature data from the MS5611 sensor, applies compensation, and
+ * stores the results in the provided struct.
+ * @param result Pointer to store the raw pressure and temperature results
+ * @note this function also applies the compensation algorithm, but does not convert units
+ * (temperature in centidegrees C, pressure in centimbar)
+ */
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 	uint32_t d1, d2;
 	int32_t dt, temp;
