@@ -14,7 +14,7 @@
  * @param double THE dt time step in seconds
  * @return x_state_t new state of estimator
  */
-x_state_t model_dynamics_update(const x_state_t* state, const u_dynamics_t* input, double dt);
+x_state_t model_dynamics_update(const x_state_t *state, const u_dynamics_t *input, double dt);
 
 /**
  * Model dynamics jacobian
@@ -24,9 +24,7 @@ x_state_t model_dynamics_update(const x_state_t* state, const u_dynamics_t* inpu
  * @param input input signal
  * @param dt the time step in seconds
  */
-void model_dynamics_jacobian(
-    double pData_dynamic_jacobian[SIZE_STATE * SIZE_STATE], const x_state_t* state,
-    double dt
-);
+void model_dynamics_jacobian(double pData_dynamic_jacobian[SIZE_STATE * SIZE_STATE],
+							 const x_state_t *state, double dt);
 
 #endif
