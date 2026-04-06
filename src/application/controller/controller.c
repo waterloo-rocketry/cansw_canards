@@ -72,7 +72,7 @@ static w_status_t send_cmd(double cmd) {
 
 	// set controller output
 	controller_output.commanded_angle = cmd;
-	controller_output.timestamp = (uint32_t)timestamp_ms;
+	controller_output.timestamp = timestamp_ms;
 
 	// send command via CAN
 	if (controller_send_can(controller_output.commanded_angle) != W_SUCCESS) {

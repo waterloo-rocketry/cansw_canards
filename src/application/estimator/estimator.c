@@ -109,7 +109,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 	controller_output_t latest_controller_cmd = {0};
 	controller_input_t output_to_controller = {0};
 	float latest_encoder_rad = 0;
-	uint32_t curr_time_tenth_ms = 0;
+	float64_t curr_time_sec = 0;
 	bool encoder_is_dead = false;
 
 	// get latest imu data, transform into estimator data structs.
@@ -157,17 +157,16 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 	// get current time. as failsafe: default to 5ms period
 	uint32_t curr_time_tenth_ms_get = 0;
 	if (timer_get_tenth_ms(&curr_time_tenth_ms_get) == W_SUCCESS) {
-		curr_time_tenth_ms = curr_time_tenth_ms_get;
+		curr_time_sec = (float64_t)curr_time_tenth_ms_get / 1000.0;
 	} else {
 		log_text(10, "Estimator", "timer_get_tenth_ms fail");
-		curr_time_tenth_ms =
-			(uint32_t)(10000 *
-					   (ctx->t_sec + 0.005)); // assuming the time will be less then the UINT32_MAX
+		curr_time_sec =
+			(float64_t)(10000 *
+						(ctx->t_sec + 0.005)); // assuming the time will be less then the UINT32_MAX
 	}
 
 	// run estimator module with all the inputs and ctx
-	estimator_module_input_t estimator_input = {.timestamp_ms =
-													(float64_t)curr_time_tenth_ms / 10.0f,
+	estimator_module_input_t estimator_input = {.timestamp_sec = curr_time_sec,
 												.movella = movella,
 												.pololu = pololu,
 												.movella_is_dead = latest_imu_data.movella.is_dead,
@@ -240,7 +239,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 		log_payload.estimator_ctx_pt3.velocity.y = (float)ctx->x.velocity.y;
 		log_payload.estimator_ctx_pt3.velocity.z = (float)ctx->x.velocity.z;
 
-		log_payload.estimator_ctx_pt3.t_sec = ctx->t_sec;
+		log_payload.estimator_ctx_pt3.t_ms = (uint32_t)(ctx->t_sec * 1000.0);
 
 		log_data(1, LOG_TYPE_ESTIMATOR_CTX_PT3, &log_payload);
 
@@ -360,7 +359,7 @@ void estimator_task(void *argument) {
 	if (timer_get_tenth_ms(&init_time_tenth_ms) != W_SUCCESS) {
 		proc_handle_fatal_error("estini");
 	}
-	g_estimator_ctx.t_sec = ((float64_t)init_time_tenth_ms) / 10000.0f; // convert ms to seconds
+	g_estimator_ctx.t_sec = ((float64_t)init_time_tenth_ms) / 10000.0; // convert 0.1ms to seconds
 
 	// initialize ctx to reasonable values in case pad filter never runs
 	g_estimator_ctx.x.attitude.w = 1.0;

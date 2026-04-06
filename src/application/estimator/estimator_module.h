@@ -27,7 +27,7 @@ typedef struct {
  * input to estimator_module function
  */
 typedef struct {
-	float64_t timestamp_ms; // new timestamp (ms)
+	float64_t timestamp_sec; // new timestamp (seconds)
 	y_imu_t movella; // latest movella data
 	y_imu_t pololu; // latest pololu data
 	bool movella_is_dead; // true if movella is dead

@@ -242,8 +242,8 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 
 	// Set timestamps for all IMUs
 	// Note: All IMUs get the same timestamp intentionally for synchronization
-	imu_data.pololu.timestamp_imu_ms = now_ms;
-	imu_data.movella.timestamp_imu_ms = now_ms;
+	imu_data.pololu.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
+	imu_data.movella.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
 
 	// Read from all IMUs, including orientation correction
 	w_status_t pololu_status = read_pololu_imu(&imu_data.pololu, &raw_pololu_data);
@@ -278,7 +278,8 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_data.movella.magnetometer.z;
 
 	log_payload.imu_reading_pt3.barometer = imu_data.movella.barometer;
-	log_payload.imu_reading_pt3.timestamp_imu_ms = imu_data.movella.timestamp_imu_ms;
+	log_payload.imu_reading_pt3.timestamp_imu_ms =
+		(uint32_t)(imu_data.movella.timestamp_imu_sec * 1000);
 	log_payload.imu_reading_pt3.is_dead = imu_data.movella.is_dead;
 	log_data(1, LOG_TYPE_MOVELLA_READING_PT3, &log_payload);
 
@@ -299,7 +300,8 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_data.pololu.magnetometer.z;
 
 	log_payload.imu_reading_pt3.barometer = imu_data.pololu.barometer;
-	log_payload.imu_reading_pt3.timestamp_imu_ms = imu_data.pololu.timestamp_imu_ms;
+	log_payload.imu_reading_pt3.timestamp_imu_ms =
+		(uint32_t)(imu_data.pololu.timestamp_imu_sec * 1000);
 	log_payload.imu_reading_pt3.is_dead = imu_data.pololu.is_dead;
 	log_data(1, LOG_TYPE_POLOLU_READING_PT3, &log_payload);
 

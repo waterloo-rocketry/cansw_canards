@@ -74,7 +74,7 @@ fprintf('%.9f}\n', bias_2(end));
 TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseOnce) {
     // Arrange
     estimator_module_input_t input = {0};
-    input.timestamp_ms = 0.005 * 1000;
+    input.timestamp_sec = 0.005;
     input.movella = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25};
     input.pololu = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30};
     input.movella_is_dead = false;
@@ -220,7 +220,7 @@ fprintf('%.9f}\n', bias_2(end));
 TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
     // Arrange - First iteration
     estimator_module_input_t input = {0};
-    input.timestamp_ms = 0.005 * 1000;
+    input.timestamp_sec = 0.005;
     input.movella = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25};
     input.pololu = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30};
     input.movella_is_dead = false;
@@ -308,7 +308,7 @@ TEST_F(EstimatorModuleTest, BothImusAlivePadFilterPhaseTwice) {
     // }
 
     // --- Second iteration setup ---
-    input.timestamp_ms = 0.01 * 1000;
+    input.timestamp_sec = 0.01;
     input.movella = {0.06, 0.1, -9.99, 0.001, -0.002, 0.0005, 0.5, 0.4, 0.4, 1010.25};
     input.pololu = {-0.03, 0.08, -9.1, 0.005, 0.01, -0.001, 0.31, -0.01, 0.99, 1014.30};
     input.cmd = {0.0, 10}; // Dummy cmd.angle = 0, timestamp = 100ms
@@ -466,7 +466,7 @@ fprintf('%.9f };\n', P_c(end));
 TEST_F(EstimatorModuleTest, BothImusAliveActAllowedPhaseOnce) {
     // Arrange
     estimator_module_input_t input = {0};
-    input.timestamp_ms = 0.1 * 1000;
+    input.timestamp_sec = 0.1;
     input.movella = {0.01, 0.02, -9.81, 0.001, -0.002, 0.0005, 0.3, 0.0, 0.4, 1013.25};
     input.pololu = {-0.02, 0.01, -9.78, 0.0005, 0.001, -0.001, 0.31, -0.01, 0.39, 1013.30};
     input.movella_is_dead = false;
