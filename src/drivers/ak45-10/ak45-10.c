@@ -21,10 +21,10 @@ typedef enum {
 #define CAN_PACKET_FEEDBACK 0x10
 
 // Scaling factors
-#define AK45_POS_CMD_SCALE 10000.0f // Position: degrees * 10000
-#define AK45_POS_FB_SCALE 0.1f // Feedback position: raw * 0.1 = degrees
-#define AK45_SPEED_FB_SCALE 10.0f // speed feedback: raw * 10.0 = ERPM
-#define AK45_CURRENT_FB_SCALE 0.01f // current feedback: raw * 0.01 = Amps
+static const float AK45_POS_CMD_SCALE = 10000.0f; // Position: degrees * 10000
+static const float AK45_POS_FB_SCALE = 0.1f; // Feedback position: raw * 0.1 = degrees
+static const float AK45_SPEED_FB_SCALE = 10.0f; // speed feedback: raw * 10.0 = ERPM
+static const float AK45_CURRENT_FB_SCALE = 0.01f; // current feedback: raw * 0.01 = Amps
 
 static FDCAN_HandleTypeDef *ak45_hfdcan = NULL;
 static QueueHandle_t feedback_queue = NULL;
