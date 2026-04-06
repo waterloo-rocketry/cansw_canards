@@ -93,21 +93,6 @@ w_status_t ak45_send_disable_cmd(void) {
 	return ak45_can_transmit_ext(ext_id, data, 4);
 }
 
-bool ak45_is_fatal_fault(ak45_fault_code_t fault) {
-	switch (fault) {
-		case AK45_FAULT_OVERTEMP:
-		case AK45_FAULT_OVERCURRENT:
-		case AK45_FAULT_OVERVOLTAGE:
-		case AK45_FAULT_UNDERVOLTAGE:
-		case AK45_FAULT_ENCODER:
-		case AK45_FAULT_OVERTEMP_MOSFET:
-		case AK45_FAULT_MOTOR_LOCKUP:
-			return true;
-		default:
-			return false;
-	}
-}
-
 w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
 	if (NULL == fb) {
 		return W_FAILURE;

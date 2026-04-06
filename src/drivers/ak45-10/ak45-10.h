@@ -60,14 +60,6 @@ w_status_t ak45_send_position_cmd(float angle_deg);
 w_status_t ak45_send_disable_cmd(void);
 
 /**
- * @brief Check if a fault code is fatal
- *
- * @param[in] fault  Fault code
- * @return true if fatal fault
- */
-bool ak45_is_fatal_fault(ak45_fault_code_t fault);
-
-/**
  * @brief Get the latest motor feedback
  *
  * @param[out] fb Pointer to store data
