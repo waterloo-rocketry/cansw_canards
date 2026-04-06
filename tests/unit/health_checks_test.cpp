@@ -40,6 +40,11 @@ FAKE_VALUE_FUNC(health_status_t, gpio_get_status);
 FAKE_VALUE_FUNC(health_status_t, flight_phase_get_status);
 FAKE_VALUE_FUNC(health_status_t, imu_handler_get_status);
 FAKE_VALUE_FUNC(health_status_t, uart_get_status);
+FAKE_VALUE_FUNC(int, snprintf_spy, char *, size_t, const char *);
+
+int snprintf_(char *s, size_t n, const char *format, ...) {
+	return snprintf_spy(s, n, format);
+}
 
 // Mocked global variables
 static float timer_ms_value_mock;
@@ -58,10 +63,10 @@ static w_status_t timer_get_ms_mock(float *out_time) {
 class HealthChecksTest : public ::testing::Test {
 protected:
 	void SetUp() override {
+		RESET_FAKE(snprintf_spy);
 		RESET_FAKE(timer_get_ms);
 		RESET_FAKE(can_handler_transmit);
 		RESET_FAKE(build_general_board_status_msg);
-		RESET_FAKE(can_handler_transmit);
 		RESET_FAKE(xTaskGetCurrentTaskHandle);
 		RESET_FAKE(xTaskGetTickCount);
 		RESET_FAKE(vTaskDelayUntil);
@@ -221,4 +226,18 @@ TEST_F(HealthChecksTest, WatchdogMaxTasksLimit) {
 	// Assert
 	EXPECT_EQ(W_SUCCESS, result); // check watchdog still goes through
 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 0);
+}
+
+TEST_F(HealthChecksTest, FatalErrorTriggersSnprintf) {
+	// Arrange: Set a module to FATAL
+	health_status_t fatal_i2c = {HEALTH_FATAL, MODULE_I2C, MODULE_ERR_I2C_NOT_INIT};
+	i2c_get_status_fake.return_val = fatal_i2c;
+
+	// Act
+	health_check_exec();
+
+	// Assert
+	EXPECT_EQ(snprintf_spy_fake.call_count, 1);
+	EXPECT_STREQ(snprintf_spy_fake.arg2_val, "%d:%d");
+	EXPECT_EQ(proc_handle_fatal_error_fake.call_count, 1);
 }

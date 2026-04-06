@@ -32,8 +32,9 @@ typedef enum {
 	MODULE_GPIO = 7,
 	MODULE_FLIGHT_PHASE = 8,
 	MODULE_IMU_HANDLER = 9,
-	MODULE_UART = 10,
-	MODULE_LOGGER = 11,
+	// can't use 10 and 12 as those are IO and watchdog offsets
+	MODULE_UART = 11,
+	MODULE_LOGGER = 13,
 	MODULE_MAX = 31
 } module_id_t;
 
