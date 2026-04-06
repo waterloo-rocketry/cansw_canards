@@ -120,6 +120,11 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 	uint8_t rx_data[8] = {0};
 	ak45_feedback_t fb = {0};
 	ak45_parse_feedback(rx_data, &fb);
+
+	// Queue feedback (overwrite old data)
+	BaseType_t higher_priority_task_woken = pdFALSE;
+	xQueueOverwriteFromISR(feedback_queue, &fb, &higher_priority_task_woken);
+	portYIELD_FROM_ISR(higher_priority_task_woken);
 }
 
 /**
