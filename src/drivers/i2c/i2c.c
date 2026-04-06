@@ -329,9 +329,7 @@ void i2c_reset_all(void) {
 	}
 }
 
-uint32_t i2c_get_status(void) {
-	uint32_t status_bitfield = 0;
-
+health_status_t i2c_get_status(void) {
 	// Check all i2c init
 	uint32_t num_bus_init = 0;
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {
@@ -368,5 +366,7 @@ uint32_t i2c_get_status(void) {
 				 i2c_error_stats[i].bus_errors);
 	}
 
-	return status_bitfield;
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_I2C, .error_code = 0};
+
+	return status;
 }

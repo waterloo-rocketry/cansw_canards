@@ -153,7 +153,7 @@ w_status_t gpio_toggle(gpio_pin_t pin, uint32_t timeout) {
  * Reports the current status of the GPIO module
  * @return Status code indicating success or failure
  */
-uint32_t gpio_get_status(void) {
+health_status_t gpio_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log operation statistics
@@ -164,5 +164,7 @@ uint32_t gpio_get_status(void) {
 			 gpio_status.accesses,
 			 gpio_status.access_fails);
 
-	return status_bitfield;
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_GPIO, .error_code = 0};
+
+	return status;
 }

@@ -223,9 +223,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 
 // --- End Fatal Error Handler ---
 
-uint32_t can_handler_get_status(void) {
-	uint32_t status_bitfield = 0;
-
+health_status_t can_handler_get_status(void) {
 	// Log all error statistics
 	log_text(0,
 			 "CAN",
@@ -240,5 +238,8 @@ uint32_t can_handler_get_status(void) {
 			 can_error_stats.rx_timeouts,
 			 can_error_stats.tx_timeouts);
 
-	return status_bitfield;
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_CAN_HANDLER, .error_code = 0};
+
+	return status;
 }
