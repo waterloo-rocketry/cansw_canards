@@ -13,6 +13,7 @@
 #include "stm32h7xx_hal.h" // For __disable_irq, __NOP
 #include "third_party/canlib/message/msg_general.h" // For build_debug_raw_msg
 #include "third_party/canlib/message_types.h" // For MSG_DEBUG_RAW, PRIO_HIGH, etc.
+#include "third_party/rocketlib/include/mathops.h" // For clamp functions
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
@@ -336,14 +337,14 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
 
-		return can_store_unsigned(target_type, value_clamp_float(scaled, 0.0f, (float32_t)maxv), out);
+		return can_store_unsigned(target_type, value_clamp_float32(scaled, 0.0f, (float32_t)maxv), out);
 
 	} else {
 		int32_t minv = 0, maxv = 0;
 		can_get_signed_limits(target_type, &minv, &maxv);
 
 		return can_store_signed(
-			target_type, (int64_t)value_clamp_float(scaled, (float32_t)minv, (float32_t)maxv), out);
+			target_type, (int64_t)value_clamp_float32(scaled, (float32_t)minv, (float32_t)maxv), out);
 	}
 	return W_SUCCESS;
 }

@@ -77,11 +77,11 @@ void can_handler_task_tx(void *argument);
  * -Inf -> min + 2,
  * +Inf -> max - 1.
  *
- * @param scale The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
+ * @param sensor The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
  * @param input The raw telemetry integer value to encode
  * @param out Pointer to the output variable where the encoded value will be stored
  *
- * @param errorMsg A descriptive string for the error (only the first ~6 chars will be sent).
+ * @return w_status_t indicating success or type of failure
  */
 w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void *out);
 
@@ -89,11 +89,11 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void
  * @brief Encodes an integer telemetry value into an integer representation according to predefined
  * scaling rules.
  *
- * @param scale The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
+ * @param sensor The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
  * @param input The raw telemetry value to encode
  * @param out Pointer to the output variable where the encoded value will be stored
  *
- * @param errorMsg A descriptive string for the error (only the first ~6 chars will be sent).
+ * @return w_status_t indicating success or type of failure
  */
 w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void *out);
 
@@ -107,8 +107,6 @@ w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void
  *
  * It uses the canlib library to send a DEBUG_RAW message with a coarse timestamp
  * and the first few characters of the error message.
- *
- * @param errorMsg A descriptive string for the error (only the first ~6 chars will be sent).
  */
 void proc_handle_fatal_error(const char *errorMsg);
 

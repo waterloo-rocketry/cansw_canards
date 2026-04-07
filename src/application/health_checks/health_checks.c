@@ -70,7 +70,7 @@ uint32_t check_current(void) {
 		// Send this to can handler module's tx
 		can_tx_sts |= can_handler_transmit(&msg);
 		if (can_tx_sts != W_SUCCESS) {
-			log_text(10, "controller", "actuator msg tx failed");
+			log_text(10, "health_checks", "health checks msg tx failed");
 		}
 
 		// send CAN err msg and log text if over current
@@ -81,7 +81,7 @@ uint32_t check_current(void) {
 		}
 	}
 
-	return current_sts || can_tx_sts;
+	return (current_sts != W_SUCCESS) ? current_sts : can_tx_sts;
 }
 
 w_status_t health_check_init(void) {

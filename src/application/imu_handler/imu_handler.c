@@ -65,7 +65,7 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	// Encode messages
 	int16_t acc_x = 0, acc_y = 0, acc_z = 0;
 	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
-	int16_t mag_x = 0, mag_y = 0, mag_z = 0;
+	int32_t mag_x = 0, mag_y = 0, mag_z = 0;
 
 	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.x, &acc_x);
 	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.y, &acc_y);
@@ -98,8 +98,12 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 									 &msg);
 	can_tx_sts |= can_handler_transmit(&msg);
 
-	build_3d_analog_sensor_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp, DEM_3D_SENSOR_CANARD_MTI630_MAG, mag_x, mag_y, mag_z, &msg);
+	build_2d_analog_sensor_24bit_msg(
+		PRIO_LOW, (uint16_t)timestamp, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_X, mag_x, mag_y, &msg);
+	can_tx_sts |= can_handler_transmit(&msg);
+
+	build_2d_analog_sensor_24bit_msg(
+		PRIO_LOW, (uint16_t)timestamp, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Z, mag_z, 0xFFFFFFFF, &msg); // test clamping
 	can_tx_sts |= can_handler_transmit(&msg);
 
 	// Error handling

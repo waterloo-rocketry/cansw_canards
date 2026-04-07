@@ -55,7 +55,7 @@ static w_status_t controller_send_can(float canard_angle) {
 		controller_state.can_send_errors++;
 		log_text(LOG_WAIT_MS, "controller", "actuator msg tx failed");
 	}
-	return can_tx_sts || encode_sts;
+	return (encode_sts != W_SUCCESS) ? encode_sts : can_tx_sts;
 }
 
 /**
