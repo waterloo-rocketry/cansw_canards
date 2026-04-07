@@ -15,11 +15,6 @@
 #define M_PI 3.14159265
 #endif
 
-// these typedefs work for stm32 arm toolchain because float is 32-bit and double is 64-bit.
-// asserts below verify that for good measure.
-typedef float float32_t;
-typedef double float64_t;
-
 static inline bool float_equal(double a, double b) {
 	return fabs(a - b) < 0.00001;
 }
