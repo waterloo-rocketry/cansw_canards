@@ -112,8 +112,8 @@ def run_formatter(source, target, env):
     dirs = ["src/application", "src/drivers", "src/common"]
     files = []
     for d in dirs:
-        files += glob.glob(os.path.join(SOURCE_DIR, d, "*", "*.c"))
-        files += glob.glob(os.path.join(SOURCE_DIR, d, "*", "*.h"))
+        files += glob.glob(os.path.join(SOURCE_DIR, d, "**", "*.c"), recursive = True)
+        files += glob.glob(os.path.join(SOURCE_DIR, d, "**", "*.h"), recursive = True)
 
     if not files:
         print("No source files found to format.")
