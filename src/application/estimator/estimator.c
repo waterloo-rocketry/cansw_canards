@@ -157,7 +157,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 	// get current time. as failsafe: default to 5ms period
 	uint32_t curr_time_tenth_ms_get = 0;
 	if (timer_get_tenth_ms(&curr_time_tenth_ms_get) == W_SUCCESS) {
-		curr_time_sec = (float64_t)curr_time_tenth_ms_get / 1000.0;
+		curr_time_sec = (float64_t)curr_time_tenth_ms_get / 10000.0;
 	} else {
 		log_text(10, "Estimator", "timer_get_tenth_ms fail");
 		curr_time_sec =
