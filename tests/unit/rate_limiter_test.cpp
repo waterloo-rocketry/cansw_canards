@@ -6,6 +6,8 @@ extern "C" {
 #include "common/rate_limiter/rate_limiter.h"
 #include <stdbool.h>
 #include <stdint.h>
+
+extern bool rate_limiter(const uint16_t freq, const uint32_t current_ms, uint32_t *p_last_ms);
 }
 
 class RateLimiterTest : public ::testing::Test {
