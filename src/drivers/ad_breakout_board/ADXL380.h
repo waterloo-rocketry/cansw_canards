@@ -1,12 +1,13 @@
 #ifndef ADXL380_H
 #define ADXL380_H
 
-#include "common/math/math.h"
-#include "rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct __attribute__((packed)) {
+#include "common/math/math.h"
+#include "rocketlib/include/common.h"
+
+typedef struct {
 	uint16_t x;
 	uint16_t y;
 	uint16_t z;
