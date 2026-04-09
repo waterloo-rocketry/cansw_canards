@@ -1,14 +1,6 @@
 #ifndef ADXL38X_H
 #define ADXL38X_H
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "common/math/math.h"
-#include "drivers/ad_breakout_board/ADXL380_regmap.h"
-#include "drivers/i2c/i2c.h"
-#include "rocketlib/include/common.h"
-
 /*******************************************************************************
  * Copyright 2024(c) Analog Devices, Inc.
  *
@@ -37,6 +29,14 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "common/math/math.h"
+#include "drivers/ad_breakout_board/ADXL380_regmap.h"
+#include "drivers/i2c/i2c.h"
+#include "rocketlib/include/common.h"
 
 typedef union {
 	_adxl38x_sts_reg_flags_t flags;

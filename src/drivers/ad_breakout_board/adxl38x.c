@@ -44,7 +44,7 @@
 
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
-#include "stm32h7xx_hal.h"
+#include "task.h"
 
 #define ADXL38X_MAX_XFER_LEN 64
 #define ADXL38X_NEG_ACC_MSK 0xFFFF0000
@@ -213,7 +213,7 @@ w_status_t adxl38x_soft_reset(adxl38x_dev_t *p_dev) {
 	}
 
 	/* no_os_udelay(500) translation */
-	HAL_Delay(ADXL38X_RESET_DELAY_MS);
+	vTaskDelay(pdMS_TO_TICKS(ADXL38X_RESET_DELAY_MS));
 
 	ret = adxl38x_read_device_data(p_dev, ADXL38X_DEVID_AD, ADXL38X_ONE_BYTE, &reg_value);
 	if (ret != W_SUCCESS) {
@@ -242,7 +242,7 @@ w_status_t adxl38x_set_op_mode(adxl38x_dev_t *p_dev, adxl38x_op_mode_t op_mode) 
 	}
 
 	/* no_os_mdelay(2) translation */
-	HAL_Delay(ADXL38X_OP_MODE_SETTLE_DELAY_MS);
+	vTaskDelay(pdMS_TO_TICKS(ADXL38X_OP_MODE_SETTLE_DELAY_MS));
 	return ret;
 }
 
@@ -312,6 +312,9 @@ w_status_t adxl38x_get_range(adxl38x_dev_t *p_dev, adxl38x_range_t *p_range_val)
 
 /**
  * @brief Sets self-test control bits.
+ * @param st_mode the state the bit will be in (true = 1, false = 0)
+ * @param st_force the state the bit will be in (true = 1, false = 0)
+ * @param st_dir the state the bit will be in (true = 1, false = 0)
  */
 w_status_t adxl38x_set_self_test_registers(adxl38x_dev_t *p_dev, bool st_mode, bool st_force,
 										   bool st_dir) {
@@ -626,6 +629,12 @@ static w_status_t adxl38x_set_to_standby(adxl38x_dev_t *p_dev) {
 
 /**
  * @brief Executes self-test and returns per-axis pass/fail.
+ * @param p_dev the handle for the adxl38x
+ * @param op_mode the operating mode that the self-test will be performed in
+ * @param p_st_x the status of the x axis self-test
+ * @param p_st_y the status of the y axis self-test
+ * @param p_st_z the status of the z axis self-test
+ * @return the status of the self test calls and function
  */
 w_status_t adxl38x_selftest(adxl38x_dev_t *p_dev, adxl38x_op_mode_t op_mode, bool *p_st_x,
 							bool *p_st_y, bool *p_st_z) {
@@ -655,7 +664,7 @@ w_status_t adxl38x_selftest(adxl38x_dev_t *p_dev, adxl38x_op_mode_t op_mode, boo
 		return ret;
 	}
 
-	if (op_mode == ADXL38X_MODE_HRT_SND) {
+	if (op_mode == ADXL38X_MODE_HRT_SND) { // if ever used this implementation must be checked
 		ret = adxl38x_register_update_bits(
 			p_dev,
 			ADXL38X_DIG_EN,
@@ -683,7 +692,7 @@ w_status_t adxl38x_selftest(adxl38x_dev_t *p_dev, adxl38x_op_mode_t op_mode, boo
 	}
 
 	for (uint8_t k = 0; k < ADXL38X_SELFTEST_SAMPLE_COUNT; k++) {
-		HAL_Delay(ADXL38X_SELFTEST_SAMPLE_DELAY_MS);
+		vTaskDelay(pdMS_TO_TICKS(ADXL38X_SELFTEST_SAMPLE_DELAY_MS));
 		ret = adxl38x_read_device_data(p_dev, ADXL38X_XDATA_H, ADXL38X_SIX_BYTES, array_raw_data);
 		if (ret != W_SUCCESS) {
 			return ret;
@@ -706,7 +715,7 @@ w_status_t adxl38x_selftest(adxl38x_dev_t *p_dev, adxl38x_op_mode_t op_mode, boo
 	y_sum = 0;
 	z_sum = 0;
 	for (uint8_t k = 0; k < ADXL38X_SELFTEST_SAMPLE_COUNT; k++) {
-		HAL_Delay(ADXL38X_SELFTEST_SAMPLE_DELAY_MS);
+		vTaskDelay(pdMS_TO_TICKS(ADXL38X_SELFTEST_SAMPLE_DELAY_MS));
 		ret = adxl38x_read_device_data(p_dev, ADXL38X_XDATA_H, ADXL38X_SIX_BYTES, array_raw_data);
 		if (ret != W_SUCCESS) {
 			return ret;
