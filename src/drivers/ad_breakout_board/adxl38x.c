@@ -1,5 +1,5 @@
 /**
- * @file ADXL380.c
+ * @file adxl38x.c
  * @brief ADXL380-focused translation of the Analog Devices no-OS adxl38x driver
  *        to Waterloo Rocketry codebase primitives.
  *
@@ -42,9 +42,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
-#include "task.h"
 
 #define ADXL38X_MAX_XFER_LEN 64
 #define ADXL38X_NEG_ACC_MSK 0xFFFF0000

@@ -2,13 +2,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
-#include "task.h"
 
 static const uint8_t ADXL_ADDRS = 0x1D;
 static const uint8_t ADXL_PDM_AUDIO_MASK = 0x20;
@@ -18,10 +20,11 @@ static const uint8_t ADXL_SOFT_RESET_DELAY = 1;
 static const float32_t ADXL_16G_SCALE_FACTOR_MICRO_G_LSB = 533.3;
 static const int32_t ADXL_MICRO_G_G = 1000000;
 
-adxl38x_dev_t g_adx380_handle = {};
+adxl38x_dev_t g_adx380_handle = {0};
 
 /**
  * @brief this is initializes the ADXL380
+ * @note Must be called after scheduler start
  * @return the status of the function call
  */
 w_status_t adxl380_init() {
@@ -77,7 +80,7 @@ w_status_t adxl380_init() {
 		return W_FAILURE;
 	}
 
-	// re-zero all register to make sure self-test settings are not accidentially carried over
+	// re-zero all register to make sure self-test settings are not accidentally carried over
 	init_setting_status |= adxl38x_soft_reset(&g_adx380_handle);
 	vTaskDelay(pdMS_TO_TICKS(ADXL_SOFT_RESET_DELAY));
 
@@ -112,7 +115,7 @@ w_status_t adxl380_init() {
 		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, ADXL38X_CH_EN_XYZ));
 
 	if (W_SUCCESS != init_setting_status) {
-		log_text(0, "ADXL380", "ERROR: Failed to set up the correct inital register bit.");
+		log_text(0, "ADXL380", "ERROR: Failed to set up the correct initial register bit.");
 	}
 
 	return init_setting_status;
