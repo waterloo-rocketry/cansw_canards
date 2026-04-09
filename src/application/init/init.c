@@ -100,14 +100,15 @@ static w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *par
 }
 
 static void system_init_task(void *arg) {
-	// initialize timer first to make sure other modules can use it
-	if (W_SUCCESS != timer_init()) {
-		proc_handle_fatal_error("timerinit");
-	}
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
 	vTaskDelay(500);
+
+	// initialize timer first to make sure other modules can use it
+	if (W_SUCCESS != timer_init()) {
+		proc_handle_fatal_error("timerinit");
+	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
