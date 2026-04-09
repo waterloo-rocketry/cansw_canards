@@ -36,7 +36,48 @@ w_status_t adxl380_init() {
 
 	w_status_t init_setting_status = W_SUCCESS;
 
-	// re-zero all register to make sure no old setting will be carried over
+	// re-zero all register to make sure no old setting will be carried over and prepare for
+	// self-test
+	if (W_SUCCESS != adxl38x_soft_reset(&g_adx380_handle)) {
+		log_text(0, "ADXL380", "ERROR: Soft reset of registers failed.");
+		return W_FAILURE;
+	}
+	vTaskDelay(pdMS_TO_TICKS(ADXL_SOFT_RESET_DELAY));
+
+	// perform self-test
+	bool st_failed = false;
+	bool x_axis_status = false;
+	bool y_axis_status = false;
+	bool z_axis_status = false;
+
+	if (W_SUCCESS !=
+		adxl38x_selftest(
+			&g_adx380_handle, ADXL38X_MODE_HP, &x_axis_status, &y_axis_status, &z_axis_status)) {
+		log_text(0, "ADXL380", "ERROR: Self-test unable to be completed.");
+		return W_FAILURE;
+
+	} else {
+		if (!x_axis_status) {
+			log_text(0, "ADXL380", "ERROR: x-axis self-test failed.");
+			st_failed = true;
+		}
+
+		if (!y_axis_status) {
+			log_text(0, "ADXL380", "ERROR: y-axis self-test failed.");
+			st_failed = true;
+		}
+
+		if (!z_axis_status) {
+			log_text(0, "ADXL380", "ERROR: z-axis self-test failed.");
+			st_failed = true;
+		}
+	}
+
+	if (st_failed) {
+		return W_FAILURE;
+	}
+
+	// re-zero all register to make sure self-test settings are not accidentially carried over
 	init_setting_status |= adxl38x_soft_reset(&g_adx380_handle);
 	vTaskDelay(pdMS_TO_TICKS(ADXL_SOFT_RESET_DELAY));
 
