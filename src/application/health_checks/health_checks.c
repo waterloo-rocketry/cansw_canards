@@ -6,6 +6,7 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "application/motor_handler/motor_handler.h"
 #include "can.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
@@ -198,6 +199,7 @@ static uint32_t check_modules_status(void) {
 	status_bitfield |= flight_phase_get_status();
 	status_bitfield |= imu_handler_get_status();
 	status_bitfield |= uart_get_status();
+	status_bitfield |= motor_handler_get_status();
 
 	if (logger_get_status() == W_FAILURE) {
 		status_bitfield |= (1 << E_FS_ERROR_OFFSET);

@@ -7,6 +7,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "application/motor_handler/motor_handler.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -40,6 +41,7 @@ TaskHandle_t controller_task_handle = NULL;
 TaskHandle_t flight_phase_task_handle = NULL;
 TaskHandle_t imu_handler_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
+TaskHandle_t motor_handler_task_handle = NULL;
 
 // Task priorities
 // flight phase must have highest priority to preempt everything else
@@ -54,6 +56,7 @@ const uint32_t estimator_task_priority = 25;
 const uint32_t imu_handler_task_priority = 20;
 const uint32_t movella_task_priority = 20;
 const uint32_t log_task_priority = 15;
+const uint32_t motor_handler_task_priority = 12; // placeholder value for now
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
@@ -136,6 +139,7 @@ static void system_init_task(void *arg) {
 	status |= init_with_retry_param((w_status_t (*)(void *))can_handler_init, &hfdcan1);
 	status |= init_with_retry(controller_init);
 	status |= init_with_retry(ekf_init);
+	status |= init_with_retry_param((w_status_t (*)(void *))motor_handler_init, &hfdcan1);
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -197,6 +201,13 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(
 		estimator_task, "estimator", 8192, NULL, estimator_task_priority, &estimator_task_handle);
+
+	task_status &= xTaskCreate(motor_handler_task,
+							   "motor",
+							   256,
+							   NULL,
+							   motor_handler_task_priority,
+							   &motor_handler_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
