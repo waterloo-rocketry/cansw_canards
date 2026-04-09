@@ -1,10 +1,11 @@
 #ifndef ADXRS649_H
 #define ADXRS649_H
 
-#include "common/math/math.h"
-#include "rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "common/math/math.h"
+#include "rocketlib/include/common.h"
 
 /**
  * @brief initialize and start up the ADXRS649 AD Gyro and ADS1219

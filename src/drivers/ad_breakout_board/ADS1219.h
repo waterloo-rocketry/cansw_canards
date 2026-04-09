@@ -23,11 +23,12 @@ ACK: https://github.com/binomaiheu/ADS1219
 #ifndef ADS1219_H
 #define ADS1219_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "common/math/math.h"
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
-#include <stdbool.h>
-#include <stdint.h>
 
 /* Default I2C address, A0 and A1 both to DGND */
 #define ADS1219_I2C_ADDRESS 0x40
@@ -229,5 +230,13 @@ w_status_t ads1219_millivolts(ads1219_handle_t *p_handle, int32_t adc_count, flo
  * @return status of function
  */
 w_status_t ads1219_get_millivolts(ads1219_handle_t *p_handle, float64_t *data);
+
+/**
+ * @brief performs a sanity check by reading back the configurations
+ * @param p_handle handle to the ADC data
+ * @param config_setting is the configuration that is being checked agaisnt
+ * @return if the sanity check was successful
+ */
+w_status_t ads1219_sanity_check(ads1219_handle_t *p_handle, uint8_t config_setting);
 
 #endif /* ADS1219_H */
