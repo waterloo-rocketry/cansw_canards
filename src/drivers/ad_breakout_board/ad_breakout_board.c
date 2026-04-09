@@ -1,15 +1,17 @@
-#include "drivers/ad_breakout_board/ad_breakout_board.h"
+
+#include <stdint.h>
+
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
+#include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/timer/timer.h"
 #include "rocketlib/include/common.h"
-#include <stdint.h>
-
-#include "FreeRTOS.h"
-#include "task.h"
 
 // struct to hold task context
 typedef struct {
@@ -134,18 +136,16 @@ void ad_breakout_board_task(void *argument) {
 
 	uint32_t raw_gyro = 0;
 	adxl380_raw_accel_data_t raw_accel = {};
-	float32_t current_time_ms = 0;
-	uint32_t current_timestamp_ms = 0;
+	uint32_t current_time_ms = 0;
 
 	while (1) {
 		// get current timestamp
 		if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
-			current_time_ms = 0.0f;
+			current_time_ms = 0;
 		}
-		uint32_t current_timestamp_ms = (uint32_t)current_time_ms;
 
-		g_task_ctx.gyro_dual_buffer[0].timestamp = current_timestamp_ms;
-		g_task_ctx.accel_dual_buffer[0].timestamp = current_timestamp_ms;
+		g_task_ctx.gyro_dual_buffer[0].timestamp = current_time_ms;
+		g_task_ctx.accel_dual_buffer[0].timestamp = current_time_ms;
 
 		if (W_SUCCESS ==
 			adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[0].z_rate), &raw_gyro)) {

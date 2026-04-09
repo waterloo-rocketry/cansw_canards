@@ -1,10 +1,11 @@
 #ifndef AD_BREAKOUT_BOARD_H
 #define AD_BREAKOUT_BOARD_H
 
+#include <stdint.h>
+
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "rocketlib/include/common.h"
-#include <stdint.h>
 
 typedef struct {
 	uint32_t timestamp;
