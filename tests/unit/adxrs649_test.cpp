@@ -27,6 +27,7 @@ FAKE_VALUE_FUNC(w_status_t, ads1219_set_conversion_mode, ads1219_handle_t *, uin
 FAKE_VALUE_FUNC(w_status_t, ads1219_set_gain, ads1219_handle_t *, uint8_t);
 FAKE_VALUE_FUNC(w_status_t, ads1219_set_data_rate, ads1219_handle_t *, uint8_t);
 FAKE_VALUE_FUNC(w_status_t, ads1219_set_vref, ads1219_handle_t *, uint8_t, float64_t, float64_t);
+FAKE_VALUE_FUNC(w_status_t, ads1219_sanity_check, ads1219_handle_t *, uint8_t);
 FAKE_VALUE_FUNC(w_status_t, ads1219_start, ads1219_handle_t *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_conversion_ready, ads1219_handle_t *, bool *);
 FAKE_VALUE_FUNC(w_status_t, ads1219_read_value, ads1219_handle_t *, uint32_t *);
@@ -74,6 +75,7 @@ protected:
         RESET_FAKE(ads1219_set_conversion_mode);
         RESET_FAKE(ads1219_set_gain);
         RESET_FAKE(ads1219_set_vref);
+        RESET_FAKE(ads1219_sanity_check);
         RESET_FAKE(ads1219_start);
         RESET_FAKE(ads1219_conversion_ready);
         RESET_FAKE(ads1219_read_value);
@@ -104,6 +106,9 @@ TEST_F(ADXRS649, initSuccess){
     ads1219_set_data_rate_fake.return_val = W_SUCCESS;
     ads1219_set_vref_fake.return_val = W_SUCCESS;
 
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_SUCCESS;
+
     // self-test
     gpio_write_fake.return_val = W_SUCCESS;
 
@@ -125,6 +130,9 @@ TEST_F(ADXRS649, initFailAfterADS1219InitFail){
     ads1219_set_gain_fake.return_val = W_SUCCESS;
     ads1219_set_data_rate_fake.return_val = W_SUCCESS;
     ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_SUCCESS;
 
     // self-test
     gpio_write_fake.return_val = W_SUCCESS;
@@ -148,6 +156,9 @@ TEST_F(ADXRS649, initFailAfterSetUpFail){
     ads1219_set_data_rate_fake.return_val = W_SUCCESS;
     ads1219_set_vref_fake.return_val = W_SUCCESS;
 
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_SUCCESS;
+
     // self-test
     gpio_write_fake.return_val = W_SUCCESS;
 
@@ -160,6 +171,31 @@ TEST_F(ADXRS649, initFailAfterSetUpFail){
 
 // unable to fake self-test since it's static function
 
+TEST_F(ADXRS649, initFailAfterADCSanityCheckFail){
+
+    // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_FAILURE;
+
+    // self-test
+    gpio_write_fake.return_val = W_SUCCESS;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    w_status_t status= adxrs649_init();
+    EXPECT_EQ(W_FAILURE, status);
+};
+
 TEST_F(ADXRS649, initFailAfterStartFail){
 
     // set up function returns
@@ -171,6 +207,9 @@ TEST_F(ADXRS649, initFailAfterStartFail){
     ads1219_set_gain_fake.return_val = W_SUCCESS;
     ads1219_set_data_rate_fake.return_val = W_SUCCESS;
     ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_SUCCESS;
 
     // self-test
     gpio_write_fake.return_val = W_SUCCESS;

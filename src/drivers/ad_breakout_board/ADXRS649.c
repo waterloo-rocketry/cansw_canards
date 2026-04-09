@@ -1,16 +1,21 @@
-#include "drivers/ad_breakout_board/ADXRS649.h"
-#include "FreeRTOS.h"
-#include "application/logger/log.h"
-#include "common/math/math.h"
-#include "drivers/ad_breakout_board/ADS1219.h"
-#include "drivers/gpio/gpio.h"
-#include "drivers/i2c/i2c.h"
-#include "task.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "application/logger/log.h"
+#include "common/math/math.h"
+#include "drivers/ad_breakout_board/ADS1219.h"
+#include "drivers/ad_breakout_board/ADXRS649.h"
+#include "drivers/gpio/gpio.h"
+#include "drivers/i2c/i2c.h"
+
 // define addresses
 #define ADS1219_ADDR 0x40
+static const uint8_t ADS1219_CONFIG_SETTINGS =
+	0x8F; // this is the configuration we are operating with
 
 // sensor range
 static const float32_t ADXRS649_GYRO_RANGE = 20000.0;
@@ -120,7 +125,14 @@ w_status_t adxrs649_init() {
 
 	if (W_SUCCESS != adc_setup_status) {
 		log_text(0, "ADXRS649", "ERROR: Failed to write settings ADC for gyro.");
-		return adc_setup_status;
+		return W_FAILURE;
+	}
+
+	// currect ads setting 10001111 -> 0x8F
+	// perform sanity check
+	if (W_SUCCESS != ads1219_sanity_check(&g_ads_handle, ADS1219_CONFIG_SETTINGS)) {
+		log_text(0, "ADXRS649", "ERROR: Failed ADC sanity check.");
+		return W_FAILURE;
 	}
 
 	if (W_SUCCESS != adxrs649_self_test()) {

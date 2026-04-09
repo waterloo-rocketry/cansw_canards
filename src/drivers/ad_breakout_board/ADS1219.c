@@ -10,8 +10,11 @@ Based on above repository
  * C port of ADS1219.cpp (Arduino / Wire) adapted for the project's I2C layer.
  */
 
-#include "drivers/ad_breakout_board/ADS1219.h"
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "common/math/math.h"
+#include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/i2c/i2c.h"
 
 /* ── internal helpers (static, replace the C++ private methods) ────────── */
@@ -344,4 +347,23 @@ w_status_t ads1219_get_millivolts(ads1219_handle_t *p_handle, float64_t *data) {
 	}
 
 	return ads1219_millivolts(p_handle, (int32_t)value, data);
+}
+
+/**
+ * @brief performs a sanity check by reading back the configurations
+ * @param p_handle handle to the ADC data
+ * @param config_setting is the configuration that is being checked agaisnt
+ * @return if the sanity check was successful
+ */
+w_status_t ads1219_sanity_check(ads1219_handle_t *p_handle, uint8_t config_setting) {
+	uint8_t data;
+	w_status_t status = ads1219_read_register(p_handle, ADS1219_CMD_RREG_CONFIG, &data);
+	if (W_SUCCESS != status) {
+		return status;
+	}
+
+	if (data != config_setting) {
+		return W_FAILURE;
+	}
+	return W_SUCCESS;
 }

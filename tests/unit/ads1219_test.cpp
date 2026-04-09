@@ -8,7 +8,8 @@ extern "C" {
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/i2c/i2c.h"
 
-extern w_status_t ads1219_read_value(ads1219_handle_t *handle, uint32_t *value);
+extern w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *p_value);
+extern w_status_t ads1219_sanity_check(ads1219_handle_t *p_handle, uint8_t config_setting);
 
 FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *, uint8_t);
 FAKE_VALUE_FUNC(w_status_t, i2c_write_reg, i2c_bus_t, uint8_t, uint8_t, const uint8_t *, uint8_t);
@@ -19,12 +20,16 @@ FAKE_VALUE_FUNC(w_status_t, i2c_write_data, i2c_bus_t, uint8_t, const uint8_t *,
 uint32_t i2c_test_input;
 ads1219_handle_t test_handle = {.bus = I2C_BUS_4, .i2c_addr = 0x40};
 w_status_t i2c_read_reg_custom_output(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data, uint8_t len){
+    if (3 == len) {
+        uint8_t test_num_array[3] = {(uint8_t) ((((uint32_t) i2c_test_input) & 0xFF0000) >> 16), (uint8_t) ((((uint32_t) i2c_test_input) & 0xFF00) >> 8), static_cast<uint8_t>((uint32_t) i2c_test_input & 0xFF)};
+        data[0] = test_num_array[0];
+        data[1] = test_num_array[1];
+        data[2] = test_num_array[2];
 
-    uint8_t test_num_array[3] = {(uint8_t) ((((uint32_t) i2c_test_input) & 0xFF0000) >> 16), (uint8_t) ((((uint32_t) i2c_test_input) & 0xFF00) >> 8), static_cast<uint8_t>((uint32_t) i2c_test_input & 0xFF)};
-    uint8_t* i2c_custom_output = (uint8_t*) test_num_array;
-    data[0] = i2c_custom_output[0];
-    data[1] = i2c_custom_output[1];
-    data[2] = i2c_custom_output[2];
+    } else if (1 == len) {
+        *data = static_cast<uint8_t>((uint32_t) i2c_test_input & 0xFF);
+    }
+    
     return W_SUCCESS;
 }
 
@@ -38,6 +43,14 @@ protected:
 
     void TearDown() override {}
 };
+
+TEST_F(ADS1219Test, readValueFailWithI2CReadFail) {
+    i2c_read_reg_fake.return_val = W_FAILURE;
+
+    uint32_t result_num = 1;
+    w_status_t status= ads1219_read_value(&test_handle, &result_num);
+    EXPECT_EQ(W_FAILURE, status);
+}
 
 TEST_F(ADS1219Test, readValueTestBitConcate0){
 
@@ -97,3 +110,30 @@ TEST_F(ADS1219Test, readValueTestOverflowMin){
     w_status_t status= ads1219_read_value(&test_handle, &result_num);
     EXPECT_EQ(W_OVERFLOW, status);
 };
+
+TEST_F(ADS1219Test, sanityCheckFailWithI2CReadFail) {
+    i2c_read_reg_fake.return_val = W_FAILURE;
+
+    w_status_t status= ads1219_sanity_check(&test_handle, 0x00);
+    EXPECT_EQ(W_FAILURE, status);
+}
+
+TEST_F(ADS1219Test, sanityCheckFailWithIncorrectComparison) {
+    // set up the i2c value
+    i2c_test_input = 0x00;
+    i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_output;
+
+    uint8_t ads_setting = 0x8F;
+    w_status_t status= ads1219_sanity_check(&test_handle, ads_setting);
+    EXPECT_EQ(W_FAILURE, status);
+}
+
+TEST_F(ADS1219Test, sanityCheckSuccess) {
+    // set up the i2c value
+    i2c_test_input = 0x8F;
+    i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_output;
+
+    uint8_t ads_setting = 0x8F;
+    w_status_t status= ads1219_sanity_check(&test_handle, ads_setting);
+    EXPECT_EQ(W_SUCCESS, status);
+}
