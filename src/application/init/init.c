@@ -105,6 +105,11 @@ static void system_init_task(void *arg) {
 	// probably because movella triggers before its ready
 	vTaskDelay(500);
 
+	// initialize timer first to make sure other modules can use it
+	if (W_SUCCESS != timer_init()) {
+		proc_handle_fatal_error("timerinit");
+	}
+
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
@@ -116,7 +121,6 @@ static void system_init_task(void *arg) {
 	w_status_t status = W_SUCCESS;
 
 	// INIT REQUIRED MODULES
-	status |= timer_init();
 	status |= gpio_init();
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0);
 	status |= i2c_init(I2C_BUS_4, &hi2c4, 0);
