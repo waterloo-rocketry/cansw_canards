@@ -258,7 +258,7 @@ TEST_F(ADXL380, initFailWithADXL38XSoftResetFail){
     EXPECT_EQ(W_FAILURE, status);
 };
 
-TEST_F(ADXL380, initFailWithADXL38XInitSettingFailure){
+TEST_F(ADXL380, initFailWithADXL38XSettingOPModeFailure){
 
     // set up function returns
     adxl38x_init_fake.return_val = W_SUCCESS;
@@ -273,15 +273,15 @@ TEST_F(ADXL380, initFailWithADXL38XInitSettingFailure){
     EXPECT_EQ(W_FAILURE, status);
 };
 
-TEST_F(ADXL380, initFailWithADXL38XSettingFail){
+TEST_F(ADXL380, initFailWithADXL38XSettingRangeFail){
 
     // set up function returns
     adxl38x_init_fake.return_val = W_SUCCESS;
 
     // set up
     adxl38x_soft_reset_fake.return_val = W_SUCCESS;
-    adxl38x_set_op_mode_fake.return_val = W_FAILURE;
-    adxl38x_set_range_fake.return_val = W_SUCCESS;
+    adxl38x_set_op_mode_fake.return_val = W_SUCCESS;
+    adxl38x_set_range_fake.return_val = W_FAILURE;
     adxl38x_register_update_bits_fake.return_val = W_SUCCESS;
 
     w_status_t status= adxl380_init();

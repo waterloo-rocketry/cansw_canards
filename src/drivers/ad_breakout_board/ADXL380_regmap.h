@@ -1,8 +1,5 @@
-#ifndef LIS3MDL_h
-#define LIS3MDL_h
-
-#include <stdbool.h>
-#include <stdint.h>
+#ifndef ADXL380_REGMAP_h
+#define ADXL380_REGMAP_h
 
 /* https://github.com/analogdevicesinc/no-OS/tree/main */
 
@@ -34,6 +31,9 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /* Register Map fo ADXL38X (Rev H DS)*/
 #define ADXL38X_DEVID_AD 0x00
