@@ -100,6 +100,10 @@ static w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *par
 }
 
 static void system_init_task(void *arg) {
+	// initialize timer first to make sure other modules can use it
+	if (W_SUCCESS != timer_init()) {
+		proc_handle_fatal_error("timerinit");
+	}
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
@@ -116,7 +120,6 @@ static void system_init_task(void *arg) {
 	w_status_t status = W_SUCCESS;
 
 	// INIT REQUIRED MODULES
-	status |= timer_init();
 	status |= gpio_init();
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0);
 	status |= i2c_init(I2C_BUS_4, &hi2c4, 0);

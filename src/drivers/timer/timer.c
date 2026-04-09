@@ -25,7 +25,6 @@ static bool g_timer_initialized = false;
 w_status_t timer_init() {
 	g_timer_initialized = false;
 	if (HAL_OK != HAL_TIM_Base_Start(&htim2)) {
-		log_text(0, "timer", "ERROR: Failed to start TIM CHANNEL 2.");
 		return W_FAILURE;
 	}
 	g_timer_initialized = true;
