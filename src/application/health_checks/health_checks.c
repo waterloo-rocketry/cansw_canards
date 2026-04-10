@@ -179,6 +179,55 @@ static uint32_t check_modules_status(void) {
 	return status_bitfield;
 }
 
+// --- Fatal Error Handler Implementation ---
+
+// Note: All IDs (Board Type, Message Type, Instance ID)
+//       are used directly from canlib/message_types.h
+
+void proc_handle_fatal_error(const char *errorMsg) {
+	// safe state - loop here forever and send CAN err msg repeatedly
+	while (1) {
+		__disable_irq();
+
+		// let CAN still work
+		HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
+
+		can_msg_t msg;
+		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
+
+		// Copy error message to the data buffer
+		if (errorMsg != NULL) {
+			strncpy((char *)data, errorMsg, sizeof(data));
+			// Ensure null termination
+			data[sizeof(data) - 1] = '\0';
+		}
+
+		// Use canlib's helper function to build the debug message
+		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
+		// state)
+		if (build_debug_raw_msg(PRIO_HIGH, 0, data, &msg)) {
+			// Only try to send if message build succeeded
+			can_send(&msg);
+		}
+
+		// scream a few times then attempt to reset.
+		// delay for ~1sec without using systick-based delays (no hal_delay)
+		volatile int dummy;
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 50000000; j++) {
+				dummy++;
+			}
+		}
+
+		dummy++;
+
+		// resetting is always a safe state even in midflight, as flightphase starts IDLE
+		NVIC_SystemReset();
+	}
+}
+
+// --- End Fatal Error Handler ---
+
 w_status_t health_check_exec() {
 	uint32_t status_bitfield = 0;
 
