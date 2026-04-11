@@ -16,7 +16,7 @@ extern "C" {
 #define TOLERANCE 0.000001
 
     FAKE_VALUE_FUNC(w_status_t, log_text, uint32_t, const char*, const char*);
-    FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float*);
+    FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t*);
 }
 
 DEFINE_FFF_GLOBALS;
