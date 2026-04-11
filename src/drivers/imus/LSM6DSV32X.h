@@ -25,7 +25,7 @@ typedef struct {
 	TaskHandle_t task_to_notify;
 	volatile bool stale_data;
 	volatile bool bus_status;
-	float timestamp[2];
+	uint32_t timestamp[2];
 
 } imu_ctx_t;
 
