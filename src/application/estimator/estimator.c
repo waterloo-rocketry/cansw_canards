@@ -201,7 +201,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 	}
 
 	// ------- do sdcard data logging at 200hz (only after pad filter starts) -------
-	if (curr_flight_phase >= STATE_SE_INIT) {
+	if (curr_flight_phase >= STATE_PAD_FILTER) {
 		// log data sent to controller
 		log_data_container_t log_payload = {0};
 
@@ -254,7 +254,7 @@ w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) 
 
 		// log the end of pad filter one time only
 		static bool pad_filter_end_logged = false;
-		if (curr_flight_phase > STATE_SE_INIT) {
+		if (curr_flight_phase > STATE_PAD_FILTER) {
 			if (!pad_filter_end_logged) {
 				log_text(1,
 						 "Estimator",

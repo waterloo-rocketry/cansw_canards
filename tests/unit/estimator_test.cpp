@@ -205,7 +205,7 @@ TEST_F(EstimatorTest, EstimatorRunLoopPadStateNominal) {
 // --- init pad filter state ---
 TEST_F(EstimatorTest, EstimatorRunLoopInitStateNominalZeroData) {
     // Arrange
-    flight_phase_get_state_fake.return_val = STATE_SE_INIT; // Simulate flight phase state
+    flight_phase_get_state_fake.return_val = STATE_PAD_FILTER; // Simulate flight phase state
     xQueueReceive_fake.return_val = pdTRUE; // Simulate successful imu queue receive
 
     // Initialize required context
