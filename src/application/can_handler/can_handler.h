@@ -1,11 +1,13 @@
 #ifndef CAN_HANDLER_H
 #define CAN_HANDLER_H
 
-#include "application/can_handler/can_telemetry_scaling.h"
+#include <stdint.h>
+
 #include "canlib.h"
 #include "rocketlib/include/common.h"
 #include "stm32h7xx_hal.h"
-#include <stdint.h>
+
+#include "application/can_handler/can_telemetry_scaling.h"
 
 #define UINT24_MAX (1U << 24) - 1U
 #define INT24_MIN -(1 << 23)

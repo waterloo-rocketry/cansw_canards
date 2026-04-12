@@ -55,8 +55,8 @@ w_status_t get_adc_current(uint32_t *adc_current_mA) {
 }
 
 uint32_t check_current(void) {
-	w_status_t current_sts = W_SUCCESS;
-	w_status_t can_tx_sts = W_SUCCESS;
+	w_status_t current_status = W_SUCCESS;
+	w_status_t can_tx_status = W_SUCCESS;
 	uint32_t adc_current_mA;
 
 	if (get_adc_current(&adc_current_mA) == W_SUCCESS) {
@@ -68,20 +68,20 @@ uint32_t check_current(void) {
 		build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)ms, SENSOR_5V_CURR, adc_current_mA, &msg);
 
 		// Send this to can handler module's tx
-		can_tx_sts |= can_handler_transmit(&msg);
-		if (can_tx_sts != W_SUCCESS) {
+		can_tx_status |= can_handler_transmit(&msg);
+		if (can_tx_status != W_SUCCESS) {
 			log_text(10, "health_checks", "health checks msg tx failed");
 		}
 
 		// send CAN err msg and log text if over current
 		if (adc_current_mA > MAX_CURRENT_mA) {
-			current_sts |= 1 << E_5V_OVER_CURRENT_OFFSET;
+			current_status |= 1 << E_5V_OVER_CURRENT_OFFSET;
 			log_text(10, "health_checks", "5V overcurrent: %d mA", adc_current_mA);
 		} else {
 		}
 	}
 
-	return (current_sts != W_SUCCESS) ? current_sts : can_tx_sts;
+	return (current_status != W_SUCCESS) ? current_status : can_tx_status;
 }
 
 w_status_t health_check_init(void) {

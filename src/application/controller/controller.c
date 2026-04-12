@@ -23,7 +23,7 @@ static controller_error_data_t controller_error_stats = {0};
 // Send `canard_angle`, the desired canard angle (radians) to CAN
 static w_status_t controller_send_can(float canard_angle) {
 	// convert canard angle from radians to degrees
-	float canard_cmd_deg = canard_angle * DEG_PER_RAD;
+	float32_t canard_cmd_deg = canard_angle * DEG_PER_RAD;
 
 	// get timestamp for can msg
 	float time_ms;
@@ -34,28 +34,28 @@ static w_status_t controller_send_can(float canard_angle) {
 	uint32_t can_timestamp = (uint32_t)time_ms;
 
 	can_msg_t msg;
-	w_status_t encode_sts = W_SUCCESS;
-	w_status_t can_tx_sts = W_SUCCESS;
+	w_status_t encode_status = W_SUCCESS;
+	w_status_t can_tx_status = W_SUCCESS;
 
 	// Encode messages
 	int16_t scaled_angle = 0;
-	encode_sts |= can_encode_scaled_float(SCALE_SERVO_D, canard_cmd_deg, &scaled_angle);
-	if (encode_sts == W_MATH_ERROR) {
+	encode_status |= can_encode_scaled_float(SCALE_SERVO_D, canard_cmd_deg, &scaled_angle);
+	if (encode_status == W_MATH_ERROR) {
 		log_text(LOG_WAIT_MS, "controller", "actuator msg encode math error (NaN or Inf)");
-	} else if (encode_sts != W_SUCCESS) {
+	} else if (encode_status != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, "controller", "actuator msg scale / encode failed");
 	}
 
 	build_analog_sensor_16bit_msg(
-		PRIO_HIGHEST, can_timestamp, SENSOR_CANARD_SERVO_ANGLE, scaled_angle, &msg);
+		PRIO_MEDIUM, can_timestamp, SENSOR_CANARD_SERVO_ANGLE, scaled_angle, &msg);
 
 	// Send this to can handler module's tx
-	can_tx_sts |= can_handler_transmit(&msg);
-	if (can_tx_sts != W_SUCCESS) {
+	can_tx_status |= can_handler_transmit(&msg);
+	if (can_tx_status != W_SUCCESS) {
 		controller_state.can_send_errors++;
 		log_text(LOG_WAIT_MS, "controller", "actuator msg tx failed");
 	}
-	return (encode_sts != W_SUCCESS) ? encode_sts : can_tx_sts;
+	return (encode_status != W_SUCCESS) ? encode_status : can_tx_status;
 }
 
 /**

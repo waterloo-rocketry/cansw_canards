@@ -58,8 +58,8 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	can_msg_t msg;
 	float timestamp = 0.0f;
 	timer_get_ms(&timestamp);
-	w_status_t encode_sts = W_SUCCESS;
-	w_status_t can_tx_sts = W_SUCCESS;
+	w_status_t encode_status = W_SUCCESS;
+	w_status_t can_tx_status = W_SUCCESS;
 
 	// TODO: Currently using incorrect sensor for testing
 	// Encode messages
@@ -67,17 +67,17 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
 	int32_t mag_x = 0, mag_y = 0, mag_z = 0;
 
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.x, &acc_x);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.y, &acc_y);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.z, &acc_z);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.x, &acc_x);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.y, &acc_y);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.z, &acc_z);
 
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.x, &gyro_x);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.y, &gyro_y);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.z, &gyro_z);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.x, &gyro_x);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.y, &gyro_y);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.z, &gyro_z);
 
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.x, &mag_x);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.y, &mag_y);
-	encode_sts |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.z, &mag_z);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.x, &mag_x);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.y, &mag_y);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.z, &mag_z);
 
 	// Build and send messages
 	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
@@ -87,7 +87,7 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 									 acc_y,
 									 acc_z,
 									 &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+	can_tx_status |= can_handler_transmit(&msg);
 
 	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)timestamp,
@@ -96,28 +96,28 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 									 gyro_y,
 									 gyro_z,
 									 &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+	can_tx_status |= can_handler_transmit(&msg);
 
 	build_2d_analog_sensor_24bit_msg(
 		PRIO_LOW, (uint16_t)timestamp, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_X, mag_x, mag_y, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+	can_tx_status |= can_handler_transmit(&msg);
 
 	build_2d_analog_sensor_24bit_msg(
 		PRIO_LOW, (uint16_t)timestamp, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Z, mag_z, 0xFFFFFFFF, &msg); // test clamping
-	can_tx_sts |= can_handler_transmit(&msg);
+	can_tx_status |= can_handler_transmit(&msg);
 
 	// Error handling
-	if (encode_sts == W_MATH_ERROR) {
+	if (encode_status == W_MATH_ERROR) {
 		log_text(0, "IMUHandler", "IMU raw msg encode math error (NaN or Inf)");
-	} else if (encode_sts != W_SUCCESS) {
+	} else if (encode_status != W_SUCCESS) {
 		log_text(0, "IMUHandler", "IMU raw msg scale / encode failed");
 	}
 
-	if (can_tx_sts != W_SUCCESS) {
+	if (can_tx_status != W_SUCCESS) {
 		log_text(0, "IMUHandler", "IMU raw msg tx failed");
 	}
 
-	if ((can_tx_sts != W_SUCCESS) || (encode_sts != W_SUCCESS)) {
+	if ((can_tx_status != W_SUCCESS) || (encode_status != W_SUCCESS)) {
 		imu_handler_state.error_count++;
 		return W_FAILURE;
 	}

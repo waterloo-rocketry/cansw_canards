@@ -1,24 +1,21 @@
+#include <limits.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+
 #include "FreeRTOS.h"
-#include "application/logger/log.h"
-#include "drivers/gpio/gpio.h"
 #include "queue.h"
+#include "stm32h7xx_hal.h" /* For __disable_irq, __NOP */
+#include "third_party/canlib/message/msg_general.h" /* For build_debug_raw_msg */
+#include "third_party/canlib/message_types.h" /* For MSG_DEBUG_RAW, PRIO_HIGH, etc. */
+#include "third_party/rocketlib/include/mathops.h" /* For clamp functions */
 
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
-
-// Include necessary headers for fatal error handler
-#include "stm32h7xx_hal.h" // For __disable_irq, __NOP
-#include "third_party/canlib/message/msg_general.h" // For build_debug_raw_msg
-#include "third_party/canlib/message_types.h" // For MSG_DEBUG_RAW, PRIO_HIGH, etc.
-#include "third_party/rocketlib/include/mathops.h" // For clamp functions
-#include <limits.h>
-#include <math.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
 
 const can_scale_data_t scale_map[SCALE_COUNT] = SCALE_MAP_INIT;
 
@@ -66,7 +63,7 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 	return status;
 }
 
-static void can_handle_rx_isr(const can_msg_t *message) {
+static void can_handle_rx_message(const can_msg_t *message) {
 	// software filter: only queue messages with registered callbacks
 	can_msg_type_t msg_type = get_message_type(message);
 	// drop any message types without a registered handler
@@ -199,7 +196,7 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 		return W_FAILURE;
 	}
 
-	if (!stm32h7_can_init(hfdcan, &can_handle_rx_isr)) {
+	if (!stm32h7_can_init(hfdcan, &can_handle_rx_message)) {
 		log_text(1, "CANHandler", "ERROR: can_init_stm failed.");
 		return W_FAILURE;
 	}
@@ -344,7 +341,7 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 		can_get_signed_limits(target_type, &minv, &maxv);
 
 		return can_store_signed(
-			target_type, (int64_t)value_clamp_float32(scaled, (float32_t)minv, (float32_t)maxv), out);
+			target_type, value_clamp_float32(scaled, (float32_t)minv, (float32_t)maxv), out);
 	}
 	return W_SUCCESS;
 }
@@ -401,7 +398,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 		// Use canlib's helper function to build the debug message
 		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
 		// state)
-		build_debug_raw_msg(PRIO_HIGH, 0, data, &msg);
+		build_debug_raw_msg(PRIO_LOW, 0, data, &msg);
 		stm32h7_can_send(&msg);
 
 		// scream a few times then attempt to reset.
