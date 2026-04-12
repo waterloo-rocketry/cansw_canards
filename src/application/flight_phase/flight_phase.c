@@ -25,8 +25,8 @@ static const float32_t ACCEL_THRESHOLD_LAUNCH_M_S2 =
 	20; // minimum acceleration in m/s^2 for a launch to be detected
 static const uint32_t NUM_CONSEC_THRESHOLD =
 	20; // number of consecutive detection beyond threshold to satisfy for condition (no units)
-static const uint32_t MAX_TIMESTAMP_DIFFERENCE_MS =
-	500; // the max timestamp difference before consec_num_detection resets
+static const float64_t MAX_TIMESTAMP_DIFFERENCE_SEC =
+	0.5; // the max timestamp difference before consec_num_detection resets
 
 /**
  * module health status trackers
@@ -79,7 +79,7 @@ static flight_phase_status_t flight_phase_status = {
 
 // number of valid sensor detection that would cause a state change
 static uint32_t consec_num_detection = 0;
-static uint32_t last_imu_timestamp = 0; // latest imu timestamp
+static float64_t last_imu_timestamp_sec = 0; // latest imu timestamp
 
 /**
  * Intialize flight phase module.
@@ -356,7 +356,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
  * @brief would complete sensor-based detection of state change for flight phase
  * @param state is a pointer to the present state
  * @param all_imu_data is a pointer to the current the imu data
- * @param last_imu_timestamp this is last imu timestamp that has was used
+ * @param last_imu_timestamp_sec this is last imu timestamp that has was used
  * @param num_consec_detection is a pointer to the number of consecutive detection made in this
  * particular flight phase
  * @param sensor_event a pointer to return the event the sensor triggers (default returns
@@ -365,7 +365,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
  */
 w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 										 const estimator_all_imus_input_t *all_imu_data,
-										 const uint32_t *last_imu_timestamp,
+										 const float64_t *last_imu_timestamp_sec,
 										 uint32_t *num_consec_detection,
 										 flight_phase_event_t *sensor_event) {
 	*sensor_event = EVENT_NULL;
@@ -379,15 +379,17 @@ w_status_t flight_phase_sensor_detection(const flight_phase_state_t *state,
 		return W_FAILURE;
 	}
 
-	if (*last_imu_timestamp ==
-		all_imu_data->pololu.timestamp_imu) { // TODO: to be changed to ST IMU. Blocked by ST IMU
-											  // not implemented yet
+	if (*last_imu_timestamp_sec ==
+		all_imu_data->pololu
+			.timestamp_imu_sec) { // TODO: to be changed to ST IMU. Blocked by ST IMU
+		// not implemented yet
 		log_text(5, "FlightPhaseSensorDetection", "WARNING: POLOLU IMU did not update");
 		return W_SUCCESS;
 
-	} else if ((MAX_TIMESTAMP_DIFFERENCE_MS + *last_imu_timestamp) <
-			   all_imu_data->pololu.timestamp_imu) { // TODO: to be changed to ST IMU. Blocked by ST
-													 // IMU not implemented yet
+	} else if ((MAX_TIMESTAMP_DIFFERENCE_SEC + *last_imu_timestamp_sec) <
+			   all_imu_data->pololu
+				   .timestamp_imu_sec) { // TODO: to be changed to ST IMU. Blocked by ST
+		// IMU not implemented yet
 		log_text(
 			5, "FlightPhaseSensorDetection", "WARNING: POLOLU IMU timestamp exceed max difference");
 		*num_consec_detection = 0;
@@ -452,7 +454,7 @@ void flight_phase_task(void *args) {
 		if (W_SUCCESS == data_collection_status) {
 			if (flight_phase_sensor_detection(&curr_state,
 											  &imu_data,
-											  &last_imu_timestamp,
+											  &last_imu_timestamp_sec,
 											  &consec_num_detection,
 											  &sensor_event) != W_SUCCESS) {
 				log_text(
@@ -471,9 +473,9 @@ void flight_phase_task(void *args) {
 					}
 				}
 			}
-			last_imu_timestamp =
-				imu_data.pololu.timestamp_imu; // TODO: to be changed to ST IMU. Blocked by ST IMU
-											   // not implemented yet
+			last_imu_timestamp_sec =
+				imu_data.pololu.timestamp_imu_sec; // TODO: to be changed to ST IMU. Blocked by ST
+												   // IMU not implemented yet
 		} else {
 			log_text(5,
 					 "FlightPhaseTask",

@@ -17,7 +17,7 @@ extern "C" {
 extern w_status_t
 flight_phase_update_state(flight_phase_event_t event, flight_phase_state_t *state);
 extern w_status_t
-flight_phase_sensor_detection(const flight_phase_state_t *state, const estimator_all_imus_input_t *all_imu_data, const uint32_t *last_imu_timestamp, int *num_consec_detection, flight_phase_event_t *sensor_event);
+flight_phase_sensor_detection(const flight_phase_state_t *state, const estimator_all_imus_input_t *all_imu_data, const float64_t *last_imu_timestamp_sec, int *num_consec_detection, flight_phase_event_t *sensor_event);
 
 // FAKES
 // w_status_t log_init(void)
@@ -48,9 +48,9 @@ xQueuePeek_state_pad(QueueHandle_t xQueue, void *const pvBuffer, TickType_t xTic
 }
 }
 
-static estimator_all_imus_input_t imu_set_acceleration(double x, double y, double z, uint32_t imu_timestamp, bool is_dead)
+static estimator_all_imus_input_t imu_set_acceleration(double x, double y, double z, float64_t imu_timestamp_sec, bool is_dead)
 {
-    estimator_all_imus_input_t all_imu_data = {.pololu = {.timestamp_imu = imu_timestamp, .accelerometer = {x, y, z}, .is_dead = is_dead}};
+    estimator_all_imus_input_t all_imu_data = {.pololu = {.timestamp_imu_sec = imu_timestamp_sec, .accelerometer = {x, y, z}, .is_dead = is_dead}};
 
     return all_imu_data;
 }
@@ -356,9 +356,9 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_DetectNominal1) {
     // Arrange
     flight_phase_state_t state = STATE_PAD_FILTER;
     int consec_num_detection = 0;
-    estimator_all_imus_input_t imu_data = imu_set_acceleration(30, 2, 0, 1772500991, false);
+    estimator_all_imus_input_t imu_data = imu_set_acceleration(30, 2, 0, 1772500.991, false);
     flight_phase_event_t sensor_event = EVENT_NULL;
-    uint32_t last_imu_timestamp = 1772500990;
+    float64_t last_imu_timestamp = 1772500.990;
 
     // Act
     w_status_t status = flight_phase_sensor_detection(&state, &imu_data, &last_imu_timestamp, &consec_num_detection, &sensor_event);
@@ -374,9 +374,9 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_DetectNominal2) {
     // Arrange
     flight_phase_state_t state = STATE_PAD_FILTER;
     int consec_num_detection = 18;
-    estimator_all_imus_input_t imu_data = imu_set_acceleration(30, -2, 4, 1772500991, false);
+    estimator_all_imus_input_t imu_data = imu_set_acceleration(30, -2, 4, 1772500.991, false);
     flight_phase_event_t sensor_event = EVENT_NULL;
-    uint32_t last_imu_timestamp = 1772500990;
+    float64_t last_imu_timestamp = 1772500.990;
 
     // Act
     w_status_t status = flight_phase_sensor_detection(&state, &imu_data, &last_imu_timestamp, &consec_num_detection, &sensor_event);
@@ -392,9 +392,9 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_ChangeStateNominal) {
     // Arrange
     flight_phase_state_t state = STATE_PAD_FILTER;
     int consec_num_detection = 19;
-    estimator_all_imus_input_t imu_data = imu_set_acceleration(20.5, -2, -3, 1772500991, false);
+    estimator_all_imus_input_t imu_data = imu_set_acceleration(20.5, -2, -3, 1772500.991, false);
     flight_phase_event_t sensor_event = EVENT_NULL;
-    uint32_t last_imu_timestamp = 1772500492;
+    float64_t last_imu_timestamp = 1772500.492;
 
     // Act
     w_status_t status = flight_phase_sensor_detection(&state, &imu_data, &last_imu_timestamp, &consec_num_detection, &sensor_event);
@@ -410,9 +410,9 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_NoDetect1) {
     // Arrange
     flight_phase_state_t state = STATE_PAD_FILTER;
     int consec_num_detection = 2;
-    estimator_all_imus_input_t imu_data = imu_set_acceleration(10, 20, 30, 1772500991, false);
+    estimator_all_imus_input_t imu_data = imu_set_acceleration(10, 20, 30, 1772500.991, false);
     flight_phase_event_t sensor_event = EVENT_NULL;
-    uint32_t last_imu_timestamp = 1772500990;
+    float64_t last_imu_timestamp = 1772500.990;
 
     // Act
     w_status_t status = flight_phase_sensor_detection(&state, &imu_data, &last_imu_timestamp, &consec_num_detection, &sensor_event);
@@ -428,9 +428,9 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_NoDetect2) {
     // Arrange
     flight_phase_state_t state = STATE_PAD_FILTER;
     int consec_num_detection = 19;
-    estimator_all_imus_input_t imu_data = imu_set_acceleration(19.9, -29, 19, 1772500991, false);
+    estimator_all_imus_input_t imu_data = imu_set_acceleration(19.9, -29, 19, 1772500.991, false);
     flight_phase_event_t sensor_event = EVENT_NULL;
-    uint32_t last_imu_timestamp = 1772500990;
+    float64_t last_imu_timestamp = 1772500.990;
 
     // Act
     w_status_t status = flight_phase_sensor_detection(&state, &imu_data, &last_imu_timestamp, &consec_num_detection, &sensor_event);
@@ -446,9 +446,9 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_FailSensor) {
     // Arrange
     flight_phase_state_t state = STATE_PAD_FILTER;
     int consec_num_detection = 19;
-    estimator_all_imus_input_t imu_data = imu_set_acceleration(22, 0, 0, 1772500991, true);
+    estimator_all_imus_input_t imu_data = imu_set_acceleration(22, 0, 0, 1772500.991, true);
     flight_phase_event_t sensor_event = EVENT_RESET; // checks if null will be returned by default
-    uint32_t last_imu_timestamp = 1772500990;
+    float64_t last_imu_timestamp = 1772500.990;
 
     // Act
     w_status_t status = flight_phase_sensor_detection(&state, &imu_data, &last_imu_timestamp, &consec_num_detection, &sensor_event);
@@ -464,9 +464,9 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_NoUpdate) {
     // Arrange
     flight_phase_state_t state = STATE_PAD_FILTER;
     int consec_num_detection = 19;
-    estimator_all_imus_input_t imu_data = imu_set_acceleration(22, 0, 0, 1772500991, false);
+    estimator_all_imus_input_t imu_data = imu_set_acceleration(22, 0, 0, 1772500.991, false);
     flight_phase_event_t sensor_event = EVENT_RESET; // checks if null will be returned by default
-    uint32_t last_imu_timestamp = 1772500991;
+    float64_t last_imu_timestamp = 1772500.991;
 
     // Act
     w_status_t status = flight_phase_sensor_detection(&state, &imu_data, &last_imu_timestamp, &consec_num_detection, &sensor_event);
@@ -482,9 +482,9 @@ TEST_F(FlightPhaseTest, PadFilterToBoostSensorDetection_ExceedMaxTimestamp) {
     // Arrange
     flight_phase_state_t state = STATE_PAD_FILTER;
     int consec_num_detection = 19;
-    estimator_all_imus_input_t imu_data = imu_set_acceleration(22, 0, 0, 1772500991, false);
+    estimator_all_imus_input_t imu_data = imu_set_acceleration(22, 0, 0, 1772500.991, false);
     flight_phase_event_t sensor_event = EVENT_RESET; // checks if null will be returned by default
-    uint32_t last_imu_timestamp = 1772500490;
+    float64_t last_imu_timestamp = 1772500.490;
 
     // Act
     w_status_t status = flight_phase_sensor_detection(&state, &imu_data, &last_imu_timestamp, &consec_num_detection, &sensor_event);
