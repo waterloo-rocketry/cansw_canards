@@ -33,6 +33,11 @@
 #include "gpio.h"
 #include "application/init/init.h"
 
+
+#include "fs.h"
+#include "log.h"
+#include "canlib.h"
+#include "rocketlib/include/common.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -123,10 +128,9 @@ int main(void) {
     /* Init scheduler */
     osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
     MX_FREERTOS_Init();
-
+    xTaskCreate(test_fs_log_task, "test_fs_log", 1024, NULL, 1, NULL);
     /* Start scheduler */
     osKernelStart();
-
     /* We should never get here as control is now taken by the scheduler */
 
     /* Infinite loop */
@@ -192,6 +196,40 @@ void SystemClock_Config(void) {
     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK) {
         Error_Handler();
     }
+}
+void test_fs_log_task(void *arg) {
+    (void)arg;
+
+    w_status_t status = fs_init();
+    w_assert(status == W_SUCCESS);
+
+    status = temp_log_init();
+    w_assert(status == W_SUCCESS);
+
+    can_msg_t msg = {
+        .sid = 0x123,
+        .data_len = 4,
+        .data = {0xDE, 0xAD, 0xBE, 0xEF}
+    };
+
+    uint32_t fake_timestamp = 0;
+    for (int i = 0; i < 315; i++) {
+        log_handle_incoming_message(&msg, fake_timestamp++);
+    }
+
+    log_heartbeat();
+
+    status = status_report();
+    w_assert(status == W_SUCCESS);
+    uint32_t written = fs_get_log_written_size();
+    w_assert(written == PAGE_SIZE);
+    (void)status;
+    (void)written;
+    w_assert(fs_get_sd_log_file_name() > 0);
+    (void)fs_get_sd_used();
+    (void)fs_get_sd_free();
+
+    vTaskDelete(NULL);
 }
 
 /**
