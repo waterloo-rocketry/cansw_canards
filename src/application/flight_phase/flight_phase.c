@@ -169,7 +169,7 @@ static w_status_t act_cmd_callback(const can_msg_t *msg) {
 	if ((ACTUATOR_OX_INJECTOR_VALVE == get_actuator_id(msg)) &&
 		(ACT_STATE_ON == get_cmd_actuator_state(msg))) {
 		return flight_phase_send_event(EVENT_INJ_OPEN);
-	} else if ((ACTUATOR_PROC_ESTIMATOR_INIT == get_actuator_id(msg)) &&
+	} else if ((ACTUATOR_CANARD_PAD_FILTER == get_actuator_id(msg)) &&
 			   (ACT_STATE_ON == get_cmd_actuator_state(msg))) {
 		return flight_phase_send_event(EVENT_ESTIMATOR_INIT);
 	}
