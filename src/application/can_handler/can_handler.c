@@ -5,6 +5,9 @@
 #include <string.h>
 
 #include "FreeRTOS.h"
+#include "application/logger/log.h"
+#include "drivers/gpio/gpio.h"
+#include "fdcan.h" // For hfdcan1 for fatal error handler
 #include "queue.h"
 #include "stm32h7xx_hal.h" /* For __disable_irq, __NOP */
 #include "third_party/canlib/message/msg_general.h" /* For build_debug_raw_msg */
@@ -334,7 +337,8 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
 
-		return can_store_unsigned(target_type, value_clamp_float32(scaled, 0.0f, (float32_t)maxv), out);
+		return can_store_unsigned(
+			target_type, value_clamp_float32(scaled, 0.0f, (float32_t)maxv), out);
 
 	} else {
 		int32_t minv = 0, maxv = 0;
@@ -378,8 +382,15 @@ w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void
 //       are used directly from canlib/message_types.h
 
 void proc_handle_fatal_error(const char *errorMsg) {
+	static bool can_initialized = false;
 	// safe state - loop here forever and send CAN err msg repeatedly
 	while (1) {
+		can_initialized =
+			can_initialized ||
+			stm32h7_can_init(
+				&hfdcan1,
+				can_handle_rx_message); // BEWARE: this is hardcoded to use hfdcan1, remember
+										// to change this when our CAN handle changes
 		__disable_irq();
 
 		// let CAN still work
@@ -399,7 +410,9 @@ void proc_handle_fatal_error(const char *errorMsg) {
 		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
 		// state)
 		build_debug_raw_msg(PRIO_LOW, 0, data, &msg);
-		stm32h7_can_send(&msg);
+		if (can_initialized) {
+			stm32h7_can_send(&msg);
+		}
 
 		// scream a few times then attempt to reset.
 		// delay for ~1sec without using systick-based delays (no hal_delay)

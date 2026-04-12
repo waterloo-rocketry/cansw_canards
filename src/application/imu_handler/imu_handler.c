@@ -56,7 +56,7 @@ static imu_handler_state_t imu_handler_state = {0};
 static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	// Log raw data to CAN
 	can_msg_t msg;
-	float timestamp = 0.0f;
+	uint32_t timestamp = 0;
 	timer_get_ms(&timestamp);
 	w_status_t encode_status = W_SUCCESS;
 	w_status_t can_tx_status = W_SUCCESS;
@@ -98,12 +98,20 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 									 &msg);
 	can_tx_status |= can_handler_transmit(&msg);
 
-	build_2d_analog_sensor_24bit_msg(
-		PRIO_LOW, (uint16_t)timestamp, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_X, mag_x, mag_y, &msg);
+	build_2d_analog_sensor_24bit_msg(PRIO_LOW,
+									 (uint16_t)timestamp,
+									 DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_X,
+									 mag_x,
+									 mag_y,
+									 &msg);
 	can_tx_status |= can_handler_transmit(&msg);
 
-	build_2d_analog_sensor_24bit_msg(
-		PRIO_LOW, (uint16_t)timestamp, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Z, mag_z, 0xFFFFFFFF, &msg); // test clamping
+	build_2d_analog_sensor_24bit_msg(PRIO_LOW,
+									 (uint16_t)timestamp,
+									 DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Z,
+									 mag_z,
+									 0xFFFFFFFF,
+									 &msg); // test clamping
 	can_tx_status |= can_handler_transmit(&msg);
 
 	// Error handling
@@ -231,19 +239,19 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	estimator_all_imus_input_t imu_data = {.pololu = {.is_dead = false},
 										   .movella = {.is_dead = false}};
 	raw_pololu_data_t raw_pololu_data = {0};
-	float current_time_ms;
+	uint32_t current_time_ms;
 	w_status_t status = W_SUCCESS;
 
 	// Get current timestamp
 	if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
-		current_time_ms = 0.0f;
+		current_time_ms = 0;
 	}
 	uint32_t now_ms = (uint32_t)current_time_ms;
 
 	// Set timestamps for all IMUs
 	// Note: All IMUs get the same timestamp intentionally for synchronization
-	imu_data.pololu.timestamp_imu = now_ms;
-	imu_data.movella.timestamp_imu = now_ms;
+	imu_data.pololu.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
+	imu_data.movella.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
 
 	// Read from all IMUs, including orientation correction
 	w_status_t pololu_status = read_pololu_imu(&imu_data.pololu, &raw_pololu_data);
@@ -278,7 +286,8 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_data.movella.magnetometer.z;
 
 	log_payload.imu_reading_pt3.barometer = imu_data.movella.barometer;
-	log_payload.imu_reading_pt3.timestamp_imu = imu_data.movella.timestamp_imu;
+	log_payload.imu_reading_pt3.timestamp_imu_ms =
+		(uint32_t)(imu_data.movella.timestamp_imu_sec * 1000);
 	log_payload.imu_reading_pt3.is_dead = imu_data.movella.is_dead;
 	log_data(1, LOG_TYPE_MOVELLA_READING_PT3, &log_payload);
 
@@ -299,7 +308,8 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_data.pololu.magnetometer.z;
 
 	log_payload.imu_reading_pt3.barometer = imu_data.pololu.barometer;
-	log_payload.imu_reading_pt3.timestamp_imu = imu_data.pololu.timestamp_imu;
+	log_payload.imu_reading_pt3.timestamp_imu_ms =
+		(uint32_t)(imu_data.pololu.timestamp_imu_sec * 1000);
 	log_payload.imu_reading_pt3.is_dead = imu_data.pololu.is_dead;
 	log_data(1, LOG_TYPE_POLOLU_READING_PT3, &log_payload);
 
