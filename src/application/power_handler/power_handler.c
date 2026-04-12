@@ -1,31 +1,32 @@
-#include "power_handler.h"
 #include "FreeRTOS.h"
+#include "queue.h"
+
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
 #include "message_types.h"
-#include "queue.h"
+#include "power_handler.h"
 #include "rocketlib/include/common.h"
 
 // TODO: add thresholds for various components
 // LiPo Thresholds
-#define VBAT_MIN 10
-#define VBAT_MAX 10
-#define IBAT_MAX 10
+static const uint32_t VBAT_MIN = 10;
+static const uint32_t VBAT_MAX = 10;
+static const uint32_t IBAT_MAX = 10;
 
 // Rocket Thresholds
-#define VRKT_MIN 10
-#define VRKT_MAX 10
+static const uint32_t VRKT_MIN = 10;
+static const uint32_t VRKT_MAX = 10;
 
 // Charge Line Thresholds
-#define VCHG_MIN 10
-#define VCHG_MAX 10
+static const uint32_t VCHG_MIN = 10;
+static const uint32_t VCHG_MAX = 10;
 
 // 5V External Thresholds
-#define V5V_EXTERNAL_MIN 10
-#define V5V_EXTERNAL_MAX 10
-#define I5V_EXTERNAL_MAX 10
+static const uint32_t V5V_EXTERNAL_MIN = 10;
+static const uint32_t V5V_EXTERNAL_MAX = 10;
+static const uint32_t I5V_EXTERNAL_MAX = 10;
 
 // TODO: Get the correct number for task delay.
 #define TASK_DELAY_MS 3000
@@ -119,8 +120,11 @@ w_status_t power_handler_init(void) {
 	// gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
 
 	w_status_t init_status = W_SUCCESS;
+	w_status_t cb_status = can_handler_register_callback(MSG_ACTUATOR_CMD, power_actuator_callback);
 
-	init_status |= can_handler_register_callback(MSG_ACTUATOR_CMD, power_actuator_callback);
+	if (cb_status != W_SUCCESS) {
+		init_status = cb_status;
+	}
 
 	power_handler_status.initialized = true;
 	power_handler_status.external_5v_enabled = true;
@@ -131,6 +135,15 @@ w_status_t power_handler_init(void) {
 
 /**
  * Returns uint32_t bitfield of active faults.
+ * Fault conditions:
+ * 		FAULT_BAT1_VOLT: BAT1 voltage exceeds thresholds
+ * 		FAULT_BAT2_VOLT: BAT2 voltage exceeds thresholds
+ * 		FAULT_RKT_VOLT: Rocket voltage exceeds thresholds
+ * 		FAULT_CHG_VOLT: Charge line exceeds thresholds
+ * 		FAULT_5V_EXT_CURR: 5V external overcurrent
+ * 		FAULT_BAT1_CURR: BAT1 overcurrent
+ * 		FAULT_BAT2_CURR: BAT2 overcurrent
+ * Returns 0 if no faults are detected.
  * Called by health checks.
  */
 uint32_t power_handler_get_status(void) {
