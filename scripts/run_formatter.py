@@ -119,6 +119,7 @@ def run_formatter(source, target, env):
         print("No source files found to format.")
         return
 
+    # build command with quoted paths. This handles path formatting for mac/linux/windows
     # use relative path so the cmd doesn't get excessively long from absolute paths
     style_file = "src/third_party/rocketlib/.clang-format"
     files_str = " ".join(f'"{f}"' for f in files)
