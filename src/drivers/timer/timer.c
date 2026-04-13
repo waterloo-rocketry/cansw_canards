@@ -23,10 +23,15 @@ static bool g_timer_initialized = false;
  * @return the status of the initialization
  */
 w_status_t timer_init() {
-	g_timer_initialized = false;
+	// can only init once
+	if (g_timer_initialized) {
+		return W_SUCCESS;
+	}
+
 	if (HAL_OK != HAL_TIM_Base_Start(&htim2)) {
 		return W_FAILURE;
 	}
+
 	g_timer_initialized = true;
 	return W_SUCCESS;
 }
