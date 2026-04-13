@@ -1,6 +1,7 @@
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
 #include "drivers/gpio/gpio.h"
+#include "fdcan.h" // For hfdcan1 for fatal error handler
 #include "queue.h"
 
 #include "application/can_handler/can_handler.h"
@@ -180,8 +181,14 @@ void can_handler_task_tx(void *argument) {
 //       are used directly from canlib/message_types.h
 
 void proc_handle_fatal_error(const char *errorMsg) {
+	static bool can_initialized = false;
 	// safe state - loop here forever and send CAN err msg repeatedly
 	while (1) {
+		can_initialized =
+			can_initialized ||
+			can_init_stm(&hfdcan1,
+						 can_handle_rx_isr); // BEWARE: this is hardcoded to use hfdcan1, remember
+											 // to change this when our CAN handle changes
 		__disable_irq();
 
 		// let CAN still work
@@ -200,7 +207,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 		// Use canlib's helper function to build the debug message
 		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
 		// state)
-		if (build_debug_raw_msg(PRIO_HIGH, 0, data, &msg)) {
+		if (build_debug_raw_msg(PRIO_HIGH, 0, data, &msg) && can_initialized) {
 			// Only try to send if message build succeeded
 			can_send(&msg);
 		}
