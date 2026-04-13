@@ -103,14 +103,8 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : ADC_INT_Pin */
-  GPIO_InitStruct.Pin = ADC_INT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(ADC_INT_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : ADXL_INT_Pin INT_MAG_Pin INT1_MAG_ACCEL_Pin */
-  GPIO_InitStruct.Pin = ADXL_INT_Pin|INT_MAG_Pin|INT1_MAG_ACCEL_Pin;
+  /*Configure GPIO pins : ADC_INT_Pin ADXL_INT_Pin INT_MAG_Pin INT1_MAG_ACCEL_Pin */
+  GPIO_InitStruct.Pin = ADC_INT_Pin|ADXL_INT_Pin|INT_MAG_Pin|INT1_MAG_ACCEL_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
