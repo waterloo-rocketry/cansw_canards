@@ -112,16 +112,17 @@ def run_formatter(source, target, env):
     dirs = ["src/application", "src/drivers", "src/common"]
     files = []
     for d in dirs:
-        files += glob.glob(os.path.join(SOURCE_DIR, d, "**", "*.c"), recursive = True)
-        files += glob.glob(os.path.join(SOURCE_DIR, d, "**", "*.h"), recursive = True)
+        files += glob.glob(os.path.join(d, "**", "*.c"), recursive=True)
+        files += glob.glob(os.path.join(d, "**", "*.h"), recursive=True)
 
     if not files:
         print("No source files found to format.")
         return
 
     # build command with quoted paths. This handles path formatting for mac/linux/windows
-    style_file = os.path.join(SOURCE_DIR, "src/third_party/rocketlib/.clang-format")
-    files_str = " ".join(f'"{os.path.normpath(f)}"' for f in files)
+    # use relative path so the cmd doesn't get excessively long from absolute paths
+    style_file = "src/third_party/rocketlib/.clang-format"
+    files_str = " ".join(f'"{f}"' for f in files)
     cmd = f'"{clang_format}" -i --style="file:{style_file}" {files_str}'
 
     env.Execute(cmd)
