@@ -54,18 +54,7 @@ void UsageFault_Handler(void);
 void DebugMon_Handler(void);
 void DMA1_Stream0_IRQHandler(void);
 void DMA1_Stream1_IRQHandler(void);
-void ADC_IRQHandler(void);
-void FDCAN1_IT0_IRQHandler(void);
-void I2C2_EV_IRQHandler(void);
-void I2C2_ER_IRQHandler(void);
-void SDMMC1_IRQHandler(void);
-void UART4_IRQHandler(void);
 void TIM6_DAC_IRQHandler(void);
-void UART8_IRQHandler(void);
-void I2C4_EV_IRQHandler(void);
-void I2C4_ER_IRQHandler(void);
-void FMAC_IRQHandler(void);
-void CORDIC_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

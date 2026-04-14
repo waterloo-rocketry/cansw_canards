@@ -74,8 +74,8 @@ TEST_F(GpioTest, ReadReturnsSuccess) {
     EXPECT_EQ(xSemaphoreTake_fake.arg1_val, pdMS_TO_TICKS(100)); // Verify timeout is correct
     EXPECT_EQ(xSemaphoreGive_fake.call_count, 1); // Verify semaphore released once
     EXPECT_EQ(HAL_GPIO_ReadPin_fake.call_count, 1); // Ensure HAL read is called once
-    EXPECT_EQ(HAL_GPIO_ReadPin_fake.arg0_val, GPIOE); // Check correct port used
-    EXPECT_EQ(HAL_GPIO_ReadPin_fake.arg1_val, GPIO_PIN_9); // Check correct pin used
+    EXPECT_EQ(HAL_GPIO_ReadPin_fake.arg0_val, GPIOC); // Check correct port used
+    EXPECT_EQ(HAL_GPIO_ReadPin_fake.arg1_val, GPIO_PIN_13); // Check correct pin used
 }
 
 TEST_F(GpioTest, ReadFailsIfSemaphoreNotTaken) {
@@ -118,8 +118,8 @@ TEST_F(GpioTest, WriteSetsPinHigh) {
     EXPECT_EQ(status, W_SUCCESS); // Ensure write succeeds
     EXPECT_EQ(HAL_GPIO_WritePin_fake.call_count, 1); // Ensure HAL write is called once
     EXPECT_EQ(HAL_GPIO_WritePin_fake.arg2_val, GPIO_PIN_SET); // Verify pin set high
-    EXPECT_EQ(HAL_GPIO_WritePin_fake.arg1_val, GPIO_PIN_9); // Check correct pin used
-    EXPECT_EQ(HAL_GPIO_WritePin_fake.arg0_val, GPIOE); // Check correct pin used
+    EXPECT_EQ(HAL_GPIO_WritePin_fake.arg1_val, GPIO_PIN_13); // Check correct pin used
+    EXPECT_EQ(HAL_GPIO_WritePin_fake.arg0_val, GPIOC); // Check correct pin used
     EXPECT_EQ(xSemaphoreTake_fake.call_count, 1); // Verify semaphore taken once
     EXPECT_EQ(xSemaphoreTake_fake.arg1_val, pdMS_TO_TICKS(100)); // Verify timeout is correct
     EXPECT_EQ(xSemaphoreGive_fake.call_count, 1); // Verify semaphore released once
@@ -136,8 +136,8 @@ TEST_F(GpioTest, WriteSetsPinLow) {
     EXPECT_EQ(status, W_SUCCESS); // Ensure write succeeds
     EXPECT_EQ(HAL_GPIO_WritePin_fake.call_count, 1); // Ensure HAL write is called once
     EXPECT_EQ(HAL_GPIO_WritePin_fake.arg2_val, GPIO_PIN_RESET); // Verify pin set low
-    EXPECT_EQ(HAL_GPIO_WritePin_fake.arg1_val, GPIO_PIN_9); // Check correct pin used
-    EXPECT_EQ(HAL_GPIO_WritePin_fake.arg0_val, GPIOE); // Check correct pin used
+    EXPECT_EQ(HAL_GPIO_WritePin_fake.arg1_val, GPIO_PIN_13); // Check correct pin used
+    EXPECT_EQ(HAL_GPIO_WritePin_fake.arg0_val, GPIOC); // Check correct pin used
     EXPECT_EQ(xSemaphoreTake_fake.call_count, 1); // Verify semaphore taken once
     EXPECT_EQ(xSemaphoreTake_fake.arg1_val, pdMS_TO_TICKS(100)); // Verify timeout is correct
     EXPECT_EQ(xSemaphoreGive_fake.call_count, 1); // Verify semaphore released once
