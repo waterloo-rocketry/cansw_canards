@@ -32,8 +32,8 @@ typedef struct {
 typedef enum {
 	I2C_BUS_1, /**< STM32 I2C1 peripheral -> ST IMU */
 	I2C_BUS_2, /**< STM32 I2C2 peripheral -> AD BREAKOUT BOARD */
-	I2C_BUS_4, /**< STM32 I2C4 peripheral -> MAG */
-	I2C_BUS_5, /**< STM32 I2C5 peripheral -> BAR */
+	I2C_BUS_4, /**< STM32 I2C4 peripheral -> ST MAG */
+	I2C_BUS_5, /**< STM32 I2C5 peripheral -> MS BAR */
 	I2C_BUS_COUNT
 } i2c_bus_t;
 
