@@ -1,7 +1,7 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : usb_device_mtps.c
+  * @file           : usb_device_mtp.c
   * @version        : v1.0_Cube
   * @brief          : This file implements the USB Device
   ******************************************************************************
