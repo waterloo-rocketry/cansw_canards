@@ -23,10 +23,10 @@ typedef struct {
  * @brief LSM6DSV32X (32G IMU), MS5611 (High-alt Barometer), and LSM303AGR (Compass) measurements 
  */
 typedef struct {
-	vector3d_t board_accel;
-	vector3d_t board_gyro;
-	float64_t board_baro;
-	vector3d_t board_mag;
+	vector3d_t board_accel; // m/s^2
+	vector3d_t board_gyro; // rad/s 
+	float64_t board_baro; // Pa
+	vector3d_t board_mag; // gauss 
 	bool is_dead;
 } estimator_board_meas_t;
 
@@ -34,10 +34,10 @@ typedef struct {
  * @brief MTi-630 (Movella) measurements 
  */
 typedef struct {
-	vector3d_t mti_accel;
-	vector3d_t mti_gyro;
-	float64_t mti_baro;
-	vector3d_t mti_mag;
+	vector3d_t mti_accel; // m/s^2	
+	vector3d_t mti_gyro; // rad/s 
+	float64_t mti_baro; // Pa
+	vector3d_t mti_mag; // gauss 
 	bool is_dead;
 } estimator_mti_meas_t;
 
@@ -45,8 +45,8 @@ typedef struct {
  * @brief ADXL380 (AD Breakout Accel) and ADXRS649 (AD high-rate gyro) measurements
  */
 typedef struct {
-	vector3d_t ad_accel;
-	float64_t ad_gyro;
+	vector3d_t ad_accel; // m/s^2
+	float64_t ad_gyro; // rad/s, 1 axis gyro 
 	bool is_dead;
 } estimator_ad_meas_t;
 
