@@ -65,7 +65,7 @@
   */
 
 /* USER CODE BEGIN EXPORTED_TYPES */
-
+extern uint8_t blink_num;
 /* USER CODE END EXPORTED_TYPES */
 
 /**

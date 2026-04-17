@@ -22,7 +22,9 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include "drivers/gpio/gpio.h"
+#include "freeRTOS.h"
+#include "task.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -115,7 +117,7 @@ USBD_CDC_LineCodingTypeDef LineCoding = {
 extern USBD_HandleTypeDef hUsbDeviceHS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
+uint8_t blink_num = 0;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -279,8 +281,14 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 11 */
+
   USBD_CDC_SetRxBuffer(&hUsbDeviceHS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceHS);
+  
+  blink_num = Buf[0] - 0x30;
+
+  CDC_Transmit_HS(Buf, *Len);
+  
   return (USBD_OK);
   /* USER CODE END 11 */
 }

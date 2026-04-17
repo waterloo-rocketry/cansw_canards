@@ -26,6 +26,9 @@
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
+extern USBD_HandleTypeDef hUsbDeviceHS;
+extern uint8_t blink_num;
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -168,22 +171,34 @@ static void system_init_task(void *arg) {
 	// its blinky now
 	// MX_USB_DEVICE_Init();
 	vTaskDelay(1000);
-	uint8_t testdata[] = {0x36, 0x37, 0x36, 0x37, 0x00, 0x34, 0x32};
+	uint8_t testdata[] = {0x36, 0x37, 0x36, 0x37, 0x00, 0x34, 0x32, (uint8_t) '\n'};
 	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1);
 	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 1);
 	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
 	USBD_StatusTypeDef cdc_state = 0;
 	while (1) {
 		gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
-		cdc_state = CDC_Transmit_HS((uint8_t *)testdata, 7);
+		cdc_state = CDC_Transmit_HS((uint8_t *)testdata, 8);
 		if (USBD_OK != cdc_state) {
 			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 1);
+			USBD_DeInit(&hUsbDeviceHS);
 
+			vTaskDelay(2000);
+			MX_USB_DEVICE_Init();
 			vTaskDelay(2000);
 			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1);
 		}
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 		vTaskDelay(500);
+		
+
+		for (int i = 0; i < blink_num; i++) {
+			gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_LOW, 1);
+			HAL_Delay(100);
+			gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
+			HAL_Delay(100);
+		}
+		blink_num = 0;
 	}
 }
 
