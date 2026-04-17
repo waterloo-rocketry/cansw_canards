@@ -106,8 +106,8 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, ui
 }
 
 w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms) {
-	//temporary call to avoid defined but not used error
-	adc_get_raw_counts(channel, output, timeout_ms);  
+	// temporary call to avoid defined but not used error
+	adc_get_raw_counts(channel, output, timeout_ms);
 	return W_SUCCESS;
 }
 
