@@ -41,16 +41,6 @@ typedef struct {
 w_status_t adc_init(ADC_HandleTypeDef *hadc);
 
 /**
- * @brief Get the raw (16 bit) value of the specified ADC channel.
- * @param channel The adc channel to read from
- * @param output Pointer to store output value of the ADC channel
- * @param timeout_ms How long to wait to acquire the mutex. Conversion timeout is fixed at 1ms in
- * addition to this
- * @return Status of the read operation
- */
-w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms);
-
-/**
  * @brief Convert the raw counts of a channel into voltage (empty stub for now)
  * @param channel The adc channel to read from
  * @param output Pointer to store output value of the ADC channel
