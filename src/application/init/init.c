@@ -172,17 +172,12 @@ static void system_init_task(void *arg) {
 	// its blinky now
 	// MX_USB_DEVICE_Init();
 	vTaskDelay(1000);
-	uint8_t testdata[] = {0x36, 0x37, 0x36, 0x37, 0x00, 0x34, 0x32, (uint8_t) '\n'};
+	uint8_t testdata[] = {0x36, 0x37, 0x36, 0x37, 0x00, 0x34, 0x32, (uint8_t)'\n'};
 	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1);
 	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 1);
 	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
 	USBD_StatusTypeDef cdc_state = 0;
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
 		cdc_state = CDC_Transmit_HS((uint8_t *)testdata, 8);
 		if (USBD_OK != cdc_state) {
 			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 1);
@@ -195,7 +190,6 @@ static void system_init_task(void *arg) {
 		}
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 		vTaskDelay(500);
-		
 
 		for (int i = 0; i < blink_num; i++) {
 			gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_LOW, 1);
