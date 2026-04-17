@@ -52,7 +52,7 @@ TEST_F(ADCTest, GetValueSucceeds) {
 
     // Act
     uint32_t counts;
-    w_status_t status = adc_get_value(PROCESSOR_BOARD_VOLTAGE, &counts, 100);
+    w_status_t status = adc_get_raw_counts(PROCESSOR_BOARD_VOLTAGE, &counts, 100);
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
