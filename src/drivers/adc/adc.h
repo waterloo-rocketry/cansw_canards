@@ -48,7 +48,28 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc);
  * addition to this
  * @return Status of the read operation
  */
-w_status_t adc_get_value(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms);
+w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms);
+
+/**
+ * @brief Convert the raw counts of a channel into voltage (empty stub for now)
+ * @param channel The adc channel to read from
+ * @param output Pointer to store output value of the ADC channel
+ * @param timeout_ms How long to wait to acquire the mutex. Conversion timeout is fixed at 1ms in
+ * addition to this
+ * @return Status of the read operation
+ */
+w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms);
+
+/**
+ * @brief Convert the raw voltage into actual value it measures (empty stub for now)
+ * Units of conversion
+ *   - VSENS_ channels & PROCESSOR_BOARD_VOLTAGE: volts (V)
+ *   - ISENS_ channels: milliamps (mA)
+ * @param channel The adc channel to read from
+ * @param output Pointer to store converted value
+ * @return Status of the read operation
+ */
+w_status_t adc_get_converted_val(adc_channel_t channel, uint32_t *output);
 
 /**
  * @brief Report ADC module health status

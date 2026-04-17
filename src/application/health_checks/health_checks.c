@@ -44,7 +44,7 @@ w_status_t get_adc_current(uint32_t *adc_current_mA) {
 	w_status_t status = W_SUCCESS;
 	uint32_t adc_value;
 
-	status |= adc_get_value(PROCESSOR_BOARD_VOLTAGE, &adc_value, TASK_DELAY_MS);
+	status |= adc_get_raw_counts(PROCESSOR_BOARD_VOLTAGE, &adc_value, TASK_DELAY_MS);
 	if (status != W_SUCCESS) {
 		return status;
 	}

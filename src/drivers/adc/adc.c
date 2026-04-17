@@ -65,7 +65,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc) {
 	return W_SUCCESS;
 }
 
-w_status_t adc_get_value(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms) {
+w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms) {
 	// Currently, there is only one channel which we read from, and our channel enum
 	// does not map directly to that channel, so handling multiple channels on the
 	// same ADC would require a lot more logic. For now, return an error if something tries to
@@ -102,6 +102,14 @@ w_status_t adc_get_value(adc_channel_t channel, uint32_t *output, uint32_t timeo
 
 	xSemaphoreGive(adc_mutex);
 
+	return W_SUCCESS;
+}
+
+w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms) {
+	return W_SUCCESS;
+}
+
+w_status_t adc_get_converted_val(adc_channel_t channel, uint32_t *output) {
 	return W_SUCCESS;
 }
 
