@@ -5,16 +5,6 @@
 #include "rocketlib/include/common.h"
 
 /**
- * raw data read from pololu device registers
- */
-typedef struct __attribute__((packed)) {
-	altimu_raw_imu_data_t raw_acc;
-	altimu_raw_imu_data_t raw_gyro;
-	altimu_raw_imu_data_t raw_mag;
-	altimu_raw_baro_data_t raw_baro;
-} raw_pololu_data_t;
-
-/**
  * @brief Initialize the IMU handler module
  * Must be called before scheduler starts
  * @return Status of initialization
