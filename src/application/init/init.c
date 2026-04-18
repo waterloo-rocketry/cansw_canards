@@ -120,11 +120,11 @@ static void system_init_task(void *arg) {
 	//     &health_checks_task_handle);
 
 	task_status &= xTaskCreate(imu_handler_task,
-	    "imu handler",
-	    512,
-	    NULL,
-	    imu_handler_task_priority,
-	    &imu_handler_task_handle);
+							   "imu handler",
+							   512,
+							   NULL,
+							   imu_handler_task_priority,
+							   &imu_handler_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",

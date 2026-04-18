@@ -34,6 +34,7 @@
 // S1 (movella)
 static const matrix3d_t g_movella_upd_mat = {
 	.array = {{0, 0, 1.000000000}, {1.0000000, 0, 0}, {0, 1.0000000000, 0}}};
+
 // TODO provide orientation correction for rest of sensors
 
 // Module state tracking
@@ -62,11 +63,13 @@ static imu_handler_state_t imu_handler_state = {0};
  */
 // TODO: update to new standard
 static w_status_t read_movella_imu(estimator_mti_meas_t *imu_data) {
-	w_status_t status;
+	w_status_t status = W_SUCCESS;
 
 	// Read all data from Movella in one call
 	movella_data_t movella_data = {0}; // Initialize to zero
-	status = movella_get_data(&movella_data, 1);
+
+	// TODO: get data from movella once that is brought up
+	//  status = movella_get_data(&movella_data, 1);
 
 	if (W_SUCCESS == status) {
 		// Copy data from Movella
@@ -86,7 +89,7 @@ static w_status_t read_movella_imu(estimator_mti_meas_t *imu_data) {
 	}
 
 	return status;
-} 
+}
 
 /**
  * @brief Initialize the IMU handler module
@@ -127,7 +130,7 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	status |= read_movella_imu(&movella_data);
 
 	// TODO: logging for non-breakout board sensors
-	
+
 	// TODO: provide update for estimator
 
 	// Return overall status
