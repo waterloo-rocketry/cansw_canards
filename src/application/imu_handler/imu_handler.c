@@ -56,6 +56,39 @@ static imu_handler_state_t imu_handler_state = {0};
 // TODO: implement read data from board, movella, and breakout board
 
 /**
+ * @brief Read data from the Movella MTi-630 sensor
+ * @param imu_data Pointer to store the IMU data
+ * @return Status of the read operation
+ */
+// TODO: update to new standard
+static w_status_t read_movella_imu(estimator_mti_meas_t *imu_data) {
+	w_status_t status;
+
+	// Read all data from Movella in one call
+	movella_data_t movella_data = {0}; // Initialize to zero
+	status = movella_get_data(&movella_data, 1);
+
+	if (W_SUCCESS == status) {
+		// Copy data from Movella
+		// Apply orientation correction
+		// TODO: update all of the units to SI units as described in estimator.h
+		imu_data->mti_accel = math_vector3d_rotate(&g_movella_upd_mat, &movella_data.acc);
+		imu_data->mti_gyro = math_vector3d_rotate(&g_movella_upd_mat, &movella_data.gyr);
+		imu_data->mti_mag = math_vector3d_rotate(&g_movella_upd_mat, &movella_data.mag);
+
+		imu_data->mti_baro = movella_data.pres;
+		imu_data->is_dead = movella_data.is_dead;
+		imu_handler_state.movella_stats.success_count++;
+	} else {
+		// Set is_dead flag to indicate IMU failure
+		imu_data->is_dead = true;
+		imu_handler_state.movella_stats.failure_count++;
+	}
+
+	return status;
+} 
+
+/**
  * @brief Initialize the IMU handler module
  * @note This function is called before the scheduler starts
  * @return Status of initialization
@@ -78,7 +111,7 @@ w_status_t imu_handler_init(void) {
  * @return Status of the execution
  */
 w_status_t imu_handler_run(uint32_t loop_count) {
-	estimator_all_imus_input_t imu_data = {};
+	estimator_all_imus_input_t imu_data = {0};
 	uint32_t current_time_ms;
 	w_status_t status = W_SUCCESS;
 
@@ -86,16 +119,19 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
 		current_time_ms = 0;
 	}
-	uint32_t now_ms = (uint32_t)current_time_ms;
 
 	// TODO: get data from board, movella, and breakout board
+
+	// Done just to use the movella imu function to make sure we can complile
+	estimator_mti_meas_t movella_data = {0};
+	status |= read_movella_imu(&movella_data);
 
 	// TODO: logging for non-breakout board sensors
 	
 	// TODO: provide update for estimator
 
 	// Return overall status
-	return W_FAILURE;
+	return status;
 }
 
 /**
