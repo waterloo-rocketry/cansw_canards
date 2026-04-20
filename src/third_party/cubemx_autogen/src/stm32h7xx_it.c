@@ -55,13 +55,13 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
 extern DMA_HandleTypeDef hdma_i2c2_rx;
 extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
 extern I2C_HandleTypeDef hi2c4;
 extern I2C_HandleTypeDef hi2c5;
 extern DMA_HandleTypeDef hdma_uart4_rx;
-extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
 extern TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN EV */
