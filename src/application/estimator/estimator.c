@@ -10,7 +10,6 @@
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/estimator/estimator.h"
-#include "application/estimator/estimator_module.h"
 #include "application/estimator/estimator_types.h"
 #include "application/estimator/pad_filter.h"
 #include "application/flight_phase/flight_phase.h"
@@ -102,7 +101,7 @@ w_status_t estimator_update_imu_data(estimator_all_imus_input_t *data) {
 	return W_SUCCESS;
 }
 
-w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count) {
+w_status_t estimator_step(estimator_module_ctx_t *ctx, uint32_t loop_count) {
 	w_status_t status = W_SUCCESS;
 	flight_phase_state_t curr_flight_phase = flight_phase_get_state();
 	estimator_all_imus_input_t latest_imu_data = {0};
@@ -372,7 +371,7 @@ void estimator_task(void *argument) {
 	log_text(10, "EstimatorTask", "Estimator task started.");
 
 	while (true) {
-		w_status_t run_status = estimator_run_loop(&g_estimator_ctx, estimator_loop_counter);
+		w_status_t run_status = estimator_step(&g_estimator_ctx, estimator_loop_counter);
 
 		if (run_status != W_SUCCESS) {
 			log_text(

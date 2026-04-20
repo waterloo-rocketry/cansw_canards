@@ -147,8 +147,9 @@ w_status_t controller_get_latest_output(controller_output_t *output) {
 }
 
 // helper to run 1 loop of the controller task, including delaying where needed.
-// not declared static to allow unit testing access
-w_status_t controller_run_loop() {
+w_status_t controller_step(controller_ctx_t *context) {
+	(void)context; // temporary ignore context. later use for rate limiting
+
 	log_data_container_t log_container = {0};
 	w_status_t status = W_SUCCESS;
 	flight_phase_state_t current_phase = flight_phase_get_state();
@@ -233,7 +234,7 @@ void controller_task(void *argument) {
 	(void)argument;
 
 	while (true) {
-		if (controller_run_loop() != W_SUCCESS) {
+		if (controller_step() != W_SUCCESS) {
 			log_text(LOG_WAIT_MS, "controller", "run loop fail");
 		}
 	}
