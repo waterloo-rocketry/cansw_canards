@@ -21,6 +21,7 @@ typedef enum {
  * Enum representing a state transition event
  */
 typedef enum {
+	EVENT_NONE,
 	EVENT_ESTIMATOR_INIT,
 	EVENT_INJ_OPEN,
 	EVENT_ACT_DELAY_ELAPSED,
@@ -53,6 +54,11 @@ flight_phase_state_t flight_phase_get_state(void);
  * Not ISR safe
  */
 w_status_t flight_phase_send_event(flight_phase_event_t event);
+
+/**
+ * process 1 transition.
+ */
+w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_state_t *state);
 
 /**
  * Resets the flight phase state machine to initial state

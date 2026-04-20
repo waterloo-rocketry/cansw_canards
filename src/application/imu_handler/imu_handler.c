@@ -7,12 +7,11 @@
 #include "application/estimator/estimator.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "canlib.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
-
-#include "canlib.h"
 
 // Period of IMU sampling in milliseconds
 // slightly slower than 200 hz to always receive encoder which can be >5ms
@@ -227,7 +226,7 @@ w_status_t imu_handler_init(void) {
  * @note This function is non-static to allow exposed to unit tests
  * @return Status of the execution
  */
-w_status_t imu_handler_run(uint32_t loop_count) {
+w_status_t imu_handler_run(uint32_t loop_count, all_sensors_data_t *output) {
 	estimator_all_imus_input_t imu_data = {.pololu = {.is_dead = false},
 										   .movella = {.is_dead = false}};
 	raw_pololu_data_t raw_pololu_data = {0};

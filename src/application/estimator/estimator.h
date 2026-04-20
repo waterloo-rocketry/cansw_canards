@@ -109,6 +109,11 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state);
  */
 uint32_t estimator_get_status(void);
 
+/**
+ * run 1 step of estimator
+ */
+w_status_t estimator_step(estimator_module_ctx_t *ctx, uint32_t loop_count);
+
 void estimator_task(void *argument);
 
 #endif
