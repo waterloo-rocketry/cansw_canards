@@ -109,8 +109,14 @@ def run_formatter(source, target, env):
         return
 
     # collect the .c and .h files from our source directories (ignore auto-gen and 3rd party stuff)
-    dirs = ["src/application", "src/drivers", "src/common"]
     files = []
+    # first, glob src with depth 1 only (src/*.c, src/*.h)
+    files += glob.glob("src/*.c")
+    files += glob.glob("src/*.h")
+
+    # then find the nested files in folders under src/ except for third-party
+    dirs = ["src/application", "src/drivers", "src/common"]
+
     for d in dirs:
         files += glob.glob(os.path.join(d, "**", "*.c"), recursive=True)
         files += glob.glob(os.path.join(d, "**", "*.h"), recursive=True)
