@@ -55,6 +55,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern FDCAN_HandleTypeDef hfdcan3;
 extern DMA_HandleTypeDef hdma_i2c2_rx;
 extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
@@ -332,6 +333,34 @@ void I2C5_ER_IRQHandler(void)
   /* USER CODE BEGIN I2C5_ER_IRQn 1 */
 
   /* USER CODE END I2C5_ER_IRQn 1 */
+}
+
+/**
+  * @brief This function handles FDCAN3 interrupt 0.
+  */
+void FDCAN3_IT0_IRQHandler(void)
+{
+  /* USER CODE BEGIN FDCAN3_IT0_IRQn 0 */
+
+  /* USER CODE END FDCAN3_IT0_IRQn 0 */
+  HAL_FDCAN_IRQHandler(&hfdcan3);
+  /* USER CODE BEGIN FDCAN3_IT0_IRQn 1 */
+
+  /* USER CODE END FDCAN3_IT0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles FDCAN3 interrupt 1.
+  */
+void FDCAN3_IT1_IRQHandler(void)
+{
+  /* USER CODE BEGIN FDCAN3_IT1_IRQn 0 */
+
+  /* USER CODE END FDCAN3_IT1_IRQn 0 */
+  HAL_FDCAN_IRQHandler(&hfdcan3);
+  /* USER CODE BEGIN FDCAN3_IT1_IRQn 1 */
+
+  /* USER CODE END FDCAN3_IT1_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
