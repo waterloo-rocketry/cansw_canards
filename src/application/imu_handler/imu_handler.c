@@ -220,15 +220,13 @@ w_status_t imu_handler_init(void) {
 }
 
 /**
- * @brief Execute one iteration of the IMU handler processing
- * Reads data from all IMUs and updates the estimator
+ * @brief Curate new data from all sensors.
+ * @note !!! data that exceeds the sensor's freshness requirement is marked as dead !!!
  * @param loop_count Number of loops run, for CAN send rate limiting
- * @note This function is non-static to allow exposed to unit tests
  * @return Status of the execution
  */
-w_status_t imu_handler_run(uint32_t loop_count, all_sensors_data_t *output) {
-	estimator_all_imus_input_t imu_data = {.pololu = {.is_dead = false},
-										   .movella = {.is_dead = false}};
+w_status_t imu_handler_get_fresh_meas(uint32_t loop_count, all_sensors_data_t *output) {
+	all_sensors_data_t imu_data = {.pololu = {.is_dead = false}, .movella = {.is_dead = false}};
 	raw_pololu_data_t raw_pololu_data = {0};
 	uint32_t current_time_ms;
 	w_status_t status = W_SUCCESS;
@@ -353,7 +351,7 @@ void imu_handler_task(void *argument) {
 	// Main task loop
 	log_text(10, "IMUHandlerTask", "IMU Handler task started.");
 	while (1) {
-		w_status_t run_status = imu_handler_run(loop_count++);
+		w_status_t run_status = imu_handler_get_fresh_meas(loop_count++);
 		if (W_SUCCESS != run_status) {
 			// Log or handle run failures if needed
 			imu_handler_state.error_count++;
