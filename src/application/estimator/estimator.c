@@ -71,7 +71,7 @@ w_status_t estimator_init(void) {
 	}
 
 	// create queues for imu data, encoder data, and controller cmd
-	imu_data_queue = xQueueCreate(1, sizeof(estimator_all_imus_input_t));
+	imu_data_queue = xQueueCreate(1, sizeof(all_sensors_data_t));
 	encoder_data_queue_rad = xQueueCreate(1, sizeof(float));
 	controller_cmd_queue = xQueueCreate(1, sizeof(controller_output_t));
 
@@ -93,7 +93,7 @@ w_status_t estimator_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t estimator_update_imu_data(estimator_all_imus_input_t *data) {
+w_status_t estimator_update_imu_data(all_sensors_data_t *data) {
 	if (NULL == data) {
 		return W_FAILURE;
 	}
@@ -104,7 +104,7 @@ w_status_t estimator_update_imu_data(estimator_all_imus_input_t *data) {
 w_status_t estimator_step(estimator_module_ctx_t *ctx, uint32_t loop_count) {
 	w_status_t status = W_SUCCESS;
 	flight_phase_state_t curr_flight_phase = flight_phase_get_state();
-	estimator_all_imus_input_t latest_imu_data = {0};
+	all_sensors_data_t latest_imu_data = {0};
 	controller_output_t latest_controller_cmd = {0};
 	controller_input_t output_to_controller = {0};
 	float latest_encoder_rad = 0;

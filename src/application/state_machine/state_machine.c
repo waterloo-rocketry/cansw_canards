@@ -5,6 +5,9 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/imu_handler/imu_handler.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 typedef struct {
 	estimator_module_ctx_t *estimator_context; // global instance of estimator
 	controller_ctx_t *controller_context; // global instance of controller
@@ -33,13 +36,16 @@ void state_machine_exec(const state_machine_inputs_t *input) {
 
 void state_machine_task(void *args) {
 	(void)args;
+	TickType_t last_wake_time = xTaskGetTickCount();
+
 	while (1) {
 		state_machine_inputs_t inputs = {0};
 
 		// get inputs needed for state machine:
 		// - imu data
 		// - etc (probably more later)
-		imu_handler_run(0, &inputs.all_sensors_input); // (ignore loop_count param for now)
+		imu_handler_get_fresh_meas(0,
+								   &inputs.all_sensors_input); // (ignore loop_count param for now)
 
 		// do state machine transitions for a limited number of most recent events
 		flight_phase_event_t event = EVENT_NONE;
@@ -47,5 +53,7 @@ void state_machine_task(void *args) {
 
 		// run actions based on curr state
 		state_machine_exec(&inputs);
+
+		vTaskDelayUntil(&last_wake_time, 2); // state machine runs at 500 hz
 	}
 }
