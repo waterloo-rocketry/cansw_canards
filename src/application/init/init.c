@@ -83,11 +83,11 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	// status |= uart_init(UART_DEBUG_SERIAL, &huart4, 100);
-	// status |= uart_init(UART_MOVELLA, &huart3, 100);
+	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	// status |= adc_init(&hadc1);
 	// status |= estimator_init();
 	// status |= health_check_init();
-	// status |= init_with_retry(movella_init);
+	status |= movella_init();
 	status |= flight_phase_init();
 	// status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
@@ -140,8 +140,8 @@ static void system_init_task(void *arg) {
 	//     can_handler_tx_priority,
 	//     &can_handler_handle_tx);
 
-	// task_status &= xTaskCreate(
-	//     movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+	task_status &= xTaskCreate(
+		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
