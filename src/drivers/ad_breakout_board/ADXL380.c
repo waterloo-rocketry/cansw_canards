@@ -30,7 +30,7 @@ adxl38x_dev_t g_adx380_handle = {0};
 w_status_t adxl380_init() {
 	// init the handle
 	g_adx380_handle.i2c_addr = ADXL_ADDRS;
-	g_adx380_handle.i2c_bus = I2C_BUS_4; // TODO: To be corrected
+	g_adx380_handle.i2c_bus = I2C_BUS_2; // TODO: To be corrected
 
 	if (W_SUCCESS != adxl38x_init(&g_adx380_handle)) {
 		log_text(0, "ADXL380", "ERROR: NO-OS based driver failed to init.");
