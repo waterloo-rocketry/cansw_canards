@@ -147,7 +147,7 @@ w_status_t adxrs649_init() {
 	}
 
 	vTaskDelay(pdMS_TO_TICKS(INIT_DELAY_MS));
-	
+
 	// currect ads setting 00001111 -> 0x0F
 	// perform sanity check
 	if (W_SUCCESS != ads1219_sanity_check(&g_ads_handle, ADS1219_CONFIG_SETTINGS)) {

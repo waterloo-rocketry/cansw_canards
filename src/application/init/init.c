@@ -165,7 +165,6 @@ static void system_init_task(void *arg) {
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
-
 	gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_HIGH, 1);
 	vTaskDelay(1000);
 	gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_LOW, 1);
@@ -176,10 +175,10 @@ static void system_init_task(void *arg) {
 	vTaskDelay(1000);
 	// its blinky now
 	// uint8_t data = 0x06;
-	// HAL_StatusTypeDef status_hal = HAL_I2C_Mem_Read(&hi2c2, (uint16_t)(0x40<<1), 0x10, I2C_MEMADD_SIZE_8BIT, &data ,  3, 1);
+	// HAL_StatusTypeDef status_hal = HAL_I2C_Mem_Read(&hi2c2, (uint16_t)(0x40<<1), 0x10,
+	// I2C_MEMADD_SIZE_8BIT, &data ,  3, 1);
 
 	adxrs649_init();
-	
 
 	while (1) {
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
