@@ -54,7 +54,8 @@ BaseType_t xQueueReceive_custom(QueueHandle_t arg0, void *arg1, TickType_t arg2)
 
 uint16_t rad_to_can_cmd(float rad) {
     // Convert radians to millidegrees and shift to unsigned 16-bit
-    return (uint16_t)(rad / M_PI * 180.0 * 1000.0) + 32768;
+    int16_t res_int16 = (int16_t)(rad / M_PI * 180.0 * 1000.0) + 32768;
+    return (uint16_t)(res_int16); 
 }
 
 class ControllerTest : public ::testing::Test {

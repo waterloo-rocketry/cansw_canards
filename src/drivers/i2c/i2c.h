@@ -30,8 +30,10 @@ typedef struct {
  * These correspond to the actual STM32H7 I2C peripheral instances used
  */
 typedef enum {
-	I2C_BUS_2, /**< STM32 I2C2 peripheral -> LSM IMU */
-	I2C_BUS_4, /**< STM32 I2C4 peripheral -> Pololu AltIMU */
+	I2C_BUS_1, /**< STM32 I2C1 peripheral -> ST IMU */
+	I2C_BUS_2, /**< STM32 I2C2 peripheral -> AD BREAKOUT BOARD */
+	I2C_BUS_4, /**< STM32 I2C4 peripheral -> ST MAG */
+	I2C_BUS_5, /**< STM32 I2C5 peripheral -> MS BAR */
 	I2C_BUS_COUNT
 } i2c_bus_t;
 
@@ -80,6 +82,21 @@ w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t
  */
 w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const uint8_t *data,
 						 uint8_t len);
+
+/**
+ * @brief send arbitrary data through I2C
+ *
+ * @param[in] bus Bus to use
+ * @param[in] device_addr 7-bit device address (raw, will be shifted left internally)
+ * @param[in] data Data to write
+ * @param[in] len Number of bytes to write (max 255)
+ * @retval W_SUCCESS Write completed successfully
+ * @retval W_INVALID_PARAM Invalid parameters
+ * @retval W_FAILURE Bus not initialized
+ * @retval W_IO_TIMEOUT Transfer timed out
+ * @retval W_IO_ERROR Bus error occurred (NACK, bus error, etc)
+ */
+w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *data, uint8_t len);
 
 /**
  * @brief Report I2C module health status
