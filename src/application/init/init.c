@@ -21,9 +21,9 @@
 #include "adc.h" // For hadc1
 #include "fdcan.h" // For hfdcan1
 #include "i2c.h" // For hi2c2, hi2c4
+#include "sdmmc.h"
 #include "task.h"
 #include "usart.h"
-#include "sdmmc.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -166,7 +166,7 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// test SD card time !!!! :(
-	// HAL_StatusTypeDef sd_status  = HAL_SD_Init(&hsd2); 
+	// HAL_StatusTypeDef sd_status  = HAL_SD_Init(&hsd2);
 	uint32_t err = HAL_SD_GetError(&hsd2);
 	HAL_SD_StateTypeDef sd_state = HAL_SD_GetState(&hsd2);
 	HAL_SD_CardStateTypeDef sdcard_state = HAL_SD_GetCardState(&hsd2);
@@ -174,8 +174,8 @@ static void system_init_task(void *arg) {
 	if (err != 0 && sd_state != 0 && sdcard_state != 0) {
 		vTaskDelay(500);
 	}
-  	HAL_SD_CardInfoTypeDef info;
-	HAL_StatusTypeDef sd_status  = HAL_SD_GetCardInfo(&hsd2, &info);
+	HAL_SD_CardInfoTypeDef info;
+	HAL_StatusTypeDef sd_status = HAL_SD_GetCardInfo(&hsd2, &info);
 	err = HAL_SD_GetError(&hsd2);
 	sd_state = HAL_SD_GetState(&hsd2);
 	sdcard_state = HAL_SD_GetCardState(&hsd2);
@@ -183,17 +183,20 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 	}
 
-
-  	uint8_t rx[512];
+	uint8_t rx[512];
 	uint32_t test_lba = 1024;
 	sd_status = HAL_SD_ReadBlocks(&hsd2, rx, test_lba, 1, 1000);
-  	vTaskDelay(1000);
+	vTaskDelay(1000);
 	sdcard_state = HAL_SD_GetCardState(&hsd2);
+	while (4 == sdcard_state) {
+		vTaskDelay(1000);
+		sdcard_state = HAL_SD_GetCardState(&hsd2);
+	}
+	err = HAL_SD_GetError(&hsd2);
+	sd_state = HAL_SD_GetState(&hsd2);
 	if (HAL_OK != sd_status && err != 0 && sd_state != 0 && sdcard_state != 0) {
 		vTaskDelay(500);
 	}
-
-
 
 	// its blinky now
 	while (1) {
