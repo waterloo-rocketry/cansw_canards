@@ -287,6 +287,7 @@ add_test_group(test_flight_phase
     ${UNIT_TESTS_DIR}/flight_phase_test.cpp
     # src files
     ${PROC_SRC_DIR}/application/flight_phase/flight_phase.c
+    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
 )
 
 add_test_group(test_altimu
