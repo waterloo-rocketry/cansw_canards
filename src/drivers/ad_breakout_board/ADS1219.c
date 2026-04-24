@@ -13,10 +13,14 @@ Based on above repository
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/i2c/i2c.h"
-#include "i2c.h" // For hi2c2, hi2c4
+
+static const uint8_t INIT_DELAY_MS = 10;
 
 /* ── internal helpers (static, replace the C++ private methods) ────────── */
 
@@ -69,6 +73,9 @@ w_status_t ads1219_init(ads1219_handle_t *p_handle, i2c_bus_t bus, uint8_t addr)
 	if (status != W_SUCCESS) {
 		return status;
 	}
+
+	// a small delay is required for successful init
+	vTaskDelay(pdMS_TO_TICKS(INIT_DELAY_MS));
 
 	p_handle->initialized = true;
 
@@ -296,10 +303,8 @@ w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
 	 *     START | addr+W | RDATA | RSTART | addr+R | buf[0..2] | STOP
 	 */
 	w_status_t status = i2c_read_reg(p_handle->bus, p_handle->i2c_addr, ADS1219_CMD_RDATA, buf, 3);
-	// HAL_StatusTypeDef status_hal = HAL_I2C_Mem_Read(&hi2c2, (uint16_t)(0x40 << 1), ADS1219_CMD_RREG_CONFIG, I2C_MEMADD_SIZE_8BIT, buf ,  1, 1);
-	uint32_t err = HAL_I2C_GetError(&hi2c2);
-	if (W_SUCCESS != status && 0 == err) {
 
+	if (W_SUCCESS != status) {
 		return status;
 	}
 

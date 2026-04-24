@@ -24,10 +24,12 @@ static const float64_t ADXRS649_GYRO_RANGE = 20000.0;
 static const float64_t ADXRS649_CONV_mV_DEG_S = 0.1; // from datasheet
 static const float64_t ADXRS649_NULL_BIAS_mv = 0.0 * 1000;
 
-// self-test constants
-static const float64_t MIN_SELF_TEST_mV = 130; // magnitude
-static const float64_t MAX_SELF_TEST_mV = 170; // magnitude
+// self-test constants TODO: Update with tighter bounds once bounds are determined
+static const float64_t MIN_SELF_TEST_mV = 100; // magnitude
+static const float64_t MAX_SELF_TEST_mV = 200; // magnitude
 static const uint32_t MAX_NUM_TESTS = 2; // unitless
+static const uint8_t SELF_TEST_DELAY_MS = 10;
+static const uint8_t INIT_DELAY_MS = 10;
 
 // ADC constants
 static float64_t V_EXTERNAL_REF_P_mV = 2048.0;
@@ -46,18 +48,16 @@ static w_status_t adxrs649_self_test() {
 	uint32_t test_num = 0;
 
 	// SELF-TEST 1
-	status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
-	vTaskDelay(pdMS_TO_TICKS(10));
 	status |=
 		gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_HIGH, 1); // TODO: create new GPIO pin for test
-	vTaskDelay(pdMS_TO_TICKS(10));
-	status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
-	vTaskDelay(pdMS_TO_TICKS(10));
+	vTaskDelay(pdMS_TO_TICKS(SELF_TEST_DELAY_MS));
 
-	while ((MAX_NUM_TESTS >= test_num) && (((-1 * MIN_SELF_TEST_mV) < adc_voltage) ||
-		   ((-1 * MAX_SELF_TEST_mV) > adc_voltage))) {
+	status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
+
+	while ((MAX_NUM_TESTS >= test_num) &&
+		   ((MIN_SELF_TEST_mV > adc_voltage) || (MAX_SELF_TEST_mV < adc_voltage))) {
 		// wait and retest
-		vTaskDelay(pdMS_TO_TICKS(10));
+		vTaskDelay(pdMS_TO_TICKS(SELF_TEST_DELAY_MS));
 		status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
 		test_num++;
 	}
@@ -71,24 +71,29 @@ static w_status_t adxrs649_self_test() {
 		return W_FAILURE;
 	}
 
-	// if (MAX_NUM_TESTS < test_num) {
-	// 	log_text(0, "ADXRS649", "ERROR: Failed ST1.");
-	// 	return W_FAILURE;
-	// }
+	if (MAX_NUM_TESTS < test_num) {
+		log_text(0, "ADXRS649", "ERROR: Failed ST1.");
+		return W_FAILURE;
+	}
 
+	vTaskDelay(pdMS_TO_TICKS(SELF_TEST_DELAY_MS));
 	status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
 
 	// SELF-TEST 2
 	test_num = 0;
 
+	vTaskDelay(pdMS_TO_TICKS(SELF_TEST_DELAY_MS));
+
 	status |=
 		gpio_write(GPIO_PIN_ADXRS649_ST2, GPIO_LEVEL_HIGH, 1); // TODO: create new GPIO pin for test
+	vTaskDelay(pdMS_TO_TICKS(SELF_TEST_DELAY_MS));
+
 	status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
 
-	while ((MAX_NUM_TESTS >= test_num) && (((MIN_SELF_TEST_mV) > adc_voltage) ||
-		   ((MAX_SELF_TEST_mV) < adc_voltage))) {
+	while ((MAX_NUM_TESTS >= test_num) &&
+		   (((-1 * MIN_SELF_TEST_mV) < adc_voltage) || ((-1 * MAX_SELF_TEST_mV) > adc_voltage))) {
 		// wait and retest
-		vTaskDelay(pdMS_TO_TICKS(2));
+		vTaskDelay(pdMS_TO_TICKS(SELF_TEST_DELAY_MS));
 		status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
 		test_num++;
 	}
@@ -114,9 +119,8 @@ static w_status_t adxrs649_self_test() {
  * @return the status at which the ADXRS649 initalization goes
  */
 w_status_t adxrs649_init() {
-
 	// reset both gpio pins to low to start
-	
+
 	if (W_SUCCESS != ads1219_init(&g_ads_handle,
 								  I2C_BUS_2,
 								  ADS1219_ADDR)) { // TODO: to be set once an I2C bus is determined
@@ -142,21 +146,14 @@ w_status_t adxrs649_init() {
 		return W_FAILURE;
 	}
 
-	vTaskDelay(pdMS_TO_TICKS(2));
-
-	// float64_t data = 0;
-	float64_t raw_data = 0;
-	while (1) {
-		 ads1219_get_millivolts(&g_ads_handle, &raw_data);
-	}
+	vTaskDelay(pdMS_TO_TICKS(INIT_DELAY_MS));
 	
-
 	// currect ads setting 00001111 -> 0x0F
 	// perform sanity check
-	// if (W_SUCCESS != ads1219_sanity_check(&g_ads_handle, ADS1219_CONFIG_SETTINGS)) {
-	// 	log_text(0, "ADXRS649", "ERROR: Failed ADC sanity check.");
-	// 	return W_FAILURE;
-	// }
+	if (W_SUCCESS != ads1219_sanity_check(&g_ads_handle, ADS1219_CONFIG_SETTINGS)) {
+		log_text(0, "ADXRS649", "ERROR: Failed ADC sanity check.");
+		return W_FAILURE;
+	}
 
 	if (W_SUCCESS != adxrs649_self_test()) {
 		// Make sure ST pins are low
