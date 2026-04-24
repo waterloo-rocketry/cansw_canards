@@ -416,3 +416,10 @@ add_test_group(test_model_acceleration
     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
 )
+
+add_test_group(test_rate_limiter
+    # test file(s)
+    ${UNIT_TESTS_DIR}/rate_limiter_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/common/rate_limiter/rate_limiter.c
+)
