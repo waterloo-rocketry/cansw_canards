@@ -90,7 +90,7 @@ static void system_init_task(void *arg) {
 	// status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
-	// status |= imu_handler_init();
+	status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	// status |= controller_init;
 	// status |= ekf_init;
@@ -120,12 +120,12 @@ static void system_init_task(void *arg) {
 	//     health_checks_task_priority,
 	//     &health_checks_task_handle);
 
-	// task_status &= xTaskCreate(imu_handler_task,
-	//     "imu handler",
-	//     512,
-	//     NULL,
-	//     imu_handler_task_priority,
-	//     &imu_handler_task_handle);
+	task_status &= xTaskCreate(imu_handler_task,
+							   "imu handler",
+							   512,
+							   NULL,
+							   imu_handler_task_priority,
+							   &imu_handler_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
