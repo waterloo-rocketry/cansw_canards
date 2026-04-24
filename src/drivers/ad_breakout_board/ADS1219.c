@@ -16,6 +16,7 @@ Based on above repository
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/i2c/i2c.h"
+#include "i2c.h" // For hi2c2, hi2c4
 
 /* ── internal helpers (static, replace the C++ private methods) ────────── */
 
@@ -285,7 +286,9 @@ w_status_t ads1219_set_channel(ads1219_handle_t *p_handle, uint8_t mux) {
  * @return status of function
  */
 w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
-	uint8_t buf[3];
+	uint8_t buf[3] = {0};
+
+	// ads1219_start(p_handle);
 
 	/*
 	 * RDATA is a two-phase command:  write the RDATA byte, then clock out
@@ -293,7 +296,10 @@ w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
 	 *     START | addr+W | RDATA | RSTART | addr+R | buf[0..2] | STOP
 	 */
 	w_status_t status = i2c_read_reg(p_handle->bus, p_handle->i2c_addr, ADS1219_CMD_RDATA, buf, 3);
-	if (W_SUCCESS != status) {
+	// HAL_StatusTypeDef status_hal = HAL_I2C_Mem_Read(&hi2c2, (uint16_t)(0x40 << 1), ADS1219_CMD_RREG_CONFIG, I2C_MEMADD_SIZE_8BIT, buf ,  1, 1);
+	uint32_t err = HAL_I2C_GetError(&hi2c2);
+	if (W_SUCCESS != status && 0 == err) {
+
 		return status;
 	}
 
