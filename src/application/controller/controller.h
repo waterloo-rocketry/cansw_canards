@@ -58,6 +58,13 @@ typedef struct {
 } controller_error_data_t;
 
 /**
+ * state of a controller instance.
+ */
+typedef struct {
+	uint32_t last_run_ms; // last time the controller did a full loop. use for rate-limiting
+} controller_ctx_t;
+
+/**
  * Initialize controller module
  * Must be called before RTOS scheduler starts
  * @return W_SUCCESS if initialization successful
@@ -77,6 +84,11 @@ w_status_t controller_update_inputs(controller_input_t *new_state);
  * @return W_FAILURE if no output available
  */
 w_status_t controller_get_latest_output(controller_output_t *output);
+
+/**
+ * run 1 step of the controller
+ */
+w_status_t controller_step(controller_ctx_t *context);
 
 /**
  * Controller task function for RTOS

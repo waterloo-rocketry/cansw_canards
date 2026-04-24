@@ -21,42 +21,42 @@ extern "C" {
 #include "task.h"
 #include "third_party/rocketlib/include/common.h" // For w_status_t
 
-extern w_status_t estimator_run_loop(estimator_module_ctx_t *ctx, uint32_t loop_count);
-extern w_status_t estimator_log_state_to_can(const x_state_t *current_state);
+    extern w_status_t estimator_run_loop(estimator_module_ctx_t* ctx, uint32_t loop_count);
+    extern w_status_t estimator_log_state_to_can(const x_state_t* current_state);
 }
 
 DEFINE_FFF_GLOBALS;
 
 // Define Fakes
 // w_status_t controller_get_latest_output(controller_output_t *output);
-FAKE_VALUE_FUNC(w_status_t, controller_get_latest_output, controller_output_t *);
+FAKE_VALUE_FUNC(w_status_t, controller_get_latest_output, controller_output_t*);
 // flight_phase_state_t flight_phase_get_state(void);
 FAKE_VALUE_FUNC(flight_phase_state_t, flight_phase_get_state);
 // w_status_t can_handler_register_callback(can_msg_type_t msg_type, can_callback_t callback);
 FAKE_VALUE_FUNC(w_status_t, can_handler_register_callback, can_msg_type_t, can_callback_t);
 // w_status_t controller_update_inputs(controller_input_t *inputs);
-FAKE_VALUE_FUNC(w_status_t, controller_update_inputs, controller_input_t *);
+FAKE_VALUE_FUNC(w_status_t, controller_update_inputs, controller_input_t*);
 // bool get_analog_data(const can_msg_t *msg, can_analog_sensor_id_t *sensor_id, uint16_t *value);
-FAKE_VALUE_FUNC(bool, get_analog_data, const can_msg_t *, can_analog_sensor_id_t *, uint16_t *);
+FAKE_VALUE_FUNC(bool, get_analog_data, const can_msg_t*, can_analog_sensor_id_t*, uint16_t*);
 // bool build_state_est_data_msg(can_msg_prio_t prio, uint16_t timestamp, can_state_est_id_t id,
 // const float *data, can_msg_t *msg);
 FAKE_VALUE_FUNC(
-    bool, build_state_est_data_msg, can_msg_prio_t, uint16_t, can_state_est_id_t, const float *,
-    can_msg_t *
+    bool, build_state_est_data_msg, can_msg_prio_t, uint16_t, can_state_est_id_t, const float*,
+    can_msg_t*
 );
-FAKE_VOID_FUNC(proc_handle_fatal_error, const char *);
+FAKE_VOID_FUNC(proc_handle_fatal_error, const char*);
 // w_status_t can_handler_transmit(const can_msg_t *msg);
-FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, const can_msg_t *);
+FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, const can_msg_t*);
 
 // Define logging fakes directly in this file
 FAKE_VALUE_FUNC0(w_status_t, log_init);
-FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
-FAKE_VALUE_FUNC3(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t *);
-FAKE_VOID_FUNC1(log_task, void *);
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char*, const char*, ...);
+FAKE_VALUE_FUNC3(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t*);
+FAKE_VOID_FUNC1(log_task, void*);
 
 // Helper function to create a simple x_state_t for testing
 x_state_t create_test_state() {
-    x_state_t test_state = {0};
+    x_state_t test_state = { 0 };
     test_state.attitude.w = 1.0;
     test_state.attitude.x = 0.1;
     test_state.attitude.y = 0.2;
@@ -77,8 +77,8 @@ float captured_build_state_est_data[99];
 uint32_t captured_build_state_est_data_count = 0;
 
 bool build_state_est_data_msg_custom(
-    can_msg_prio_t prio, uint16_t timestamp, can_state_est_id_t id, const float *data,
-    can_msg_t *msg
+    can_msg_prio_t prio, uint16_t timestamp, can_state_est_id_t id, const float* data,
+    can_msg_t* msg
 ) {
     // Make sure we don't overflow the array
     EXPECT_TRUE(captured_build_state_est_data_count < 99);
@@ -168,7 +168,7 @@ TEST_F(EstimatorTest, EstimatorInitCanFail) {
 
 TEST_F(EstimatorTest, NominalUpdateImuData) {
     // Arrange
-    estimator_all_imus_input_t test_imu_data = {};
+    all_sensors_data_t test_imu_data = {};
     xQueueOverwrite_fake.return_val =
         pdPASS; // xqueueoverwrite literally can't fail hence this is the only test case
 
@@ -189,7 +189,7 @@ TEST_F(EstimatorTest, EstimatorRunLoopPadStateNominal) {
     flight_phase_get_state_fake.return_val = STATE_IDLE; // Simulate flight phase state
 
     // Initialize required context
-    estimator_module_ctx_t ctx = {0};
+    estimator_module_ctx_t ctx = { 0 };
 
     // Act
     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -209,7 +209,7 @@ TEST_F(EstimatorTest, EstimatorRunLoopInitStateNominalZeroData) {
     xQueueReceive_fake.return_val = pdTRUE; // Simulate successful imu queue receive
 
     // Initialize required context
-    estimator_module_ctx_t ctx = {0};
+    estimator_module_ctx_t ctx = { 0 };
 
     // Act
     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -239,7 +239,7 @@ TEST_F(EstimatorTest, EstimatorRunLoopBoostStateNominal) {
     log_text_fake.return_val = W_SUCCESS;
 
     // Initialize required context
-    estimator_module_ctx_t ctx = {0};
+    estimator_module_ctx_t ctx = { 0 };
 
     // Act
     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -269,7 +269,7 @@ TEST_F(EstimatorTest, EstimatorRunLoopActallowedStateNominal) {
     log_text_fake.return_val = W_SUCCESS; // Set return for FFF fake
 
     // Initialize required context
-    estimator_module_ctx_t ctx = {0};
+    estimator_module_ctx_t ctx = { 0 };
 
     // Act
     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -297,7 +297,7 @@ TEST_F(EstimatorTest, EstimatorRunLoopRecoveryStateNominal) {
     log_text_fake.return_val = W_SUCCESS; // Set return for FFF fake
 
     // Initialize required context
-    estimator_module_ctx_t ctx = {0};
+    estimator_module_ctx_t ctx = { 0 };
 
     // Act
     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -323,7 +323,7 @@ TEST_F(EstimatorTest, EstimatorRunLoopFlightStateImuQueueFail) {
     controller_update_inputs_fake.return_val = W_SUCCESS; // Simulate successful controller update
 
     // Initialize required context
-    estimator_module_ctx_t ctx = {0};
+    estimator_module_ctx_t ctx = { 0 };
 
     // Act
     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -373,7 +373,7 @@ TEST_F(EstimatorTest, EstimatorRunLoopFlightStateControllerFail) {
     controller_update_inputs_fake.return_val = W_SUCCESS; // Simulate successful controller update
 
     // Initialize required context
-    estimator_module_ctx_t ctx = {0};
+    estimator_module_ctx_t ctx = { 0 };
 
     // Act
     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -397,7 +397,7 @@ TEST_F(EstimatorTest, EstimatorRunLoopFlightStateControllerUpdateFail) {
     log_text_fake.return_val = W_SUCCESS; // Set return for FFF fake
 
     // Initialize required context
-    estimator_module_ctx_t ctx = {0};
+    estimator_module_ctx_t ctx = { 0 };
 
     // Act
     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -524,7 +524,7 @@ TEST_F(EstimatorTest, EstimatorRunLoop_CanRateLimit) {
     log_text_fake.return_val = W_SUCCESS;
 
     // Initialize required context
-    estimator_module_ctx_t ctx = {0};
+    estimator_module_ctx_t ctx = { 0 };
 
     // Act
     for (uint32_t i = 0; i < num_loops; ++i) {

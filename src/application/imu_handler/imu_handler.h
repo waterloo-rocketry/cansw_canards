@@ -1,6 +1,7 @@
 #ifndef IMU_HANDLER_H
 #define IMU_HANDLER_H
 
+#include "application/state_machine/state_machine.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "rocketlib/include/common.h"
 
@@ -20,6 +21,10 @@ typedef struct __attribute__((packed)) {
  * @return Status of initialization
  */
 w_status_t imu_handler_init(void);
+
+// run 1 iteration of collecting all recent sensor data. guarantees data is fresh within 1 period
+// (2ms)
+w_status_t imu_handler_get_fresh_meas(uint32_t loop_count, all_sensors_data_t *output);
 
 /**
  * @brief IMU handler task function for FreeRTOS
