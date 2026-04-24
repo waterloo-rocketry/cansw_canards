@@ -55,7 +55,8 @@ w_status_t get_adc_current(uint32_t *adc_current_mA) {
 }
 
 uint32_t check_current(void) {
-	uint32_t status = 0;
+	w_status_t current_status = W_SUCCESS;
+	w_status_t can_tx_status = W_SUCCESS;
 	uint32_t adc_current_mA;
 
 	if (get_adc_current(&adc_current_mA) == W_SUCCESS) {
@@ -63,19 +64,24 @@ uint32_t check_current(void) {
 		timer_get_ms(&ms);
 		can_msg_t msg = {0};
 
-		// always send current sense msg to can
-		build_analog_data_msg(PRIO_LOW, (uint16_t)ms, SENSOR_5V_CURR, adc_current_mA, &msg);
-		status |= can_handler_transmit(&msg);
+		// No scaling for 5V current
+		build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)ms, SENSOR_5V_CURR, adc_current_mA, &msg);
+
+		// Send this to can handler module's tx
+		can_tx_status |= can_handler_transmit(&msg);
+		if (can_tx_status != W_SUCCESS) {
+			log_text(10, "health_checks", "health checks msg tx failed");
+		}
 
 		// send CAN err msg and log text if over current
 		if (adc_current_mA > MAX_CURRENT_mA) {
-			status |= 1 << E_5V_OVER_CURRENT_OFFSET;
+			current_status |= 1 << E_5V_OVER_CURRENT_OFFSET;
 			log_text(10, "health_checks", "5V overcurrent: %d mA", adc_current_mA);
 		} else {
 		}
 	}
 
-	return status;
+	return (current_status != W_SUCCESS) ? current_status : can_tx_status;
 }
 
 w_status_t health_check_init(void) {
@@ -216,14 +222,10 @@ w_status_t health_check_exec() {
 
 	// send status CAN msg
 	can_msg_t msg = {0};
-	if (build_general_board_status_msg(
-			PRIO_LOW, xTaskGetTickCount(), status_bitfield, status_bitfield, &msg) == true) {
-		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0, "health_checks", "CAN send failure for status msg");
-			return W_FAILURE;
-		}
-	} else {
-		log_text(0, "health_checks", "build_general_board_status_msg failure");
+	build_general_board_status_msg(PRIO_LOW, xTaskGetTickCount(), status_bitfield, &msg);
+
+	if (can_handler_transmit(&msg) != W_SUCCESS) {
+		log_text(0, "health_checks", "CAN send failure for status msg");
 		return W_FAILURE;
 	}
 

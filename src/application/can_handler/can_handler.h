@@ -1,10 +1,17 @@
 #ifndef CAN_HANDLER_H
 #define CAN_HANDLER_H
 
+#include <stdint.h>
+
 #include "canlib.h"
 #include "rocketlib/include/common.h"
 #include "stm32h7xx_hal.h"
-#include <stdint.h>
+
+#include "application/can_handler/can_telemetry_scaling.h"
+
+#define UINT24_MAX (1U << 24) - 1U
+#define INT24_MIN -(1 << 23)
+#define INT24_MAX (1 << 23) - 1
 
 /**
  * @brief Structure to track CAN handler stats, errors and status
@@ -56,6 +63,43 @@ void can_handler_task_rx(void *argument);
 void can_handler_task_tx(void *argument);
 
 /**
+ * @brief Encodes a float telemetry value into an integer representation according to predefined
+ * scaling rules.
+ *
+ * The function also handles special float values as specific reserved integer values near the
+ * limits of the target type.
+ *
+ * Unsigned output:
+ * NaN -> max - 3,
+ * +Inf -> max - 2,
+ * -Inf -> max - 1.
+ *
+ * Signed output:
+ * NaN -> min + 3,
+ * -Inf -> min + 2,
+ * +Inf -> max - 1.
+ *
+ * @param sensor The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
+ * @param input The raw telemetry integer value to encode
+ * @param out Pointer to the output variable where the encoded value will be stored
+ *
+ * @return w_status_t indicating success or type of failure
+ */
+w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void *out);
+
+/**
+ * @brief Encodes an integer telemetry value into an integer representation according to predefined
+ * scaling rules.
+ *
+ * @param sensor The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
+ * @param input The raw telemetry value to encode
+ * @param out Pointer to the output variable where the encoded value will be stored
+ *
+ * @return w_status_t indicating success or type of failure
+ */
+w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void *out);
+
+/**
  * @brief Handles a fatal system error by sending a CAN message.
  *
  * This function attempts to send a CAN message indicating the error and then
@@ -65,8 +109,6 @@ void can_handler_task_tx(void *argument);
  *
  * It uses the canlib library to send a DEBUG_RAW message with a coarse timestamp
  * and the first few characters of the error message.
- *
- * @param errorMsg A descriptive string for the error (only the first ~6 chars will be sent).
  */
 void proc_handle_fatal_error(const char *errorMsg);
 
