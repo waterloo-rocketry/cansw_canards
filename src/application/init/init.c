@@ -184,7 +184,7 @@ static void system_init_task(void *arg) {
 	}
 
 	while (1) {
-		vTaskDelay(10);
+		vTaskDelay(2);
 		motor_get_latest_feedback(&fb);
 		motor_send_position_cmd(10);
 	}

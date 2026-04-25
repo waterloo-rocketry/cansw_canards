@@ -135,11 +135,10 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 		return W_FAILURE;
 	}
 
-	uint8_t data[1];
-	data[0] = 4;
-
-
-	motor_can_transmit_ext(10565, data, 1);
+	// uint32_t data  = ((uint32_t)(4) << 8) | (MOTOR_DRIVER_ID);
+	// // uint8_t data[1];
+	// // data[0] = 4;
+	// motor_can_transmit_ext(10565, (uint8_t*)&data, FDCAN_DLC_BYTES_4);
 
 	tx_errors = 0;
 	is_init = true;
@@ -150,9 +149,9 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 
 w_status_t motor_send_position_cmd(float angle_deg) {
 	// TODO fix id
-	// uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | MOTOR_DRIVER_ID;
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | MOTOR_DRIVER_ID;
 
-	uint32_t ext_id = 10565;
+	// uint32_t ext_id = 10565;
 
 	int32_t pos_raw = (int32_t)(angle_deg * MOTOR_POS_CMD_SCALE);
 	uint8_t data[4];
@@ -161,7 +160,7 @@ w_status_t motor_send_position_cmd(float angle_deg) {
 	data[2] = (uint8_t)((pos_raw >> 8) & 0xFF);
 	data[3] = (uint8_t)(pos_raw & 0xFF);
 
-	return motor_can_transmit_ext(ext_id, data, 4);
+	return motor_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
 }
 
 w_status_t motor_send_disable_cmd(void) {

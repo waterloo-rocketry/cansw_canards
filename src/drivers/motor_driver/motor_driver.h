@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 // Motor CAN driver ID configurable on the servo, default 1
-#define MOTOR_DRIVER_ID 1
+#define MOTOR_DRIVER_ID 0x45
 
 // Servo fault codes
 typedef enum {
