@@ -32,6 +32,9 @@ static QueueHandle_t feedback_queue = NULL;
 static uint32_t tx_errors = 0;
 static bool is_init = false;
 
+
+
+
 /**
  * @brief Transmit 29-bit ID via FDCAN
  *
@@ -56,7 +59,7 @@ static w_status_t motor_can_transmit_ext(uint32_t ext_id, const uint8_t *data, u
 	tx_header.MessageMarker = 0;
 	tx_header.DataLength = len; // TODO invalid DLC? 
 	// TODO suggested changes 
-	if (len <= 8) { tx_header.DataLength = len << 16; }
+	// if (len <= 8) { tx_header.DataLength = len << 16; }
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(motor_hfdcan, &tx_header, data) != HAL_OK) {
 		tx_errors++;
@@ -83,7 +86,7 @@ static void motor_parse_feedback(const uint8_t *data, motor_feedback_t *fb) {
 	int16_t raw_current = ((data[4] << 8) | data[5]);
 	fb->current_a = (float)raw_current * MOTOR_CURRENT_FB_SCALE;
 
-	fb->temperature_c = (float)data[6];
+	fb->temperature_c = (int8_t)data[6];
 	fb->fault_code = (motor_fault_code_t)data[7];
 
 	uint32_t ms = 0.0f;
@@ -132,6 +135,11 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 		return W_FAILURE;
 	}
 
+	uint8_t data[21];
+
+
+	motor_can_transmit_ext(10565, data, len);
+
 	tx_errors = 0;
 	is_init = true;
 
@@ -140,7 +148,10 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 }
 
 w_status_t motor_send_position_cmd(float angle_deg) {
-	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | MOTOR_DRIVER_ID;
+	// TODO fix id
+	// uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | MOTOR_DRIVER_ID;
+
+	uint32_t ext_id = 10565;
 
 	int32_t pos_raw = (int32_t)(angle_deg * MOTOR_POS_CMD_SCALE);
 	uint8_t data[4];
@@ -206,8 +217,12 @@ static void motor_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo
 		return;
 	}
 
+	//TODO: update the motor ID to match the motor
 	uint32_t expected_id = ((uint32_t)CAN_PACKET_FEEDBACK << 8) | MOTOR_DRIVER_ID;
-	if (rx_header.IdType != FDCAN_EXTENDED_ID || rx_header.Identifier != expected_id) {
+
+	if (rx_header.IdType != FDCAN_EXTENDED_ID || rx_header.Identifier != 10565) {
+		uint8_t abc =0;
+		(void)abc;
 		return;
 	}
 
