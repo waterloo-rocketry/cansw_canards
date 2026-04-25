@@ -54,13 +54,15 @@ static w_status_t motor_can_transmit_ext(uint32_t ext_id, const uint8_t *data, u
 	tx_header.FDFormat = FDCAN_CLASSIC_CAN;
 	tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	tx_header.MessageMarker = 0;
-	tx_header.DataLength = len;
+	tx_header.DataLength = len; // TODO invalid DLC? 
+	// TODO suggested changes 
+	if (len <= 8) { tx_header.DataLength = len << 16; }
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(motor_hfdcan, &tx_header, data) != HAL_OK) {
 		tx_errors++;
+		// TODO log error 
 		return W_FAILURE;
 	}
-
 	return W_SUCCESS;
 }
 
@@ -71,6 +73,7 @@ static w_status_t motor_can_transmit_ext(uint32_t ext_id, const uint8_t *data, u
  * @param[out] fb     Decoded feedback struct
  */
 static void motor_parse_feedback(const uint8_t *data, motor_feedback_t *fb) {
+	// TODO floating point multiplication in isr? 
 	int16_t raw_pos = ((data[0] << 8) | data[1]);
 	fb->position_deg = (float)raw_pos * MOTOR_POS_FB_SCALE;
 
@@ -108,11 +111,24 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 	motor_filter.FilterIndex = 0;
 	motor_filter.FilterType = FDCAN_FILTER_MASK;
 	motor_filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
-	motor_filter.FilterID1 = MOTOR_DRIVER_ID | (uint32_t)(CAN_PACKET_FEEDBACK << 8);
-	motor_filter.FilterID2 = 0x1FFFFFFF;
+	// TODO motor filter removed for now 
+	motor_filter.FilterID1 = 0;
+	motor_filter.FilterID2 = 0;
+	// motor_filter.FilterID1 = MOTOR_DRIVER_ID | (uint32_t)(CAN_PACKET_FEEDBACK << 8);
+	// motor_filter.FilterID2 = 0x1FFFFFFF;
 
 	if (HAL_FDCAN_ConfigFilter(motor_hfdcan, &motor_filter) != HAL_OK) {
 		log_text(LOG_WAIT_MS, "motor", "FDCAN filter config failed");
+		return W_FAILURE;
+	}
+
+	// TODO added: manually start clock and enable interrupts 
+	if (HAL_FDCAN_Start(motor_hfdcan) != HAL_OK) {
+		log_text(LOG_WAIT_MS, "motor", "FDCAN start failed");
+		return W_FAILURE;
+	}
+	if (HAL_FDCAN_ActivateNotification(motor_hfdcan, FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) != HAL_OK) {
+		log_text(LOG_WAIT_MS, "motor", "FDCAN activate notification failed");
 		return W_FAILURE;
 	}
 
@@ -176,6 +192,8 @@ uint32_t motor_get_tx_errors(void) {
  * Called from ISR context when a message matching the servo feedback filter
  * is received. Parses the feedback and puts it in the queue.
  */
+
+ // TODO this function is never called? 
 static void motor_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
 	if (0 == (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)) {
 		return;
