@@ -135,10 +135,11 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 		return W_FAILURE;
 	}
 
-	uint8_t data[21];
+	uint8_t data[1];
+	data[0] = 4;
 
 
-	motor_can_transmit_ext(10565, data, len);
+	motor_can_transmit_ext(10565, data, 1);
 
 	tx_errors = 0;
 	is_init = true;
