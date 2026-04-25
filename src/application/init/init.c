@@ -57,53 +57,16 @@ const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
-// Initialize a function with retry logic
-static w_status_t init_with_retry(w_status_t (*init_fn)(void)) {
-	w_status_t status;
-	uint32_t retry_count = 0;
-
-	while (retry_count < MAX_INIT_RETRIES) {
-		status = init_fn();
-
-		if (W_SUCCESS == status) {
-			return W_SUCCESS;
-		}
-
-		retry_count++;
-		if (retry_count < MAX_INIT_RETRIES) {
-			HAL_Delay(INIT_RETRY_DELAY_MS);
-		}
-	}
-
-	return W_FAILURE;
-}
-
-// Initialize a function with retry logic and parameter
-static w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *param) {
-	w_status_t status;
-	uint32_t retry_count = 0;
-
-	while (retry_count < MAX_INIT_RETRIES) {
-		status = init_fn(param);
-
-		if (status == W_SUCCESS) {
-			return W_SUCCESS;
-		}
-
-		retry_count++;
-		if (retry_count < MAX_INIT_RETRIES) {
-			HAL_Delay(INIT_RETRY_DELAY_MS);
-		}
-	}
-
-	return W_FAILURE;
-}
-
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
 	vTaskDelay(500);
+
+	// initialize timer first to make sure other modules can use it
+	if (W_SUCCESS != timer_init()) {
+		proc_handle_fatal_error("timerinit");
+	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
@@ -117,20 +80,20 @@ static void system_init_task(void *arg) {
 
 	// INIT REQUIRED MODULES
 	status |= gpio_init();
-	status |= i2c_init(I2C_BUS_2, &hi2c2, 0);
-	status |= i2c_init(I2C_BUS_4, &hi2c4, 0);
-	status |= uart_init(UART_DEBUG_SERIAL, &huart4, 100);
+	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
+	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
+	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
+	// status |= uart_init(UART_DEBUG_SERIAL, &huart4, 100);
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
-	status |= adc_init(&hadc1);
-	status |= estimator_init();
-	status |= health_check_init();
-	status |= init_with_retry(altimu_init);
-	status |= init_with_retry(movella_init);
-	status |= init_with_retry(flight_phase_init);
-	status |= init_with_retry(imu_handler_init);
-	status |= init_with_retry_param((w_status_t (*)(void *))can_handler_init, &hfdcan1);
-	status |= init_with_retry(controller_init);
-	status |= init_with_retry(ekf_init);
+	// status |= adc_init(&hadc1);
+	// status |= estimator_init();
+	// status |= health_check_init();
+	status |= movella_init();
+	status |= flight_phase_init();
+	// status |= imu_handler_init();
+	status |= can_handler_init(&hfdcan3);
+	// status |= controller_init;
+	// status |= ekf_init;
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -150,19 +113,19 @@ static void system_init_task(void *arg) {
 							   flight_phase_task_priority,
 							   &flight_phase_task_handle);
 
-	task_status &= xTaskCreate(health_check_task,
-							   "health",
-							   512,
-							   NULL,
-							   health_checks_task_priority,
-							   &health_checks_task_handle);
+	// task_status &= xTaskCreate(health_check_task,
+	//     "health",
+	//     512,
+	//     NULL,
+	//     health_checks_task_priority,
+	//     &health_checks_task_handle);
 
-	task_status &= xTaskCreate(imu_handler_task,
-							   "imu handler",
-							   512,
-							   NULL,
-							   imu_handler_task_priority,
-							   &imu_handler_task_handle);
+	// task_status &= xTaskCreate(imu_handler_task,
+	//     "imu handler",
+	//     512,
+	//     NULL,
+	//     imu_handler_task_priority,
+	//     &imu_handler_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
@@ -171,27 +134,28 @@ static void system_init_task(void *arg) {
 							   can_handler_rx_priority,
 							   &can_handler_handle_rx);
 
-	task_status &= xTaskCreate(can_handler_task_tx,
-							   "can handler tx",
-							   256,
-							   NULL,
-							   can_handler_tx_priority,
-							   &can_handler_handle_tx);
+	// task_status &= xTaskCreate(can_handler_task_tx,
+	//     "can handler tx",
+	//     256,
+	//     NULL,
+	//     can_handler_tx_priority,
+	//     &can_handler_handle_tx);
 
 	task_status &= xTaskCreate(
 		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
-	task_status &= xTaskCreate(controller_task,
-							   "controller",
-							   512,
-							   NULL,
-							   controller_task_priority,
-							   &controller_task_handle);
+	// task_status &= xTaskCreate(controller_task,
+	//     "controller",
+	//     512,
+	//     NULL,
+	//     controller_task_priority,
+	//     &controller_task_handle);
 
-	task_status &= xTaskCreate(
-		estimator_task, "estimator", 8192, NULL, estimator_task_priority, &estimator_task_handle);
+	// task_status &= xTaskCreate(
+	//     estimator_task, "estimator", 8192, NULL, estimator_task_priority,
+	//     &estimator_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -203,9 +167,11 @@ static void system_init_task(void *arg) {
 	// its blinky now
 	while (1) {
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
+		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(1000);
+		vTaskDelay(500);
 	}
 }
 

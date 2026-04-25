@@ -89,7 +89,7 @@ void MX_I2C2_Init(void)
 
   /* USER CODE END I2C2_Init 1 */
   hi2c2.Instance = I2C2;
-  hi2c2.Init.Timing = 0x00601A57;
+  hi2c2.Init.Timing = 0x00601A5A;
   hi2c2.Init.OwnAddress1 = 0;
   hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -136,7 +136,7 @@ void MX_I2C4_Init(void)
 
   /* USER CODE END I2C4_Init 1 */
   hi2c4.Instance = I2C4;
-  hi2c4.Init.Timing = 0x00601A5A;
+  hi2c4.Init.Timing = 0x00D048F6;
   hi2c4.Init.OwnAddress1 = 0;
   hi2c4.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c4.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -162,10 +162,6 @@ void MX_I2C4_Init(void)
   {
     Error_Handler();
   }
-
-  /** I2C Enable Fast Mode Plus
-  */
-  HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C4);
   /* USER CODE BEGIN I2C4_Init 2 */
 
   /* USER CODE END I2C4_Init 2 */
@@ -253,6 +249,12 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
 
     /* I2C1 clock enable */
     __HAL_RCC_I2C1_CLK_ENABLE();
+
+    /* I2C1 interrupt Init */
+    HAL_NVIC_SetPriority(I2C1_EV_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C1_ER_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
   /* USER CODE BEGIN I2C1_MspInit 1 */
 
   /* USER CODE END I2C1_MspInit 1 */
@@ -306,6 +308,11 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
 
     __HAL_LINKDMA(i2cHandle,hdmarx,hdma_i2c2_rx);
 
+    /* I2C2 interrupt Init */
+    HAL_NVIC_SetPriority(I2C2_EV_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C2_ER_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C2_ER_IRQn);
   /* USER CODE BEGIN I2C2_MspInit 1 */
 
   /* USER CODE END I2C2_MspInit 1 */
@@ -339,6 +346,12 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
 
     /* I2C4 clock enable */
     __HAL_RCC_I2C4_CLK_ENABLE();
+
+    /* I2C4 interrupt Init */
+    HAL_NVIC_SetPriority(I2C4_EV_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C4_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C4_ER_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C4_ER_IRQn);
   /* USER CODE BEGIN I2C4_MspInit 1 */
 
   /* USER CODE END I2C4_MspInit 1 */
@@ -380,6 +393,12 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
 
     /* I2C5 clock enable */
     __HAL_RCC_I2C5_CLK_ENABLE();
+
+    /* I2C5 interrupt Init */
+    HAL_NVIC_SetPriority(I2C5_EV_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C5_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C5_ER_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C5_ER_IRQn);
   /* USER CODE BEGIN I2C5_MspInit 1 */
 
   /* USER CODE END I2C5_MspInit 1 */
@@ -405,6 +424,9 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
     HAL_GPIO_DeInit(IMU_SDA_GPIO_Port, IMU_SDA_Pin);
 
+    /* I2C1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(I2C1_EV_IRQn);
+    HAL_NVIC_DisableIRQ(I2C1_ER_IRQn);
   /* USER CODE BEGIN I2C1_MspDeInit 1 */
 
   /* USER CODE END I2C1_MspDeInit 1 */
@@ -427,6 +449,10 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
     /* I2C2 DMA DeInit */
     HAL_DMA_DeInit(i2cHandle->hdmarx);
+
+    /* I2C2 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(I2C2_EV_IRQn);
+    HAL_NVIC_DisableIRQ(I2C2_ER_IRQn);
   /* USER CODE BEGIN I2C2_MspDeInit 1 */
 
   /* USER CODE END I2C2_MspDeInit 1 */
@@ -447,6 +473,9 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
     HAL_GPIO_DeInit(MAG_SDA_GPIO_Port, MAG_SDA_Pin);
 
+    /* I2C4 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(I2C4_EV_IRQn);
+    HAL_NVIC_DisableIRQ(I2C4_ER_IRQn);
   /* USER CODE BEGIN I2C4_MspDeInit 1 */
 
   /* USER CODE END I2C4_MspDeInit 1 */
@@ -467,6 +496,9 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
     HAL_GPIO_DeInit(BAR_SCL_GPIO_Port, BAR_SCL_Pin);
 
+    /* I2C5 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(I2C5_EV_IRQn);
+    HAL_NVIC_DisableIRQ(I2C5_ER_IRQn);
   /* USER CODE BEGIN I2C5_MspDeInit 1 */
 
   /* USER CODE END I2C5_MspDeInit 1 */

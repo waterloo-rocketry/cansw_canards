@@ -55,7 +55,21 @@ void DebugMon_Handler(void);
 void DMA1_Stream0_IRQHandler(void);
 void DMA1_Stream1_IRQHandler(void);
 void FDCAN1_IT0_IRQHandler(void);
+void DMA1_Stream5_IRQHandler(void);
+void DMA1_Stream6_IRQHandler(void);
+void I2C1_EV_IRQHandler(void);
+void I2C1_ER_IRQHandler(void);
+void I2C2_EV_IRQHandler(void);
+void I2C2_ER_IRQHandler(void);
+void USART3_IRQHandler(void);
 void TIM6_DAC_IRQHandler(void);
+void OTG_HS_IRQHandler(void);
+void I2C4_EV_IRQHandler(void);
+void I2C4_ER_IRQHandler(void);
+void I2C5_EV_IRQHandler(void);
+void I2C5_ER_IRQHandler(void);
+void FDCAN3_IT0_IRQHandler(void);
+void FDCAN3_IT1_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
