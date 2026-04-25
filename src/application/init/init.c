@@ -25,6 +25,8 @@
 #include "task.h"
 #include "usart.h"
 
+#include "drivers/motor_driver/motor_driver.h"
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -168,6 +170,19 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+
+	// test
+	w_status_t motor_status = motor_driver_init(&hfdcan1);
+	HAL_StatusTypeDef hal_status = HAL_FDCAN_Start(&hfdcan1);
+
+	motor_feedback_t fb = {0};
+
+	if (W_SUCCESS != motor_status && hal_status != HAL_OK) {
+		vTaskDelay(500);
+	} else {
+		motor_get_latest_feedback(&fb);
+	}
+
 	while (1) {
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
 		vTaskDelay(500);

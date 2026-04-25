@@ -9,19 +9,19 @@
 #include <math.h>
 #include <string.h>
 
-#define MOTOR_TASK_PERIOD_MS  10  // 100 Hz command rate (poll slower when not actuating?)
-#define LOG_WAIT_MS        10
+#define MOTOR_TASK_PERIOD_MS 10 // 100 Hz command rate (poll slower when not actuating?)
+#define LOG_WAIT_MS 10
 
 static motor_handler_error_data_t motor_error_stats = {0};
 static motor_feedback_t latest_feedback = {0};
 
 w_status_t motor_handler_init(FDCAN_HandleTypeDef *hfdcan) {
-	if (NULL = hfdcan) {
+	if (NULL == hfdcan) {
 		return W_INVALID_PARAM;
 	}
 
-	//todo: init motor driver
-	if (motor_driver_init(hfdcan) != W_SUCCESS){
+	// todo: init motor driver
+	if (motor_driver_init(hfdcan) != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, "motor", "Motor driver init failure");
 		return W_FAILURE;
 	}
@@ -32,14 +32,13 @@ w_status_t motor_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 }
 
 void motor_handler_task(void *argument) {
-
 	(void)argument;
 
 	TickType_t last_wake_time = xTaskGetTickCount();
-	float last_feedback_ms = 0.0f;
+	uint32_t last_feedback_ms = 0;
 	timer_get_ms(&last_feedback_ms);
 
-	while(true){
+	while (true) {
 		flight_phase_state_t current_phase = flight_phase_get_state();
 		motor_feedback_t fb = {0};
 		bool feedback_received = false;
@@ -49,13 +48,13 @@ void motor_handler_task(void *argument) {
 			latest_feedback = fb;
 			timer_get_ms(&last_feedback_ms);
 
-			if (feedback_received && fb.fault_code != MOTOR_FAULT_NONE){
+			if (feedback_received && fb.fault_code != MOTOR_FAULT_NONE) {
 				motor_error_stats.fault_count++;
 				motor_error_stats.last_fault = fb.fault_code;
 
 				log_text(LOG_WAIT_MS, "motor", "Motor fault: %d", fb.fault_code);
 
-				if (motor_is_fatal_fault(fb.fault_code)){
+				if (motor_is_fatal_fault(fb.fault_code)) {
 					log_text(LOG_WAIT_MS, "motor", "FATAL fault: %d", fb.fault_code);
 					motor_send_disable_cmd();
 					proc_handle_fatal_error("motor");
@@ -63,24 +62,22 @@ void motor_handler_task(void *argument) {
 			}
 		}
 
-		//check for feedback timeouts
-		float current_time_ms = 0.0f;
-		if (timer_get_ms(&current_ms) == W_SUCCESS){
-			if ((current_ms - last_feedback_ms) > MOTOR_FEEDBACK_TIMEOUT_MS){
-				motor_error_stata.feedback_timeouts++;
+		// check for feedback timeouts
+		uint32_t current_time_ms = 0;
+		if (timer_get_ms(&current_time_ms) == W_SUCCESS) {
+			if ((current_time_ms - last_feedback_ms) > MOTOR_FEEDBACK_TIMEOUT_MS) {
+				motor_error_stats.feedback_timeouts++;
 			}
 		}
 
-		//check flight phase and act accordingly
+		// check flight phase and act accordingly
 		switch (current_phase) {
 			case STATE_ACT_ALLOWED:
 			case STATE_RECOVERY: {
 				controller_output_t command = {0};
-				if (controller_get_latest_output(&command) == W_SUCCESS){
+				if (controller_get_latest_output(&command) == W_SUCCESS) {
 					float angle_deg = (float)(command.commanded_angle * (180.0 / M_PI));
-					if (motor_send_position_cmd(angle_deg) != W_SUCCESS){
-						
-					}
+					if (motor_send_position_cmd(angle_deg) != W_SUCCESS) {}
 				}
 
 				vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(MOTOR_TASK_PERIOD_MS));
@@ -92,7 +89,7 @@ void motor_handler_task(void *argument) {
 				break;
 		}
 
-		//kick dog
+		// kick dog
 		watchdog_kick();
 	}
 
