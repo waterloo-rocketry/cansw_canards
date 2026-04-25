@@ -62,6 +62,8 @@ const uint32_t motor_handler_task_priority = 12; // placeholder value for now
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
+
+
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -182,11 +184,20 @@ static void system_init_task(void *arg) {
 	} else {
 		motor_get_latest_feedback(&fb);
 	}
+	
 
+	float motor_angle = 0;
 	while (1) {
 		vTaskDelay(2);
 		motor_get_latest_feedback(&fb);
-		motor_send_position_cmd(10);
+		motor_send_position_cmd(motor_angle);
+
+		if (motor_angle == 0) {
+			motor_angle = 10;
+		}
+		// vTaskDelay(2);
+		// motor_get_latest_feedback(&fb);
+		// motor_send_position_cmd(motor_angle);
 	}
 }
 

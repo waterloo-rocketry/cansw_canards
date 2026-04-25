@@ -20,6 +20,7 @@ typedef enum {
 
 // Feedback message mode ID
 #define CAN_PACKET_FEEDBACK 0x10
+#define CAN_REAL_TIME_FEEDBACK 0x29
 
 // Scaling factors
 #define MOTOR_POS_CMD_SCALE 10000.0f // Position: degrees * 10000
@@ -115,10 +116,10 @@ w_status_t motor_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 	motor_filter.FilterType = FDCAN_FILTER_MASK;
 	motor_filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
 	// TODO motor filter removed for now 
-	motor_filter.FilterID1 = 0;
-	motor_filter.FilterID2 = 0;
-	// motor_filter.FilterID1 = MOTOR_DRIVER_ID | (uint32_t)(CAN_PACKET_FEEDBACK << 8);
-	// motor_filter.FilterID2 = 0x1FFFFFFF;
+	// motor_filter.FilterID1 = 0;
+	// motor_filter.FilterID2 = 0;
+	motor_filter.FilterID1 = (uint32_t)(CAN_REAL_TIME_FEEDBACK << 8) | MOTOR_DRIVER_ID;
+	motor_filter.FilterID2 = 0x1FFFFFFF;
 
 	if (HAL_FDCAN_ConfigFilter(motor_hfdcan, &motor_filter) != HAL_OK) {
 		log_text(LOG_WAIT_MS, "motor", "FDCAN filter config failed");
