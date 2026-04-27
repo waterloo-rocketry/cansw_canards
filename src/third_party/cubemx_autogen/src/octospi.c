@@ -75,22 +75,11 @@ void HAL_OSPI_MspInit(OSPI_HandleTypeDef* ospiHandle)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
   if(ospiHandle->Instance==OCTOSPI1)
   {
   /* USER CODE BEGIN OCTOSPI1_MspInit 0 */
 
   /* USER CODE END OCTOSPI1_MspInit 0 */
-
-  /** Initializes the peripherals clock
-  */
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_OSPI;
-    PeriphClkInitStruct.OspiClockSelection = RCC_OSPICLKSOURCE_D1HCLK;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
     /* OCTOSPI1 clock enable */
     __HAL_RCC_OCTOSPIM_CLK_ENABLE();
     __HAL_RCC_OSPI1_CLK_ENABLE();
