@@ -169,12 +169,48 @@ static void system_init_task(void *arg) {
 	// HAL_StatusTypeDef sd_status  = HAL_SD_Init(&hsd2);
 	uint32_t err = HAL_SD_GetError(&hsd2);
 	HAL_SD_StateTypeDef sd_state = HAL_SD_GetState(&hsd2);
+	if (err != 0) {
+		vTaskDelay(500);
+	}
+	err = HAL_SD_GetError(&hsd2);
+	if (err != 0) {
+		vTaskDelay(500);
+	}
+	vTaskDelay(10);
 	HAL_SD_CardStateTypeDef sdcard_state = HAL_SD_GetCardState(&hsd2);
+	err = HAL_SD_GetError(&hsd2);
+	if (err != 0) {
+		vTaskDelay(500);
+	}
+	int retries = 3;
+
+	// If the card is in Standby (4), we must select it to move to Transfer (3)
+	if (HAL_SD_GetCardState(&hsd2) == HAL_SD_CARD_TRANSFER) {
+		// CMD7: Select the card using its Relative Card Address (RCA)
+		SDMMC_CmdSelDesel(hsd2.Instance, (uint32_t)(hsd2.SdCard.RelCardAdd << 16U));
+		vTaskDelay(10);
+	}
+	while (retries--) {
+		hsd2.ErrorCode = 0;
+		sdcard_state = HAL_SD_GetCardState(&hsd2);
+		if (hsd2.ErrorCode == 0) {
+			break; // Success!
+		}
+
+		// If we timed out, the card is likely stuck in a bad state.
+		// Send CMD0 to force it back to IDLE and try again.
+		SDMMC_CmdGoIdleState(SDMMC2);
+		HAL_Delay(50);
+	}
 
 	if (err != 0 && sd_state != 0 && sdcard_state != 0) {
 		vTaskDelay(500);
 	}
 	HAL_SD_CardInfoTypeDef info;
+	err = HAL_SD_GetError(&hsd2);
+	if (err != 0) {
+		vTaskDelay(500);
+	}
 	HAL_StatusTypeDef sd_status = HAL_SD_GetCardInfo(&hsd2, &info);
 	err = HAL_SD_GetError(&hsd2);
 	sd_state = HAL_SD_GetState(&hsd2);
@@ -183,15 +219,33 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 	}
 
-	uint8_t rx[512];
+	// clear write
+	uint8_t rx[512] = {1};
 	uint32_t test_lba = 1024;
+	uint8_t tx_clear[512] = {0};
+	sd_status = HAL_SD_WriteBlocks(&hsd2, tx_clear, test_lba, 1, 1000);
+	vTaskDelay(1000);
 	sd_status = HAL_SD_ReadBlocks(&hsd2, rx, test_lba, 1, 1000);
 	vTaskDelay(1000);
 	sdcard_state = HAL_SD_GetCardState(&hsd2);
-	while (4 == sdcard_state) {
+	while (4 != sdcard_state) {
 		vTaskDelay(1000);
 		sdcard_state = HAL_SD_GetCardState(&hsd2);
 	}
+	err = HAL_SD_GetError(&hsd2);
+	sd_state = HAL_SD_GetState(&hsd2);
+	if (HAL_OK != sd_status && err != 0 && sd_state != 0 && sdcard_state != 0) {
+		vTaskDelay(500);
+	}
+
+	// write test
+	uint8_t tx[512] = {1, 2, 3, 4, 5, 0, 6, 7, 6, 7};
+	sd_status = HAL_SD_WriteBlocks(&hsd2, tx, test_lba, 1, 1000);
+	vTaskDelay(1000);
+	sdcard_state = HAL_SD_GetCardState(&hsd2);
+	sd_status = HAL_SD_ReadBlocks(&hsd2, rx, test_lba, 1, 1000);
+	vTaskDelay(1000);
+	sdcard_state = HAL_SD_GetCardState(&hsd2);
 	err = HAL_SD_GetError(&hsd2);
 	sd_state = HAL_SD_GetState(&hsd2);
 	if (HAL_OK != sd_status && err != 0 && sd_state != 0 && sdcard_state != 0) {
