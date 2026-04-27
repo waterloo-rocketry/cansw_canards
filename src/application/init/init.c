@@ -175,7 +175,9 @@ static void system_init_task(void *arg) {
 	cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
 	cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
 	cmd_readstatus.NbData = 1;
+	
 
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
 	if (hal_status != 0) {
 		vTaskDelay(500);
@@ -184,6 +186,7 @@ static void system_init_task(void *arg) {
 	if (hal_status != 0 && (ospistatus & 0x01)) {
 		vTaskDelay(500);
 	}
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
 
 	OSPI_RegularCmdTypeDef cmd_rx1 = {0};
 	cmd_rx1.OperationType = HAL_OSPI_OPTYPE_COMMON_CFG;
@@ -197,6 +200,7 @@ static void system_init_task(void *arg) {
 	cmd_rx1.DataMode = HAL_OSPI_DATA_4_LINES;
 	cmd_rx1.NbData = 256;
 
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_rx1, 100);
 
 	if (hal_status != 0) {
@@ -204,17 +208,19 @@ static void system_init_task(void *arg) {
 	}
 	uint8_t buffer[256] = {0};
 	hal_status = HAL_OSPI_Receive(&hospi1, buffer, 100);
-
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
 
 	// check
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
 	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
 	if (hal_status != 0 && (ospistatus & 0x01)) {
 		vTaskDelay(500);
 	}
@@ -229,17 +235,21 @@ static void system_init_task(void *arg) {
 	cmd_wren.DummyCycles = 0;
 	cmd_wren.NbData = 0;
 
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_wren, 100);
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
 
 	// check status
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
 	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
 	if (hal_status != 0 && (ospistatus & 0x01)) {
 		vTaskDelay(500);
 	}
@@ -256,43 +266,36 @@ static void system_init_task(void *arg) {
 
 	uint8_t tx[8] = {4, 2, 0, 0, 6, 7, 6, 7};
 
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_tx1, 100);
 
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
 	hal_status = HAL_OSPI_Transmit(&hospi1, tx, 100);
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
 
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
 
 	// check status
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
 	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
 	if (hal_status != 0 && (ospistatus & 0x01)) {
 		vTaskDelay(500);
 	}
 
-	do {
-		cmd_readstatus.Instruction = 0x05; // Read Status
-		cmd_readstatus.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-		cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
-		cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
-		cmd_readstatus.NbData = 1;
-
-		HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
-		HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
-		vTaskDelay(500);
-
-	} while (ospistatus & 0x01); // BUSY bit
 
 	// read wrote data
 	cmd_rx1.Address = 0x07;
 	cmd_rx1.NbData = 8;
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_rx1, 100);
 	uint8_t rx[8] = {0};
 
@@ -300,6 +303,7 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 	}
 	hal_status = HAL_OSPI_Receive(&hospi1, rx, 100);
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
 
 	// its blinky now
 	while (1) {
