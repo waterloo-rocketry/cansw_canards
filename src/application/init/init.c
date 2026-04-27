@@ -24,6 +24,8 @@
 #include "task.h"
 #include "usart.h"
 
+#include "octospi.h"
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -163,6 +165,141 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
+
+	// test octospi
+	HAL_StatusTypeDef hal_status;
+	OSPI_RegularCmdTypeDef cmd_readstatus = {0};
+	uint8_t ospistatus;
+	cmd_readstatus.Instruction = 0x05; // Read Status
+	cmd_readstatus.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+	cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
+	cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
+	cmd_readstatus.NbData = 1;
+
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+	if (hal_status != 0 && (ospistatus & 0x01)) {
+		vTaskDelay(500);
+	}
+
+	OSPI_RegularCmdTypeDef cmd_rx1 = {0};
+	cmd_rx1.OperationType = HAL_OSPI_OPTYPE_COMMON_CFG;
+	cmd_rx1.FlashId = HAL_OSPI_FLASH_ID_1;
+	cmd_rx1.Instruction = 0x03; // Fast read
+	cmd_rx1.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+	cmd_rx1.AddressMode = HAL_OSPI_ADDRESS_4_LINES;
+	cmd_rx1.AddressSize = HAL_OSPI_ADDRESS_24_BITS;
+	cmd_rx1.Address = 0x07;
+	cmd_rx1.DummyCycles = 8;
+	cmd_rx1.DataMode = HAL_OSPI_DATA_4_LINES;
+	cmd_rx1.NbData = 256;
+
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_rx1, 100);
+
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+	uint8_t buffer[256] = {0};
+	hal_status = HAL_OSPI_Receive(&hospi1, buffer, 100);
+
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+
+	// check
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+	if (hal_status != 0 && (ospistatus & 0x01)) {
+		vTaskDelay(500);
+	}
+
+	// test write
+	OSPI_RegularCmdTypeDef cmd_wren = {0};
+
+	cmd_wren.Instruction = 0x06; // WREN
+	cmd_wren.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+	cmd_wren.AddressMode = HAL_OSPI_ADDRESS_NONE;
+	cmd_wren.DataMode = HAL_OSPI_DATA_NONE;
+	cmd_wren.DummyCycles = 0;
+	cmd_wren.NbData = 0;
+
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_wren, 100);
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+
+	// check status
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+	if (hal_status != 0 && (ospistatus & 0x01)) {
+		vTaskDelay(500);
+	}
+
+	OSPI_RegularCmdTypeDef cmd_tx1 = {0};
+	cmd_tx1.Instruction = 0x38; //  Page Program (common for Micron)
+	cmd_tx1.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+	cmd_tx1.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
+	cmd_tx1.AddressSize = HAL_OSPI_ADDRESS_24_BITS;
+	cmd_tx1.Address = 0x07;
+	cmd_tx1.DataMode = HAL_OSPI_DATA_1_LINE;
+	cmd_tx1.DummyCycles = 0; // IMPORTANT: none for 0x02
+	cmd_tx1.NbData = 8; // ← bits
+
+	uint8_t tx[8] = {4, 2, 0, 0, 6, 7, 6, 7};
+
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_tx1, 100);
+
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+	hal_status = HAL_OSPI_Transmit(&hospi1, tx, 100);
+
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+
+	// check status
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+	if (hal_status != 0 && (ospistatus & 0x01)) {
+		vTaskDelay(500);
+	}
+
+	do {
+		cmd_readstatus.Instruction = 0x05; // Read Status
+		cmd_readstatus.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+		cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
+		cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
+		cmd_readstatus.NbData = 1;
+
+		HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
+		HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+		vTaskDelay(500);
+
+	} while (ospistatus & 0x01); // BUSY bit
+
+	// read wrote data
+	cmd_rx1.Address = 0x07;
+	cmd_rx1.NbData = 8;
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_rx1, 100);
+	uint8_t rx[8] = {0};
+
+	if (hal_status != 0) {
+		vTaskDelay(500);
+	}
+	hal_status = HAL_OSPI_Receive(&hospi1, rx, 100);
 
 	// its blinky now
 	while (1) {
