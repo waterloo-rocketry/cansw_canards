@@ -108,12 +108,12 @@ static void system_init_task(void *arg) {
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	task_status &= xTaskCreate(flight_phase_task,
-							   "flight phase",
-							   256,
-							   NULL,
-							   flight_phase_task_priority,
-							   &flight_phase_task_handle);
+	// task_status &= xTaskCreate(flight_phase_task,
+	// 						   "flight phase",
+	// 						   256,
+	// 						   NULL,
+	// 						   flight_phase_task_priority,
+	// 						   &flight_phase_task_handle);
 
 	// task_status &= xTaskCreate(health_check_task,
 	//     "health",
@@ -129,12 +129,12 @@ static void system_init_task(void *arg) {
 	//     imu_handler_task_priority,
 	//     &imu_handler_task_handle);
 
-	task_status &= xTaskCreate(can_handler_task_rx,
-							   "can handler rx",
-							   256,
-							   NULL,
-							   can_handler_rx_priority,
-							   &can_handler_handle_rx);
+	// task_status &= xTaskCreate(can_handler_task_rx,
+	// 						   "can handler rx",
+	// 						   256,
+	// 						   NULL,
+	// 						   can_handler_rx_priority,
+	// 						   &can_handler_handle_rx);
 
 	// task_status &= xTaskCreate(can_handler_task_tx,
 	//     "can handler tx",
@@ -143,10 +143,11 @@ static void system_init_task(void *arg) {
 	//     can_handler_tx_priority,
 	//     &can_handler_handle_tx);
 
-	task_status &= xTaskCreate(
-		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+	// task_status &= xTaskCreate(
+	// 	movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
-	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
+	// task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority,
+	// &log_task_handle);
 
 	// task_status &= xTaskCreate(controller_task,
 	//     "controller",
@@ -175,7 +176,6 @@ static void system_init_task(void *arg) {
 	cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
 	cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
 	cmd_readstatus.NbData = 1;
-	
 
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
@@ -186,18 +186,18 @@ static void system_init_task(void *arg) {
 	if (hal_status != 0 && (ospistatus & 0x01)) {
 		vTaskDelay(500);
 	}
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 
 	OSPI_RegularCmdTypeDef cmd_rx1 = {0};
 	cmd_rx1.OperationType = HAL_OSPI_OPTYPE_COMMON_CFG;
 	cmd_rx1.FlashId = HAL_OSPI_FLASH_ID_1;
 	cmd_rx1.Instruction = 0x03; // Fast read
 	cmd_rx1.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_rx1.AddressMode = HAL_OSPI_ADDRESS_4_LINES;
+	cmd_rx1.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
 	cmd_rx1.AddressSize = HAL_OSPI_ADDRESS_24_BITS;
 	cmd_rx1.Address = 0x07;
 	cmd_rx1.DummyCycles = 8;
-	cmd_rx1.DataMode = HAL_OSPI_DATA_4_LINES;
+	cmd_rx1.DataMode = HAL_OSPI_DATA_1_LINE;
 	cmd_rx1.NbData = 256;
 
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
@@ -208,7 +208,7 @@ static void system_init_task(void *arg) {
 	}
 	uint8_t buffer[256] = {0};
 	hal_status = HAL_OSPI_Receive(&hospi1, buffer, 100);
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
@@ -220,7 +220,7 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 	}
 	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 	if (hal_status != 0 && (ospistatus & 0x01)) {
 		vTaskDelay(500);
 	}
@@ -237,7 +237,7 @@ static void system_init_task(void *arg) {
 
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_wren, 100);
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
@@ -249,48 +249,59 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 	}
 	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 	if (hal_status != 0 && (ospistatus & 0x01)) {
 		vTaskDelay(500);
 	}
 
 	OSPI_RegularCmdTypeDef cmd_tx1 = {0};
-	cmd_tx1.Instruction = 0x38; //  Page Program (common for Micron)
+	cmd_tx1.Instruction = 0x02; //  Page Program
 	cmd_tx1.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
 	cmd_tx1.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
 	cmd_tx1.AddressSize = HAL_OSPI_ADDRESS_24_BITS;
-	cmd_tx1.Address = 0x07;
+	cmd_tx1.Address = 0x06;
 	cmd_tx1.DataMode = HAL_OSPI_DATA_1_LINE;
 	cmd_tx1.DummyCycles = 0; // IMPORTANT: none for 0x02
-	cmd_tx1.NbData = 8; // ← bits
+	cmd_tx1.NbData = 8; // ← bytes
 
 	uint8_t tx[8] = {4, 2, 0, 0, 6, 7, 6, 7};
 
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
+	// vTaskDelay(10);
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_tx1, 100);
 
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
 	hal_status = HAL_OSPI_Transmit(&hospi1, tx, 100);
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
+
+	// MANDATORY: Wait for the hardware peripheral to physically finish
+	// If you don't do this, the next line will pull CS high while bits are still moving.
+	while (__HAL_OSPI_GET_FLAG(&hospi1, HAL_OSPI_FLAG_BUSY) != RESET)
+		;
+
+	// Hold delay (Busy wait)
+	for (volatile int i = 0; i < 50; i++)
+		;
+
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
+	vTaskDelay(500);
 
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
 
 	// check status
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
-	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
-	if (hal_status != 0) {
+	do {
+		gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
+		hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
+		if (hal_status != 0) {
+			vTaskDelay(500);
+		}
+		hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+		gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 		vTaskDelay(500);
-	}
-	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
-	if (hal_status != 0 && (ospistatus & 0x01)) {
-		vTaskDelay(500);
-	}
-
+	} while ((ospistatus & 0x01) == 0x01);
 
 	// read wrote data
 	cmd_rx1.Address = 0x07;
@@ -303,7 +314,7 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 	}
 	hal_status = HAL_OSPI_Receive(&hospi1, rx, 100);
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);  // ncs off
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 
 	// its blinky now
 	while (1) {
