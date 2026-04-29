@@ -240,6 +240,7 @@ static void system_init_task(void *arg) {
 	// wren on
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_wren, 100);
+	while (__HAL_OSPI_GET_FLAG(&hospi1, HAL_OSPI_FLAG_BUSY) != RESET);
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 	if (hal_status != 0) {
 		vTaskDelay(500);
@@ -263,6 +264,11 @@ static void system_init_task(void *arg) {
 	while (__HAL_OSPI_GET_FLAG(&hospi1, HAL_OSPI_FLAG_BUSY) != RESET);
 
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);
+
+	// Hold delay (Busy wait)
+	for (volatile int i = 0; i < 50; i++)
+		;
+	vTaskDelay(500);
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
@@ -271,6 +277,7 @@ static void system_init_task(void *arg) {
 	// wren on again
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_wren, 100);
+	while (__HAL_OSPI_GET_FLAG(&hospi1, HAL_OSPI_FLAG_BUSY) != RESET);
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 	if (hal_status != 0) {
 		vTaskDelay(500);
