@@ -168,6 +168,7 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// test octospi
+	/******* common ospi commands *******/
 	HAL_StatusTypeDef hal_status;
 	OSPI_RegularCmdTypeDef cmd_readstatus = {0};
 	uint8_t ospistatus;
@@ -176,6 +177,16 @@ static void system_init_task(void *arg) {
 	cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
 	cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
 	cmd_readstatus.NbData = 1;
+
+	OSPI_RegularCmdTypeDef cmd_wren = {0};
+
+	cmd_wren.Instruction = 0x06; // WREN
+	cmd_wren.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+	cmd_wren.AddressMode = HAL_OSPI_ADDRESS_NONE;
+	cmd_wren.DataMode = HAL_OSPI_DATA_NONE;
+	cmd_wren.DummyCycles = 0;
+	cmd_wren.NbData = 0;
+	/******* END *******/
 
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
@@ -191,14 +202,14 @@ static void system_init_task(void *arg) {
 	OSPI_RegularCmdTypeDef cmd_rx1 = {0};
 	cmd_rx1.OperationType = HAL_OSPI_OPTYPE_COMMON_CFG;
 	cmd_rx1.FlashId = HAL_OSPI_FLASH_ID_1;
-	cmd_rx1.Instruction = 0x03; // Fast read
+	cmd_rx1.Instruction = 0x03; // regular read
 	cmd_rx1.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
 	cmd_rx1.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
 	cmd_rx1.AddressSize = HAL_OSPI_ADDRESS_24_BITS;
 	cmd_rx1.Address = 0x07;
-	cmd_rx1.DummyCycles = 8;
+	cmd_rx1.DummyCycles = 0;
 	cmd_rx1.DataMode = HAL_OSPI_DATA_1_LINE;
-	cmd_rx1.NbData = 256;
+	cmd_rx1.NbData = 8;
 
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_rx1, 100);
@@ -206,7 +217,7 @@ static void system_init_task(void *arg) {
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
-	uint8_t buffer[256] = {0};
+	uint8_t buffer[8] = {0};
 	hal_status = HAL_OSPI_Receive(&hospi1, buffer, 100);
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
 	if (hal_status != 0) {
@@ -225,16 +236,8 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 	}
 
-	// test write
-	OSPI_RegularCmdTypeDef cmd_wren = {0};
-
-	cmd_wren.Instruction = 0x06; // WREN
-	cmd_wren.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_wren.AddressMode = HAL_OSPI_ADDRESS_NONE;
-	cmd_wren.DataMode = HAL_OSPI_DATA_NONE;
-	cmd_wren.DummyCycles = 0;
-	cmd_wren.NbData = 0;
-
+	// erase this section of data
+	// wren on
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_wren, 100);
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
@@ -242,34 +245,52 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 	}
 
-	// check status
-	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
-	hal_status = HAL_OSPI_Command(&hospi1, &cmd_readstatus, HAL_MAX_DELAY);
+	// erase commands
+	OSPI_RegularCmdTypeDef cmd_erase = {0};
+	cmd_erase.Instruction     = 0x20; // 4KB Sector Erase
+	cmd_erase.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+	cmd_erase.AddressMode     = HAL_OSPI_ADDRESS_1_LINE;
+	cmd_erase.AddressSize     = HAL_OSPI_ADDRESS_24_BITS;
+	cmd_erase.Address         = 0x07; // any address inside sector
+	cmd_erase.DataMode        = HAL_OSPI_DATA_NONE;
+	cmd_erase.DummyCycles     = 0;
+	cmd_erase.NbData          = 8;
+
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0);
+
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_erase, HAL_MAX_DELAY);
+
+	while (__HAL_OSPI_GET_FLAG(&hospi1, HAL_OSPI_FLAG_BUSY) != RESET);
+
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0);
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
-	hal_status = HAL_OSPI_Receive(&hospi1, &ospistatus, HAL_MAX_DELAY);
+
+	// write data
+	// wren on again
+	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
+	hal_status = HAL_OSPI_Command(&hospi1, &cmd_wren, 100);
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_HIGH, 0); // ncs off
-	if (hal_status != 0 && (ospistatus & 0x01)) {
+	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
+	
 
 	OSPI_RegularCmdTypeDef cmd_tx1 = {0};
 	cmd_tx1.Instruction = 0x02; //  Page Program
 	cmd_tx1.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
 	cmd_tx1.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
 	cmd_tx1.AddressSize = HAL_OSPI_ADDRESS_24_BITS;
-	cmd_tx1.Address = 0x06;
+	cmd_tx1.Address = 0x07;
 	cmd_tx1.DataMode = HAL_OSPI_DATA_1_LINE;
 	cmd_tx1.DummyCycles = 0; // IMPORTANT: none for 0x02
 	cmd_tx1.NbData = 8; // ← bytes
 
-	uint8_t tx[8] = {4, 2, 0, 0, 6, 7, 6, 7};
+	uint8_t tx[8] = {6, 7, 6, 7, 4, 2, 4, 2};
 
 	gpio_write(GPIO_PIN_FLASH_CS, GPIO_LEVEL_LOW, 0); // NCS active
-	// vTaskDelay(10);
 	hal_status = HAL_OSPI_Command(&hospi1, &cmd_tx1, 100);
-
 	if (hal_status != 0) {
 		vTaskDelay(500);
 	}
