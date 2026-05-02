@@ -90,7 +90,7 @@ static void system_init_task(void *arg) {
 	// status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
-	// status |= imu_handler_init();
+	status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	// status |= controller_init;
 	// status |= ekf_init;
