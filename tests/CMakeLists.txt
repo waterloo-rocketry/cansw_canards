@@ -416,3 +416,24 @@ add_test_group(test_model_acceleration
     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
 )
+
+add_test_group(test_ads1219
+    # test file(s)
+    ${UNIT_TESTS_DIR}/ads1219_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADS1219.c
+)
+
+add_test_group(test_adxrs649
+    # test file(s)
+    ${UNIT_TESTS_DIR}/adxrs649_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXRS649.c
+)
+
+add_test_group(test_ad_breakout_board
+    # test files
+    ${UNIT_TESTS_DIR}/ad_breakout_board_test.cpp
+    # src files
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ad_breakout_board.c
+)
