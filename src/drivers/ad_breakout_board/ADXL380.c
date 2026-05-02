@@ -92,8 +92,8 @@ w_status_t adxl380_init() {
 	/* OP_MODE
 	PDM_MODE: on
 	*/
-	init_setting_status |=
-		adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_OP_MODE, ADXL_PDM_AUDIO_MASK, 0x20);
+	// init_setting_status |=
+	// 	adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_OP_MODE, ADXL_PDM_AUDIO_MASK, 0x20);
 
 	/* FILTER: 00011000 -> 0x18
 	DCF_BYPASS: 0
@@ -112,7 +112,7 @@ w_status_t adxl380_init() {
 		&g_adx380_handle,
 		ADXL38X_DIG_EN,
 		ADXL38X_MASK_CHEN_DIG_EN,
-		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, ADXL38X_CH_EN_XYZ));
+		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, (uint8_t)ADXL38X_CH_EN_XYZ));
 
 	if (W_SUCCESS != init_setting_status) {
 		log_text(0, "ADXL380", "ERROR: Failed to set up the correct initial register bit.");

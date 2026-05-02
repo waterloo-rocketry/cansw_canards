@@ -169,14 +169,20 @@ static void system_init_task(void *arg) {
 
 	// its blinky now
 	status = adxl380_init();
+	vector3d_t data = {0};
+	adxl380_raw_accel_data_t raw_data = {0};
 
 	if (W_SUCCESS != status) vTaskDelay(500);
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+		// gpio_toggle(GPIO_PIN_RED_LED, 1);
+		// vTaskDelay(500);
+		// gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		// vTaskDelay(500);
+		// gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+		// vTaskDelay(500);
+
+		status = adxl380_get_accel_data(&data, &raw_data);
+		if (W_SUCCESS != status) vTaskDelay(500);
 		vTaskDelay(500);
 	}
 }
