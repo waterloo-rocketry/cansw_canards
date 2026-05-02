@@ -7,6 +7,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -165,6 +166,8 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+	adxrs649_init();
+
 	while (1) {
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
 		vTaskDelay(500);
