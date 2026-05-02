@@ -38,7 +38,7 @@ FAKE_VALUE_FUNC(w_status_t, altimu_check_sanity);
 FAKE_VALUE_FUNC(w_status_t, movella_init);
 FAKE_VALUE_FUNC(w_status_t, movella_get_data, movella_data_t *, uint32_t);
 
-FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float *);
+FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 FAKE_VALUE_FUNC(w_status_t, estimator_init);
 FAKE_VALUE_FUNC(w_status_t, estimator_update_imu_data, estimator_all_imus_input_t *);
 
@@ -85,9 +85,9 @@ static const double EXPECTED_BARO = 101325.0; // Standard atmospheric pressure i
 static const double tolerance = 0.00005;
 
 // Helper functions for setting up test data
-static w_status_t timer_get_ms_custom_fake(float *time_ms) {
-	*time_ms = 1000.0;
-	return W_SUCCESS;
+static w_status_t timer_get_ms_custom_fake(uint32_t *time_ms) {
+    *time_ms = 1000;
+    return W_SUCCESS;
 }
 
 static w_status_t altimu_get_acc_data_success(vector3d_t *acc, altimu_raw_imu_data_t *raw_acc) {
@@ -223,9 +223,9 @@ TEST_F(ImuHandlerTest, RunSuccessful) {
 	EXPECT_EQ(1, altimu_get_baro_data_fake.call_count);
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
-	// Verify timestamps
-	EXPECT_EQ(1000, captured_data.pololu.timestamp_imu);
-	EXPECT_EQ(1000, captured_data.movella.timestamp_imu);
+    // Verify timestamps
+    EXPECT_EQ(1, captured_data.pololu.timestamp_imu_sec); // timer return 1000 ms 
+    EXPECT_EQ(1, captured_data.movella.timestamp_imu_sec); // timer return 1000 ms 
 
 	// Verify data values for Pololu
 	assert_vec_eq(EXPECTED_ACC_POLOLU, captured_data.pololu.accelerometer, tolerance);
@@ -352,9 +352,9 @@ TEST_F(ImuHandlerTest, RunWithTimerFailure) {
 	// Function should return success since IMUs are working
 	EXPECT_EQ(W_SUCCESS, result);
 
-	// Verify timestamps are zero
-	EXPECT_EQ(0, captured_data.pololu.timestamp_imu);
-	EXPECT_EQ(0, captured_data.movella.timestamp_imu);
+    // Verify timestamps are zero
+    EXPECT_EQ(0, captured_data.pololu.timestamp_imu_sec);
+    EXPECT_EQ(0, captured_data.movella.timestamp_imu_sec);
 
 	// But IMU data should still be valid and not dead
 	assert_vec_eq(EXPECTED_ACC_POLOLU, captured_data.pololu.accelerometer, tolerance);

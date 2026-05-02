@@ -43,6 +43,7 @@ typedef struct {
 	uint32_t hw_errors; /**< Count of hardware errors */
 	uint32_t messages_received; /**< Count of messages successfully received */
 	uint32_t messages_sent; /**< Count of messages successfully sent */
+	uint32_t restart_failed; /**< Count of times we failed to restart reception after error */
 } uart_stats_t;
 
 /** @brief Error statistics for each channel */
@@ -288,7 +289,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 			curr_msg->busy = false;
 			// Attempt to restart reception
 			if (HAL_UARTEx_ReceiveToIdle_DMA(huart, curr_msg->data, UART_MAX_LEN) != HAL_OK) {
-				// Critical error, unsure how to recover ISR context
+				s_uart_stats[ch].restart_failed++;
 			}
 			portYIELD_FROM_ISR(higher_priority_task_woken);
 			break;
