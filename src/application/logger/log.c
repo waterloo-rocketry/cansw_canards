@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "FreeRTOS.h"
-#include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"

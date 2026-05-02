@@ -58,66 +58,74 @@ static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
 	can_msg_t msg;
 	uint32_t timestamp = 0;
 	timer_get_ms(&timestamp);
-	bool build_sts = true;
-	w_status_t can_tx_sts = W_SUCCESS;
+	w_status_t encode_status = W_SUCCESS;
+	w_status_t can_tx_status = W_SUCCESS;
 
-	// Build CAN message with raw data
-	build_sts &= build_imu_data_msg(PRIO_LOW,
-									(uint16_t)timestamp,
-									'X',
-									IMU_PROC_ALTIMU10,
-									raw_data->raw_acc.x,
-									raw_data->raw_gyro.x,
-									&msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+	// TODO: Currently using incorrect sensor for testing
+	// Encode messages
+	int16_t acc_x = 0, acc_y = 0, acc_z = 0;
+	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
+	int32_t mag_x = 0, mag_y = 0, mag_z = 0;
 
-	build_sts &= build_imu_data_msg(PRIO_LOW,
-									(uint16_t)timestamp,
-									'Y',
-									IMU_PROC_ALTIMU10,
-									raw_data->raw_acc.y,
-									raw_data->raw_gyro.y,
-									&msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.x, &acc_x);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.y, &acc_y);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_A, (int64_t)raw_data->raw_acc.z, &acc_z);
 
-	build_sts &= build_imu_data_msg(PRIO_LOW,
-									(uint16_t)timestamp,
-									'Z',
-									IMU_PROC_ALTIMU10,
-									raw_data->raw_acc.z,
-									raw_data->raw_gyro.z,
-									&msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.x, &gyro_x);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.y, &gyro_y);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_W, (int64_t)raw_data->raw_gyro.z, &gyro_z);
 
-	build_sts &= build_mag_data_msg(
-		PRIO_LOW, (uint16_t)timestamp, 'X', IMU_PROC_ALTIMU10, raw_data->raw_mag.x, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.x, &mag_x);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.y, &mag_y);
+	encode_status |= can_encode_scaled_int(SCALE_MTI_M, (int64_t)raw_data->raw_mag.z, &mag_z);
 
-	build_sts &= build_mag_data_msg(
-		PRIO_LOW, (uint16_t)timestamp, 'Y', IMU_PROC_ALTIMU10, raw_data->raw_mag.y, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
-
-	build_sts &= build_mag_data_msg(
-		PRIO_LOW, (uint16_t)timestamp, 'Z', IMU_PROC_ALTIMU10, raw_data->raw_mag.z, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
-
-	build_sts &= build_baro_data_msg(PRIO_LOW,
+	// Build and send messages
+	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)timestamp,
-									 IMU_PROC_ALTIMU10,
-									 raw_data->raw_baro.pressure,
-									 raw_data->raw_baro.temperature,
+									 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
+									 acc_x,
+									 acc_y,
+									 acc_z,
 									 &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+	can_tx_status |= can_handler_transmit(&msg);
 
-	// Transmit CAN message
-	if (can_tx_sts != W_SUCCESS) {
-		log_text(0, "IMUHandler", "CAN tx failed");
-	}
-	if (!build_sts) {
-		log_text(0, "IMUHandler", "build raw CAN msg failed");
+	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+									 (uint16_t)timestamp,
+									 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
+									 gyro_x,
+									 gyro_y,
+									 gyro_z,
+									 &msg);
+	can_tx_status |= can_handler_transmit(&msg);
+
+	build_2d_analog_sensor_24bit_msg(PRIO_LOW,
+									 (uint16_t)timestamp,
+									 DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_X,
+									 mag_x,
+									 mag_y,
+									 &msg);
+	can_tx_status |= can_handler_transmit(&msg);
+
+	build_2d_analog_sensor_24bit_msg(PRIO_LOW,
+									 (uint16_t)timestamp,
+									 DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Z,
+									 mag_z,
+									 0xFFFFFFFF,
+									 &msg); // test clamping
+	can_tx_status |= can_handler_transmit(&msg);
+
+	// Error handling
+	if (encode_status == W_MATH_ERROR) {
+		log_text(0, "IMUHandler", "IMU raw msg encode math error (NaN or Inf)");
+	} else if (encode_status != W_SUCCESS) {
+		log_text(0, "IMUHandler", "IMU raw msg scale / encode failed");
 	}
 
-	if ((can_tx_sts != W_SUCCESS) || !build_sts) {
+	if (can_tx_status != W_SUCCESS) {
+		log_text(0, "IMUHandler", "IMU raw msg tx failed");
+	}
+
+	if ((can_tx_status != W_SUCCESS) || (encode_status != W_SUCCESS)) {
 		imu_handler_state.error_count++;
 		return W_FAILURE;
 	}
@@ -315,6 +323,7 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	log_payload.raw_pololu_data_pt2.raw_baro = raw_pololu_data.raw_baro;
 	log_data(1, LOG_TYPE_POLOLU_RAW_PT2, &log_payload);
 
+	// TODO: update for new CAN
 	// do CAN logging as backup less frequently to avoid flooding can bus
 	if ((loop_count % IMU_HANDLER_CAN_TX_RATE) == 0) {
 		if (log_raw_to_can(&raw_pololu_data) != W_SUCCESS) {
