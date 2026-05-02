@@ -27,6 +27,8 @@ typedef enum {
 	GPIO_PIN_LSM6DSV32X_CS,
 	GPIO_PIN_LSM6DSV32X_SA0,
 	GPIO_PIN_ALTIMU_SA0,
+	GPIO_PIN_EN_EXT_5V,
+	GPIO_PIN_PWR_EN,
 	GPIO_PIN_COUNT // Enum max value
 } gpio_pin_t;
 
