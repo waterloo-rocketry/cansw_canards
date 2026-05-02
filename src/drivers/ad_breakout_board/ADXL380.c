@@ -118,7 +118,7 @@ w_status_t adxl380_init() {
 		&g_adx380_handle,
 		ADXL38X_DIG_EN,
 		ADXL38X_MASK_CHEN_DIG_EN,
-		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, ADXL38X_CH_EN_XYZ));
+		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, (uint8_t)ADXL38X_CH_EN_XYZ));
 
 	/* Set up INT0 for drdy */
 	init_setting_status |= adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_INT0_MAP0, ADXL_INT0_MASK, 0x01);
