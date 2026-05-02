@@ -24,6 +24,9 @@
 #include "task.h"
 #include "usart.h"
 
+// test include
+#include "drivers/ad_breakout_board/ADXL380.h"
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -165,6 +168,9 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+	status = adxl380_init();
+
+	if (W_SUCCESS != status) vTaskDelay(500);
 	while (1) {
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
 		vTaskDelay(500);

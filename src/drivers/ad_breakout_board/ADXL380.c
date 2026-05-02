@@ -12,7 +12,7 @@
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
 
-static const uint8_t ADXL_ADDRS = 0x1D;
+static const uint8_t ADXL_ADDRS = 0x53;
 static const uint8_t ADXL_PDM_AUDIO_MASK = 0x20;
 static const uint8_t ADXL_FILTER_MASK = 0x18; // 0001100
 
