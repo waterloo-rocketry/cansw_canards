@@ -7,6 +7,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "application/motor_handler/motor_handler.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -40,6 +41,7 @@ TaskHandle_t controller_task_handle = NULL;
 TaskHandle_t flight_phase_task_handle = NULL;
 TaskHandle_t imu_handler_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
+TaskHandle_t motor_handler_task_handle = NULL;
 
 // Task priorities
 // flight phase must have highest priority to preempt everything else
@@ -54,6 +56,7 @@ const uint32_t estimator_task_priority = 25;
 const uint32_t imu_handler_task_priority = 20;
 const uint32_t movella_task_priority = 20;
 const uint32_t log_task_priority = 15;
+const uint32_t motor_handler_task_priority = 12; // placeholder value for now
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 

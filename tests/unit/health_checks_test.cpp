@@ -42,6 +42,7 @@ FAKE_VALUE_FUNC(uint32_t, gpio_get_status);
 FAKE_VALUE_FUNC(uint32_t, flight_phase_get_status);
 FAKE_VALUE_FUNC(uint32_t, imu_handler_get_status);
 FAKE_VALUE_FUNC(uint32_t, uart_get_status);
+FAKE_VALUE_FUNC(uint32_t, motor_handler_get_status);
 
 // Mocked global variables
 static uint32_t timer_ms_value_mock;
