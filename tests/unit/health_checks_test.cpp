@@ -16,7 +16,6 @@ extern "C" {
 
 // all the functions that are being tested
 extern w_status_t health_check_exec();
-extern w_status_t get_adc_current(uint32_t *adc_current_mA);
 extern w_status_t check_watchdog_tasks(void);
 
 FAKE_VALUE_FUNC(w_status_t, adc_get_raw_volts, adc_channel_t, uint32_t *, uint32_t);
@@ -30,18 +29,23 @@ FAKE_VALUE_FUNC(bool, build_analog_data_msg, can_msg_prio_t, uint16_t, can_analo
 				uint16_t, can_msg_t *);
 
 // Mock implementations for all the module get_status functions
-FAKE_VALUE_FUNC(uint32_t, i2c_get_status);
-FAKE_VALUE_FUNC(uint32_t, adc_get_status);
-FAKE_VALUE_FUNC(uint32_t, can_handler_get_status);
-FAKE_VALUE_FUNC(uint32_t, estimator_get_status);
-FAKE_VALUE_FUNC(uint32_t, controller_get_status);
-FAKE_VALUE_FUNC(uint32_t, sd_card_get_status);
-FAKE_VALUE_FUNC(uint32_t, timer_get_status);
-FAKE_VALUE_FUNC(uint32_t, logger_get_status);
-FAKE_VALUE_FUNC(uint32_t, gpio_get_status);
-FAKE_VALUE_FUNC(uint32_t, flight_phase_get_status);
-FAKE_VALUE_FUNC(uint32_t, imu_handler_get_status);
-FAKE_VALUE_FUNC(uint32_t, uart_get_status);
+FAKE_VALUE_FUNC(health_status_t, i2c_get_status);
+FAKE_VALUE_FUNC(health_status_t, adc_get_status);
+FAKE_VALUE_FUNC(health_status_t, can_handler_get_status);
+FAKE_VALUE_FUNC(health_status_t, estimator_get_status);
+FAKE_VALUE_FUNC(health_status_t, controller_get_status);
+FAKE_VALUE_FUNC(health_status_t, sd_card_get_status);
+FAKE_VALUE_FUNC(health_status_t, timer_get_status);
+FAKE_VALUE_FUNC(health_status_t, logger_get_status);
+FAKE_VALUE_FUNC(health_status_t, gpio_get_status);
+FAKE_VALUE_FUNC(health_status_t, flight_phase_get_status);
+FAKE_VALUE_FUNC(health_status_t, imu_handler_get_status);
+FAKE_VALUE_FUNC(health_status_t, uart_get_status);
+FAKE_VALUE_FUNC(int, snprintf_spy, char *, size_t, const char *);
+
+int snprintf_(char *s, size_t n, const char *format, ...) {
+	return snprintf_spy(s, n, format);
+}
 
 // Mocked global variables
 static uint32_t timer_ms_value_mock;
@@ -49,6 +53,7 @@ static uint32_t adc_value_mock;
 }
 
 DEFINE_FFF_GLOBALS;
+DEFINE_FAKE_VOID_FUNC(proc_handle_fatal_error, const char *);
 
 // Mocked functions for helping with unit testing
 // check if having extra static functions is good or not for unit testing
@@ -304,4 +309,18 @@ TEST_F(HealthChecksTest, WatchdogMaxTasksLimit) {
 	// Assert
 	EXPECT_EQ(W_SUCCESS, result); // check watchdog still goes through
 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 0);
+}
+
+TEST_F(HealthChecksTest, FatalErrorTriggersSnprintf) {
+	// Arrange: Set a module to FATAL
+	health_status_t fatal_i2c = {HEALTH_FATAL, MODULE_I2C, MODULE_ERR_I2C_NOT_INIT};
+	i2c_get_status_fake.return_val = fatal_i2c;
+
+	// Act
+	health_check_exec();
+
+	// Assert
+	EXPECT_EQ(snprintf_spy_fake.call_count, 1);
+	EXPECT_STREQ(snprintf_spy_fake.arg2_val, "%d:%d");
+	EXPECT_EQ(proc_handle_fatal_error_fake.call_count, 1);
 }

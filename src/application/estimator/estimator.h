@@ -3,6 +3,7 @@
 
 #include "application/controller/controller.h"
 #include "application/estimator/estimator_types.h"
+#include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
 #include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
@@ -107,7 +108,7 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state);
  *
  * @return CAN board specific err bitfield
  */
-uint32_t estimator_get_status(void);
+health_status_t estimator_get_status(void);
 
 void estimator_task(void *argument);
 

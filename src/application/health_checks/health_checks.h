@@ -8,6 +8,57 @@
 #include <stdint.h>
 
 /**
+ * @brief Health severity levels
+ *
+ * Defines the severity of health check results:
+ * - HEALTH_OK: No issues
+ * - HEALTH_ERROR: Something is wrong, but can still fly safely
+ * - HEALTH_FATAL: Unrecoverable failure, unsafe flight
+ */
+typedef enum {
+	HEALTH_OK = 0,
+	HEALTH_ERROR,
+	HEALTH_FATAL
+} health_severity_t;
+
+typedef enum {
+	MODULE_I2C = 0,
+	MODULE_ADC = 1,
+	MODULE_CAN_HANDLER = 2,
+	MODULE_ESTIMATOR = 3,
+	MODULE_CONTROLLER = 4,
+	MODULE_SD_CARD = 5,
+	MODULE_TIMER = 6,
+	MODULE_GPIO = 7,
+	MODULE_FLIGHT_PHASE = 8,
+	MODULE_IMU_HANDLER = 9,
+	// can't use 10 and 12 as those are IO and watchdog offsets
+	MODULE_UART = 11,
+	MODULE_LOGGER = 13,
+	MODULE_MAX = 31
+} module_id_t;
+
+// Any module can add more error codes
+typedef enum {
+	MODULE_ERR_NONE = 0,
+	MODULE_ERR_I2C_FAIL,
+	MODULE_ERR_I2C_NOT_INIT,
+	MODULE_ERR_SD_CARD_NOT_INIT,
+	MODULE_ERR_LOGGER_NOT_INIT
+} module_error_code_t;
+
+/**
+ * @brief Health check result from a module
+ *
+ * Standard structure returned by all module health check functions
+ */
+typedef struct {
+	health_severity_t severity;
+	module_id_t module_id;
+	module_error_code_t error_code;
+} health_status_t;
+
+/**
  * @brief Initializes the health check module and watchdog registry
  *
  * Resets all watchdog task entries and initializes the watchdog counter.
@@ -41,6 +92,21 @@ w_status_t watchdog_kick(void);
  * @return W_SUCCESS if registration successful, W_FAILURE on invalid params or registry full
  */
 w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_ticks);
+
+/**
+ * @brief Handles a fatal system error by sending a CAN message.
+ *
+ * This function attempts to send a CAN message indicating the error and then
+ * enters a safe, non-recoverable state (infinite loop with interrupts disabled).
+ * It is designed to be called in critical failure scenarios where normal error
+ * logging (e.g., to SD card) or task execution may not be possible.
+ *
+ * It uses the canlib library to send a DEBUG_RAW message with a coarse timestamp
+ * and the first few characters of the error message.
+ *
+ * @param errorMsg A descriptive string for the error (only the first ~6 chars will be sent).
+ */
+void proc_handle_fatal_error(const char *errorMsg);
 
 /**
  * @brief Task function for health check background processing

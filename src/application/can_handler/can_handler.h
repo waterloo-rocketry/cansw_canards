@@ -1,6 +1,7 @@
 #ifndef CAN_HANDLER_H
 #define CAN_HANDLER_H
 
+#include "application/health_checks/health_checks.h"
 #include "canlib.h"
 #include "rocketlib/include/common.h"
 #include "stm32h7xx_hal.h"
@@ -56,21 +57,6 @@ void can_handler_task_rx(void *argument);
 void can_handler_task_tx(void *argument);
 
 /**
- * @brief Handles a fatal system error by sending a CAN message.
- *
- * This function attempts to send a CAN message indicating the error and then
- * enters a safe, non-recoverable state (infinite loop with interrupts disabled).
- * It is designed to be called in critical failure scenarios where normal error
- * logging (e.g., to SD card) or task execution may not be possible.
- *
- * It uses the canlib library to send a DEBUG_RAW message with a coarse timestamp
- * and the first few characters of the error message.
- *
- * @param errorMsg A descriptive string for the error (only the first ~6 chars will be sent).
- */
-void proc_handle_fatal_error(const char *errorMsg);
-
-/**
  * @brief Report CAN handler module health status
  *
  * Retrieves and reports CAN error statistics and initialization status
@@ -78,6 +64,6 @@ void proc_handle_fatal_error(const char *errorMsg);
  *
  * @return CAN board specific err bitfield
  */
-uint32_t can_handler_get_status(void);
+health_status_t can_handler_get_status(void);
 
 #endif

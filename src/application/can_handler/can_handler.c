@@ -175,62 +175,7 @@ void can_handler_task_tx(void *argument) {
 	}
 }
 
-// --- Fatal Error Handler Implementation ---
-
-// Note: All IDs (Board Type, Message Type, Instance ID)
-//       are used directly from canlib/message_types.h
-
-void proc_handle_fatal_error(const char *errorMsg) {
-	static bool can_initialized = false;
-	// safe state - loop here forever and send CAN err msg repeatedly
-	while (1) {
-		can_initialized =
-			can_initialized ||
-			can_init_stm(&hfdcan1,
-						 can_handle_rx_isr); // BEWARE: this is hardcoded to use hfdcan1, remember
-											 // to change this when our CAN handle changes
-		__disable_irq();
-
-		// let CAN still work
-		HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
-
-		can_msg_t msg;
-		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
-
-		// Copy error message to the data buffer
-		if (errorMsg != NULL) {
-			strncpy((char *)data, errorMsg, sizeof(data));
-			// Ensure null termination
-			data[sizeof(data) - 1] = '\0';
-		}
-
-		// Use canlib's helper function to build the debug message
-		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
-		// state)
-		if (build_debug_raw_msg(PRIO_HIGH, 0, data, &msg) && can_initialized) {
-			// Only try to send if message build succeeded
-			can_send(&msg);
-		}
-
-		// scream a few times then attempt to reset.
-		// delay for ~1sec without using systick-based delays (no hal_delay)
-		volatile int dummy;
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 50000000; j++) {
-				dummy++;
-			}
-		}
-
-		dummy++;
-
-		// resetting is always a safe state even in midflight, as flightphase starts IDLE
-		NVIC_SystemReset();
-	}
-}
-
-// --- End Fatal Error Handler ---
-
-uint32_t can_handler_get_status(void) {
+health_status_t can_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log all error statistics
@@ -247,5 +192,8 @@ uint32_t can_handler_get_status(void) {
 			 can_error_stats.rx_timeouts,
 			 can_error_stats.tx_timeouts);
 
-	return status_bitfield;
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_CAN_HANDLER, .error_code = 0};
+
+	return status;
 }
