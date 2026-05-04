@@ -1,6 +1,7 @@
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
 #include "drivers/gpio/gpio.h"
+#include "fdcan.h" // For hfdcan1 for fatal error handler
 #include "queue.h"
 
 #include "application/can_handler/can_handler.h"
@@ -175,6 +176,8 @@ void can_handler_task_tx(void *argument) {
 }
 
 health_status_t can_handler_get_status(void) {
+	uint32_t status_bitfield = 0;
+
 	// Log all error statistics
 	log_text(0,
 			 "CAN",

@@ -27,9 +27,9 @@ static w_status_t controller_send_can(float canard_angle) {
 	uint16_t canard_cmd_shifted = canard_cmd_signed + 32768;
 
 	// get timestamp for can msg
-	float time_ms;
+	uint32_t time_ms;
 	if (W_SUCCESS != timer_get_ms(&time_ms)) {
-		time_ms = 0.0f;
+		time_ms = 0;
 		controller_error_stats.timestamp_errors++;
 	}
 	uint32_t can_timestamp = (uint32_t)time_ms;
@@ -59,20 +59,20 @@ static w_status_t controller_send_can(float canard_angle) {
  */
 static w_status_t send_cmd(double cmd) {
 	w_status_t status = W_SUCCESS; // track status but still try to do everything regardless
-	float timestamp_ms = 0.0f;
+	uint32_t timestamp_ms = 0;
 	// object to copy into the outputs queue (queue is pass by copy, not by reference)
 	controller_output_t controller_output = {0};
 
 	// get current timestamp
 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
-		timestamp_ms = 0.0f;
+		timestamp_ms = 0;
 		log_text(LOG_WAIT_MS, "controller", "get_ms fail");
 		status |= W_FAILURE;
 	}
 
 	// set controller output
 	controller_output.commanded_angle = cmd;
-	controller_output.timestamp = (uint32_t)timestamp_ms;
+	controller_output.timestamp = timestamp_ms;
 
 	// send command via CAN
 	if (controller_send_can(controller_output.commanded_angle) != W_SUCCESS) {

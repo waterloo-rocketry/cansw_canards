@@ -58,7 +58,7 @@ static logger_health_t logger_health = {0};
  * @param data Pointer to raw payload data of data log message
  */
 static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uint32_t msg_num,
-										   log_data_type_t type, float timestamp,
+										   log_data_type_t type, uint32_t timestamp,
 										   const log_data_container_t *data) {
 	// Validate arguments
 	// Assumption: logger_health.is_init == true OR (during init) all buffer semaphores are valid
@@ -141,8 +141,8 @@ static void log_reset_buffer(log_buffer_t *buffer) {
 		log_data_container_t data = {0};
 		data.header.version = LOG_DATA_FORMAT_VERSION;
 		data.header.index = total_data_log_buffers;
-		// Use dummy timestamp of -1.0f if failed to get timestamp, as in log_text()
-		float timestamp = -1.0f;
+		// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
+		uint32_t timestamp = 0;
 		(void)timer_get_ms(&timestamp);
 		log_data_write_to_region(buffer, 0, LOG_TYPE_HEADER, timestamp, &data);
 		total_data_log_buffers++;
@@ -242,10 +242,10 @@ w_status_t log_init(void) {
 
 w_status_t log_text(uint32_t timeout, const char *source, const char *format, ...) {
 	// Get timestamp as close to time of call as possible
-	// If we fail to get a timestamp, use a dummy value of -1.0f and continue to write the log
+	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log
 	// message anyway. We're trying to log as much as possible and a missing timestamp does not
 	// inherently critically affect the ability to write the log message
-	float timestamp = -1.0f;
+	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
 	// Validate arguments
@@ -296,7 +296,7 @@ w_status_t log_text(uint32_t timeout, const char *source, const char *format, ..
 	// Write log message header to region
 	chars_written += snprintf_(msg_dest + chars_written,
 							   MAX_TEXT_MSG_LENGTH - chars_written,
-							   "[%.1f] %s;",
+							   "[%" PRIu32 "] %s;",
 							   timestamp,
 							   source);
 	// If truncated, set first char to '!'
@@ -337,8 +337,8 @@ w_status_t log_text(uint32_t timeout, const char *source, const char *format, ..
 
 w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_container_t *data) {
 	// Get timestamp as close to time of call as possible
-	// Use dummy timestamp of -1.0f if failed to get timestamp, as in log_text()
-	float timestamp = -1.0f;
+	// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
+	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
 	// Validate arguments

@@ -16,10 +16,25 @@ typedef struct {
 	uint32_t timer_invalid; /**< Count of calls when timer was invalid */
 } timer_health_t;
 
-// tracks system time since program startup
-// retrieves time passed in the form of clock ticks
-// timer resolution set to 0.1ms (10000Hz frequency)
-w_status_t timer_get_ms(float *ms);
+w_status_t timer_init();
+
+/**
+ * @brief tracks system time since program startup
+ * @details retrieves time passed in the form of clock ticks, timer resolution set to 0.1ms (10000Hz
+ * frequency), however rounded to 1 ms resolution
+ * @param p_ms the pointer to the time (ms)
+ * @return status of function call
+ */
+w_status_t timer_get_ms(uint32_t *p_ms);
+
+/**
+ * @brief tracks system time since program startup
+ * @details retrieves time passed in the form of clock ticks, timer resolution set to 0.1ms (10000Hz
+ * frequency)
+ * @param p_time the pointer to the time (tenth of a ms)
+ * @return status of function call
+ */
+w_status_t timer_get_tenth_ms(uint32_t *p_time);
 
 /**
  * @brief Report timer module health status
