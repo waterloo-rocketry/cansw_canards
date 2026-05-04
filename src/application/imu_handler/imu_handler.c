@@ -7,12 +7,11 @@
 #include "application/estimator/estimator.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "canlib.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
-
-#include "canlib.h"
 
 // Period of IMU sampling in milliseconds
 // slightly slower than 200 hz to always receive encoder which can be >5ms
@@ -221,15 +220,13 @@ w_status_t imu_handler_init(void) {
 }
 
 /**
- * @brief Execute one iteration of the IMU handler processing
- * Reads data from all IMUs and updates the estimator
+ * @brief Curate new data from all sensors.
+ * @note !!! data that exceeds the sensor's freshness requirement is marked as dead !!!
  * @param loop_count Number of loops run, for CAN send rate limiting
- * @note This function is non-static to allow exposed to unit tests
  * @return Status of the execution
  */
-w_status_t imu_handler_run(uint32_t loop_count) {
-	estimator_all_imus_input_t imu_data = {.pololu = {.is_dead = false},
-										   .movella = {.is_dead = false}};
+w_status_t imu_handler_get_fresh_meas(uint32_t loop_count, all_sensors_data_t *output) {
+	all_sensors_data_t imu_data = {.pololu = {.is_dead = false}, .movella = {.is_dead = false}};
 	raw_pololu_data_t raw_pololu_data = {0};
 	uint32_t current_time_ms;
 	w_status_t status = W_SUCCESS;
@@ -322,13 +319,14 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 		}
 	}
 
-	// Send data to estimator with status flags
-	w_status_t estimator_status = estimator_update_imu_data(&imu_data);
-	if (W_SUCCESS != estimator_status) {
-		status = estimator_status;
-		imu_handler_state.error_count++;
-		log_text(1, "IMUHandler", "estimator update fail (status: %d).", estimator_status);
-	}
+	// TODO: redesign to work to update data into output struct
+	//  Send data to estimator with status flags
+	//  w_status_t estimator_status = estimator_update_imu_data(&imu_data);
+	//  if (W_SUCCESS != estimator_status) {
+	//  	status = estimator_status;
+	//  	imu_handler_state.error_count++;
+	//  	log_text(1, "IMUHandler", "estimator update fail (status: %d).", estimator_status);
+	//  }
 
 	imu_handler_state.sample_count++;
 
@@ -354,12 +352,12 @@ void imu_handler_task(void *argument) {
 	// Main task loop
 	log_text(10, "IMUHandlerTask", "IMU Handler task started.");
 	while (1) {
-		w_status_t run_status = imu_handler_run(loop_count++);
-		if (W_SUCCESS != run_status) {
-			// Log or handle run failures if needed
-			imu_handler_state.error_count++;
-			log_text(1, "IMUHandlerTask", "run failed (status: %d).", run_status);
-		}
+		// w_status_t run_status = imu_handler_get_fresh_meas(loop_count++);
+		// if (W_SUCCESS != run_status) {
+		// 	// Log or handle run failures if needed
+		// 	imu_handler_state.error_count++;
+		// 	log_text(1, "IMUHandlerTask", "run failed (status: %d).", run_status);
+		// }
 
 		// Wait for next sampling period with precise timing
 		vTaskDelayUntil(&last_wake_time, frequency);

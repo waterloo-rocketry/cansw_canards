@@ -5,10 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "application/controller/controller.h"
 #include "application/estimator/estimator_types.h"
 #include "application/estimator/pad_filter.h"
-#include "application/flight_phase/flight_phase.h"
 
 /**
  * persistent state updated by estimator_module
@@ -22,6 +20,9 @@ typedef struct {
 	// estimator ctx must have exactly 1 pad filter ctx
 	pad_filter_ctx_t pad_filter_ctx;
 } estimator_module_ctx_t;
+
+#include "application/controller/controller.h"
+#include "application/flight_phase/flight_phase.h"
 
 /**
  * input to estimator_module function

@@ -26,12 +26,12 @@ w_status_t estimator_module(const estimator_module_input_t *input,
 	}
 
 	switch (flight_phase) {
-		// ------- if idle state: do nothing -------
+			// ------- if idle state: do nothing -------
 		case STATE_IDLE:
 			// do nothing.
 			break;
 
-		// ------- after SE-init CAN msg received: run pad filter -------
+			// ------- after SE-init CAN msg received: run pad filter -------
 		case STATE_SE_INIT:
 			// initialize the pad filter if it hasn't been done yet
 			if (false == ctx->pad_filter_ctx.is_initialized) {
@@ -59,7 +59,7 @@ w_status_t estimator_module(const estimator_module_input_t *input,
 			}
 			break;
 
-		// ------- flight!! run ekf -------
+			// ------- flight!! run ekf -------
 		case STATE_BOOST:
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:

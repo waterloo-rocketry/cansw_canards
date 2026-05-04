@@ -1,7 +1,6 @@
 #ifndef PAD_FILTER_H
 #define PAD_FILTER_H
 
-#include "application/estimator/estimator.h"
 #include "application/estimator/estimator_types.h"
 #include "common/math/math.h"
 #include "third_party/rocketlib/include/common.h"

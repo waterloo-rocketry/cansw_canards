@@ -1,10 +1,11 @@
 #ifndef STATE_EST_H
 #define STATE_EST_H
 
-#include "application/controller/controller.h"
 #include "application/estimator/estimator_types.h"
 #include "common/math/math.h"
+
 #include "third_party/rocketlib/include/common.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -59,7 +60,7 @@ typedef struct {
 	// TODO: remove old impl below
 	estimator_imu_measurement_t movella; // raw movella data
 	estimator_imu_measurement_t pololu; // raw pololu data
-} estimator_all_imus_input_t;
+} all_sensors_data_t;
 
 /**
  * @brief Structure to track estimator errors and status
@@ -74,14 +75,10 @@ typedef struct {
 	uint32_t invalid_phase_errors; /**< Count of invalid flight phase errors */
 } estimator_error_data_t;
 
-/**
- * @brief Used to update the imu inputs for estimator
- *
- * @note Should be called every 5ms or faster for optimal estimator performance
- *
- * @param data Pointer to the struct containing latest measurements from all imus
- */
-w_status_t estimator_update_imu_data(estimator_all_imus_input_t *data);
+// this has been moved here so that all_sensors_data_t can be defined before running this header
+#include "application/controller/controller.h"
+#include "application/estimator/estimator_module.h"
+#include "application/flight_phase/flight_phase.h"
 
 /**
  * @brief initialize estimator module. call before creating estimator task
@@ -109,7 +106,18 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state);
  */
 uint32_t estimator_get_status(void);
 
-void estimator_task(void *argument);
+/**
+ * @brief 1 step of estimator
+ * @param ctx pointer to estimator context
+ * @param curr_flight_phase the current flight phase
+ * @param p_latest_imu_data pointer to the latest imu data
+ * @param p_controller_context pointer to conrtoller context for both past actuation info and to
+ * update with new actuation info
+ * @param loop_count for rate limiting
+ */
+w_status_t estimator_step(estimator_module_ctx_t *ctx, const flight_phase_state_t curr_flight_phase,
+						  const all_sensors_data_t *p_latest_imu_data,
+						  controller_ctx_t *p_controller_context, uint32_t loop_count);
 
 #endif
 
