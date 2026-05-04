@@ -1,9 +1,11 @@
 #ifndef CONTROLLER_H_
 #define CONTROLLER_H_
 
-#include "FreeRTOS.h"
 #include "application/controller/gain_table.h"
 #include "third_party/rocketlib/include/common.h"
+
+#include "FreeRTOS.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -61,8 +63,17 @@ typedef struct {
  * state of a controller instance.
  */
 typedef struct {
+	controller_output_t cmd_output;
+	controller_input_t new_state;
+	// both of the following bool should be revaluated if they should still exisits with the new
+	// system design
+	bool state_updated;
+	bool cmd_updated;
+
 	uint32_t last_run_ms; // last time the controller did a full loop. use for rate-limiting
 } controller_ctx_t;
+
+#include "application/flight_phase/flight_phase.h"
 
 /**
  * Initialize controller module
@@ -86,9 +97,16 @@ w_status_t controller_update_inputs(controller_input_t *new_state);
 w_status_t controller_get_latest_output(controller_output_t *output);
 
 /**
- * run 1 step of the controller
+ * @brief run 1 step of the controller
+ * @param context pointer to controller global context
+ * @param curr_flight_phase current flight phase state
+ * @param act_allowed_timestamp_ms the timestamp at which act_allowed was set (only used when passed
+ * actuation allowed)
+ * @param curr_timestamp_ms the currrent timestamp
  */
-w_status_t controller_step(controller_ctx_t *context);
+w_status_t controller_step(controller_ctx_t *context, const flight_phase_state_t curr_flight_phase,
+						   const uint32_t act_allowed_timestamp_ms,
+						   const uint32_t curr_timestamp_ms);
 
 /**
  * Controller task function for RTOS

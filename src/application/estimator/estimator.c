@@ -10,6 +10,7 @@
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/estimator/estimator.h"
+#include "application/estimator/estimator_module.h"
 #include "application/estimator/estimator_types.h"
 #include "application/estimator/pad_filter.h"
 #include "application/flight_phase/flight_phase.h"
@@ -101,56 +102,55 @@ w_status_t estimator_update_imu_data(all_sensors_data_t *data) {
 	return W_SUCCESS;
 }
 
-w_status_t estimator_step(estimator_module_ctx_t *ctx, uint32_t loop_count) {
+w_status_t estimator_step(estimator_module_ctx_t *ctx, const flight_phase_state_t curr_flight_phase,
+						  const all_sensors_data_t *p_latest_imu_data,
+						  controller_ctx_t *p_controller_context, uint32_t loop_count) {
 	w_status_t status = W_SUCCESS;
-	flight_phase_state_t curr_flight_phase = flight_phase_get_state();
-	all_sensors_data_t latest_imu_data = {0};
-	controller_output_t latest_controller_cmd = {0};
-	controller_input_t output_to_controller = {0};
+	// controller_output_t latest_controller_cmd = {0}; // TODO: consider if will be passed in as an
+	// input from controller ctx or keep current arrangement This should be input based on my
+	// understanding of new design
+
+	// this is done to make sure only under a few state are the new cmd actually going to be
+	// indicated as usable by the system (this is to keep in structure with last years system,
+	// though this seem very redundent)
+	p_controller_context->state_updated = false;
+
 	float latest_encoder_rad = 0;
 	float64_t curr_time_sec = 0;
 	bool encoder_is_dead = false;
 
-	// get latest imu data, transform into estimator data structs.
-	if (xQueueReceive(imu_data_queue, &latest_imu_data, pdMS_TO_TICKS(DATA_WAIT_MS)) != pdTRUE) {
-		log_text(5, "estimator", "imu data q empty");
-		estimator_error_stats.imu_data_timeouts++;
-		return W_FAILURE;
-	}
-	y_imu_t movella = {.accelerometer = latest_imu_data.movella.accelerometer,
-					   .gyroscope = latest_imu_data.movella.gyroscope,
-					   .magnetometer = latest_imu_data.movella.magnetometer,
-					   .barometer = latest_imu_data.movella.barometer};
-	y_imu_t pololu = {.accelerometer = latest_imu_data.pololu.accelerometer,
-					  .gyroscope = latest_imu_data.pololu.gyroscope,
-					  .magnetometer = latest_imu_data.pololu.magnetometer,
-					  .barometer = latest_imu_data.pololu.barometer};
+	y_imu_t movella = {.accelerometer = p_latest_imu_data->movella.accelerometer,
+					   .gyroscope = p_latest_imu_data->movella.gyroscope,
+					   .magnetometer = p_latest_imu_data->movella.magnetometer,
+					   .barometer = p_latest_imu_data->movella.barometer};
+	y_imu_t pololu = {.accelerometer = p_latest_imu_data->pololu.accelerometer,
+					  .gyroscope = p_latest_imu_data->pololu.gyroscope,
+					  .magnetometer = p_latest_imu_data->pololu.magnetometer,
+					  .barometer = p_latest_imu_data->pololu.barometer};
 
-	// get the latest encoder reading. wait very briefly in case mcb is a bit imperfect timing
-	if (xQueueReceive(encoder_data_queue_rad, &latest_encoder_rad, pdMS_TO_TICKS(4)) == pdTRUE) {
-		// log received encoder val (radians)
-		log_data_container_t log_payload = {0};
-		log_payload.encoder.angle_rad = latest_encoder_rad;
-		log_payload.encoder.is_dead = false;
-		log_data(1, LOG_TYPE_ENCODER, &log_payload);
-	} else {
-		estimator_error_stats.encoder_data_fails++;
-		encoder_is_dead = true; // mark encoder as dead if no data received
+	// TODO: remove encoder information and replace with new motor
+	// // get the latest encoder reading. wait very briefly in case mcb is a bit imperfect timing
+	// if (xQueueReceive(encoder_data_queue_rad, &latest_encoder_rad, pdMS_TO_TICKS(4)) == pdTRUE) {
+	// 	// log received encoder val (radians)
+	// 	log_data_container_t log_payload = {0};
+	// 	log_payload.encoder.angle_rad = latest_encoder_rad;
+	// 	log_payload.encoder.is_dead = false;
+	// 	log_data(1, LOG_TYPE_ENCODER, &log_payload);
+	// } else {
+	// 	estimator_error_stats.encoder_data_fails++;
+	// 	encoder_is_dead = true; // mark encoder as dead if no data received
 
-		// log encoder as dead
-		log_data_container_t log_payload = {0};
-		log_payload.encoder.angle_rad = -1.23456f; // indicate dead
-		log_payload.encoder.is_dead = true;
-		log_data(1, LOG_TYPE_ENCODER, &log_payload);
-	}
+	// 	// log encoder as dead
+	// 	log_data_container_t log_payload = {0};
+	// 	log_payload.encoder.angle_rad = -1.23456f; // indicate dead
+	// 	log_payload.encoder.is_dead = true;
+	// 	log_data(1, LOG_TYPE_ENCODER, &log_payload);
+	// }
 
 	// get the latest controller cmd, only while controller is active (act-allowed or recovery)
 	if ((STATE_RECOVERY == curr_flight_phase) || (STATE_ACT_ALLOWED == curr_flight_phase)) {
-		if (controller_get_latest_output(&latest_controller_cmd) != W_SUCCESS) {
-			log_text(10, "Estimator", "controller_get_latest_output fail");
-			estimator_error_stats.controller_data_fails++;
-			status = W_FAILURE;
-		}
+		// TODO consider what to do controller cmd if not in these two state, reset it back to 0, if
+		// not???
 	}
 
 	// get current time. as failsafe: default to 5ms period
@@ -168,19 +168,23 @@ w_status_t estimator_step(estimator_module_ctx_t *ctx, uint32_t loop_count) {
 	estimator_module_input_t estimator_input = {.timestamp_sec = curr_time_sec,
 												.movella = movella,
 												.pololu = pololu,
-												.movella_is_dead = latest_imu_data.movella.is_dead,
-												.pololu_is_dead = latest_imu_data.pololu.is_dead,
-												.cmd = latest_controller_cmd,
+												.movella_is_dead =
+													p_latest_imu_data->movella.is_dead,
+												.pololu_is_dead = p_latest_imu_data->pololu.is_dead,
+												.cmd = p_controller_context->cmd_output,
 												.encoder = latest_encoder_rad,
 												.encoder_is_dead = encoder_is_dead};
 
 	// only run estimator with minimum 1 imu alive to avoid div by 0
-	if (latest_imu_data.movella.is_dead && latest_imu_data.pololu.is_dead) {
+	if (p_latest_imu_data->movella.is_dead && p_latest_imu_data->pololu.is_dead) {
 		log_text(5, "Estimator", "both imus dead");
 		estimator_error_stats.imu_data_timeouts++;
 		status = W_FAILURE;
 	} else {
-		if (estimator_module(&estimator_input, curr_flight_phase, ctx, &output_to_controller) !=
+		// just have the state edited directly, and have bool to indicate if controller can use the
+		// output (the bool seems very redundent so don't think is best way)
+		if (estimator_module(
+				&estimator_input, curr_flight_phase, ctx, &(p_controller_context->new_state)) !=
 			W_SUCCESS) {
 			log_text(10, "Estimator", "estimator_module fail");
 			status = W_FAILURE;
@@ -191,11 +195,7 @@ w_status_t estimator_step(estimator_module_ctx_t *ctx, uint32_t loop_count) {
 	// continue actuating after recovery too to avoid timer lockout issues
 	if (W_SUCCESS == status) {
 		if ((STATE_RECOVERY == curr_flight_phase) || (STATE_ACT_ALLOWED == curr_flight_phase)) {
-			if (controller_update_inputs(&output_to_controller) != W_SUCCESS) {
-				log_text(10, "Estimator", "failed to update controller inputs.");
-				estimator_error_stats.controller_data_fails++;
-				status = W_FAILURE;
-			}
+			p_controller_context->state_updated = true;
 		}
 	}
 
@@ -205,11 +205,13 @@ w_status_t estimator_step(estimator_module_ctx_t *ctx, uint32_t loop_count) {
 		log_data_container_t log_payload = {0};
 
 		log_payload.controller_input_t.roll_angle =
-			(float)output_to_controller.roll_state.roll_angle;
-		log_payload.controller_input_t.roll_rate = (float)output_to_controller.roll_state.roll_rate;
-		log_payload.controller_input_t.canard_coeff = (float)output_to_controller.canard_coeff;
+			(float)p_controller_context->new_state.roll_state.roll_angle;
+		log_payload.controller_input_t.roll_rate =
+			(float)p_controller_context->new_state.roll_state.roll_rate;
+		log_payload.controller_input_t.canard_coeff =
+			(float)p_controller_context->new_state.canard_coeff;
 		log_payload.controller_input_t.pressure_dynamic =
-			(float)output_to_controller.pressure_dynamic;
+			(float)p_controller_context->new_state.pressure_dynamic;
 
 		log_data(1, LOG_TYPE_CONTROLLER_INPUT, &log_payload);
 
@@ -351,34 +353,35 @@ void estimator_task(void *argument) {
 	uint32_t estimator_loop_counter = 0;
 
 	// estimator_module persistent ctx for the whole program
-	estimator_module_ctx_t g_estimator_ctx = {0};
+	// estimator_module_ctx_t g_estimator_ctx = {0};
 
 	// initialize ctx timestamp to current time
 	uint32_t init_time_tenth_ms = 0;
 	if (timer_get_tenth_ms(&init_time_tenth_ms) != W_SUCCESS) {
 		proc_handle_fatal_error("estini");
 	}
-	g_estimator_ctx.t_sec = ((float64_t)init_time_tenth_ms) / 10000.0; // convert 0.1ms to seconds
+	// g_estimator_ctx.t_sec = ((float64_t)init_time_tenth_ms) / 10000.0; // convert 0.1ms to
+	// seconds
 
 	// initialize ctx to reasonable values in case pad filter never runs
-	g_estimator_ctx.x.attitude.w = 1.0;
-	g_estimator_ctx.x.attitude.x = 0.0;
-	g_estimator_ctx.x.attitude.y = 0.0;
-	g_estimator_ctx.x.attitude.z = 0.0;
-	g_estimator_ctx.x.altitude = 420;
-	g_estimator_ctx.x.CL = 3;
+	// g_estimator_ctx.x.attitude.w = 1.0;
+	// g_estimator_ctx.x.attitude.x = 0.0;
+	// g_estimator_ctx.x.attitude.y = 0.0;
+	// g_estimator_ctx.x.attitude.z = 0.0;
+	// g_estimator_ctx.x.altitude = 420;
+	// g_estimator_ctx.x.CL = 3;
 
 	log_text(10, "EstimatorTask", "Estimator task started.");
 
 	while (true) {
-		w_status_t run_status = estimator_step(&g_estimator_ctx, estimator_loop_counter);
+		// w_status_t run_status = estimator_step(&g_estimator_ctx, estimator_loop_counter);
 
-		if (run_status != W_SUCCESS) {
-			log_text(
-				1, "EstimatorTask", "ERROR: Estimator run loop failed (status: %d).", run_status);
-		}
+		// if (run_status != W_SUCCESS) {
+		// 	log_text(
+		// 		1, "EstimatorTask", "ERROR: Estimator run loop failed (status: %d).", run_status);
+		// }
 
-		estimator_loop_counter++;
+		// estimator_loop_counter++;
 
 		// // do delay here instead of inside the run to unify the timing
 		// vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(ESTIMATOR_TASK_PERIOD_MS));

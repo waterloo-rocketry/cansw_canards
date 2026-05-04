@@ -20,36 +20,36 @@ static QueueHandle_t output_queue;
 static controller_t controller_state = {0};
 static controller_error_data_t controller_error_stats = {0};
 
-// Send `canard_angle`, the desired canard angle (radians) to CAN
-static w_status_t controller_send_can(float canard_angle) {
-	// convert canard angle from radians to millidegrees
-	int16_t canard_cmd_signed = (int16_t)(canard_angle / M_PI * 180.0 * 1000.0);
-	uint16_t canard_cmd_shifted = canard_cmd_signed + 32768;
+// // Send `canard_angle`, the desired canard angle (radians) to CAN
+// static w_status_t controller_send_can(float canard_angle) {
+// 	// convert canard angle from radians to millidegrees
+// 	int16_t canard_cmd_signed = (int16_t)(canard_angle / M_PI * 180.0 * 1000.0);
+// 	uint16_t canard_cmd_shifted = canard_cmd_signed + 32768;
 
-	// get timestamp for can msg
-	uint32_t time_ms;
-	if (W_SUCCESS != timer_get_ms(&time_ms)) {
-		time_ms = 0;
-		controller_error_stats.timestamp_errors++;
-	}
-	uint32_t can_timestamp = (uint32_t)time_ms;
+// 	// get timestamp for can msg
+// 	uint32_t time_ms;
+// 	if (W_SUCCESS != timer_get_ms(&time_ms)) {
+// 		time_ms = 0;
+// 		controller_error_stats.timestamp_errors++;
+// 	}
+// 	uint32_t can_timestamp = (uint32_t)time_ms;
 
-	// Build the CAN msg
-	can_msg_t msg;
-	if (!build_actuator_analog_cmd_msg(
-			PRIO_HIGHEST, can_timestamp, ACTUATOR_CANARD_ANGLE, canard_cmd_shifted, &msg)) {
-		log_text(LOG_WAIT_MS, "controller", "actuator message build failure");
-		controller_error_stats.can_send_errors++;
-		log_text(LOG_WAIT_MS, "controller", "actuator message build failure");
-	}
+// 	// Build the CAN msg
+// 	can_msg_t msg;
+// 	if (!build_actuator_analog_cmd_msg(
+// 			PRIO_HIGHEST, can_timestamp, ACTUATOR_CANARD_ANGLE, canard_cmd_shifted, &msg)) {
+// 		log_text(LOG_WAIT_MS, "controller", "actuator message build failure");
+// 		controller_error_stats.can_send_errors++;
+// 		log_text(LOG_WAIT_MS, "controller", "actuator message build failure");
+// 	}
 
-	// Send this to can handler module's tx
-	w_status_t result = can_handler_transmit(&msg);
-	if (result != W_SUCCESS) {
-		controller_state.can_send_errors++;
-	}
-	return result;
-}
+// 	// Send this to can handler module's tx
+// 	w_status_t result = can_handler_transmit(&msg);
+// 	if (result != W_SUCCESS) {
+// 		controller_state.can_send_errors++;
+// 	}
+// 	return result;
+// }
 
 /**
  * helper to handle a new canard cmd:
@@ -57,35 +57,35 @@ static w_status_t controller_send_can(float canard_angle) {
  * ref_signal is only used for logging here
  * Return W_FAILURE if any of the steps fail, but still try to do everything regardless.
  */
-static w_status_t send_cmd(double cmd) {
-	w_status_t status = W_SUCCESS; // track status but still try to do everything regardless
-	uint32_t timestamp_ms = 0;
-	// object to copy into the outputs queue (queue is pass by copy, not by reference)
-	controller_output_t controller_output = {0};
+// static w_status_t send_cmd(double cmd) {
+// 	w_status_t status = W_SUCCESS; // track status but still try to do everything regardless
+// 	uint32_t timestamp_ms = 0;
+// 	// object to copy into the outputs queue (queue is pass by copy, not by reference)
+// 	controller_output_t controller_output = {0};
 
-	// get current timestamp
-	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
-		timestamp_ms = 0;
-		log_text(LOG_WAIT_MS, "controller", "get_ms fail");
-		status |= W_FAILURE;
-	}
+// 	// get current timestamp
+// 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
+// 		timestamp_ms = 0;
+// 		log_text(LOG_WAIT_MS, "controller", "get_ms fail");
+// 		status |= W_FAILURE;
+// 	}
 
-	// set controller output
-	controller_output.commanded_angle = cmd;
-	controller_output.timestamp = timestamp_ms;
+// 	// set controller output
+// 	controller_output.commanded_angle = cmd;
+// 	controller_output.timestamp = timestamp_ms;
 
-	// send command via CAN
-	if (controller_send_can(controller_output.commanded_angle) != W_SUCCESS) {
-		controller_state.can_send_errors++;
-		log_text(LOG_WAIT_MS, "controller", "CAN send failure");
-		status |= W_FAILURE;
-	}
+// 	// send command via CAN
+// 	if (controller_send_can(controller_output.commanded_angle) != W_SUCCESS) {
+// 		controller_state.can_send_errors++;
+// 		log_text(LOG_WAIT_MS, "controller", "CAN send failure");
+// 		status |= W_FAILURE;
+// 	}
 
-	// update output queue with latest cmd (for estimator)
-	xQueueOverwrite(output_queue, &controller_output);
+// 	// update output queue with latest cmd (for estimator)
+// 	xQueueOverwrite(output_queue, &controller_output);
 
-	return status;
-}
+// 	return status;
+// }
 
 /**
  * Initialize controller module
@@ -147,18 +147,17 @@ w_status_t controller_get_latest_output(controller_output_t *output) {
 }
 
 // helper to run 1 loop of the controller task, including delaying where needed.
-w_status_t controller_step(controller_ctx_t *context) {
-	(void)context; // temporary ignore context. later use for rate limiting
-
+w_status_t controller_step(controller_ctx_t *context, const flight_phase_state_t curr_flight_phase,
+						   const uint32_t act_allowed_timestamp_ms,
+						   const uint32_t curr_timestamp_ms) {
 	log_data_container_t log_container = {0};
 	w_status_t status = W_SUCCESS;
-	flight_phase_state_t current_phase = flight_phase_get_state();
 
 	// do the following steps which vary depending on curr flight phase:
 	// 1. determine new canard angle cmd
 	// 2. process new cmd (send to CAN, update output queue, log)
 	// 3. do task delay
-	switch (current_phase) {
+	switch (curr_flight_phase) {
 			// recovery: actively cmd 0 deg at 1hz
 			// status |= send_cmd(cmd_angle_zero);
 
@@ -182,28 +181,28 @@ w_status_t controller_step(controller_ctx_t *context) {
 		// actuation continues through recovery phase too until the board shuts off
 		case STATE_RECOVERY:
 		case STATE_ACT_ALLOWED: {
-			controller_input_t new_state_msg = {0};
+			uint32_t act_allowed_ms = curr_timestamp_ms - act_allowed_timestamp_ms;
+
 			float ref_signal = 0.0f; // track latest reference signal for logging only
-			uint32_t act_allowed_ms = 0; // elapsed flight time
 			double new_cmd = 0.0;
 
 			// wait for estimator data. >5ms timeout to avoid false fail if wait takes just over 5ms
-			if (xQueueReceive(internal_state_queue, &new_state_msg, pdMS_TO_TICKS(DATA_WAIT_MS)) !=
-				pdPASS) {
+			if (context->state_updated) {
 				controller_state.data_miss_counter++;
 				log_text(LOG_WAIT_MS, "controller", "data miss");
 				return W_FAILURE;
 			}
 
-			// get elapsed time since actuation-allowed started
-			status |= flight_phase_get_act_allowed_ms(&act_allowed_ms);
-
 			// run controller module
-			status |= controller_module(new_state_msg, act_allowed_ms, &new_cmd, &ref_signal);
+			status |= controller_module(context->new_state, act_allowed_ms, &new_cmd, &ref_signal);
 
 			// send cmd if we can
 			if (W_SUCCESS == status) {
-				status |= send_cmd(new_cmd);
+				// update the controller output
+				// TODO: currently assuming the timer didn't fail, this should be reevaluated
+				context->cmd_output.commanded_angle = new_cmd;
+				context->cmd_output.timestamp = curr_timestamp_ms;
+				context->cmd_updated = true;
 
 				log_container.controller.cmd_angle = (float)new_cmd;
 				log_container.controller.ref_signal = ref_signal;
@@ -234,9 +233,9 @@ void controller_task(void *argument) {
 	(void)argument;
 
 	while (true) {
-		if (controller_step() != W_SUCCESS) {
-			log_text(LOG_WAIT_MS, "controller", "run loop fail");
-		}
+		// if (controller_step() != W_SUCCESS) {
+		// 	log_text(LOG_WAIT_MS, "controller", "run loop fail");
+		// }
 	}
 }
 

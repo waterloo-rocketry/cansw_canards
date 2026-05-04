@@ -228,17 +228,17 @@ w_status_t flight_phase_get_act_allowed_ms(uint32_t *act_allowed_ms) {
  * @return W_SUCCESS if the input state was valid, W_FAILURE otherwise (this means W_SUCCESS is
  * returned event if we go into STATE_ERROR)
  */
-w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_state_t *state) {
-	flight_phase_state_t previous_state = *state;
+w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_ctx_t *context) {
+	flight_phase_state_t previous_state = context->curr_state;
 
-	switch (*state) {
+	switch (context->curr_state) {
 		case STATE_IDLE:
 			if (EVENT_ESTIMATOR_INIT == event) {
-				*state = STATE_SE_INIT;
+				context->curr_state = STATE_SE_INIT;
 			} else if (EVENT_INJ_OPEN == event) {
 				// allowed to skip pad filter state in case it was forgotten or failed etc.
 				// not ideal but would rather run without pad filter than not fly at all
-				*state = STATE_BOOST;
+				context->curr_state = STATE_BOOST;
 				// flight starts now
 				xTimerReset(act_delay_timer, 0);
 				xTimerReset(flight_timer, 0);
@@ -251,7 +251,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 
 		case STATE_SE_INIT:
 			if (EVENT_INJ_OPEN == event) {
-				*state = STATE_BOOST;
+				context->curr_state = STATE_BOOST;
 				// flight starts now
 				xTimerReset(act_delay_timer, 0);
 				xTimerReset(flight_timer, 0);
@@ -264,12 +264,12 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 
 		case STATE_BOOST:
 			if (EVENT_ACT_DELAY_ELAPSED == event) {
-				*state = STATE_ACT_ALLOWED;
+				context->curr_state = STATE_ACT_ALLOWED;
 				// record timestamp of actuation-allowed start (aka we just exited boost phase)
 				timer_get_ms(&act_allowed_timestamp_ms);
 			} else if (EVENT_FLIGHT_ELAPSED == event) {
 				xTimerStop(act_delay_timer, 0);
-				*state = STATE_RECOVERY;
+				context->curr_state = STATE_RECOVERY;
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -278,7 +278,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 
 		case STATE_ACT_ALLOWED:
 			if (EVENT_FLIGHT_ELAPSED == event) {
-				*state = STATE_RECOVERY;
+				context->curr_state = STATE_RECOVERY;
 			} else {
 				// Ignore redundant or unexpected events - already in flight
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -287,7 +287,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 
 		case STATE_RECOVERY:
 			if (EVENT_RESET == event) {
-				*state = STATE_IDLE;
+				context->curr_state = STATE_IDLE;
 			} else {
 				// Ignore redundant or unexpected events - already in flight
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -295,21 +295,21 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 			break;
 		case STATE_ERROR:
 			if (EVENT_RESET == event) {
-				*state = STATE_IDLE;
+				context->curr_state = STATE_IDLE;
 			} else {
 				// Stay in error state, log repeated invalid event
 				log_text(1, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
 			}
 			break;
 		default:
-			log_text(10, "FlightPhase", "Unhandled state %d", *state);
-			*state = STATE_ERROR; // Ensure state becomes ERROR
+			log_text(10, "FlightPhase", "Unhandled state %d", context->curr_state);
+			context->curr_state = STATE_ERROR; // Ensure state becomes ERROR
 			return W_FAILURE;
 			break;
 	}
 
 	// Only count as a transition if the state actually changed
-	if (previous_state != *state) {
+	if (previous_state != context->curr_state) {
 		flight_phase_status.state_transitions++;
 	}
 
@@ -326,9 +326,9 @@ void flight_phase_task(void *args) {
 		if (pdPASS == xQueueReceive(event_queue, &event, pdMS_TO_TICKS(TASK_TIMEOUT_MS))) {
 			log_text(10, "flight_phase", "transition\nentry-state:%d\nevent:%d", curr_state, event);
 
-			if (flight_phase_update_state(event, &curr_state) != W_SUCCESS) {
-				flight_phase_status.loop_run_errs++;
-			}
+			// if (flight_phase_update_state(event, &curr_state) != W_SUCCESS) {
+			// 	flight_phase_status.loop_run_errs++;
+			// }
 
 			log_text(10, "flight_phase", "exit-state:%d", curr_state);
 
@@ -359,4 +359,16 @@ uint32_t flight_phase_get_status(void) {
 			 flight_phase_status.event_queue_full_count);
 
 	return status_bitfield;
+}
+
+// new state machine function stubs
+w_status_t flight_phase_timer_detection(flight_phase_ctx_t *p_context, const uint32_t timestamp_ms,
+										flight_phase_event_t *p_timer_event) {
+	return W_SUCCESS;
+}
+
+w_status_t flight_phase_sensor_detection(flight_phase_ctx_t *p_context,
+										 const all_sensors_data_t *p_sensor_data,
+										 flight_phase_event_t *p_sensor_event) {
+	return W_SUCCESS;
 }

@@ -319,13 +319,14 @@ w_status_t imu_handler_get_fresh_meas(uint32_t loop_count, all_sensors_data_t *o
 		}
 	}
 
-	// Send data to estimator with status flags
-	w_status_t estimator_status = estimator_update_imu_data(&imu_data);
-	if (W_SUCCESS != estimator_status) {
-		status = estimator_status;
-		imu_handler_state.error_count++;
-		log_text(1, "IMUHandler", "estimator update fail (status: %d).", estimator_status);
-	}
+	// TODO: redesign to work to update data into output struct
+	//  Send data to estimator with status flags
+	//  w_status_t estimator_status = estimator_update_imu_data(&imu_data);
+	//  if (W_SUCCESS != estimator_status) {
+	//  	status = estimator_status;
+	//  	imu_handler_state.error_count++;
+	//  	log_text(1, "IMUHandler", "estimator update fail (status: %d).", estimator_status);
+	//  }
 
 	imu_handler_state.sample_count++;
 
@@ -351,12 +352,12 @@ void imu_handler_task(void *argument) {
 	// Main task loop
 	log_text(10, "IMUHandlerTask", "IMU Handler task started.");
 	while (1) {
-		w_status_t run_status = imu_handler_get_fresh_meas(loop_count++);
-		if (W_SUCCESS != run_status) {
-			// Log or handle run failures if needed
-			imu_handler_state.error_count++;
-			log_text(1, "IMUHandlerTask", "run failed (status: %d).", run_status);
-		}
+		// w_status_t run_status = imu_handler_get_fresh_meas(loop_count++);
+		// if (W_SUCCESS != run_status) {
+		// 	// Log or handle run failures if needed
+		// 	imu_handler_state.error_count++;
+		// 	log_text(1, "IMUHandlerTask", "run failed (status: %d).", run_status);
+		// }
 
 		// Wait for next sampling period with precise timing
 		vTaskDelayUntil(&last_wake_time, frequency);
