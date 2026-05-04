@@ -166,20 +166,21 @@ TEST_F(EstimatorTest, EstimatorInitCanFail) {
 
 // -------- test imu data update ------
 
-TEST_F(EstimatorTest, NominalUpdateImuData) {
-    // Arrange
-    all_sensors_data_t test_imu_data = {};
-    xQueueOverwrite_fake.return_val =
-        pdPASS; // xqueueoverwrite literally can't fail hence this is the only test case
+// this function no longer exisits
+// TEST_F(EstimatorTest, NominalUpdateImuData) {
+//     // Arrange
+//     all_sensors_data_t test_imu_data = {};
+//     xQueueOverwrite_fake.return_val =
+//         pdPASS; // xqueueoverwrite literally can't fail hence this is the only test case
 
-    // Act
-    w_status_t actual_ret = estimator_update_imu_data(&test_imu_data);
+//     // Act
+//     w_status_t actual_ret = estimator_update_imu_data(&test_imu_data);
 
-    // Assert
-    EXPECT_EQ(actual_ret, W_SUCCESS);
-    EXPECT_EQ(xQueueOverwrite_fake.call_count, 1);
-    EXPECT_EQ(xQueueOverwrite_fake.arg1_val, &test_imu_data);
-}
+//     // Assert
+//     EXPECT_EQ(actual_ret, W_SUCCESS);
+//     EXPECT_EQ(xQueueOverwrite_fake.call_count, 1);
+//     EXPECT_EQ(xQueueOverwrite_fake.arg1_val, &test_imu_data);
+// }
 
 // -------- test estimator task main loop -----
 

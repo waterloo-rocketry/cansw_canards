@@ -13,9 +13,6 @@ extern "C" {
 #include "rocketlib/include/common.h"
 #include "timers.h"
 
-extern w_status_t
-flight_phase_update_state(flight_phase_event_t event, flight_phase_state_t *state);
-
 // FAKES
 // w_status_t log_init(void)
 FAKE_VALUE_FUNC(w_status_t, log_init);
@@ -169,180 +166,180 @@ TEST_F(FlightPhaseTest, ResetSendsResetEvent) {
 
 TEST_F(FlightPhaseTest, IdleToPadfilter) {
     // Arrange
-    flight_phase_state_t state = STATE_IDLE;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_IDLE};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &state);
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_SE_INIT);
+    EXPECT_EQ(ctx.curr_state, STATE_SE_INIT);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, IdleToBoost) {
     // Arrange
-    flight_phase_state_t state = STATE_IDLE;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_IDLE};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &state);
+    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_BOOST);
+    EXPECT_EQ(ctx.curr_state, STATE_BOOST);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, IdleToIdle) {
     // Arrange
-    flight_phase_state_t state = STATE_IDLE;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_IDLE};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &state);
+    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_IDLE);
+    EXPECT_EQ(ctx.curr_state, STATE_IDLE);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, PadfilterToBoost) {
     // Arrange
-    flight_phase_state_t state = STATE_SE_INIT;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_SE_INIT};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &state);
+    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_BOOST);
+    EXPECT_EQ(ctx.curr_state, STATE_BOOST);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, PadfilterToPadfilter) {
     // Arrange
-    flight_phase_state_t state = STATE_SE_INIT;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_SE_INIT};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &state);
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_SE_INIT);
+    EXPECT_EQ(ctx.curr_state, STATE_SE_INIT);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, PadfilterToPadfilter2) {
     // Arrange
-    flight_phase_state_t state = STATE_SE_INIT;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_SE_INIT};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &state);
+    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_SE_INIT);
+    EXPECT_EQ(ctx.curr_state, STATE_SE_INIT);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, BoostToActAllowed) {
     // Arrange
-    flight_phase_state_t state = STATE_BOOST;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_BOOST};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &state);
+    w_status_t status = flight_phase_update_state(EVENT_ACT_DELAY_ELAPSED, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_ACT_ALLOWED);
+    EXPECT_EQ(ctx.curr_state, STATE_ACT_ALLOWED);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, BoostToRecovery) {
     // Arrange
-    flight_phase_state_t state = STATE_BOOST;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_BOOST};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_FLIGHT_ELAPSED, &state);
+    w_status_t status = flight_phase_update_state(EVENT_FLIGHT_ELAPSED, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_RECOVERY);
+    EXPECT_EQ(ctx.curr_state, STATE_RECOVERY);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, BoostToBoost) {
     // Arrange
-    flight_phase_state_t state = STATE_BOOST;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_BOOST};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &state);
+    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_BOOST);
+    EXPECT_EQ(ctx.curr_state, STATE_BOOST);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, BoostToBoost2) {
     // Arrange
-    flight_phase_state_t state = STATE_BOOST;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_BOOST};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &state);
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_BOOST);
+    EXPECT_EQ(ctx.curr_state, STATE_BOOST);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, ActAllowedToRecovery) {
     // Arrange
-    flight_phase_state_t state = STATE_ACT_ALLOWED;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_ACT_ALLOWED};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_FLIGHT_ELAPSED, &state);
+    w_status_t status = flight_phase_update_state(EVENT_FLIGHT_ELAPSED, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_RECOVERY);
+    EXPECT_EQ(ctx.curr_state, STATE_RECOVERY);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, ActAllowedToActAllowed) {
     // Arrange
-    flight_phase_state_t state = STATE_ACT_ALLOWED;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_ACT_ALLOWED};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &state);
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_ACT_ALLOWED);
+    EXPECT_EQ(ctx.curr_state, STATE_ACT_ALLOWED);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, ActAllowedToActAllowed2) {
     // Arrange
-    flight_phase_state_t state = STATE_ACT_ALLOWED;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_ACT_ALLOWED};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &state);
+    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_ACT_ALLOWED);
+    EXPECT_EQ(ctx.curr_state, STATE_ACT_ALLOWED);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, RecoveryToRecovery) {
     // Arrange
-    flight_phase_state_t state = STATE_RECOVERY;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_RECOVERY};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &state);
+    w_status_t status = flight_phase_update_state(EVENT_INJ_OPEN, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_RECOVERY);
+    EXPECT_EQ(ctx.curr_state, STATE_RECOVERY);
     EXPECT_EQ(status, W_SUCCESS);
 }
 
 TEST_F(FlightPhaseTest, RecoveryToRecovery2) {
     // Arrange
-    flight_phase_state_t state = STATE_RECOVERY;
+    flight_phase_ctx_t ctx = {.curr_state = STATE_RECOVERY};
 
     // Act
-    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &state);
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &ctx);
 
     // Assert
-    EXPECT_EQ(state, STATE_RECOVERY);
+    EXPECT_EQ(ctx.curr_state, STATE_RECOVERY);
     EXPECT_EQ(status, W_SUCCESS);
 }
