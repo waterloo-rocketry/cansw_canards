@@ -1,4 +1,5 @@
 #include "application/controller/controller_module.h"
+#include "application/controller/controller_types.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 

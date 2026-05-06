@@ -129,6 +129,29 @@ TEST_F(FlightPhaseTest, ResetSendsResetEvent) {
     EXPECT_EQ(status, W_SUCCESS);
 }
 
+TEST_F(FlightPhaseTest, UpdateFailAsInvalidStatePtr) {
+    // Arrange
+    flight_phase_ctx_t ctx = {0};
+
+    // Act
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, NULL, &ctx);
+
+    // Assert
+    EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
+TEST_F(FlightPhaseTest, UpdateFailAsInvalidCtxPtr) {
+    // Arrange
+    fsm_state_t curr_state = STATE_IDLE;
+
+    // Act
+    w_status_t status = flight_phase_update_state(EVENT_ESTIMATOR_INIT, &curr_state, NULL);
+
+    // Assert
+    EXPECT_EQ(curr_state, STATE_IDLE);
+    EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
 TEST_F(FlightPhaseTest, IdleToPadfilter) {
     // Arrange
     flight_phase_ctx_t ctx = {0};

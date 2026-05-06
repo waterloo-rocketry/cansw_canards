@@ -9,6 +9,7 @@
 
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller_types.h"
+#include "application/controller/controller.h"
 #include "application/estimator/estimator.h"
 #include "application/estimator/estimator_internal.h"
 #include "application/estimator/estimator_module.h"
@@ -93,7 +94,7 @@ w_status_t estimator_step(estimator_module_ctx_t *ctx, const fsm_state_t curr_fs
 						  controller_ctx_t *p_controller_context, uint32_t loop_count) {
 	// check if all of the pointers are valid before proceeding
 	if ((NULL == ctx) || (NULL == p_latest_imu_data) || (NULL == p_controller_context)) {
-		log_text(10, "Estimator", "ERROR: invalid pointers");
+		log_text(10, "Estimator", "ERROR: invalid ptrs");
 		return W_INVALID_PARAM;
 	}
 	w_status_t status = W_SUCCESS;
@@ -168,8 +169,7 @@ w_status_t estimator_step(estimator_module_ctx_t *ctx, const fsm_state_t curr_fs
 		estimator_error_stats.imu_data_timeouts++;
 		status = W_FAILURE;
 	} else {
-		// just have the state edited directly, and have bool to indicate if controller can use the
-		// output (the bool seems very redundent so don't think is best way)
+		// just have the state edited directly
 		if (estimator_module(
 				&estimator_input, curr_fsm_state, ctx, &(p_controller_context->new_input_state)) !=
 			W_SUCCESS) {

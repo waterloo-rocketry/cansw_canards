@@ -70,6 +70,24 @@ TEST_F(ControllerTest, Init) {
     EXPECT_EQ(res, W_SUCCESS);
 }
 
+TEST_F(ControllerTest, StepErrorAsInvalidPtr) {
+    // Arrange
+
+    // initalize context
+    controller_ctx_t ctx = {.state_updated = true, .cmd_updated = false};
+    const fsm_state_t curr_fsm_state = STATE_IDLE;
+    const uint32_t act_allowed_timestamp_ms = 1000;
+    const uint32_t curr_timestamp_ms = test_act_allowed_ms_value + act_allowed_timestamp_ms;
+
+    // Act
+    w_status_t actual_res = controller_step(NULL, curr_fsm_state, act_allowed_timestamp_ms, curr_timestamp_ms);
+
+    // Assert
+    EXPECT_EQ(actual_res, W_INVALID_PARAM);
+    EXPECT_FALSE(ctx.cmd_updated);
+    EXPECT_EQ(log_text_fake.call_count, 1);
+}
+
 TEST_F(ControllerTest, StepPadPhase) {
     // Arrange
 

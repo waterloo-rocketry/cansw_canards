@@ -40,9 +40,14 @@ w_status_t controller_init(void) {
 }
 
 // helper to run 1 loop of the controller task, including delaying where needed.
-w_status_t controller_step(controller_ctx_t *context, const fsm_state_t curr_fsm_state,
+w_status_t controller_step(controller_ctx_t *ctx, const fsm_state_t curr_fsm_state,
 						   const uint32_t act_allowed_timestamp_ms,
 						   const uint32_t curr_timestamp_ms) {
+	if (NULL == ctx) {
+		log_text(LOG_WAIT_MS, "controller", "ERROR: Invalid contex ptr.");
+		return W_INVALID_PARAM;
+	}
+
 	log_data_container_t log_container = {0};
 	w_status_t status = W_SUCCESS;
 
@@ -80,25 +85,25 @@ w_status_t controller_step(controller_ctx_t *context, const fsm_state_t curr_fsm
 			double new_cmd = 0.0;
 
 			// make sure the state is fresh
-			if (!(context->state_updated)) {
+			if (!(ctx->state_updated)) {
 				controller_state.data_miss_counter++;
 				log_text(LOG_WAIT_MS, "controller", "data miss");
 				return W_FAILURE;
 			} else {
-				context->state_updated = false;
+				ctx->state_updated = false;
 			}
 
 			// run controller module
 			status |=
-				controller_module(context->new_input_state, act_allowed_ms, &new_cmd, &ref_signal);
+				controller_module(ctx->new_input_state, act_allowed_ms, &new_cmd, &ref_signal);
 
 			// send cmd if we can
 			if (W_SUCCESS == status) {
 				// update the controller output
 				// TODO: currently assuming the timer didn't fail, this should be reevaluated
-				context->cmd_output.commanded_angle = new_cmd;
-				context->cmd_output.timestamp = curr_timestamp_ms;
-				context->cmd_updated = true;
+				ctx->cmd_output.commanded_angle = new_cmd;
+				ctx->cmd_output.timestamp = curr_timestamp_ms;
+				ctx->cmd_updated = true;
 
 				log_container.controller.cmd_angle = (float)new_cmd;
 				log_container.controller.ref_signal = ref_signal;
@@ -107,7 +112,7 @@ w_status_t controller_step(controller_ctx_t *context, const fsm_state_t curr_fsm
 					status |= W_FAILURE;
 				}
 			} else {
-				context->cmd_updated = false;
+				ctx->cmd_updated = false;
 				// if anything fails, send no cmd. MCB failsafes to 0 after some ms of silence
 				log_text(LOG_WAIT_MS, "cntl act", "fail; send no cmd");
 			}

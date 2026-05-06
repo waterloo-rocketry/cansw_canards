@@ -46,7 +46,7 @@ flight_phase_event_t flight_phase_get_queue_event(uint8_t timeout_ms);
  * process 1 transition.
  */
 w_status_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t *p_state,
-									 flight_phase_ctx_t *p_context);
+									 flight_phase_ctx_t *p_ctx);
 
 /**
  * Resets the flight phase state machine to initial state
@@ -69,7 +69,7 @@ uint32_t flight_phase_get_status(void);
  * @param p_timer_event is the pointer to any generated timer event
  * @return the status of the function
  */
-w_status_t flight_phase_timer_detection(flight_phase_ctx_t *p_context, const fsm_state_t *p_state,
+w_status_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx, const fsm_state_t *p_state,
 										const uint32_t timestamp_ms,
 										flight_phase_event_t *p_timer_event);
 
@@ -81,7 +81,7 @@ w_status_t flight_phase_timer_detection(flight_phase_ctx_t *p_context, const fsm
  * @param p_sensor_event pointer to any generated sensor event
  * @return the status of the function
  */
-w_status_t flight_phase_sensor_detection(flight_phase_ctx_t *p_context, const fsm_state_t *p_state,
+w_status_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx, const fsm_state_t *p_state,
 										 const all_sensors_data_t *p_sensor_data,
 										 flight_phase_event_t *p_sensor_event);
 

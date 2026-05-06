@@ -35,6 +35,7 @@ void fsm_exec(const fsm_inputs_t *p_input) {
 						   p_input->controller_context,
 						   0); // (ignore loop_count var for now)
 			break;
+		case STATE_RECOVERY:
 		case STATE_ACT_ALLOWED:
 			estimator_step(p_input->estimator_context,
 						   p_input->curr_state,
@@ -45,7 +46,7 @@ void fsm_exec(const fsm_inputs_t *p_input) {
 							p_input->curr_state,
 							p_input->flight_phase_context->act_allowed_timestamp_ms,
 							p_input->timestamp_ms);
-			// motor maybe
+			// TODO: motor
 			break;
 
 			// etc for more cases...
@@ -88,7 +89,7 @@ void fsm_do_transitions(fsm_inputs_t *p_input) {
 		num_events++;
 	}
 
-	// TODO: what should be fone if there are still events remaining after reaching the
+	// TODO: what should be done if there are still events remaining after reaching the
 	// MAX_PROCESS_FP_QUEUE_EVENTS
 
 	// perform sensor transitions
@@ -150,7 +151,7 @@ void fsm_task(void *args) {
 	// consider how to establish
 
 	while (1) {
-		if (W_SUCCESS != timer_get_ms(&inputs.timestamp_ms)) {
+		if (W_SUCCESS != timer_get_ms(&(inputs.timestamp_ms))) {
 			// TODO: error handling
 		}
 

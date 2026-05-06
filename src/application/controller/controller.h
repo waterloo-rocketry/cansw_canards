@@ -12,10 +12,6 @@
 
 #include "application/fsm/fsm_types.h"
 
-#define FEEDBACK_GAIN_NUM (GAIN_NUM - 1) // subtract 1 for the pre-gain
-#define ROLL_STATE_NUM (FEEDBACK_GAIN_NUM)
-#define MIN_COOR_BOUND 0
-
 /* Enums/Types */
 
 // main controller state using in task

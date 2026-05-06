@@ -148,7 +148,12 @@ w_status_t flight_phase_reset(void) {
  * returned event if we go into STATE_ERROR)
  */
 w_status_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t *p_state,
-									 flight_phase_ctx_t *p_context) {
+									 flight_phase_ctx_t *p_ctx) {
+	if ((NULL == p_state) || (NULL == p_ctx)) {
+		log_text(5, "FlightPhase", "ERROR: Invalid ptrs in update states");
+		return W_INVALID_PARAM;
+	}
+
 	fsm_state_t previous_state = *p_state;
 
 	switch (*p_state) {
@@ -160,7 +165,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t *p_
 				// not ideal but would rather run without pad filter than not fly at all
 				*p_state = STATE_BOOST;
 				// flight starts now
-				timer_get_ms(&(p_context->launch_timestamp_ms));
+				timer_get_ms(&(p_ctx->launch_timestamp_ms));
 			} else {
 				// Ignore redundant PAD events or other unexpected events
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, *p_state);
@@ -171,7 +176,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t *p_
 			if (EVENT_INJ_OPEN == event) {
 				*p_state = STATE_BOOST;
 				// flight starts now
-				timer_get_ms(&(p_context->launch_timestamp_ms));
+				timer_get_ms(&(p_ctx->launch_timestamp_ms));
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, *p_state);
@@ -182,7 +187,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t *p_
 			if (EVENT_ACT_DELAY_ELAPSED == event) {
 				*p_state = STATE_ACT_ALLOWED;
 				// record timestamp of actuation-allowed start (aka we just exited boost phase)
-				timer_get_ms(&(p_context->act_allowed_timestamp_ms));
+				timer_get_ms(&(p_ctx->act_allowed_timestamp_ms));
 			} else if (EVENT_FLIGHT_ELAPSED == event) {
 				*p_state = STATE_RECOVERY;
 			} else {
@@ -279,13 +284,13 @@ uint32_t flight_phase_get_status(void) {
 }
 
 // new state machine function stubs
-w_status_t flight_phase_timer_detection(flight_phase_ctx_t *p_context, const fsm_state_t *p_state,
+w_status_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx, const fsm_state_t *p_state,
 										const uint32_t timestamp_ms,
 										flight_phase_event_t *p_timer_event) {
 	return W_SUCCESS;
 }
 
-w_status_t flight_phase_sensor_detection(flight_phase_ctx_t *p_context, const fsm_state_t *p_state,
+w_status_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx, const fsm_state_t *p_state,
 										 const all_sensors_data_t *p_sensor_data,
 										 flight_phase_event_t *p_sensor_event) {
 	return W_SUCCESS;
