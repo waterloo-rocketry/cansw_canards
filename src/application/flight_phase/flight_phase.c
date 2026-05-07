@@ -1,5 +1,6 @@
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "task.h"
 #include "timers.h"
 
 #include "canlib.h"
@@ -257,6 +258,7 @@ void flight_phase_task(void *args) {
 		// } else {
 		// 	log_text(10, "flight_phase", "curr state:%d", curr_state);
 		// }
+		vTaskDelay(1000);
 	}
 }
 
@@ -264,7 +266,7 @@ uint32_t flight_phase_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Get current state
-	// TODO: consider if this is still needed as part of flight phase
+	// TODO: refactor this to match new design
 	// fsm_state_t current_state = flight_phase_get_state();
 	uint8_t current_state = 0;
 

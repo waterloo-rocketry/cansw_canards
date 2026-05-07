@@ -148,9 +148,7 @@ w_status_t estimator_step(estimator_module_ctx_t *ctx, const fsm_state_t curr_fs
 		curr_time_sec = (float64_t)curr_time_tenth_ms_get / 10000.0;
 	} else {
 		log_text(10, "Estimator", "timer_get_tenth_ms fail");
-		curr_time_sec =
-			(float64_t)(10000 *
-						(ctx->t_sec + 0.005)); // assuming the time will be less then the UINT32_MAX
+		curr_time_sec = (float64_t)(ctx->t_sec + 0.005);
 	}
 
 	// run estimator module with all the inputs and ctx

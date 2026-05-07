@@ -35,15 +35,15 @@ FAKE_VALUE_FUNC(
 );
 
 // TODO: confirm with Finn and Tristan with actual tolerance
-static double CMD_TOLERANCE_RAD = 180.0 * 1000.0 / M_PI;
+static double CMD_TOLERANCE_RAD = M_PI / (180.0 * 1000.0); // this is based on the error being a single millidegree since rounding to integer
 
 static uint32_t test_act_allowed_ms_value = 0;
 
-uint16_t rad_to_can_cmd(float rad) {
-    // Convert radians to millidegrees and shift to unsigned 16-bit
-    int16_t res_int16 = (int16_t)(rad / M_PI * 180.0 * 1000.0) + 32768;
-    return (uint16_t)(res_int16); 
-}
+// uint16_t rad_to_can_cmd(float rad) {
+//     // Convert radians to millidegrees and shift to unsigned 16-bit
+//     int16_t res_int16 = (int16_t)(rad / M_PI * 180.0 * 1000.0) + 32768;
+//     return (uint16_t)(res_int16); 
+// }
 
 
 class ControllerTest : public ::testing::Test {

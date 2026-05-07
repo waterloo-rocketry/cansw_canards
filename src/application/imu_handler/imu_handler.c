@@ -241,7 +241,7 @@ w_status_t imu_handler_get_fresh_meas(uint32_t loop_count, all_sensors_data_t *i
 		return W_INVALID_PARAM;
 	}
 
-	// is this even nesscary at all, since this assumes success before any process
+	// is this even necessary at all, since this assumes success before any process
 	// replacing original declaration
 	imu_output->movella.is_dead = false;
 	imu_output->pololu.is_dead = false;

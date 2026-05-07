@@ -390,7 +390,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasWithTimerFailure) {
 }
 
 // Test behavior with invalid output ptr
-TEST_F(ImuHandlerTest, GetFreshMeasWithEstimatorFailure) {
+TEST_F(ImuHandlerTest, GetFreshMeasWithInvalidPtr) {
 	// Set up all IMUs for success
 	// altimu_get_acc_data_fake.custom_fake = altimu_get_acc_data_success;
 	// altimu_get_gyro_data_fake.custom_fake = altimu_get_gyro_data_success;

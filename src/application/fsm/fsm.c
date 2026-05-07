@@ -13,6 +13,7 @@ static uint8_t QUEUE_TIMEOUT_MS = 0;
 static uint8_t MAX_PROCESS_FP_QUEUE_EVENTS =
 	3; // this is the max amount of flight phase events that will be processed from the flight phase
 	   // queue (this does not count sensor base transitions)
+static uint8_t FSM_PERIOD_MS = 2;
 
 typedef struct {
 	estimator_module_ctx_t *estimator_context; // global instance of estimator
@@ -28,7 +29,9 @@ void fsm_exec(const fsm_inputs_t *p_input) {
 		case STATE_IDLE:
 			// do stuff
 			break;
+
 		case STATE_SE_INIT:
+		case STATE_BOOST:
 			estimator_step(p_input->estimator_context,
 						   p_input->curr_state,
 						   p_input->all_sensors_input,
@@ -36,6 +39,7 @@ void fsm_exec(const fsm_inputs_t *p_input) {
 						   &(p_input->controller_context->cmd_output),
 						   0); // (ignore loop_count var for now)
 			break;
+
 		case STATE_RECOVERY:
 		case STATE_ACT_ALLOWED:
 			estimator_step(p_input->estimator_context,
@@ -89,6 +93,7 @@ void fsm_do_transitions(fsm_inputs_t *p_input) {
 			// TODO: error handling
 		}
 		num_events++;
+		queue_event = flight_phase_get_queue_event(QUEUE_TIMEOUT_MS);
 	}
 
 	// TODO: what should be done if there are still events remaining after reaching the
@@ -172,6 +177,7 @@ void fsm_task(void *args) {
 		// run actions based on curr state
 		fsm_exec(&inputs);
 
-		vTaskDelayUntil(&last_wake_time, 2); // state machine runs at 500 hz
+		vTaskDelayUntil(&last_wake_time,
+						pdMS_TO_TICKS(FSM_PERIOD_MS)); // state machine runs at 500 hz
 	}
 }

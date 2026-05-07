@@ -44,7 +44,7 @@ w_status_t controller_step(controller_ctx_t *ctx, const fsm_state_t curr_fsm_sta
 						   const uint32_t act_allowed_timestamp_ms,
 						   const uint32_t curr_timestamp_ms) {
 	if (NULL == ctx) {
-		log_text(LOG_WAIT_MS, "controller", "ERROR: Invalid contex ptr.");
+		log_text(LOG_WAIT_MS, "controller", "ERROR: Invalid context ptr.");
 		return W_INVALID_PARAM;
 	}
 
@@ -86,6 +86,8 @@ w_status_t controller_step(controller_ctx_t *ctx, const fsm_state_t curr_fsm_sta
 
 			// make sure the state is fresh
 			if (!(ctx->new_input_state.state_updated)) {
+				// make sure command is stale
+				ctx->cmd_output.cmd_updated = false;
 				controller_state.data_miss_counter++;
 				log_text(LOG_WAIT_MS, "controller", "data miss");
 				return W_FAILURE;
