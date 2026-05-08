@@ -9,16 +9,11 @@
 
 /**
  * @brief Health severity levels
- *
- * Defines the severity of health check results:
- * - HEALTH_OK: No issues
- * - HEALTH_ERROR: Something is wrong, but can still fly safely
- * - HEALTH_FATAL: Unrecoverable failure, unsafe flight
  */
 typedef enum {
-	HEALTH_OK = 0,
-	HEALTH_ERROR,
-	HEALTH_FATAL
+	HEALTH_OK = 0, /**< No issues */
+	HEALTH_ERROR, /**< Something is wrong, but can still fly safely */
+	HEALTH_FATAL /**< Unrecoverable failure, unsafe flight */
 } health_severity_t;
 
 typedef enum {
