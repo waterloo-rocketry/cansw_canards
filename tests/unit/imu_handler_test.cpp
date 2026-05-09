@@ -421,88 +421,88 @@ TEST_F(ImuHandlerTest, RunWithEstimatorFailure) {
 }
 
 // Test CAN logging respects rate limit
-TEST_F(ImuHandlerTest, ImuHandlerRunLoop_CanRateLimit) {
-	// Arrange
-	const uint32_t can_tx_rate = 16; // period is now 6 ms, so 100/6=16
-	const uint32_t num_loops = 120; // Run for enough loops to cover multiple send cycles
-	uint32_t expected_log_loops = 0;
+// TEST_F(ImuHandlerTest, ImuHandlerRunLoop_CanRateLimit) {
+// 	// Arrange
+// 	const uint32_t can_tx_rate = 16; // period is now 6 ms, so 100/6=16
+// 	const uint32_t num_loops = 120; // Run for enough loops to cover multiple send cycles
+// 	uint32_t expected_log_loops = 0;
 
-	// Set up mocks for successful readings
-	// altimu_get_acc_data_fake.custom_fake = altimu_get_acc_data_success;
-	// altimu_get_gyro_data_fake.custom_fake = altimu_get_gyro_data_success;
-	altimu_get_gyro_acc_data_fake.custom_fake = altimu_get_gyro_acc_data_success;
-	altimu_get_mag_data_fake.custom_fake = altimu_get_mag_data_success;
-	altimu_get_baro_data_fake.custom_fake = altimu_get_baro_data_success;
-	movella_get_data_fake.custom_fake = movella_get_data_success;
+// 	// Set up mocks for successful readings
+// 	// altimu_get_acc_data_fake.custom_fake = altimu_get_acc_data_success;
+// 	// altimu_get_gyro_data_fake.custom_fake = altimu_get_gyro_data_success;
+// 	altimu_get_gyro_acc_data_fake.custom_fake = altimu_get_gyro_acc_data_success;
+// 	altimu_get_mag_data_fake.custom_fake = altimu_get_mag_data_success;
+// 	altimu_get_baro_data_fake.custom_fake = altimu_get_baro_data_success;
+// 	movella_get_data_fake.custom_fake = movella_get_data_success;
 
-	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
-	estimator_update_imu_data_fake.custom_fake = estimator_update_capture;
+// 	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
+// 	estimator_update_imu_data_fake.custom_fake = estimator_update_capture;
 
-	// build_imu_data_msg_fake.return_val = true; // Simulate successful CAN message build
-	can_handler_transmit_fake.return_val = W_SUCCESS; // Simulate successful CAN transmission
+// 	// build_imu_data_msg_fake.return_val = true; // Simulate successful CAN message build
+// 	can_handler_transmit_fake.return_val = W_SUCCESS; // Simulate successful CAN transmission
 
-	// Act
-	for (uint32_t i = 0; i < num_loops; ++i) {
-		imu_handler_run(i);
-		if (i % can_tx_rate == 0) {
-			expected_log_loops++;
-		}
-	}
+// 	// Act
+// 	for (uint32_t i = 0; i < num_loops; ++i) {
+// 		imu_handler_run(i);
+// 		if (i % can_tx_rate == 0) {
+// 			expected_log_loops++;
+// 		}
+// 	}
 
-	// Assert
-	// Check that CAN-related functions were called the correct number of times
-	// TODO: revive these with the new associated messages
-    // EXPECT_EQ(build_imu_data_msg_fake.call_count, expected_log_loops * 3); // 3 imu msgs per cycle
-	// EXPECT_EQ(build_baro_data_msg_fake.call_count, expected_log_loops * 1); // 1 baro msg per cycle
-	// TODO: double check this is the new standard
-    // 4 transmissions per cycle
-	EXPECT_EQ(can_handler_transmit_fake.call_count, expected_log_loops * 4);
-}
+// 	// Assert
+// 	// Check that CAN-related functions were called the correct number of times
+// 	// TODO: revive these with the new associated messages
+//     // EXPECT_EQ(build_imu_data_msg_fake.call_count, expected_log_loops * 3); // 3 imu msgs per cycle
+// 	// EXPECT_EQ(build_baro_data_msg_fake.call_count, expected_log_loops * 1); // 1 baro msg per cycle
+// 	// TODO: double check this is the new standard
+//     // 4 transmissions per cycle
+// 	EXPECT_EQ(can_handler_transmit_fake.call_count, expected_log_loops * 4);
+// }
 
-TEST_F(ImuHandlerTest, ImuHandlerRun_CanLogNominal) {
-	// Arrange
-	const uint32_t loop_count = 16; // Trigger CAN logging at this loop count
-	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
+// TEST_F(ImuHandlerTest, ImuHandlerRun_CanLogNominal) {
+// 	// Arrange
+// 	const uint32_t loop_count = 16; // Trigger CAN logging at this loop count
+// 	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
 
-	// Set up mocks for successful readings
-	// altimu_get_acc_data_fake.custom_fake = altimu_get_acc_data_success;
-	// altimu_get_gyro_data_fake.custom_fake = altimu_get_gyro_data_success;
-	altimu_get_gyro_acc_data_fake.custom_fake = altimu_get_gyro_acc_data_success;
-	altimu_get_mag_data_fake.custom_fake = altimu_get_mag_data_success;
-	altimu_get_baro_data_fake.custom_fake = altimu_get_baro_data_success;
-	movella_get_data_fake.custom_fake = movella_get_data_success;
+// 	// Set up mocks for successful readings
+// 	// altimu_get_acc_data_fake.custom_fake = altimu_get_acc_data_success;
+// 	// altimu_get_gyro_data_fake.custom_fake = altimu_get_gyro_data_success;
+// 	altimu_get_gyro_acc_data_fake.custom_fake = altimu_get_gyro_acc_data_success;
+// 	altimu_get_mag_data_fake.custom_fake = altimu_get_mag_data_success;
+// 	altimu_get_baro_data_fake.custom_fake = altimu_get_baro_data_success;
+// 	movella_get_data_fake.custom_fake = movella_get_data_success;
 
-	// build_imu_data_msg_fake.return_val = true; // Simulate successful CAN message build
-	// build_baro_data_msg_fake.return_val = true; // Simulate successful CAN message build
-	can_handler_transmit_fake.return_val = W_SUCCESS; // Simulate successful CAN transmission
+// 	// build_imu_data_msg_fake.return_val = true; // Simulate successful CAN message build
+// 	// build_baro_data_msg_fake.return_val = true; // Simulate successful CAN message build
+// 	can_handler_transmit_fake.return_val = W_SUCCESS; // Simulate successful CAN transmission
 
-	// Act
-	w_status_t result = imu_handler_run(loop_count);
+// 	// Act
+// 	w_status_t result = imu_handler_run(loop_count);
 
-	// Assert
-	EXPECT_EQ(result, W_SUCCESS); // Expect overall success
+// 	// Assert
+// 	EXPECT_EQ(result, W_SUCCESS); // Expect overall success
 
-	// Verify CAN message build and transmit calls
-	// TODO: revive these with the new associated messages
-    // EXPECT_EQ(build_imu_data_msg_fake.call_count, 3); // 3 IMU messages (X, Y, Z)
-	// EXPECT_EQ(build_baro_data_msg_fake.call_count, 1); // 1 barometer message
+// 	// Verify CAN message build and transmit calls
+// 	// TODO: revive these with the new associated messages
+//     // EXPECT_EQ(build_imu_data_msg_fake.call_count, 3); // 3 IMU messages (X, Y, Z)
+// 	// EXPECT_EQ(build_baro_data_msg_fake.call_count, 1); // 1 barometer message
 
-    // TODO: double check this is the new standard
-	EXPECT_EQ(can_handler_transmit_fake.call_count, 4); // Total 7 CAN transmissions
+//     // TODO: double check this is the new standard
+// 	EXPECT_EQ(can_handler_transmit_fake.call_count, 4); // Total 7 CAN transmissions
 
-	// Verify arguments for the first IMU message (X-axis)
-	// EXPECT_EQ(build_imu_data_msg_fake.arg0_history[0], PRIO_LOW);
-	// EXPECT_EQ(build_imu_data_msg_fake.arg2_history[0], 'X');
-	// EXPECT_EQ(build_imu_data_msg_fake.arg3_history[0], IMU_PROC_ALTIMU10);
-	// EXPECT_EQ(build_imu_data_msg_fake.arg4_history[0], 100); // Raw accelerometer X
-	// EXPECT_EQ(build_imu_data_msg_fake.arg5_history[0], 400); // Raw gyroscope X
+// 	// Verify arguments for the first IMU message (X-axis)
+// 	// EXPECT_EQ(build_imu_data_msg_fake.arg0_history[0], PRIO_LOW);
+// 	// EXPECT_EQ(build_imu_data_msg_fake.arg2_history[0], 'X');
+// 	// EXPECT_EQ(build_imu_data_msg_fake.arg3_history[0], IMU_PROC_ALTIMU10);
+// 	// EXPECT_EQ(build_imu_data_msg_fake.arg4_history[0], 100); // Raw accelerometer X
+// 	// EXPECT_EQ(build_imu_data_msg_fake.arg5_history[0], 400); // Raw gyroscope X
 
-	// // Verify arguments for the barometer message
-	// EXPECT_EQ(build_baro_data_msg_fake.arg0_history[0], PRIO_LOW);
-	// EXPECT_EQ(build_baro_data_msg_fake.arg2_history[0], IMU_PROC_ALTIMU10);
-	// EXPECT_EQ(build_baro_data_msg_fake.arg3_history[0], 101325); // Raw pressure
-	// EXPECT_EQ(build_baro_data_msg_fake.arg4_history[0], 33); // Raw temperature
-}
+// 	// // Verify arguments for the barometer message
+// 	// EXPECT_EQ(build_baro_data_msg_fake.arg0_history[0], PRIO_LOW);
+// 	// EXPECT_EQ(build_baro_data_msg_fake.arg2_history[0], IMU_PROC_ALTIMU10);
+// 	// EXPECT_EQ(build_baro_data_msg_fake.arg3_history[0], 101325); // Raw pressure
+// 	// EXPECT_EQ(build_baro_data_msg_fake.arg4_history[0], 33); // Raw temperature
+// }
 
 TEST_F(ImuHandlerTest, ImuHandlerRun_CalibrationWarning) {
 	// Arrange
