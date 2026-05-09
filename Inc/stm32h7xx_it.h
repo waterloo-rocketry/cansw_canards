@@ -67,6 +67,7 @@ void TIM6_DAC_IRQHandler(void);
 void OTG_HS_IRQHandler(void);
 void I2C4_EV_IRQHandler(void);
 void I2C4_ER_IRQHandler(void);
+void SDMMC2_IRQHandler(void);
 void I2C5_EV_IRQHandler(void);
 void I2C5_ER_IRQHandler(void);
 void FDCAN3_IT0_IRQHandler(void);
