@@ -37,14 +37,8 @@ static w_status_t controller_send_can(float canard_angle) {
 	w_status_t encode_status = W_SUCCESS;
 	w_status_t can_tx_status = W_SUCCESS;
 
-	// Encode messages
+	// TODO: do CAN scaling
 	int16_t scaled_angle = 0;
-	encode_status |= can_encode_scaled_float(SCALE_SERVO_D, canard_cmd_deg, &scaled_angle);
-	if (encode_status == W_MATH_ERROR) {
-		log_text(LOG_WAIT_MS, "controller", "actuator msg encode math error (NaN or Inf)");
-	} else if (encode_status != W_SUCCESS) {
-		log_text(LOG_WAIT_MS, "controller", "actuator msg scale / encode failed");
-	}
 
 	build_analog_sensor_16bit_msg(
 		PRIO_MEDIUM, can_timestamp, SENSOR_CANARD_SERVO_ANGLE, scaled_angle, &msg);
