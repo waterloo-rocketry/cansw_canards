@@ -48,7 +48,8 @@ w_status_t controller_init(void);
 /**
  * @brief run 1 step of the controller
  * @param context pointer to controller global context
- * @param curr_fsm_state current flight phase state
+ * @param input pointer to new inputs for this iteration
+ * @param output pointer to the output struct to update with new command
  * @param act_allowed_timestamp_ms the timestamp at which act_allowed was set (only used when passed
  * actuation allowed)
  * @param curr_timestamp_ms the currrent timestamp
