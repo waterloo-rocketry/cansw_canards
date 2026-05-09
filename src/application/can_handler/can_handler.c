@@ -299,8 +299,6 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 	// handle NaN or +/-Inf with reserved sentinel codes near the limits of the target type
 	if (!isfinite(input)) {
 		if (is_unsigned) {
-			uint32_t maxv = 0U;
-			can_get_unsigned_max(target_type, &maxv);
 			uint64_t encoded = 0U;
 
 			if (isinf(input)) {
@@ -316,8 +314,6 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 			w_status_t store_status = can_store_unsigned(target_type, encoded, out);
 			return (store_status == W_SUCCESS) ? W_MATH_ERROR : store_status;
 		} else {
-			int32_t minv = 0, maxv = 0;
-			can_get_signed_limits(target_type, &minv, &maxv);
 			int64_t encoded = 0;
 
 			if (isinf(input)) {
@@ -335,6 +331,8 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 		}
 	}
 
+	// scaling is selected based on irl expected max values, so this multiply will never overflow
+	// unless input is already garbage
 	float32_t scaled = input * (float32_t)scale_map[sensor].scale;
 
 	// clamp according to target type
@@ -376,7 +374,7 @@ w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void
 		int32_t minv = 0, maxv = 0;
 		can_get_signed_limits(target_type, &minv, &maxv);
 
-		return can_store_signed(target_type, value_clamp_uint32(scaled, minv, maxv), out);
+		return can_store_signed(target_type, value_clamp_int32(scaled, minv, maxv), out);
 	}
 	return W_SUCCESS;
 }
@@ -390,12 +388,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 	static bool can_initialized = false;
 	// safe state - loop here forever and send CAN err msg repeatedly
 	while (1) {
-		can_initialized =
-			can_initialized ||
-			stm32h7_can_init(
-				&hfdcan3,
-				can_handle_rx_message); // BEWARE: this is hardcoded to use hfdcan1, remember
-										// to change this when our CAN handle changes
+		can_initialized = can_initialized || stm32h7_can_init(&hfdcan3, can_handle_rx_message);
 		__disable_irq();
 
 		// let CAN still work
