@@ -54,7 +54,7 @@ FAKE_VOID_FUNC(log_task, void *);
 // w_status_t can_handler_transmit(const can_msg_t *msg);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, const can_msg_t *);
 // TODO: add unit tests for these new canlib message builders
-FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_int, can_scaling_types_t, int64_t, void*);
+// FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_int, can_scaling_types_t, int64_t, void*);
 FAKE_VOID_FUNC(build_analog_sensor_16bit_msg, can_msg_prio_t, uint16_t, can_analog_sensor_id_t, uint16_t, can_msg_t *);
 FAKE_VOID_FUNC(build_3d_analog_sensor_16bit_msg, can_msg_prio_t, uint16_t, can_dem_3d_sensor_id_t, uint16_t, uint16_t, uint16_t, can_msg_t *);
 FAKE_VOID_FUNC(build_2d_analog_sensor_24bit_msg, can_msg_prio_t, uint16_t, can_dem_2d_sensor_id_t, uint32_t, uint32_t, can_msg_t *);
