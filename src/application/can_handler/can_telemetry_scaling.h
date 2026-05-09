@@ -92,8 +92,8 @@ typedef struct {
 		[SCALE_AD_W] = {.type = TYPE_INT24, .scale = 1},                                           \
                                                                                                    \
 		[SCALE_SERVO_D] = {.type = TYPE_INT16, .scale = 1000},                                     \
-		[SCALE_SERVO_I] = {.type = TYPE_UINT8, .scale = 1},                                        \
-		[SCALE_SERVO_T] = {.type = TYPE_INT8, .scale = 1},                                         \
+		[SCALE_SERVO_I] = {.type = TYPE_UINT16, .scale = 1},                                       \
+		[SCALE_SERVO_T] = {.type = TYPE_INT16, .scale = 1},                                        \
 	}
 
 #endif

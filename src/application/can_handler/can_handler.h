@@ -70,14 +70,14 @@ void can_handler_task_tx(void *argument);
  * limits of the target type.
  *
  * Unsigned output:
- * NaN -> max - 3,
- * +Inf -> max - 2,
- * -Inf -> max - 1.
+ * NaN -> 0xABCD,
+ * +Inf -> 0xBEEF,
+ * -Inf -> 0xDEAD.
  *
  * Signed output:
- * NaN -> min + 3,
- * -Inf -> min + 2,
- * +Inf -> max - 1.
+ * NaN -> 0xABCD,
+ * +Inf -> 0xBEEF,
+ * -Inf -> 0xDEAD.
  *
  * @param sensor The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
  * @param input The raw telemetry integer value to encode

@@ -22,6 +22,11 @@
 
 const can_scale_data_t scale_map[SCALE_COUNT] = SCALE_MAP_INIT;
 
+// Sentry Type Defs. We are making sure that all of that data is at least 2 bytes
+static const uint16_t NEG_INF_SENTRY = 0xDEAD;
+static const uint16_t POS_INF_SENTRY = 0xBEEF;
+static const uint16_t NAN_SENTRY = 0xABCD;
+
 // TODO: calculate better. for now make excessively large and check dropped tx counter
 #define BUS_QUEUE_LENGTH 32
 
@@ -300,12 +305,12 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 
 			if (isinf(input)) {
 				if (signbit(input)) {
-					encoded = (maxv >= 2U) ? (maxv - 1U) : 0U; // -Inf
+					encoded = NEG_INF_SENTRY; // -Inf
 				} else {
-					encoded = (maxv >= 2U) ? (maxv - 2U) : maxv; // +Inf
+					encoded = POS_INF_SENTRY; // +Inf
 				}
 			} else {
-				encoded = (maxv >= 3U) ? (maxv - 3U) : 0U; // NaN
+				encoded = NAN_SENTRY; // NaN
 			}
 
 			w_status_t store_status = can_store_unsigned(target_type, encoded, out);
@@ -317,12 +322,12 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 
 			if (isinf(input)) {
 				if (signbit(input)) {
-					encoded = (minv <= INT32_MAX - 2) ? (minv + 2) : minv; // -Inf
+					encoded = (int64_t)NEG_INF_SENTRY; // -Inf
 				} else {
-					encoded = (maxv >= 1) ? (maxv - 1) : maxv; // +Inf
+					encoded = (int64_t)POS_INF_SENTRY; // +Inf
 				}
 			} else {
-				encoded = (minv <= INT32_MAX - 3) ? (minv + 3) : minv; // NaN
+				encoded = (int64_t)NAN_SENTRY; // NaN
 			}
 
 			w_status_t store_status = can_store_signed(target_type, encoded, out);
@@ -388,13 +393,13 @@ void proc_handle_fatal_error(const char *errorMsg) {
 		can_initialized =
 			can_initialized ||
 			stm32h7_can_init(
-				&hfdcan1,
+				&hfdcan3,
 				can_handle_rx_message); // BEWARE: this is hardcoded to use hfdcan1, remember
 										// to change this when our CAN handle changes
 		__disable_irq();
 
 		// let CAN still work
-		HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
+		HAL_NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
 
 		can_msg_t msg;
 		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
@@ -409,7 +414,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 		// Use canlib's helper function to build the debug message
 		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
 		// state)
-		build_debug_raw_msg(PRIO_LOW, 0, data, &msg);
+		build_debug_raw_msg(PRIO_MEDIUM, 0, data, &msg);
 		if (can_initialized) {
 			stm32h7_can_send(&msg);
 		}
