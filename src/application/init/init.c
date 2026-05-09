@@ -172,6 +172,9 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 		vTaskDelay(500);
+		for (int i = 0; i < 50; i++) {
+			log_text(10, "SystemInit", "System initialization complete. Running...");
+		}
 	}
 }
 
