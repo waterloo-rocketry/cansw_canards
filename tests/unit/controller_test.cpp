@@ -36,7 +36,7 @@ FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char 
 FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t *);
 
 // TODO: add unit test for these new can functions
-FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_float, can_scaling_types_t, float32_t, void*);
+// FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_float, can_scaling_types_t, float32_t, void*);
 FAKE_VOID_FUNC(build_analog_sensor_16bit_msg, can_msg_prio_t, uint16_t, can_analog_sensor_id_t, uint16_t, can_msg_t *);
 
 // Customizable fake for flight_phase_get_act_allowed_ms
