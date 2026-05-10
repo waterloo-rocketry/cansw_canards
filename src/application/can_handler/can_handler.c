@@ -1,21 +1,21 @@
+#include <limits.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+
 #include "FreeRTOS.h"
-#include "application/logger/log.h"
-#include "drivers/gpio/gpio.h"
-#include "fdcan.h" // For hfdcan1 for fatal error handler
+#include "canlib.h"
+#include "fdcan.h"
 #include "queue.h"
+#include "stm32h7xx_hal.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
+#include "common/math/math.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
-
-// Include necessary headers for fatal error handler
-#include "stm32h7xx_hal.h" // For __disable_irq, __NOP
-#include "third_party/canlib/can.h" // For can_msg_t, can_send
-#include "third_party/canlib/message/msg_general.h" // For build_debug_raw_msg
-#include "third_party/canlib/message_types.h" // For MSG_DEBUG_RAW, PRIO_HIGH, etc.
-#include <stdint.h>
-#include <string.h>
+#include "third_party/rocketlib/include/mathops.h" /* For clamp functions */
 
 // TODO: calculate better. for now make excessively large and check dropped tx counter
 #define BUS_QUEUE_LENGTH 32
@@ -61,8 +61,7 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 	return status;
 }
 
-static void can_handle_rx_isr(const can_msg_t *message, uint32_t timestamp) {
-	(void)timestamp;
+static void can_handle_rx_message(const can_msg_t *message) {
 	// software filter: only queue messages with registered callbacks
 	can_msg_type_t msg_type = get_message_type(message);
 	// drop any message types without a registered handler
@@ -91,7 +90,7 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 		return W_FAILURE;
 	}
 
-	if (!can_init_stm(hfdcan, can_handle_rx_isr)) {
+	if (!stm32h7_can_init(hfdcan, &can_handle_rx_message)) {
 		log_text(1, "CANHandler", "ERROR: can_init_stm failed.");
 		return W_FAILURE;
 	}
@@ -156,7 +155,7 @@ void can_handler_task_tx(void *argument) {
 
 		if (xQueueReceive(bus_queue_tx, &tx_msg, pdMS_TO_TICKS(5)) == pdPASS) {
 			// send to CAN bus; log errors
-			if (!can_send(&tx_msg)) {
+			if (!stm32h7_can_send(&tx_msg)) {
 				can_error_stats.tx_failures++;
 				log_text(3, "CAN tx", "CAN send failed!");
 			}
@@ -184,15 +183,11 @@ void proc_handle_fatal_error(const char *errorMsg) {
 	static bool can_initialized = false;
 	// safe state - loop here forever and send CAN err msg repeatedly
 	while (1) {
-		can_initialized =
-			can_initialized ||
-			can_init_stm(&hfdcan1,
-						 can_handle_rx_isr); // BEWARE: this is hardcoded to use hfdcan1, remember
-											 // to change this when our CAN handle changes
+		can_initialized = can_initialized || stm32h7_can_init(&hfdcan3, can_handle_rx_message);
 		__disable_irq();
 
 		// let CAN still work
-		HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
+		HAL_NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
 
 		can_msg_t msg;
 		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
@@ -207,9 +202,9 @@ void proc_handle_fatal_error(const char *errorMsg) {
 		// Use canlib's helper function to build the debug message
 		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
 		// state)
-		if (build_debug_raw_msg(PRIO_HIGH, 0, data, &msg) && can_initialized) {
-			// Only try to send if message build succeeded
-			can_send(&msg);
+		build_debug_raw_msg(PRIO_MEDIUM, 0, data, &msg);
+		if (can_initialized) {
+			stm32h7_can_send(&msg);
 		}
 
 		// scream a few times then attempt to reset.
