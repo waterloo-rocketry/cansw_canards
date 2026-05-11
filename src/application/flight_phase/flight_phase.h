@@ -80,7 +80,7 @@ uint32_t flight_phase_get_status(void);
  * @return generated timer event
  */
 flight_phase_event_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx,
-												  const fsm_state_t p_state,
+												  const fsm_state_t curr_state,
 												  const uint32_t timestamp_ms);
 
 /**
@@ -91,7 +91,7 @@ flight_phase_event_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx,
  * @return generated sensor event
  */
 flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
-												   const fsm_state_t p_state,
+												   const fsm_state_t curr_state,
 												   const all_sensors_data_t *p_sensor_data);
 
 #endif

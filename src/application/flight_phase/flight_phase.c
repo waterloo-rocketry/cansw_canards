@@ -13,8 +13,10 @@
 
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these
-#define ACT_DELAY_MS 11000 // Q - the minimum time after launch before allowing canards to actuate
-#define FLIGHT_TIMEOUT_MS 49000 // K - the approximate time between launch and apogee
+static const uint32_t ACT_DELAY_MS =
+	11000; // Q - the minimum time after launch before allowing canards to actuate
+static const uint32_t FLIGHT_TIMEOUT_MS =
+	49000; // K - the approximate time between launch and apogee
 
 // #define TASK_TIMEOUT_MS 1000
 
@@ -291,13 +293,41 @@ uint32_t flight_phase_get_status(void) {
 
 // new state machine function stubs
 flight_phase_event_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx,
-												  const fsm_state_t p_state,
+												  const fsm_state_t curr_state,
 												  const uint32_t timestamp_ms) {
-	return EVENT_NONE;
+	if (NULL == p_ctx) {
+		log_text(5, "FlightPhase", "ERROR: Invalid ptrs in update states");
+		// just return the current state if invalid
+		return EVENT_NONE;
+	}
+
+	flight_phase_event_t output_state = EVENT_NONE;
+
+	switch (curr_state) {
+		// act delayed state
+		case STATE_BOOST:
+			if (ACT_DELAY_MS <= (timestamp_ms - p_ctx->launch_timestamp_ms)) {
+				output_state = EVENT_ACT_DELAY_ELAPSED;
+			}
+			break;
+
+		// act recovery state
+		case STATE_ACT_ALLOWED:
+			if (FLIGHT_TIMEOUT_MS <= (timestamp_ms - p_ctx->launch_timestamp_ms)) {
+				output_state = EVENT_FLIGHT_ELAPSED;
+			}
+			break;
+
+		default:
+			output_state = EVENT_NONE;
+			break;
+	}
+
+	return output_state;
 }
 
 flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
-												   const fsm_state_t p_state,
+												   const fsm_state_t curr_state,
 												   const all_sensors_data_t *p_sensor_data) {
 	return EVENT_NONE;
 }

@@ -125,6 +125,7 @@ void fsm_do_transitions(fsm_inputs_t *p_input) {
 		current_index++;
 	}
 
+	// run the events and check for updates
 	for (uint8_t i = 0; i < MAX_PROCESS_FP_EVENTS; i++) {
 		p_input->curr_state = flight_phase_update_state(
 			event_array[i], p_input->curr_state, p_input->p_flight_phase_context);
