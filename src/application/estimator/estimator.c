@@ -52,12 +52,11 @@ w_status_t estimator_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t estimator_step(estimator_module_ctx_t *ctx, navigator_input_t *p_input,
-						  navigator_output_t *p_output, uint32_t loop_count) {
+w_status_t estimator_step(estimator_module_ctx_t *ctx, const navigator_input_t *p_input,
+						  navigator_output_t *p_output) {
 	(void)ctx;
 	(void)p_input;
 	(void)p_output;
-	(void)loop_count;
 	return W_SUCCESS;
 }
 

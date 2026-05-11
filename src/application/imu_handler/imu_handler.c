@@ -55,41 +55,41 @@ typedef struct {
 
 static imu_handler_state_t imu_handler_state = {0};
 
-static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
-	// Log raw data to CAN
-	can_msg_t msg;
-	uint32_t timestamp = 0;
-	timer_get_ms(&timestamp);
-	w_status_t encode_status = W_SUCCESS;
-	w_status_t can_tx_status = W_SUCCESS;
+// static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
+// 	// Log raw data to CAN
+// 	can_msg_t msg;
+// 	uint32_t timestamp = 0;
+// 	timer_get_ms(&timestamp);
+// 	w_status_t encode_status = W_SUCCESS;
+// 	w_status_t can_tx_status = W_SUCCESS;
 
-	// TODO: Currently using incorrect sensor for testing
-	// Encode messages
-	int16_t acc_x = 0, acc_y = 0, acc_z = 0;
-	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
-	int32_t mag_x = 0, mag_y = 0, mag_z = 0;
+// 	// TODO: Currently using incorrect sensor for testing
+// 	// Encode messages
+// 	int16_t acc_x = 0, acc_y = 0, acc_z = 0;
+// 	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
+// 	int32_t mag_x = 0, mag_y = 0, mag_z = 0;
 
-	// TODO: do CAN scaling and sending
+// 	// TODO: do CAN scaling and sending
 
-	can_tx_status |= can_handler_transmit(&msg);
+// 	can_tx_status |= can_handler_transmit(&msg);
 
-	// Error handling
-	if (encode_status == W_MATH_ERROR) {
-		log_text(0, "IMUHandler", "IMU raw msg encode math error (NaN or Inf)");
-	} else if (encode_status != W_SUCCESS) {
-		log_text(0, "IMUHandler", "IMU raw msg scale / encode failed");
-	}
+// 	// Error handling
+// 	if (encode_status == W_MATH_ERROR) {
+// 		log_text(0, "IMUHandler", "IMU raw msg encode math error (NaN or Inf)");
+// 	} else if (encode_status != W_SUCCESS) {
+// 		log_text(0, "IMUHandler", "IMU raw msg scale / encode failed");
+// 	}
 
-	if (can_tx_status != W_SUCCESS) {
-		log_text(0, "IMUHandler", "IMU raw msg tx failed");
-	}
+// 	if (can_tx_status != W_SUCCESS) {
+// 		log_text(0, "IMUHandler", "IMU raw msg tx failed");
+// 	}
 
-	if ((can_tx_status != W_SUCCESS) || (encode_status != W_SUCCESS)) {
-		imu_handler_state.error_count++;
-		return W_FAILURE;
-	}
-	return W_SUCCESS;
-}
+// 	if ((can_tx_status != W_SUCCESS) || (encode_status != W_SUCCESS)) {
+// 		imu_handler_state.error_count++;
+// 		return W_FAILURE;
+// 	}
+// 	return W_SUCCESS;
+// }
 
 /**
  * @brief Read data from the pololu AltIMU-10 sensor
@@ -192,13 +192,7 @@ w_status_t imu_handler_init(void) {
 	return W_SUCCESS;
 }
 
-/**
- * @brief Curate new data from all sensors.
- * @note !!! data that exceeds the sensor's freshness requirement is marked as dead !!!
- * @param loop_count Number of loops run, for CAN send rate limiting
- * @return Status of the execution
- */
-w_status_t imu_handler_get_fresh_meas(uint32_t loop_count, all_sensors_data_t *imu_output) {
+w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *imu_output) {
 	if (NULL == imu_output) {
 		log_text(10, "IMUHandler", "ERROR: get fresh meas invalid output ptr.");
 		return W_INVALID_PARAM;
@@ -294,14 +288,6 @@ w_status_t imu_handler_get_fresh_meas(uint32_t loop_count, all_sensors_data_t *i
 	log_payload.raw_pololu_data_pt2.raw_mag = raw_pololu_data.raw_mag;
 	log_payload.raw_pololu_data_pt2.raw_baro = raw_pololu_data.raw_baro;
 	log_data(1, LOG_TYPE_POLOLU_RAW_PT2, &log_payload);
-
-	// TODO: update for new CAN
-	// do CAN logging as backup less frequently to avoid flooding can bus
-	if ((loop_count % IMU_HANDLER_CAN_TX_RATE) == 0) {
-		if (log_raw_to_can(&raw_pololu_data) != W_SUCCESS) {
-			log_text(0, "imuhandler", "WARN: raw log to CAN fail");
-		}
-	}
 
 	// update queue with current IMU data for flight phase to read
 	// now this is done by the updated output data

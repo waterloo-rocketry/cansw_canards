@@ -23,9 +23,15 @@ typedef struct __attribute__((packed)) {
  */
 w_status_t imu_handler_init(void);
 
-// run 1 iteration of collecting all recent sensor data. guarantees data is fresh within 1 period
-// (2ms)
-w_status_t imu_handler_get_fresh_meas(uint32_t loop_count, all_sensors_data_t *output);
+/**
+ * @brief Curate fresh data from all sensors. This function executes instantly (non-blocking)
+ * to avoid delaying the control loop.
+ * @note !!! data that exceeds the sensor's freshness requirement is marked as dead !!!
+ *
+ * @param output pointer to update with the latest data
+ * @return Status of the execution
+ */
+w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *output);
 
 /**
  * @brief IMU handler task function for FreeRTOS

@@ -75,14 +75,11 @@ uint32_t estimator_get_status(void);
 /**
  * @brief 1 step of estimator
  * @param ctx pointer to estimator context
- * @param curr_fsm_state the current flight phase
- * @param p_latest_imu_data pointer to the latest imu data
- * @param p_input pointer to the next navigator input
- * @param p_output pointer to the last navigator output
+ * @param p_input pointer to the new navigator input
+ * @param p_output pointer to navigator output to update with new results
  * update with new actuation info
- * @param loop_count for rate limiting
  */
-w_status_t estimator_step(estimator_module_ctx_t *ctx, navigator_input_t *p_input,
-						  navigator_output_t *p_output, uint32_t loop_count);
+w_status_t estimator_step(estimator_module_ctx_t *ctx, const navigator_input_t *p_input,
+						  navigator_output_t *p_output);
 
 #endif

@@ -36,7 +36,7 @@ w_status_t controller_init(void) {
 }
 
 // helper to run 1 iteration of the controller algo, including delaying where needed.
-w_status_t controller_step(controller_ctx_t *ctx, controller_input_t *const input,
+w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *input,
 						   controller_output_t *output, const uint32_t act_allowed_timestamp_ms,
 						   const uint32_t curr_timestamp_ms) {
 	if (NULL == ctx) {

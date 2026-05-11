@@ -81,19 +81,13 @@ void fsm_exec(const fsm_inputs_t *p_input) {
 		case STATE_SE_INIT:
 		// TODO: how to tell estimator it needs to pad filter
 		case STATE_BOOST:
-			estimator_step(p_input->estimator_context,
-						   &navigator_input,
-						   &navigator_output,
-						   0); // (ignore loop_count var for now)
+			estimator_step(p_input->estimator_context, &navigator_input, &navigator_output);
 			break;
 
 		// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
-			estimator_step(p_input->estimator_context,
-						   &navigator_input,
-						   &navigator_output,
-						   0); // (ignore loop_count var for now)
+			estimator_step(p_input->estimator_context, &navigator_input, &navigator_output);
 
 			controller_step(p_input->p_controller_context,
 							&controller_input,
@@ -151,9 +145,7 @@ void fsm_task(void *args) {
 		// - etc (probably more later)
 		// will type case bthe all sensor input pointer as this is the only function where sensor
 		// data will be updated, while the rest should use const and therefore that should stay
-		imu_handler_get_fresh_meas(
-			0,
-			(all_sensors_data_t *)g_inputs.all_sensors_input); // (ignore loop_count param for now)
+		imu_handler_get_fresh_meas((all_sensors_data_t *)g_inputs.all_sensors_input);
 
 		// do state machine transitions for a limited number of most recent events
 		fsm_do_transitions(&g_inputs);
