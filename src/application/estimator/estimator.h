@@ -9,8 +9,9 @@
 #include <stdint.h>
 
 // measurement data from 1 arbitrary imu
+// TODO: remove old impl of `estimator_imu_measurement_t`
 typedef struct {
-	uint32_t timestamp_imu;
+	float64_t timestamp_imu_sec;
 	vector3d_t accelerometer; // gravities
 	vector3d_t gyroscope; // rad/sec
 	vector3d_t magnetometer; // mgauss (pololu) or arbitrary units (movella)
@@ -18,10 +19,46 @@ typedef struct {
 	bool is_dead;
 } estimator_imu_measurement_t;
 
+/**
+ * @brief LSM6DSV32X (32G IMU), MS5611 (High-alt Barometer), and LSM303AGR (Compass) measurements
+ */
+typedef struct {
+	vector3d_t board_accel; // m/s^2
+	vector3d_t board_gyro; // rad/s
+	float64_t board_baro; // Pa
+	vector3d_t board_mag; // gauss
+	bool is_dead;
+} estimator_board_meas_t;
+
+/**
+ * @brief MTi-630 (Movella) measurements
+ */
+typedef struct {
+	vector3d_t mti_accel; // m/s^2
+	vector3d_t mti_gyro; // rad/s
+	float64_t mti_baro; // Pa
+	vector3d_t mti_mag; // gauss
+	bool is_dead;
+} estimator_mti_meas_t;
+
+/**
+ * @brief ADXL380 (AD Breakout Accel) and ADXRS649 (AD high-rate gyro) measurements
+ */
+typedef struct {
+	vector3d_t ad_accel; // m/s^2
+	float64_t ad_gyro; // rad/s, 1 axis gyro
+	bool is_dead;
+} estimator_ad_meas_t;
+
 // measurements from all imus together
 typedef struct {
-	estimator_imu_measurement_t pololu;
-	estimator_imu_measurement_t movella;
+	estimator_board_meas_t board_meas;
+	estimator_mti_meas_t mti_meas;
+	estimator_ad_meas_t ad_meas;
+
+	// TODO: remove old impl below
+	estimator_imu_measurement_t movella; // raw movella data
+	estimator_imu_measurement_t pololu; // raw pololu data
 } estimator_all_imus_input_t;
 
 /**

@@ -23,7 +23,7 @@ FAKE_VALUE_FUNC(w_status_t, log_init);
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
 // w_status_t log_data(uint32_t id, log_data_type_t type, const log_data_container_t *data)
 FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t *);
-FAKE_VALUE_FUNC(w_status_t, timer_get_ms, double *);
+FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 // w_status_t can_handler_register_callback(can_msg_type_t msg_type, can_callback_t callback)
 FAKE_VALUE_FUNC(w_status_t, can_handler_register_callback, can_msg_type_t, can_callback_t)
 

@@ -347,11 +347,17 @@ uint32_t i2c_get_status(void) {
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {
 		const char *bus_name = "unknown";
 		switch (i) {
+			case I2C_BUS_1:
+				bus_name = "I2C1 (ST IMU)";
+				break;
 			case I2C_BUS_2:
-				bus_name = "I2C2 (LSM IMU)";
+				bus_name = "I2C2 (AD Breakout)";
 				break;
 			case I2C_BUS_4:
-				bus_name = "I2C4 (Pololu AltIMU)";
+				bus_name = "I2C4 (ST MAG)";
+				break;
+			case I2C_BUS_5:
+				bus_name = "I2C5 (MS BARO)";
 				break;
 			default:
 				bus_name = "unknown";

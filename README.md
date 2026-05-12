@@ -28,6 +28,15 @@ All firmware dev is done in VSCode using PlatformIO (previously using devcontain
 - If needed, switch between debug/release environments: `Ctrl+Shift+P > PlatformIO: Pick Project Environment`
 - Auto-format the project code: `Project Tasks > Custom > Format`
 
+### 2.5 STM32CubeMX
+
+Steps to configure stuff in CubeMX and auto-generate code:
+
+- Open `cansw_canard_board.ioc` in CubeMX and configure things as needed
+- Click `Generate Code` and wait for the pop-up that indicates it's done
+- Run the script `./scripts/cubemx_cleanup.sh` to make the auto-gen files conform to our project setup
+- Run clang-format (see section 2) to format the auto-gen code
+
 ### 3. Run unit tests in devcontainer
 
 The devcontainer has everything installed to run unit tests using CMake. One could also install all the dependencies locally if desired but the devcontainer is recommended to avoid "but it works on my machine!" issues.

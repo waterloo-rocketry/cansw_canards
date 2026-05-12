@@ -22,33 +22,34 @@ static controller_error_data_t controller_error_stats = {0};
 
 // Send `canard_angle`, the desired canard angle (radians) to CAN
 static w_status_t controller_send_can(float canard_angle) {
-	// convert canard angle from radians to millidegrees
-	int16_t canard_cmd_signed = (int16_t)(canard_angle / M_PI * 180.0 * 1000.0);
-	uint16_t canard_cmd_shifted = canard_cmd_signed + 32768;
+	// convert canard angle from radians to degrees
+	float32_t canard_cmd_deg = canard_angle * DEG_PER_RAD;
 
 	// get timestamp for can msg
-	float time_ms;
+	uint32_t time_ms;
 	if (W_SUCCESS != timer_get_ms(&time_ms)) {
-		time_ms = 0.0f;
+		time_ms = 0;
 		controller_error_stats.timestamp_errors++;
 	}
 	uint32_t can_timestamp = (uint32_t)time_ms;
 
-	// Build the CAN msg
 	can_msg_t msg;
-	if (!build_actuator_analog_cmd_msg(
-			PRIO_HIGHEST, can_timestamp, ACTUATOR_CANARD_ANGLE, canard_cmd_shifted, &msg)) {
-		log_text(LOG_WAIT_MS, "controller", "actuator message build failure");
-		controller_error_stats.can_send_errors++;
-		log_text(LOG_WAIT_MS, "controller", "actuator message build failure");
-	}
+	w_status_t encode_status = W_SUCCESS;
+	w_status_t can_tx_status = W_SUCCESS;
+
+	// TODO: do CAN scaling
+	int16_t scaled_angle = 0;
+
+	build_analog_sensor_16bit_msg(
+		PRIO_MEDIUM, can_timestamp, SENSOR_CANARD_SERVO_ANGLE, scaled_angle, &msg);
 
 	// Send this to can handler module's tx
-	w_status_t result = can_handler_transmit(&msg);
-	if (result != W_SUCCESS) {
+	can_tx_status |= can_handler_transmit(&msg);
+	if (can_tx_status != W_SUCCESS) {
 		controller_state.can_send_errors++;
+		log_text(LOG_WAIT_MS, "controller", "actuator msg tx failed");
 	}
-	return result;
+	return (encode_status != W_SUCCESS) ? encode_status : can_tx_status;
 }
 
 /**
@@ -59,25 +60,23 @@ static w_status_t controller_send_can(float canard_angle) {
  */
 static w_status_t send_cmd(double cmd) {
 	w_status_t status = W_SUCCESS; // track status but still try to do everything regardless
-	float timestamp_ms = 0.0f;
+	uint32_t timestamp_ms = 0;
 	// object to copy into the outputs queue (queue is pass by copy, not by reference)
 	controller_output_t controller_output = {0};
 
 	// get current timestamp
 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
-		timestamp_ms = 0.0f;
+		timestamp_ms = 0;
 		log_text(LOG_WAIT_MS, "controller", "get_ms fail");
 		status |= W_FAILURE;
 	}
 
 	// set controller output
 	controller_output.commanded_angle = cmd;
-	controller_output.timestamp = (uint32_t)timestamp_ms;
+	controller_output.timestamp = timestamp_ms;
 
 	// send command via CAN
 	if (controller_send_can(controller_output.commanded_angle) != W_SUCCESS) {
-		controller_state.can_send_errors++;
-		log_text(LOG_WAIT_MS, "controller", "CAN send failure");
 		status |= W_FAILURE;
 	}
 

@@ -9,9 +9,9 @@ w_status_t estimator_module(const estimator_module_input_t *input,
 	w_status_t status = W_SUCCESS;
 
 	// calculate dt regardless of flight phase
-	double dt = input->timestamp - ctx->t;
+	double dt = input->timestamp_sec - ctx->t_sec;
 	// record current time
-	ctx->t = input->timestamp;
+	ctx->t_sec = input->timestamp_sec;
 
 	// store persistent alive values in case an imu happens to die the moment pad_filter_init
 	// runs, it can still use the older value. better than init to 0.

@@ -32,7 +32,7 @@
 typedef struct {
 	TaskHandle_t task_handle;
 	bool is_kicked;
-	float last_kick_timestamp;
+	uint32_t last_kick_timestamp_ms; // ms
 	uint32_t timeout_ticks;
 } watchdog_task_t;
 
@@ -44,7 +44,7 @@ w_status_t get_adc_current(uint32_t *adc_current_mA) {
 	w_status_t status = W_SUCCESS;
 	uint32_t adc_value;
 
-	status |= adc_get_value(PROCESSOR_BOARD_VOLTAGE, &adc_value, TASK_DELAY_MS);
+	status |= adc_get_raw_volts(PROCESSOR_BOARD_VOLTAGE, &adc_value, TASK_DELAY_MS);
 	if (status != W_SUCCESS) {
 		return status;
 	}
@@ -55,27 +55,33 @@ w_status_t get_adc_current(uint32_t *adc_current_mA) {
 }
 
 uint32_t check_current(void) {
-	uint32_t status = 0;
+	w_status_t current_status = W_SUCCESS;
+	w_status_t can_tx_status = W_SUCCESS;
 	uint32_t adc_current_mA;
 
 	if (get_adc_current(&adc_current_mA) == W_SUCCESS) {
-		float ms = 0;
+		uint32_t ms = 0;
 		timer_get_ms(&ms);
 		can_msg_t msg = {0};
 
-		// always send current sense msg to can
-		build_analog_data_msg(PRIO_LOW, (uint16_t)ms, SENSOR_5V_CURR, adc_current_mA, &msg);
-		status |= can_handler_transmit(&msg);
+		// No scaling for 5V current
+		build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)ms, SENSOR_5V_CURR, adc_current_mA, &msg);
+
+		// Send this to can handler module's tx
+		can_tx_status |= can_handler_transmit(&msg);
+		if (can_tx_status != W_SUCCESS) {
+			log_text(10, "health_checks", "health checks msg tx failed");
+		}
 
 		// send CAN err msg and log text if over current
 		if (adc_current_mA > MAX_CURRENT_mA) {
-			status |= 1 << E_5V_OVER_CURRENT_OFFSET;
+			current_status |= 1 << E_5V_OVER_CURRENT_OFFSET;
 			log_text(10, "health_checks", "5V overcurrent: %d mA", adc_current_mA);
 		} else {
 		}
 	}
 
-	return status;
+	return (current_status != W_SUCCESS) ? current_status : can_tx_status;
 }
 
 w_status_t health_check_init(void) {
@@ -85,7 +91,7 @@ w_status_t health_check_init(void) {
 
 w_status_t watchdog_kick(void) {
 	TaskHandle_t current_task = xTaskGetCurrentTaskHandle();
-	float current_time = 0.0f;
+	uint32_t current_time = 0;
 	w_status_t status = W_SUCCESS;
 
 	status |= timer_get_ms(&current_time);
@@ -98,7 +104,7 @@ w_status_t watchdog_kick(void) {
 	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
 		if (watchdog_tasks[i].task_handle == current_task) {
 			watchdog_tasks[i].is_kicked = true;
-			watchdog_tasks[i].last_kick_timestamp = current_time;
+			watchdog_tasks[i].last_kick_timestamp_ms = current_time;
 			return W_SUCCESS;
 		}
 	}
@@ -124,13 +130,13 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
 		}
 	}
 
-	float current_time = 0.0f;
+	uint32_t current_time = 0;
 	w_status_t status = W_SUCCESS;
 	status |= timer_get_ms(&current_time);
 
 	watchdog_tasks[num_watchdog_tasks].task_handle = task_handle;
 	watchdog_tasks[num_watchdog_tasks].is_kicked = true;
-	watchdog_tasks[num_watchdog_tasks].last_kick_timestamp = current_time;
+	watchdog_tasks[num_watchdog_tasks].last_kick_timestamp_ms = current_time;
 	watchdog_tasks[num_watchdog_tasks].timeout_ticks = timeout_ticks;
 
 	num_watchdog_tasks++; // incriminent the watchdog task count for future ref
@@ -149,7 +155,7 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
  */
 uint32_t check_watchdog_tasks(void) {
 	uint32_t status_bitfield = 0;
-	float current_time = 0.0f;
+	uint32_t current_time = 0;
 
 	// failing to get time isn't a fatal err
 	if (timer_get_ms(&current_time) != W_SUCCESS) {
@@ -158,7 +164,7 @@ uint32_t check_watchdog_tasks(void) {
 	}
 
 	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
-		float time_elapsed = current_time - watchdog_tasks[i].last_kick_timestamp;
+		uint32_t time_elapsed = current_time - watchdog_tasks[i].last_kick_timestamp_ms;
 		uint32_t ticks_elapsed = pdMS_TO_TICKS((uint32_t)time_elapsed); // time to ticks
 
 		if (watchdog_tasks[i].is_kicked || (ticks_elapsed <= watchdog_tasks[i].timeout_ticks)) {
@@ -216,14 +222,10 @@ w_status_t health_check_exec() {
 
 	// send status CAN msg
 	can_msg_t msg = {0};
-	if (build_general_board_status_msg(
-			PRIO_LOW, xTaskGetTickCount(), status_bitfield, status_bitfield, &msg) == true) {
-		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0, "health_checks", "CAN send failure for status msg");
-			return W_FAILURE;
-		}
-	} else {
-		log_text(0, "health_checks", "build_general_board_status_msg failure");
+	build_general_board_status_msg(PRIO_LOW, xTaskGetTickCount(), status_bitfield, &msg);
+
+	if (can_handler_transmit(&msg) != W_SUCCESS) {
+		log_text(0, "health_checks", "CAN send failure for status msg");
 		return W_FAILURE;
 	}
 
