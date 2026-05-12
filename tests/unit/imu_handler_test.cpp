@@ -230,7 +230,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasSuccessful) {
 	all_sensors_data_t output = {0};
 
 	// Run the function under test with loop_count = 1
-	w_status_t result = imu_handler_get_fresh_meas(1, &output);
+	w_status_t result = imu_handler_get_fresh_meas(&output);
 
 	// Verify function returned success
 	EXPECT_EQ(W_SUCCESS, result);
@@ -283,7 +283,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasWithPoluluFailure) {
 	all_sensors_data_t output = {0};
 
 	// Run the function under test with loop_count = 1
-	w_status_t result = imu_handler_get_fresh_meas(1, &output);
+	w_status_t result = imu_handler_get_fresh_meas(&output);
 
 	// Function should return success since Movella is still working
 	EXPECT_EQ(W_SUCCESS, result);
@@ -318,7 +318,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasWithMovellaFailure) {
 	all_sensors_data_t output = {0};
 
 	// Run the function under test with loop_count = 1
-	w_status_t result = imu_handler_get_fresh_meas(1, &output);
+	w_status_t result = imu_handler_get_fresh_meas(&output);
 
 	// Function should return success since Polulu is still working
 	EXPECT_EQ(W_SUCCESS, result);
@@ -351,7 +351,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasWithAllImusFailure) {
 	all_sensors_data_t output = {0};
 
 	// Run the function under test with loop_count = 1
-	w_status_t result = imu_handler_get_fresh_meas(1, &output);
+	w_status_t result = imu_handler_get_fresh_meas(&output);
 
 	// Function should return failure since both IMUs failed
 	EXPECT_EQ(W_FAILURE, result);
@@ -379,7 +379,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasWithTimerFailure) {
 	all_sensors_data_t output = {0};
 
 	// Run the function under test with loop_count = 1
-	w_status_t result = imu_handler_get_fresh_meas(1, &output);
+	w_status_t result = imu_handler_get_fresh_meas(&output);
 
 	// Function should return success since IMUs are working
 	EXPECT_EQ(W_SUCCESS, result);
@@ -414,7 +414,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasWithInvalidPtr) {
 	all_sensors_data_t output = {0};
 
 	// Run the function under test with loop_count = 1
-	w_status_t result = imu_handler_get_fresh_meas(1, NULL);
+	w_status_t result = imu_handler_get_fresh_meas(NULL);
 
 	// Function should return the failure from estimator
 	EXPECT_EQ(W_INVALID_PARAM, result);
@@ -448,7 +448,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasWithInvalidPtr) {
 	
 // 	// Act
 // 	for (uint32_t i = 0; i < num_loops; ++i) {
-// 		imu_handler_get_fresh_meas(i, &output);
+// 		imu_handler_get_fresh_meas(&output);
 // 		if (i % can_tx_rate == 0) {
 // 			expected_log_loops++;
 // 		}
