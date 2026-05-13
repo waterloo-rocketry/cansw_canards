@@ -17,6 +17,7 @@
 // IDEAL task period, for calculating CAN send rate limiter
 static const uint32_t ESTIMATOR_TASK_PERIOD_MS = 5;
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
+// TODO: if kept change to static const
 #define ESTIMATOR_CAN_TX_PERIOD_MS 100
 #define ESTIMATOR_CAN_TX_RATE (ESTIMATOR_CAN_TX_PERIOD_MS / ESTIMATOR_TASK_PERIOD_MS)
 // wait for imu data for >5ms to avoid false failure if imu takes like 5.1ms
@@ -41,13 +42,7 @@ w_status_t estimator_init(void) {
 	}
 
 	// Initialize error tracking
-	estimator_error_stats.is_init = true;
-	estimator_error_stats.imu_data_timeouts = 0;
-	estimator_error_stats.encoder_data_fails = 0;
-	estimator_error_stats.controller_data_fails = 0;
-	estimator_error_stats.pad_filter_fails = 0;
-	estimator_error_stats.can_log_fails = 0;
-	estimator_error_stats.invalid_phase_errors = 0;
+	estimator_error_stats = (estimator_error_data_t){.is_init = true};
 
 	return W_SUCCESS;
 }

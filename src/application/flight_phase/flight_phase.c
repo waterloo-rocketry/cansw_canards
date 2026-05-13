@@ -47,14 +47,7 @@ static QueueHandle_t event_queue = NULL;
 
 static w_status_t act_cmd_callback(const can_msg_t *msg);
 
-static flight_phase_status_t flight_phase_status = {
-	.initialized = false,
-	.loop_run_errs = 0,
-	.state_transitions = 0,
-	.invalid_events = 0,
-	.event_counts = {0},
-	.event_queue_full_count = 0,
-};
+static flight_phase_status_t flight_phase_status = (flight_phase_status_t){.event_counts = {0}};
 
 /**
  * Intialize flight phase module.

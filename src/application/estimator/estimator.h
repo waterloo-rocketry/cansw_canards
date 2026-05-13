@@ -1,3 +1,4 @@
+// TODO: remember to rename the file name to navigator.h
 #ifndef NAVIGATOR_H
 #define NAVIGATOR_H
 
@@ -23,7 +24,7 @@ typedef struct {
 /**
  * persistent state updated by estimator and fsm
  */
-typedef struct estimator_module_ctx_t {
+typedef struct {
 	x_state_t x;
 	double P_flat[SIZE_STATE * SIZE_STATE];
 	y_imu_t bias_movella;

@@ -22,7 +22,7 @@ typedef enum {
 	EVENT_RESET
 } flight_phase_event_t;
 
-typedef struct flight_phase_ctx_t {
+typedef struct {
 	uint32_t launch_timestamp_ms;
 	uint32_t act_allowed_timestamp_ms;
 	uint8_t num_consec_detections;

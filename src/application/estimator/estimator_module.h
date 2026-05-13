@@ -14,7 +14,7 @@
 /**
  * input to estimator_module function
  */
-typedef struct estimator_module_input_t {
+typedef struct {
 	float64_t timestamp_sec; // new timestamp (seconds)
 	y_imu_t movella; // latest movella data
 	y_imu_t pololu; // latest pololu data

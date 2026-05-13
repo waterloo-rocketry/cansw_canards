@@ -45,10 +45,7 @@ w_status_t fsm_init() {
 	}
 	g_estimator_context.t_sec =
 		((float64_t)init_time_tenth_ms) / 10000.0; // convert 0.1ms to seconds
-	g_estimator_context.x.attitude.w = 1.0;
-	g_estimator_context.x.attitude.x = 0.0;
-	g_estimator_context.x.attitude.y = 0.0;
-	g_estimator_context.x.attitude.z = 0.0;
+	g_estimator_context.x.attitude = (quaternion_t){.w = 1.0, .x = 0.0, .y = 0.0, .z = 0.0};
 	g_estimator_context.x.altitude = 420;
 	g_estimator_context.x.CL = 3;
 
@@ -65,6 +62,8 @@ w_status_t fsm_init() {
 }
 
 void fsm_exec(const fsm_inputs_t *p_input) {
+	// can't init to {0} as don't have any fields
+	// TODO: either init to {0} or with some value once implemented
 	navigator_input_t navigator_input = {};
 	navigator_output_t navigator_output = {};
 	controller_input_t controller_input = {0};

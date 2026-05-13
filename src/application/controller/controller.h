@@ -34,7 +34,7 @@ typedef struct {
 /**
  * state of a controller instance.
  */
-typedef struct controller_ctx_t {
+typedef struct {
 	uint32_t last_run_ms; // last time the controller did a full loop. use for rate-limiting
 } controller_ctx_t;
 

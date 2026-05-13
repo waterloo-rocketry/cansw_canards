@@ -23,13 +23,7 @@ static controller_error_data_t controller_error_stats = {0};
  */
 w_status_t controller_init(void) {
 	// Initialize error tracking
-	controller_error_stats.is_init = true;
-	controller_error_stats.can_send_errors = 0;
-	controller_error_stats.data_miss_counter = 0;
-	controller_error_stats.timestamp_errors = 0;
-	controller_error_stats.gain_interpolation_errors = 0;
-	controller_error_stats.angle_calculation_errors = 0;
-	controller_error_stats.log_errors = 0;
+	controller_error_stats = (controller_error_data_t){.is_init = true};
 	// return w_status_t state
 	log_text(LOG_WAIT_MS, "controller", "initialization successful");
 	return W_SUCCESS;
@@ -56,6 +50,7 @@ w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *inpu
 	//     controller_module(ctx, act_allowed_ms, &output, &ref_signal);
 	(void)input;
 
+	// TODO: reorder structre to multiple return points
 	// send motor cmd if we can
 	if (W_SUCCESS == status) {
 		// TODO: motor

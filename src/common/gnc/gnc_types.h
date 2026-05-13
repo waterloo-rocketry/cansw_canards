@@ -1,3 +1,5 @@
+// TODO: this file should be cleaned up during gnc impl this year
+
 /**
  * Navigator and controller types used by the whole gnc system
  */
