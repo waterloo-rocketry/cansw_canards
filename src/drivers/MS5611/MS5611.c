@@ -32,7 +32,7 @@ static const uint8_t D2_CMD[] = {
 static ms5611_handle_t handle = {.C = {0}, // will be populated by prom read
 								 .bus = I2C_BUS_4,
 								 .addr =
-									 MS5611_ADDRESS_CSB_HIGH, // default to addr with CSB pin high
+									 MS5611_ADDRESS_CSB_LOW, // according to canard board schematic, CSB is tied to GND, so addr is 0x77
 								 .osr = MS5611_OSR_1024,
 								 .initialized = false};
 
@@ -91,7 +91,7 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 
 	for (cnt = 0; cnt < 16; cnt++) /* loop all */
 	{
-		if ((cnt % 2) == 1) /* check bit */
+		if (cnt & 0x1) /* check LSB */
 		{
 			n_rem ^= (uint16_t)((n_prom[cnt >> 1]) & 0x00FF); /* run part1 */
 		} else {
@@ -111,12 +111,12 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	n_prom[7] = crc_read; /* set crc read */
 	n_rem ^= 0x00; /* xor */
 
-	if (n_rem == crc) {
-		return W_SUCCESS;
-	} else {
+	if (n_rem != crc) {
 		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
 		return W_FAILURE;
-	}
+	} 
+
+	return W_SUCCESS;
 }
 
 /**
@@ -173,7 +173,7 @@ w_status_t ms5611_check_sanity(void) {
 	uint8_t buf[2];
 	uint16_t C[8];
 
-	// read prom coefficients again
+	// read prom coefficients agaisoftware onboardingn
 	for (uint8_t i = 0; i < 8; i++) {
 		if (W_SUCCESS !=
 			i2c_read_reg(
