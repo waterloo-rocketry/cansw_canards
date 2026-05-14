@@ -55,7 +55,7 @@ typedef enum {
 
 typedef struct {
 	/* Calibration coefficients read from PROM */
-	uint16_t C[8]; /* C[1]..C[6] used; C[0] = factory reserved empty space */
+	uint16_t prom_coef[8]; /* C[1]..C[6] used; C[0] = factory reserved empty space */
 
 	i2c_bus_t bus;
 	ms5611_address_t addr;
