@@ -6,7 +6,7 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
-#include "can.h"
+#include "can.h" 
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
