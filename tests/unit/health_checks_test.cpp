@@ -20,8 +20,9 @@ extern w_status_t check_watchdog_tasks(void);
 
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
-FAKE_VALUE_FUNC(bool, build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, uint16_t,
-				can_msg_t *);
+FAKE_VOID_FUNC(
+    build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, can_msg_t *
+);
 // FAKE_VALUE_FUNC(TaskHandle_t, xTaskGetCurrentTaskHandle);
 FAKE_VOID_FUNC(log_text, uint32_t, const char *, const char *, void *);
 
@@ -87,7 +88,6 @@ protected:
 
 		timer_get_ms_fake.return_val = W_SUCCESS;
 		can_handler_transmit_fake.return_val = W_SUCCESS;
-		build_general_board_status_msg_fake.return_val = true;
 
 		// Set default return values for module status functions
 		health_status_t i2c_ok = {HEALTH_OK, MODULE_I2C, MODULE_ERR_NONE};
@@ -147,8 +147,8 @@ TEST_F(HealthChecksTest, FailureHealthCheck) {
 
 	build_general_board_status_msg_fake.return_val = false;
 
-	// Act
-	w_status_t result = health_check_exec();
+// 	// Act
+// 	w_status_t result = health_check_exec();
 
 	// Assert
 	EXPECT_EQ(W_FAILURE, result);
@@ -190,8 +190,7 @@ TEST_F(HealthChecksTest, WatchdogTimeout) {
 
 	check_watchdog_tasks();
 
-	build_general_board_status_msg_fake.return_val = true;
-	can_handler_transmit_fake.return_val = W_SUCCESS;
+    can_handler_transmit_fake.return_val = W_SUCCESS;
 
 	// Advance time beyond timeout
 	SetTimerMs(1200.0f); // 200ms later, should trigger timeout

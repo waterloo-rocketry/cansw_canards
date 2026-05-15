@@ -185,12 +185,14 @@ static uint32_t check_modules_status(void) {
 //       are used directly from canlib/message_types.h
 
 void proc_handle_fatal_error(const char *errorMsg) {
+	static bool can_initialized = false;
 	// safe state - loop here forever and send CAN err msg repeatedly
 	while (1) {
+		can_initialized = can_initialized || stm32h7_can_init(&hfdcan3, can_handle_rx_message);
 		__disable_irq();
 
 		// let CAN still work
-		HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
+		HAL_NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
 
 		can_msg_t msg;
 		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
@@ -205,9 +207,9 @@ void proc_handle_fatal_error(const char *errorMsg) {
 		// Use canlib's helper function to build the debug message
 		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
 		// state)
-		if (build_debug_raw_msg(PRIO_HIGH, 0, data, &msg)) {
-			// Only try to send if message build succeeded
-			can_send(&msg);
+		build_debug_raw_msg(PRIO_MEDIUM, 0, data, &msg);
+		if (can_initialized) {
+			stm32h7_can_send(&msg);
 		}
 
 		// scream a few times then attempt to reset.
@@ -228,6 +230,9 @@ void proc_handle_fatal_error(const char *errorMsg) {
 
 // --- End Fatal Error Handler ---
 
+uint32_t can_handler_get_status(void) {
+// --- End Fatal Error Handler ---
+
 w_status_t health_check_exec() {
 	uint32_t status_bitfield = 0;
 
@@ -236,14 +241,10 @@ w_status_t health_check_exec() {
 
 	// send status CAN msg
 	can_msg_t msg = {0};
-	if (build_general_board_status_msg(
-			PRIO_LOW, xTaskGetTickCount(), status_bitfield, status_bitfield, &msg) == true) {
-		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0, "health_checks", "CAN send failure for status msg");
-			return W_FAILURE;
-		}
-	} else {
-		log_text(0, "health_checks", "build_general_board_status_msg failure");
+	build_general_board_status_msg(PRIO_LOW, xTaskGetTickCount(), status_bitfield, &msg);
+
+	if (can_handler_transmit(&msg) != W_SUCCESS) {
+		log_text(0, "health_checks", "CAN send failure for status msg");
 		return W_FAILURE;
 	}
 
