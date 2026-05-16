@@ -1,4 +1,4 @@
-#include "drivers/motor_driver/motor_driver.h"
+#include "drivers/ak45_driver/ak45_driver.h"
 #include "application/logger/log.h"
 #include "drivers/timer/timer.h"
 #include "fdcan.h"
@@ -8,7 +8,7 @@
 
 // Motor CAN driver ID configurable on the servo, default 1
 static const uint16_t AK45_DRIVER_ID = 0x45;
-static const uint16_t LOG_WAIT_MS = 10;
+static const uint16_t LOG_WAIT_MS = 1;
 
 // CAN command IDs
 typedef enum {
@@ -22,14 +22,15 @@ typedef enum {
 } can_packet_id_t;
 
 // Feedback message mode ID
-#define CAN_PACKET_FEEDBACK 0x10
-#define CAN_REAL_TIME_FEEDBACK 0x29
+static const uint16_t CAN_PACKET_FEEDBACK = 0x10;
+static const uint16_t CAN_REAL_TIME_FEEDBACK = 0x29;
+static const uint16_t CAN_START_FRAME = 0x2C;
 
 // Scaling factors
-#define MOTOR_POS_CMD_SCALE 10000.0f // Position: degrees * 10000
-#define MOTOR_POS_FB_SCALE 0.1f // Feedback position: raw * 0.1 = degrees
-#define MOTOR_SPEED_FB_SCALE 10.0f // speed feedback: raw * 10.0 = ERPM
-#define MOTOR_CURRENT_FB_SCALE 0.01f // current feedback: raw * 0.01 = Amps
+static const float32_t AK45_POS_CMD_SCALE = 10000.0f; // Position: degrees * 10000
+static const float32_t AK45_POS_FB_SCALE = 0.1f; // Feedback position: raw * 0.1 = degrees
+static const float32_t AK45_SPEED_FB_SCALE = 10.0f; // speed feedback: raw * 10.0 = ERPM
+static const float32_t AK45_CURRENT_FB_SCALE = 0.01f; // current feedback: raw * 0.01 = Amps
 
 static FDCAN_HandleTypeDef *g_ak45_hfdcan = NULL;
 static QueueHandle_t g_feedback_queue = NULL;
@@ -46,6 +47,7 @@ static bool is_init = false;
  */
 static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, uint8_t len) {
 	if ((NULL == g_ak45_hfdcan) || (NULL == data) || (len > 8)) {
+		log_text(LOG_WAIT_MS, "ak45", "Invalid pointers");
 		return W_FAILURE;
 	}
 
@@ -58,13 +60,12 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
 	tx_header.FDFormat = FDCAN_CLASSIC_CAN;
 	tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	tx_header.MessageMarker = 0;
-	tx_header.DataLength = len; // TODO invalid DLC?
-	// TODO suggested changes
-	// if (len <= 8) { tx_header.DataLength = len << 16; }
+	tx_header.DataLength = len; 
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(g_ak45_hfdcan, &tx_header, data) != HAL_OK) {
 		g_tx_errors++;
-		// TODO log error
+
+		log_text(LOG_WAIT_MS, "ak45", "Unable to add can message");
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
@@ -77,20 +78,24 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
  * @param[out] fb     Decoded feedback struct
  */
 static void ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
+	if ((NULL == data) && (NULL == fb)) {
+		log_text(LOG_WAIT_MS, "ak45", "Invalid pointers");
+		return W_INVALID_PARAM;
+	}
 	// TODO floating point multiplication in isr?
-	int16_t raw_pos = ((data[0] << 8) | data[1]);
-	fb->position_deg = (float)raw_pos * MOTOR_POS_FB_SCALE;
+	int16_t raw_pos = (int16_t)(((uint16_t)data[0] << 8) | data[1]);
+	fb->position_deg = (float32_t)raw_pos * AK45_POS_FB_SCALE;
 
-	int16_t raw_speed = ((data[2] << 8) | data[3]);
-	fb->speed_erpm = (float)raw_speed * MOTOR_SPEED_FB_SCALE;
+	int16_t raw_speed = (int16_t)(((uint16_t)data[2] << 8) | data[3]);
+	fb->speed_erpm = (float32_t)raw_speed * AK45_SPEED_FB_SCALE;
 
-	int16_t raw_current = ((data[4] << 8) | data[5]);
-	fb->current_a = (float)raw_current * MOTOR_CURRENT_FB_SCALE;
+	int16_t raw_current = (int16_t)(((uint16_t)data[4] << 8) | data[5]);
+	fb->current_a = (float32_t)raw_current * AK45_CURRENT_FB_SCALE;
 
 	fb->temperature_c = (int8_t)data[6];
 	fb->fault_code = (ak45_fault_code_t)data[7];
 
-	uint32_t ms = 0.0f;
+	uint32_t ms = 0;
 	if (timer_get_ms(&ms) == W_SUCCESS) {
 		fb->timestamp_ms = ms;
 	}
@@ -98,6 +103,7 @@ static void ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
 
 w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 	if (NULL == hfdcan) {
+		log_text(LOG_WAIT_MS, "ak45", "Invalid pointers");
 		return W_INVALID_PARAM;
 	}
 
@@ -106,7 +112,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 	// feedback queue with length 1
 	g_feedback_queue = xQueueCreate(1, sizeof(ak45_feedback_t));
 	if (g_feedback_queue == NULL) {
-		log_text(LOG_WAIT_MS, "motor", "Lack of memory to create feedback queue");
+		log_text(LOG_WAIT_MS, "ak45", "Lack of memory to create feedback queue");
 		return W_FAILURE;
 	}
 
@@ -115,36 +121,28 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 	motor_filter.FilterIndex = 0;
 	motor_filter.FilterType = FDCAN_FILTER_MASK;
 	motor_filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
-	// TODO motor filter removed for now
-	// motor_filter.FilterID1 = 0;
-	// motor_filter.FilterID2 = 0;
 	motor_filter.FilterID1 = (uint32_t)(CAN_REAL_TIME_FEEDBACK << 8) | AK45_DRIVER_ID;
-	motor_filter.FilterID2 = 0x1FFFFFFF;
+	motor_filter.FilterID2 = (uint32_t)(CAN_START_FRAME << 8) | AK45_DRIVER_ID;
 
 	if (HAL_FDCAN_ConfigFilter(g_ak45_hfdcan, &motor_filter) != HAL_OK) {
-		log_text(LOG_WAIT_MS, "motor", "FDCAN filter config failed");
+		log_text(LOG_WAIT_MS, "ak45", "FDCAN filter config failed");
 		return W_FAILURE;
 	}
 
 	// TODO added: manually start clock and enable interrupts
 	if (HAL_FDCAN_Start(g_ak45_hfdcan) != HAL_OK) {
-		log_text(LOG_WAIT_MS, "motor", "FDCAN start failed");
+		log_text(LOG_WAIT_MS, "ak45", "FDCAN start failed");
 		return W_FAILURE;
 	}
 	if (HAL_FDCAN_ActivateNotification(g_ak45_hfdcan, FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) != HAL_OK) {
-		log_text(LOG_WAIT_MS, "motor", "FDCAN activate notification failed");
+		log_text(LOG_WAIT_MS, "ak45", "FDCAN activate notification failed");
 		return W_FAILURE;
 	}
-
-	// uint32_t data  = ((uint32_t)(4) << 8) | (AK45_DRIVER_ID);
-	// // uint8_t data[1];
-	// // data[0] = 4;
-	// ak45_can_transmit_ext(10565, (uint8_t*)&data, FDCAN_DLC_BYTES_4);
 
 	g_tx_errors = 0;
 	is_init = true;
 
-	log_text(LOG_WAIT_MS, "motor", "Init successful");
+	log_text(LOG_WAIT_MS, "ak45", "Init successful");
 	return W_SUCCESS;
 }
 
@@ -152,9 +150,7 @@ w_status_t ak45_send_position_cmd(float angle_deg) {
 	// TODO fix id
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | AK45_DRIVER_ID;
 
-	// uint32_t ext_id = 10565;
-
-	int32_t pos_raw = (int32_t)(angle_deg * MOTOR_POS_CMD_SCALE);
+	int32_t pos_raw = (int32_t)(angle_deg * AK45_POS_CMD_SCALE);
 	uint8_t data[4];
 	data[0] = (uint8_t)((pos_raw >> 24) & 0xFF);
 	data[1] = (uint8_t)((pos_raw >> 16) & 0xFF);
@@ -184,6 +180,7 @@ bool ak45_is_fatal_fault(ak45_fault_code_t fault) {
 
 w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
 	if ((NULL == fb) || (!is_init)) {
+		log_text(LOG_WAIT_MS, "ak45", "Invalid pointers or not initalized");
 		return W_FAILURE;
 	}
 
@@ -204,8 +201,6 @@ uint32_t ak45_get_tx_errors(void) {
  * Called from ISR context when a message matching the servo feedback filter
  * is received. Parses the feedback and puts it in the queue.
  */
-
-// TODO this function is never called?
 static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
 	if (0 == (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)) {
 		return;
@@ -218,12 +213,9 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 		return;
 	}
 
-	// TODO: update the motor ID to match the motor
 	uint32_t expected_id = ((uint32_t)CAN_PACKET_FEEDBACK << 8) | AK45_DRIVER_ID;
 
-	if (rx_header.IdType != FDCAN_EXTENDED_ID || rx_header.Identifier != 10565) {
-		uint8_t abc = 0;
-		(void)abc;
+	if (rx_header.IdType != FDCAN_EXTENDED_ID || rx_header.Identifier != expected_id) {
 		return;
 	}
 

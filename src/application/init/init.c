@@ -25,7 +25,7 @@
 #include "task.h"
 #include "usart.h"
 
-#include "drivers/motor_driver/motor_driver.h"
+#include "drivers/ak45_driver/ak45_driver.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -172,29 +172,29 @@ static void system_init_task(void *arg) {
 	// its blinky now
 
 	// test
-	w_status_t motor_status = motor_driver_init(&hfdcan1);
+	w_status_t motor_status = ak45_driver_init(&hfdcan1);
 	// HAL_StatusTypeDef hal_status = HAL_FDCAN_Start(&hfdcan1);
 
-	motor_feedback_t fb = {0};
+	ak45_feedback_t fb = {0};
 
 	if (W_SUCCESS != motor_status) {
 		vTaskDelay(500);
 	} else {
-		motor_get_latest_feedback(&fb);
+		ak45_get_latest_feedback(&fb);
 	}
 
 	float motor_angle = 0;
 	while (1) {
 		vTaskDelay(2);
-		motor_get_latest_feedback(&fb);
-		motor_send_position_cmd(motor_angle);
+		ak45_get_latest_feedback(&fb);
+		ak45_send_position_cmd(motor_angle);
 
 		if (motor_angle == 0) {
 			motor_angle = 10;
 		}
 		// vTaskDelay(2);
-		// motor_get_latest_feedback(&fb);
-		// motor_send_position_cmd(motor_angle);
+		// ak45_get_latest_feedback(&fb);
+		// ak45_send_position_cmd(motor_angle);
 	}
 }
 
