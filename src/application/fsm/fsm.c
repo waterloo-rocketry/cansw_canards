@@ -70,14 +70,14 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			// do stuff
 			break;
 
-		// both Pad filter and boost will only run estimator step
+			// both Pad filter and boost will only run estimator step
 		case STATE_SE_INIT:
-		// TODO: how to tell estimator it needs to pad filter
+			// TODO: how to tell estimator it needs to pad filter
 		case STATE_BOOST:
 			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
 			break;
 
-		// both act allowed and recovery will only run estimator and controller step
+			// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
 			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
@@ -112,27 +112,28 @@ void fsm_task(void *args) {
 			// TODO: error handling
 		}
 
-		all_sensors_data_t sensor_state = {0};
+		all_sensors_data_t sensor_data = {0};
 
 		// TODO: decide how to deal with a function returning an error
 
 		// get inputs needed for state machine:
 		// - imu data
 		// - etc (probably more later)
-		// will type case bthe all sensor input pointer as this is the only function where sensor
-		// data will be updated, while the rest should use const and therefore that should stay
-		imu_handler_get_fresh_meas(&sensor_state);
+		imu_handler_get_fresh_meas(&sensor_data);
 
 		flight_phase_gen_sync_events(
-			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_state);
+			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_data);
 
-		// do state machine transitions for a limited number of most recent events
-		fsm_do_transitions(&g_ctx);
+		// run 1 cycle of state transition
+		flight_phase_event_t next_event = flight_phase_get_next_event();
+		fsm_state_t new_state =
+			flight_phase_update_state(next_event, g_ctx.curr_state, g_ctx.p_flight_phase_context);
+		g_ctx.curr_state = new_state;
 
-		// run actions based on curr state
-		fsm_exec(&g_ctx, &sensor_state);
+		// run actions based on new curr state
+		fsm_exec(&g_ctx, &sensor_data);
 
-		vTaskDelayUntil(&last_wake_time,
-						pdMS_TO_TICKS(FSM_PERIOD_MS)); // state machine runs at 500 hz
+		// state machine runs at 500 hz
+		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(FSM_PERIOD_MS));
 	}
 }
