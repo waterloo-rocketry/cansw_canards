@@ -10,22 +10,18 @@
 #include "drivers/timer/timer.h"
 
 static const uint8_t QUEUE_TIMEOUT_MS = 0;
-// this is the max amount of flight phase events that will be processed from the flight phase
-// queue (this does not count sensor base transitions)
-#define MAX_PROCESS_FP_EVENTS 5
 static const uint8_t FSM_PERIOD_MS = 2;
 
 typedef struct {
 	estimator_module_ctx_t *estimator_context; // global instance of estimator
 	controller_ctx_t *p_controller_context; // global instance of controller
-	const all_sensors_data_t *all_sensors_input; // imu data collected for this run
 	uint32_t timestamp_ms; // curr timestamp
 	fsm_state_t curr_state;
 	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
-} fsm_inputs_t;
+} fsm_ctx_t;
 
 // global
-static fsm_inputs_t g_inputs = {0};
+static fsm_ctx_t g_ctx = {0};
 
 // create all of the global instances
 static estimator_module_ctx_t g_estimator_context = {0};
@@ -33,7 +29,6 @@ static estimator_module_ctx_t g_estimator_context = {0};
 // make sure controller_output_t is initalized to 0 and valid to read to match original design
 static controller_ctx_t g_controller_context = {0};
 static flight_phase_ctx_t g_flight_phase_context = {0};
-static all_sensors_data_t g_all_sensors_input = {0};
 
 w_status_t fsm_init() {
 	// init estimator context
@@ -50,18 +45,18 @@ w_status_t fsm_init() {
 	g_estimator_context.x.CL = 3;
 
 	// init rest of input
-	g_inputs.estimator_context = &g_estimator_context;
-	g_inputs.p_controller_context = &g_controller_context;
-	g_inputs.p_flight_phase_context = &g_flight_phase_context;
-	g_inputs.all_sensors_input = &g_all_sensors_input;
+	g_ctx.estimator_context = &g_estimator_context;
+	g_ctx.p_controller_context = &g_controller_context;
+	g_ctx.p_flight_phase_context = &g_flight_phase_context;
 
 	// initialize fsm state
-	g_inputs.curr_state = STATE_IDLE;
+	g_ctx.curr_state = STATE_IDLE;
 
 	return W_SUCCESS;
 }
 
-void fsm_exec(const fsm_inputs_t *p_input) {
+void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
+	(void)p_sensor_data;
 	// can't init to {0} as don't have any fields
 	// TODO: either init to {0} or with some value once implemented
 	navigator_input_t navigator_input = {};
@@ -71,7 +66,7 @@ void fsm_exec(const fsm_inputs_t *p_input) {
 
 	// TODO: convert fsm_inputs into the nav/cntl inputs
 
-	switch (p_input->curr_state) {
+	switch (p_ctx->curr_state) {
 		case STATE_IDLE:
 			// do stuff
 			break;
@@ -80,19 +75,19 @@ void fsm_exec(const fsm_inputs_t *p_input) {
 		case STATE_SE_INIT:
 		// TODO: how to tell estimator it needs to pad filter
 		case STATE_BOOST:
-			estimator_step(p_input->estimator_context, &navigator_input, &navigator_output);
+			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
 			break;
 
 		// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
-			estimator_step(p_input->estimator_context, &navigator_input, &navigator_output);
+			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
 
-			controller_step(p_input->p_controller_context,
+			controller_step(p_ctx->p_controller_context,
 							&controller_input,
 							&controller_output,
-							p_input->p_flight_phase_context->act_allowed_timestamp_ms,
-							p_input->timestamp_ms);
+							p_ctx->p_flight_phase_context->act_allowed_timestamp_ms,
+							p_ctx->timestamp_ms);
 			// TODO: motor
 			break;
 
@@ -104,31 +99,10 @@ void fsm_exec(const fsm_inputs_t *p_input) {
 	}
 }
 
-void fsm_do_transitions(fsm_inputs_t *p_input) {
-	flight_phase_event_t event_array[MAX_PROCESS_FP_EVENTS] = {};
-
-	// collect all of the events
-	uint8_t current_index = 0;
-
-	event_array[current_index] = flight_phase_timer_detection(
-		p_input->p_flight_phase_context, p_input->curr_state, p_input->timestamp_ms);
-	current_index++;
-
-	event_array[current_index] = flight_phase_sensor_detection(
-		p_input->p_flight_phase_context, p_input->curr_state, p_input->all_sensors_input);
-	current_index++;
-
-	// asnc events
-	while (current_index < MAX_PROCESS_FP_EVENTS) {
-		event_array[current_index] = flight_phase_get_queue_event(QUEUE_TIMEOUT_MS);
-		current_index++;
-	}
-
-	// run the events and check for updates
-	for (uint8_t i = 0; i < MAX_PROCESS_FP_EVENTS; i++) {
-		p_input->curr_state = flight_phase_update_state(
-			event_array[i], p_input->curr_state, p_input->p_flight_phase_context);
-	}
+void fsm_do_transitions(fsm_ctx_t *p_ctx) {
+	p_ctx->curr_state = flight_phase_update_state(flight_phase_get_queue_event(QUEUE_TIMEOUT_MS),
+												  p_ctx->curr_state,
+												  p_ctx->p_flight_phase_context);
 }
 
 void fsm_task(void *args) {
@@ -136,22 +110,29 @@ void fsm_task(void *args) {
 	TickType_t last_wake_time = xTaskGetTickCount();
 
 	while (1) {
-		if (W_SUCCESS != timer_get_ms(&(g_inputs.timestamp_ms))) {
+		if (W_SUCCESS != timer_get_ms(&(g_ctx.timestamp_ms))) {
 			// TODO: error handling
 		}
+
+		all_sensors_data_t sensor_state = {0};
+
+		// TODO: decide how to deal with a function returning an error
 
 		// get inputs needed for state machine:
 		// - imu data
 		// - etc (probably more later)
 		// will type case bthe all sensor input pointer as this is the only function where sensor
 		// data will be updated, while the rest should use const and therefore that should stay
-		imu_handler_get_fresh_meas((all_sensors_data_t *)g_inputs.all_sensors_input);
+		imu_handler_get_fresh_meas(&sensor_state);
+
+		flight_phase_gen_sync_events(
+			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_state);
 
 		// do state machine transitions for a limited number of most recent events
-		fsm_do_transitions(&g_inputs);
+		fsm_do_transitions(&g_ctx);
 
 		// run actions based on curr state
-		fsm_exec(&g_inputs);
+		fsm_exec(&g_ctx, &sensor_state);
 
 		vTaskDelayUntil(&last_wake_time,
 						pdMS_TO_TICKS(FSM_PERIOD_MS)); // state machine runs at 500 hz

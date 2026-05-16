@@ -243,31 +243,6 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 	return new_state;
 }
 
-/**
- * Task to execute the state machine itself. Consumes events and transitions the state
- */
-void flight_phase_task(void *args) {
-	(void)args;
-	flight_phase_event_t event;
-	while (1) {
-		// if (pdPASS == xQueueReceive(event_queue, &event, pdMS_TO_TICKS(TASK_TIMEOUT_MS))) {
-		// 	log_text(10, "flight_phase", "transition\nentry-state:%d\nevent:%d", curr_state, event);
-
-		// 	// if (flight_phase_update_state(event, &curr_state) != W_SUCCESS) {
-		// 	// 	flight_phase_status.loop_run_errs++;
-		// 	// }
-
-		// 	log_text(10, "flight_phase", "exit-state:%d", curr_state);
-
-		// 	// pdPASS is guaranteed for a queue of length 1, so no error check needed
-		// 	(void)xQueueOverwrite(state_mailbox, &curr_state);
-		// } else {
-		// 	log_text(10, "flight_phase", "curr state:%d", curr_state);
-		// }
-		vTaskDelay(1000);
-	}
-}
-
 uint32_t flight_phase_get_status(void) {
 	uint32_t status_bitfield = 0;
 
@@ -302,4 +277,42 @@ flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
 												   const fsm_state_t curr_state,
 												   const all_sensors_data_t *p_sensor_data) {
 	return EVENT_NONE;
+}
+
+/**
+ * @brief generate syncronous flight phase evnets
+ * @param p_context is the global flight phase global context
+ * @param curr_state current fsm state
+ * @param timestamp_ms is the current timestamp
+ * @param p_sensor_data pointer to the current sensor data
+ * @return the status of function
+ */
+w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_state_t curr_state,
+										const uint32_t timestamp_ms,
+										const all_sensors_data_t *p_sensor_data) {
+	w_status_t status = W_SUCCESS;
+
+	// timer
+	flight_phase_event_t timer_event =
+		flight_phase_timer_detection(p_ctx, curr_state, timestamp_ms);
+
+	if (EVENT_NONE != timer_event) {
+		if (flight_phase_send_event(timer_event) != W_SUCCESS) {
+			log_text(1, "flight_phase", "ERROR: timer send event failed.");
+			status = W_FAILURE;
+		}
+	}
+
+	// sensor
+	flight_phase_event_t sensor_event =
+		flight_phase_sensor_detection(p_ctx, curr_state, p_sensor_data);
+
+	if (EVENT_NONE != sensor_event) {
+		if (flight_phase_send_event(sensor_event) != W_SUCCESS) {
+			log_text(1, "flight_phase", "ERROR: sensor send event failed.");
+			status = W_FAILURE;
+		}
+	}
+
+	return status;
 }

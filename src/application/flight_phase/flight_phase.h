@@ -94,4 +94,16 @@ flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
 												   const fsm_state_t curr_state,
 												   const all_sensors_data_t *p_sensor_data);
 
+/**
+ * @brief generate syncronous flight phase evnets
+ * @param p_context is the global flight phase global context
+ * @param curr_state current fsm state
+ * @param timestamp_ms is the current timestamp
+ * @param p_sensor_data pointer to the current sensor data
+ * @return the status of function
+ */
+w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_state_t curr_state,
+										const uint32_t timestamp_ms,
+										const all_sensors_data_t *p_sensor_data);
+
 #endif
