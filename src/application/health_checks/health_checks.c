@@ -135,7 +135,7 @@ uint32_t check_watchdog_tasks(void) {
 	return status_bitfield;
 }
 
-static void process_module_status(health_status_t status, uint32_t *status_bitfield) {
+static void process_module_status(health_status_t status) {
 	if (status.severity != HEALTH_OK) {
 		log_text(0,
 				 "health",
@@ -144,7 +144,18 @@ static void process_module_status(health_status_t status, uint32_t *status_bitfi
 				 status.severity,
 				 status.error_code);
 
-		*status_bitfield |= (1 << status.module_id);
+		can_msg_t msg = {0};
+		msg.data[2] = status.module_id;
+		msg.data[3] = status.error_code;
+		msg.data[4] = status.error_code;
+		msg.data[5] = status.error_code; //fix later, turn error code into bitfield
+		msg.data[7] = status.severity;                                            
+
+		// temporary debug msg 
+		build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), msg.data, &msg);
+		if (can_handler_transmit(&msg) != W_SUCCESS) {
+			log_text(0, "health", "CAN send failure for module status msg");
+		}
 
 		if (HEALTH_FATAL == status.severity) {
 			char error_msg[6];
@@ -160,24 +171,19 @@ static void process_module_status(health_status_t status, uint32_t *status_bitfi
  *
  * Simply calls each module's status function to trigger status reporting
  */
-static uint32_t check_modules_status(void) {
-	// CAN error bitfield
-	uint32_t status_bitfield = 0;
-
-	process_module_status(i2c_get_status(), &status_bitfield);
-	process_module_status(adc_get_status(), &status_bitfield);
-	process_module_status(can_handler_get_status(), &status_bitfield);
-	process_module_status(estimator_get_status(), &status_bitfield);
-	process_module_status(controller_get_status(), &status_bitfield);
-	process_module_status(sd_card_get_status(), &status_bitfield);
-	process_module_status(timer_get_status(), &status_bitfield);
-	process_module_status(gpio_get_status(), &status_bitfield);
-	process_module_status(flight_phase_get_status(), &status_bitfield);
-	process_module_status(imu_handler_get_status(), &status_bitfield);
-	process_module_status(uart_get_status(), &status_bitfield);
-	process_module_status(logger_get_status(), &status_bitfield);
-
-	return status_bitfield;
+static void check_modules_status(void) {
+	process_module_status(i2c_get_status());
+	process_module_status(adc_get_status());
+	process_module_status(can_handler_get_status());
+	process_module_status(estimator_get_status());
+	process_module_status(controller_get_status());
+	process_module_status(sd_card_get_status());
+	process_module_status(timer_get_status());
+	process_module_status(gpio_get_status());
+	process_module_status(flight_phase_get_status());
+	process_module_status(imu_handler_get_status());
+	process_module_status(uart_get_status());
+	process_module_status(logger_get_status());
 }
 
 // --- Fatal Error Handler Implementation ---
@@ -235,7 +241,7 @@ w_status_t health_check_exec() {
 	uint32_t status_bitfield = 0;
 
 	status_bitfield |= check_watchdog_tasks();
-	status_bitfield |= check_modules_status();
+	check_modules_status();
 
 	// send status CAN msg
 	can_msg_t msg = {0};
