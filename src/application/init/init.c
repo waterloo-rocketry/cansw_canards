@@ -27,6 +27,8 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
+#include "drivers/ak45_driver/ak45_driver.h"
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -40,6 +42,7 @@ TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
+TaskHandle_t motor_handler_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
@@ -51,6 +54,7 @@ const uint32_t can_handler_rx_priority = 45;
 const uint32_t can_handler_tx_priority = 40;
 const uint32_t movella_task_priority = 20;
 const uint32_t log_task_priority = 15;
+const uint32_t motor_handler_task_priority = 12; // placeholder value for now
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
@@ -145,13 +149,42 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+
+	// test
+	w_status_t motor_status = ak45_driver_init(&hfdcan1);
+	// HAL_StatusTypeDef hal_status = HAL_FDCAN_Start(&hfdcan1);
+
+	ak45_feedback_t fb = {0};
+	vTaskDelay(2000);
+
+	if (W_SUCCESS != motor_status) {
+		vTaskDelay(500);
+	} else {
+		ak45_get_latest_feedback(&fb);
+	}
+
+	float motor_angle = -10;
+
+	float32_t motor_targets[10] = {-10, 4, 3, -4, 6, -7, -9, 1, 9, 10};
+	uint8_t i = 0;
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(500);
+		vTaskDelay(20);
+		ak45_get_latest_feedback(&fb);
+		// ak45_send_position_cmd(motor_targets[i]);
+		// i = (i+1)%10;
+
+		motor_angle++;
+		ak45_send_position_cmd(motor_angle);
+
+		if (10 < motor_angle) {
+			vTaskDelay(1000);
+			motor_angle = -10;
+			ak45_send_position_cmd(motor_angle);
+			vTaskDelay(500);
+		}
+		// vTaskDelay(2);
+		// ak45_get_latest_feedback(&fb);
+		// ak45_send_position_cmd(motor_angle);
 	}
 }
 
