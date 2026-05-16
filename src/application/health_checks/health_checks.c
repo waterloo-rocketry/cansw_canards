@@ -7,6 +7,7 @@
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
 #include "can.h" 
+#include "fdcan.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -228,9 +229,6 @@ void proc_handle_fatal_error(const char *errorMsg) {
 	}
 }
 
-// --- End Fatal Error Handler ---
-
-uint32_t can_handler_get_status(void) {
 // --- End Fatal Error Handler ---
 
 w_status_t health_check_exec() {

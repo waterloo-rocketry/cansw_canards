@@ -28,7 +28,7 @@ static can_handler_status_t can_error_stats = {0};
 static can_callback_t callback_map[MSG_ID_ENUM_MAX] = {NULL};
 
 static w_status_t can_reset_callback(const can_msg_t *msg) {
-	if (check_board_need_reset(msg, 0)) {
+	if (check_board_need_reset(msg)) {
 		NVIC_SystemReset();
 		return W_FAILURE; // Should never reach here
 	}
@@ -61,7 +61,7 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 	return status;
 }
 
-static void can_handle_rx_message(const can_msg_t *message) {
+void can_handle_rx_message(const can_msg_t *message) {
 	// software filter: only queue messages with registered callbacks
 	can_msg_type_t msg_type = get_message_type(message);
 	// drop any message types without a registered handler

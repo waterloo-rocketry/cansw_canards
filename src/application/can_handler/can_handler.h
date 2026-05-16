@@ -55,6 +55,9 @@ void can_handler_task_rx(void *argument);
  */
 void can_handler_task_tx(void *argument);
 
+
+void can_handle_rx_message(const can_msg_t *message);
+
 /**
  * @brief Report CAN handler module health status
  *
