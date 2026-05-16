@@ -28,7 +28,7 @@ static can_handler_status_t can_error_stats = {0};
 static can_callback_t callback_map[MSG_ID_ENUM_MAX] = {NULL};
 
 static w_status_t can_reset_callback(const can_msg_t *msg) {
-	if (check_board_need_reset(msg)) {
+	if (check_board_need_reset(msg, 0)) {
 		NVIC_SystemReset();
 		return W_FAILURE; // Should never reach here
 	}
