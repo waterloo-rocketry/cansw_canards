@@ -43,6 +43,12 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 	[GPIO_PIN_RED_LED] = {.port = LED_R_GPIO_Port, .pin = LED_R_Pin, .access_mutex = NULL},
 	[GPIO_PIN_GREEN_LED] = {.port = LED_G_GPIO_Port, .pin = LED_G_Pin, .access_mutex = NULL},
 	[GPIO_PIN_BLUE_LED] = {.port = LED_B_GPIO_Port, .pin = LED_B_Pin, .access_mutex = NULL},
+	[GPIO_PIN_FLASH_CS] = {.port = FLASH_CS_GPIO_Port, .pin = FLASH_CS_Pin, .access_mutex = NULL},
+
+	[GPIO_PIN_EN_EXT_5V] = {.port = EN_EXT_5V_GPIO_Port,
+							.pin = EN_EXT_5V_Pin,
+							.access_mutex = NULL},
+	[GPIO_PIN_PWR_EN] = {.port = PWR_EN_GPIO_Port, .pin = PWR_EN_Pin, .access_mutex = NULL},
 };
 
 // Public ---------------------------------------------------------------------

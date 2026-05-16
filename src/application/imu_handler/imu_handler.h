@@ -36,4 +36,11 @@ void imu_handler_task(void *argument);
  */
 uint32_t imu_handler_get_status(void);
 
+/**
+ * @brief Public function to get the latest IMU data for use by the flight phase
+ * @param all_imu_data Pointer to store the output data
+ * @return Status of the execution
+ */
+w_status_t imu_handler_get_data_for_flight_phase(estimator_all_imus_input_t *all_imu_data);
+
 #endif // IMU_HANDLER_H

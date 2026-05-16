@@ -62,8 +62,6 @@ const uint32_t motor_handler_task_priority = 12; // placeholder value for now
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
-
-
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -97,7 +95,7 @@ static void system_init_task(void *arg) {
 	// status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
-	// status |= imu_handler_init();
+	status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	// status |= controller_init;
 	// status |= ekf_init;
@@ -141,12 +139,12 @@ static void system_init_task(void *arg) {
 							   can_handler_rx_priority,
 							   &can_handler_handle_rx);
 
-	// task_status &= xTaskCreate(can_handler_task_tx,
-	//     "can handler tx",
-	//     256,
-	//     NULL,
-	//     can_handler_tx_priority,
-	//     &can_handler_handle_tx);
+	task_status &= xTaskCreate(can_handler_task_tx,
+							   "can handler tx",
+							   256,
+							   NULL,
+							   can_handler_tx_priority,
+							   &can_handler_handle_tx);
 
 	task_status &= xTaskCreate(
 		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
@@ -184,7 +182,6 @@ static void system_init_task(void *arg) {
 	} else {
 		motor_get_latest_feedback(&fb);
 	}
-	
 
 	float motor_angle = 0;
 	while (1) {
