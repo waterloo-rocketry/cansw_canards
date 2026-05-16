@@ -151,32 +151,13 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
 		return W_FAILURE;
 	}
 
-	HAL_StatusTypeDef callback_status = HAL_OK;
-
 	// Register HAL callbacks for memory TX and RX complete events
-	callback_status |= HAL_I2C_RegisterCallback(
+	HAL_I2C_RegisterCallback(
 		hal_handle, HAL_I2C_MEM_TX_COMPLETE_CB_ID, i2c_transfer_complete_callback);
-	callback_status |= HAL_I2C_RegisterCallback(
+	HAL_I2C_RegisterCallback(
 		hal_handle, HAL_I2C_MEM_RX_COMPLETE_CB_ID, i2c_transfer_complete_callback);
-	// Register HAL callbacks for Master TX complete events
-	callback_status |= HAL_I2C_RegisterCallback(
-		hal_handle, HAL_I2C_MASTER_TX_COMPLETE_CB_ID, i2c_transfer_complete_callback);
 	// Register separate error callback to handle errors using HAL_I2C_GetError
-	callback_status |=
-		HAL_I2C_RegisterCallback(hal_handle, HAL_I2C_ERROR_CB_ID, i2c_error_callback);
-
-	if (HAL_OK != callback_status) {
-		handle->initialized = false;
-		log_text(10, "i2c", "ERROR: callbacks not resitered");
-
-		// delete semaphore and mutex
-		vSemaphoreDelete(handle->mutex);
-		vSemaphoreDelete(handle->transfer_sem);
-		handle->mutex = NULL;
-		handle->transfer_sem = NULL;
-
-		return W_FAILURE;
-	}
+	HAL_I2C_RegisterCallback(hal_handle, HAL_I2C_ERROR_CB_ID, i2c_error_callback);
 
 	// Mark bus as initialized
 	handle->initialized = true;
@@ -196,8 +177,8 @@ w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t
 		return W_FAILURE;
 	}
 
-	// Convert 7-bit device address to 8-bit HAL format by shifting left and have HAL set R/W bit
-	uint16_t hal_addr = (uint16_t)(device_addr << 1);
+	// Convert 7-bit device address to 8-bit HAL format by shifting left and setting R/W bit to 0
+	uint16_t hal_addr = (device_addr << 1) & 0xFE;
 
 	// Acquire the bus mutex to ensure exclusive access during the transfer
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
@@ -242,8 +223,8 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 		return W_FAILURE;
 	}
 
-	// Convert 7-bit device address to 8-bit HAL format by shifting left and have HAL set R/W bit
-	uint16_t hal_addr = (uint16_t)(device_addr << 1);
+	// Convert 7-bit device address to 8-bit HAL format by shifting left and setting R/W bit to 0
+	uint16_t hal_addr = (device_addr << 1) & 0xFE;
 
 	// Acquire bus mutex with timeout
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
@@ -260,50 +241,6 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 	// Start non-blocking write operation
 	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Write_IT(
 		handle->hal_handle, hal_addr, reg, I2C_MEMADD_SIZE_8BIT, (uint8_t *)data, len);
-
-	// Handle HAL-level errors
-	if (hal_status != HAL_OK) {
-		i2c_error_stats[bus].bus_errors++;
-		xSemaphoreGive(handle->mutex);
-		return W_IO_ERROR;
-	}
-
-	// Wait for transfer completion and release mutex
-	wait_transfer_complete(handle, bus);
-	xSemaphoreGive(handle->mutex);
-	return handle->transfer_status; // Return the status set by callback
-}
-
-w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *data, uint8_t len) {
-	// Validate input parameters
-	if (bus >= I2C_BUS_COUNT || !data || !len) {
-		return W_INVALID_PARAM;
-	}
-
-	// Get bus handle and check initialization
-	i2c_bus_handle_t *handle = &i2c_buses[bus];
-	if (!handle->initialized) {
-		return W_FAILURE;
-	}
-
-	// Convert 7-bit device address to 8-bit HAL format by shifting left and have HAL set R/W bit
-	uint16_t hal_addr = (uint16_t)(device_addr << 1);
-
-	// Acquire bus mutex with timeout
-	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
-		i2c_error_stats[bus].timeouts++;
-		return W_IO_TIMEOUT;
-	}
-
-	// Clear transfer state and prepare for new transfer
-	handle->transfer_complete = false;
-	handle->transfer_status = W_SUCCESS; // Initialize with success status
-	xSemaphoreGive(handle->transfer_sem); // Give semaphore to ensure it's in a known state
-	xSemaphoreTake(handle->transfer_sem, 0); // Clear any pending signal
-
-	// Start non-blocking write operation
-	HAL_StatusTypeDef hal_status =
-		HAL_I2C_Master_Transmit_IT(handle->hal_handle, hal_addr, (uint8_t *)data, len);
 
 	// Handle HAL-level errors
 	if (hal_status != HAL_OK) {
