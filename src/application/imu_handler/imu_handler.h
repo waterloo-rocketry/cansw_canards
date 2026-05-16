@@ -34,13 +34,6 @@ w_status_t imu_handler_init(void);
 w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *output);
 
 /**
- * @brief IMU handler task function for FreeRTOS
- * Should be created during system startup
- * @param argument Task argument (unused)
- */
-void imu_handler_task(void *argument);
-
-/**
  * @brief Reports the current status of the IMU handler module
  * @return CAN board status bitfield
  * @details Logs initialization status, sampling statistics, and error conditions

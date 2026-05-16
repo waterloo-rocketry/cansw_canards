@@ -100,7 +100,7 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 }
 
 void fsm_do_transitions(fsm_ctx_t *p_ctx) {
-	p_ctx->curr_state = flight_phase_update_state(flight_phase_get_queue_event(QUEUE_TIMEOUT_MS),
+	p_ctx->curr_state = flight_phase_update_state(flight_phase_get_next_event(QUEUE_TIMEOUT_MS),
 												  p_ctx->curr_state,
 												  p_ctx->p_flight_phase_context);
 }

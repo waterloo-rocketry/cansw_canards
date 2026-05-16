@@ -36,22 +36,17 @@ typedef struct {
 w_status_t flight_phase_init(void);
 
 /**
- * Task to execute the state machine itself. Consumes events and transitions the state
- */
-void flight_phase_task(void *args);
-
-/**
  * Send a flight phase event to the state machine
  * Not ISR safe
  */
 w_status_t flight_phase_send_event(flight_phase_event_t event);
 
 /**
- * @brief get the newest event in the event queue
+ * @brief get the next event that should be processed from the event queue
  * @param timeout_ms timeout time
- * @return return the newest event or return EVENT_NONE otherwise
+ * @return return the next event or return EVENT_NONE otherwise
  */
-flight_phase_event_t flight_phase_get_queue_event(uint8_t timeout_ms);
+flight_phase_event_t flight_phase_get_next_event(uint8_t timeout_ms);
 
 /**
  * process 1 transition.
@@ -71,28 +66,6 @@ w_status_t flight_phase_reset(void);
  * and error conditions for the flight phase state machine
  */
 uint32_t flight_phase_get_status(void);
-
-/**
- * @brief performs any timer based state transition detection
- * @param p_context is the global flight phase global context
- * @param curr_state current fsm state
- * @param timestamp_ms is the current timestamp
- * @return generated timer event
- */
-flight_phase_event_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx,
-												  const fsm_state_t curr_state,
-												  const uint32_t timestamp_ms);
-
-/**
- * @brief performs any sensor based state transition detection
- * @param p_context pointer to the global flight phase global context
- * @param curr_state current fsm state
- * @param p_sensor_data pointer to the current sensor data
- * @return generated sensor event
- */
-flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
-												   const fsm_state_t curr_state,
-												   const all_sensors_data_t *p_sensor_data);
 
 /**
  * @brief generate syncronous flight phase evnets

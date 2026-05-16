@@ -1,8 +1,5 @@
 #include <string.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 #include "application/can_handler/can_handler.h"
 #include "application/estimator/estimator_types.h"
 #include "application/imu_handler/imu_handler.h"
@@ -296,36 +293,6 @@ w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *imu_output) {
 
 	// Return overall status
 	return status;
-}
-
-/**
- * @brief IMU handler task function for FreeRTOS
- * @note This task will be created during system initialization
- * @param argument Task argument (unused)
- */
-void imu_handler_task(void *argument) {
-	(void)argument; // Unused parameter
-
-	// Variables for precise timing control
-	TickType_t last_wake_time = xTaskGetTickCount();
-	const TickType_t frequency = pdMS_TO_TICKS(IMU_SAMPLING_PERIOD_MS);
-
-	// track loop count for CAN tx rate limiting
-	uint32_t loop_count = 0;
-
-	// Main task loop
-	log_text(10, "IMUHandlerTask", "INFO: IMU Handler task started.");
-	while (1) {
-		// w_status_t run_status = imu_handler_get_fresh_meas(loop_count++);
-		// if (W_SUCCESS != run_status) {
-		// 	// Log or handle run failures if needed
-		// 	imu_handler_state.error_count++;
-		// 	log_text(1, "IMUHandlerTask", "ERROR: task run failed (status: %d).", run_status);
-		// }
-
-		// Wait for next sampling period with precise timing
-		vTaskDelayUntil(&last_wake_time, frequency);
-	}
 }
 
 uint32_t imu_handler_get_status(void) {

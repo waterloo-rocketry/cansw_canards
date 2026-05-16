@@ -2,7 +2,6 @@
 
 #include "FreeRTOS.h"
 #include "queue.h"
-#include "task.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/flight_phase/flight_phase.h"
@@ -130,7 +129,7 @@ static w_status_t act_cmd_callback(const can_msg_t *msg) {
  * @param timeout_ms timeout time
  * @return return the newest event or return event none if empty
  */
-flight_phase_event_t flight_phase_get_queue_event(uint8_t timeout_ms) {
+flight_phase_event_t flight_phase_get_next_event(uint8_t timeout_ms) {
 	flight_phase_event_t queue_event = EVENT_NONE;
 	if (pdPASS != xQueueReceive(event_queue, &queue_event, pdMS_TO_TICKS(timeout_ms))) {
 		return EVENT_NONE;
@@ -266,16 +265,29 @@ uint32_t flight_phase_get_status(void) {
 	return status_bitfield;
 }
 
-// new state machine function stubs
-flight_phase_event_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx,
-												  const fsm_state_t curr_state,
-												  const uint32_t timestamp_ms) {
+/**
+ * @brief performs any timer based state transition detection
+ * @param p_context is the global flight phase global context
+ * @param curr_state current fsm state
+ * @param timestamp_ms is the current timestamp
+ * @return generated timer event
+ */
+static flight_phase_event_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx,
+														 const fsm_state_t curr_state,
+														 const uint32_t timestamp_ms) {
 	return EVENT_NONE;
 }
 
-flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
-												   const fsm_state_t curr_state,
-												   const all_sensors_data_t *p_sensor_data) {
+/**
+ * @brief performs any sensor based state transition detection
+ * @param p_context pointer to the global flight phase global context
+ * @param curr_state current fsm state
+ * @param p_sensor_data pointer to the current sensor data
+ * @return generated sensor event
+ */
+static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
+														  const fsm_state_t curr_state,
+														  const all_sensors_data_t *p_sensor_data) {
 	return EVENT_NONE;
 }
 

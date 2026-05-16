@@ -39,24 +39,15 @@ TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
-// TaskHandle_t estimator_task_handle = NULL;
-// TaskHandle_t controller_task_handle = NULL;
-// TaskHandle_t flight_phase_task_handle = NULL;
-// TaskHandle_t imu_handler_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
 const uint32_t fsm_task_priority = configMAX_PRIORITIES - 1;
-// flight phase must have highest priority to preempt everything else
-// const uint32_t flight_phase_task_priority = configMAX_PRIORITIES - 1;
 // prioritize not missing injectorvalveopen msg
 // TODO: could dynamically reduce this priority after flight starts?
 const uint32_t can_handler_rx_priority = 45;
 // in general, prioritize consumers (estimator) over producers (imus) to avoid congestion
 const uint32_t can_handler_tx_priority = 40;
-// const uint32_t controller_task_priority = 30;
-// const uint32_t estimator_task_priority = 25;
-// const uint32_t imu_handler_task_priority = 20;
 const uint32_t movella_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
@@ -88,7 +79,6 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
-	// status |= uart_init(UART_DEBUG_SERIAL, &huart4, 100);
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	// status |= adc_init(&hadc1);
 	status |= estimator_init();
@@ -119,26 +109,12 @@ static void system_init_task(void *arg) {
 							   fsm_task_priority,
 							   &fsm_task_handle);
 
-	// task_status &= xTaskCreate(flight_phase_task,
-	// 						   "flight phase",
-	// 						   256,
-	// 						   NULL,
-	// 						   flight_phase_task_priority,
-	// 						   &flight_phase_task_handle);
-
 	// task_status &= xTaskCreate(health_check_task,
 	//     "health",
 	//     512,
 	//     NULL,
 	//     health_checks_task_priority,
 	//     &health_checks_task_handle);
-
-	// task_status &= xTaskCreate(imu_handler_task,
-	//     "imu handler",
-	//     512,
-	//     NULL,
-	//     imu_handler_task_priority,
-	//     &imu_handler_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
