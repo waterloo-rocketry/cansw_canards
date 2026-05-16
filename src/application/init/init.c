@@ -7,7 +7,6 @@
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
-#include "application/motor_handler/motor_handler.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -25,8 +24,6 @@
 #include "task.h"
 #include "usart.h"
 
-#include "drivers/ak45_driver/ak45_driver.h"
-
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -43,7 +40,6 @@ TaskHandle_t controller_task_handle = NULL;
 TaskHandle_t flight_phase_task_handle = NULL;
 TaskHandle_t imu_handler_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
-TaskHandle_t motor_handler_task_handle = NULL;
 
 // Task priorities
 // flight phase must have highest priority to preempt everything else
@@ -58,7 +54,6 @@ const uint32_t estimator_task_priority = 25;
 const uint32_t imu_handler_task_priority = 20;
 const uint32_t movella_task_priority = 20;
 const uint32_t log_task_priority = 15;
-const uint32_t motor_handler_task_priority = 12; // placeholder value for now
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
@@ -170,31 +165,13 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
-
-	// test
-	w_status_t motor_status = ak45_driver_init(&hfdcan1);
-	// HAL_StatusTypeDef hal_status = HAL_FDCAN_Start(&hfdcan1);
-
-	ak45_feedback_t fb = {0};
-
-	if (W_SUCCESS != motor_status) {
-		vTaskDelay(500);
-	} else {
-		ak45_get_latest_feedback(&fb);
-	}
-
-	float motor_angle = 0;
 	while (1) {
-		vTaskDelay(2);
-		ak45_get_latest_feedback(&fb);
-		ak45_send_position_cmd(motor_angle);
-
-		if (motor_angle == 0) {
-			motor_angle = 10;
-		}
-		// vTaskDelay(2);
-		// ak45_get_latest_feedback(&fb);
-		// ak45_send_position_cmd(motor_angle);
+		gpio_toggle(GPIO_PIN_RED_LED, 1);
+		vTaskDelay(500);
+		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		vTaskDelay(500);
+		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+		vTaskDelay(500);
 	}
 }
 
