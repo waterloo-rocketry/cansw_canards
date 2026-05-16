@@ -25,10 +25,10 @@ FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 // w_status_t can_handler_register_callback(can_msg_type_t msg_type, can_callback_t callback)
 FAKE_VALUE_FUNC(w_status_t, can_handler_register_callback, can_msg_type_t, can_callback_t)
 
-FAKE_VALUE_FUNC(int, get_actuator_id, const can_msg_t *)
+FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_t *)
 
-// int get_cmd_actuator_state(const can_msg_t *msg);
-FAKE_VALUE_FUNC(int, get_cmd_actuator_state, const can_msg_t *)
+// w_status_t get_cmd_actuator_state(const can_msg_t *msg, can_actuator_state_t *cmd_actuator_state);
+FAKE_VALUE_FUNC(w_status_t, get_cmd_actuator_state, const can_msg_t *, can_actuator_state_t *)
 
 BaseType_t
 xQueuePeek_state_pad(QueueHandle_t xQueue, void *const pvBuffer, TickType_t xTicksToWait) {

@@ -108,11 +108,18 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
  * Handles OX_INJECTOR_VALVE->OPEN and PROC_ESTIMATOR_INIT->OPEN
  */
 static w_status_t act_cmd_callback(const can_msg_t *msg) {
-	if ((ACTUATOR_OX_INJECTOR_VALVE == get_actuator_id(msg)) &&
-		(ACT_STATE_ON == get_cmd_actuator_state(msg))) {
+	can_actuator_id_t msg_id;
+	can_actuator_state_t msg_state;
+
+	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
+		(get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
+		log_text(1, "FlightPhase", "invalid actuator data");
+		return W_FAILURE;
+	}
+
+	if ((ACTUATOR_OX_INJECTOR_VALVE == msg_id) && (ACT_STATE_ON == msg_state)) {
 		return flight_phase_send_event(EVENT_INJ_OPEN);
-	} else if ((ACTUATOR_CANARD_PAD_FILTER == get_actuator_id(msg)) &&
-			   (ACT_STATE_ON == get_cmd_actuator_state(msg))) {
+	} else if ((ACTUATOR_CANARD_PAD_FILTER == msg_id) && (ACT_STATE_ON == msg_state)) {
 		return flight_phase_send_event(EVENT_ESTIMATOR_INIT);
 	}
 	return W_SUCCESS;
