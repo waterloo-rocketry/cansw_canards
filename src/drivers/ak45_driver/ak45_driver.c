@@ -5,7 +5,6 @@
 #include "queue.h"
 #include <string.h>
 
-
 // Motor CAN driver ID configurable on the servo, default 1
 static const uint16_t AK45_DRIVER_ID = 0x45;
 static const uint16_t LOG_WAIT_MS = 1;
@@ -60,7 +59,7 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
 	tx_header.FDFormat = FDCAN_CLASSIC_CAN;
 	tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
 	tx_header.MessageMarker = 0;
-	tx_header.DataLength = len; 
+	tx_header.DataLength = len;
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(g_ak45_hfdcan, &tx_header, data) != HAL_OK) {
 		g_tx_errors++;
@@ -78,9 +77,9 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
  * @param[out] fb     Decoded feedback struct
  */
 static void ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
-	if ((NULL == data) && (NULL == fb)) {
+	if ((NULL == data) || (NULL == fb)) {
 		log_text(LOG_WAIT_MS, "ak45", "Invalid pointers");
-		return W_INVALID_PARAM;
+		return;
 	}
 	// TODO floating point multiplication in isr?
 	int16_t raw_pos = (int16_t)(((uint16_t)data[0] << 8) | data[1]);
