@@ -322,9 +322,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
  * @brief Gets and logs the current status of all UART channels
  * @return Status code indicating success or failure
  */
-uint32_t uart_get_status(void) {
-	uint32_t status_bitfield = 0;
-
+health_status_t uart_get_status(void) {
 	// Iterate through all UART channels
 	for (uart_channel_t channel = 0; channel < UART_CHANNEL_COUNT; channel++) {
 		const char *channel_name = "";
@@ -353,5 +351,7 @@ uint32_t uart_get_status(void) {
 				 stats->overflows);
 	}
 
-	return status_bitfield;
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_UART, .error_code = 0};
+
+	return status;
 }

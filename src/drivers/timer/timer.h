@@ -1,6 +1,8 @@
 #ifndef TIMER_H
 #define TIMER_H
 
+#include "application/health_checks/health_checks.h"
+
 #include "rocketlib/include/common.h"
 #include <stdint.h>
 
@@ -41,6 +43,6 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time);
  *
  * @return CAN board specific err bitfield
  */
-uint32_t timer_get_status(void);
+health_status_t timer_get_status(void);
 
 #endif

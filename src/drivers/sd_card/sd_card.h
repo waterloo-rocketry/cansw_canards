@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
+
 #include "stm32h7xx_hal.h"
 
 #include "rocketlib/include/common.h"
@@ -99,6 +101,6 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *p_sd_handle);
  *
  * @return CAN board specific err bitfield
  */
-uint32_t sd_card_get_status(void);
+health_status_t sd_card_get_status(void);
 
 #endif // SD_CARD_H

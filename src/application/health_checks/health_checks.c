@@ -15,6 +15,7 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#include "fdcan.h"
 #include "message_types.h"
 #include "printf.h"
 #include "task.h"
@@ -23,10 +24,7 @@
 #define ADC_VREF 3.3f
 #define R_SENSE 0.033f
 #define INA180A3_GAIN 100.0f
-#define MAX_CURRENT_mA 400
 #define MAX_WATCHDOG_TASKS 10
-#define CONV_ADC_COUNTS_TO_CURRENT_mA                                                              \
-	((ADC_VREF * 1000.0f) / (ADC_MAX_COUNTS * INA180A3_GAIN * R_SENSE))
 
 // struct for watchdog
 typedef struct {
@@ -39,50 +37,6 @@ typedef struct {
 // watchdog initiailsations
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
 static uint32_t num_watchdog_tasks = 0;
-
-w_status_t get_adc_current(uint32_t *adc_current_mA) {
-	w_status_t status = W_SUCCESS;
-	uint32_t adc_value;
-
-	status |= adc_get_raw_volts(PROCESSOR_BOARD_VOLTAGE, &adc_value, TASK_DELAY_MS);
-	if (status != W_SUCCESS) {
-		return status;
-	}
-
-	*adc_current_mA = (uint32_t)(adc_value * CONV_ADC_COUNTS_TO_CURRENT_mA);
-
-	return W_SUCCESS;
-}
-
-uint32_t check_current(void) {
-	w_status_t current_status = W_SUCCESS;
-	w_status_t can_tx_status = W_SUCCESS;
-	uint32_t adc_current_mA;
-
-	if (get_adc_current(&adc_current_mA) == W_SUCCESS) {
-		uint32_t ms = 0;
-		timer_get_ms(&ms);
-		can_msg_t msg = {0};
-
-		// No scaling for 5V current
-		build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)ms, SENSOR_5V_CURR, adc_current_mA, &msg);
-
-		// Send this to can handler module's tx
-		can_tx_status |= can_handler_transmit(&msg);
-		if (can_tx_status != W_SUCCESS) {
-			log_text(10, "health_checks", "health checks msg tx failed");
-		}
-
-		// send CAN err msg and log text if over current
-		if (adc_current_mA > MAX_CURRENT_mA) {
-			current_status |= 1 << E_5V_OVER_CURRENT_OFFSET;
-			log_text(10, "health_checks", "5V overcurrent: %d mA", adc_current_mA);
-		} else {
-		}
-	}
-
-	return (current_status != W_SUCCESS) ? current_status : can_tx_status;
-}
 
 w_status_t health_check_init(void) {
 	num_watchdog_tasks = 0;
@@ -139,7 +93,7 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
 	watchdog_tasks[num_watchdog_tasks].last_kick_timestamp_ms = current_time;
 	watchdog_tasks[num_watchdog_tasks].timeout_ticks = timeout_ticks;
 
-	num_watchdog_tasks++; // incriminent the watchdog task count for future ref
+	num_watchdog_tasks++; // increment the watchdog task count for future ref
 
 	return status;
 }
@@ -181,42 +135,121 @@ uint32_t check_watchdog_tasks(void) {
 	return status_bitfield;
 }
 
+static w_status_t process_module_status(health_status_t status) {
+	if (status.severity != HEALTH_OK) {
+		log_text(0,
+				 "health",
+				 "%s: sev=%d, err=%d",
+				 status.module_id,
+				 status.severity,
+				 status.error_code);
+
+		can_msg_t msg = {0};
+		msg.data[2] = status.module_id;
+		msg.data[3] = status.error_code;
+		msg.data[4] = status.error_code;
+		msg.data[5] = status.error_code; // fix later, turn error code into bitfield
+		msg.data[7] = status.severity;
+
+		// temporary debug msg
+		build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), msg.data, &msg);
+		if (can_handler_transmit(&msg) != W_SUCCESS) {
+			log_text(0, "health", "CAN send failure for module status msg");
+		}
+
+		if (HEALTH_FATAL == status.severity) {
+			char error_msg[6];
+			// send error msg in the form "module id:error code"
+			snprintf_(error_msg, sizeof(error_msg), "%d:%d", status.module_id, status.error_code);
+			proc_handle_fatal_error(error_msg);
+		}
+		return W_FAILURE;
+	}
+	return W_SUCCESS;
+}
+
 /**
  * @brief Checks the status of all known modules by directly calling their get_status functions
  *
  * Simply calls each module's status function to trigger status reporting
  */
 static uint32_t check_modules_status(void) {
-	// CAN error bitfield
 	uint32_t status_bitfield = 0;
 
-	// Call each module's get_status function
-	// These functions handle their own status checking, logging, and CAN messaging
+	status_bitfield |= process_module_status(i2c_get_status());
+	status_bitfield |= process_module_status(adc_get_status());
+	status_bitfield |= process_module_status(can_handler_get_status());
+	status_bitfield |= process_module_status(estimator_get_status());
+	status_bitfield |= process_module_status(controller_get_status());
+	status_bitfield |= process_module_status(sd_card_get_status());
+	status_bitfield |= process_module_status(timer_get_status());
+	status_bitfield |= process_module_status(gpio_get_status());
+	status_bitfield |= process_module_status(flight_phase_get_status());
+	status_bitfield |= process_module_status(imu_handler_get_status());
+	status_bitfield |= process_module_status(uart_get_status());
+	status_bitfield |= process_module_status(logger_get_status());
 
-	status_bitfield |= i2c_get_status();
-	status_bitfield |= adc_get_status();
-	status_bitfield |= can_handler_get_status();
-	status_bitfield |= estimator_get_status();
-	status_bitfield |= controller_get_status();
-	status_bitfield |= sd_card_get_status();
-	status_bitfield |= timer_get_status();
-	status_bitfield |= gpio_get_status();
-	status_bitfield |= flight_phase_get_status();
-	status_bitfield |= imu_handler_get_status();
-	status_bitfield |= uart_get_status();
-
-	if (logger_get_status() == W_FAILURE) {
-		status_bitfield |= (1 << E_FS_ERROR_OFFSET);
-		log_text(5, "health", "logger not init");
+	if (status_bitfield != 0) {
+		status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
 	}
 
 	return status_bitfield;
 }
 
+// --- Fatal Error Handler Implementation ---
+
+// Note: All IDs (Board Type, Message Type, Instance ID)
+//       are used directly from canlib/message_types.h
+
+void proc_handle_fatal_error(const char *errorMsg) {
+	static bool can_initialized = false;
+	// safe state - loop here forever and send CAN err msg repeatedly
+	while (1) {
+		can_initialized = can_initialized || stm32h7_can_init(&hfdcan3, can_handle_rx_message);
+		__disable_irq();
+
+		// let CAN still work
+		HAL_NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
+
+		can_msg_t msg;
+		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
+
+		// Copy error message to the data buffer
+		if (errorMsg != NULL) {
+			strncpy((char *)data, errorMsg, sizeof(data));
+			// Ensure null termination
+			data[sizeof(data) - 1] = '\0';
+		}
+
+		// Use canlib's helper function to build the debug message
+		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
+		// state)
+		build_debug_raw_msg(PRIO_MEDIUM, 0, data, &msg);
+		if (can_initialized) {
+			stm32h7_can_send(&msg);
+		}
+
+		// scream a few times then attempt to reset.
+		// delay for ~1sec without using systick-based delays (no hal_delay)
+		volatile int dummy;
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 50000000; j++) {
+				dummy++;
+			}
+		}
+
+		dummy++;
+
+		// resetting is always a safe state even in midflight, as flightphase starts IDLE
+		NVIC_SystemReset();
+	}
+}
+
+// --- End Fatal Error Handler ---
+
 w_status_t health_check_exec() {
 	uint32_t status_bitfield = 0;
 
-	status_bitfield |= check_current();
 	status_bitfield |= check_watchdog_tasks();
 	status_bitfield |= check_modules_status();
 
