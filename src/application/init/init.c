@@ -170,7 +170,7 @@ static void system_init_task(void *arg) {
 	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status = sd_card_init();
+	w_status_t non_crit_status = W_SUCCESS;//sd_card_init();
 	non_crit_status |= log_init();
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
@@ -278,11 +278,18 @@ static void system_init_task(void *arg) {
   /* Call the entry-point 'navigation_codegen_entry'. */
   b_r = argInit_struct1_T();
   r1 = argInit_struct1_T();
+  volatile uint32_t timestart = HAL_GetTick();
+
   navigation_codegen_entry(argInit_real_T(), argInit_boolean_T(),
                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
                            &b_r, &board_accel_tmp, &r1, &board_accel_tmp,
                            &state, &cov_norm, &airdata, roll_state);
+
+    volatile uint32_t timeend = HAL_GetTick();
+
+    volatile uint32_t timediff = timeend - timestart;
+    (void)timediff; // Suppress unused variable warning
 	}
 }
 
