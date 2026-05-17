@@ -16,7 +16,7 @@
  * cannot handle dead imus, because it needs to init the filtered arrays with actual imu values. if
  * an imu is actually permanently dead, it will be all 0s anyway for the rest of the program
  */
-w_status_t pad_filter_init(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2);
+w_status_t pad_filter_inits(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2);
 
 /**
  * @param ctx input - object containing the persistent data for this instance of pad_filter
@@ -27,7 +27,7 @@ w_status_t pad_filter_init(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_
  * @param x_init output
  * @param bias output
  */
-w_status_t pad_filter(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2,
+w_status_t pad_filters(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2,
 					  const bool is_dead_1, const bool is_dead_2, x_state_t *x_init,
 					  y_imu_t *bias_1, y_imu_t *bias_2);
 #endif

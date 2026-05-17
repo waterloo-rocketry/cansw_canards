@@ -17,7 +17,7 @@ static const double launch_elevation = 420.0; // 420m above sea level
 static const vector3d_t w = {{0.0}}; // stationary on rail
 static const vector3d_t v = {{0.0}}; // stationary on rail
 
-w_status_t pad_filter_init(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2) {
+w_status_t pad_filter_inits(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2) {
 	if (ctx->is_initialized) {
 		return W_FAILURE; // should not initialize more than once!
 	}
@@ -40,7 +40,7 @@ w_status_t pad_filter_init(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_
 // Computes inital state and covariance estimate for EKF, and bias values for the IMU
 // Uses all available sensors: Gyroscope W, Magnetometer M, Accelerometer A, Barometer P
 // Outputs: initial state, sensor bias matrix, [x_init, bias_1, bias_2]
-w_status_t pad_filter(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2,
+w_status_t pad_filters(pad_filter_ctx_t *ctx, const y_imu_t *IMU_1, const y_imu_t *IMU_2,
 					  const bool is_dead_1, const bool is_dead_2, x_state_t *x_init,
 					  y_imu_t *bias_1, y_imu_t *bias_2) {
 	const double canard_sweep_cot = cot(canard_sweep_angle);

@@ -37,7 +37,7 @@ w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t f
 		case STATE_SE_INIT:
 			// initialize the pad filter if it hasn't been done yet
 			if (false == ctx->pad_filter_ctx.is_initialized) {
-				status |= pad_filter_init(&ctx->pad_filter_ctx, &last_movella, &last_pololu);
+				status |= pad_filter_inits(&ctx->pad_filter_ctx, &last_movella, &last_pololu);
 
 				if (W_SUCCESS == status) {
 					log_text(5, "Estimator", "Pad filter init!");
@@ -47,7 +47,7 @@ w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t f
 			}
 
 			// run pad filter
-			status |= pad_filter(&ctx->pad_filter_ctx,
+			status |= pad_filters(&ctx->pad_filter_ctx,
 								 &input->movella,
 								 &input->pololu,
 								 input->movella_is_dead,
