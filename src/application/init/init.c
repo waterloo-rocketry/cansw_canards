@@ -155,12 +155,24 @@ static void system_init_task(void *arg) {
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
+	uint16_t actual_a = 0;
+	for (uint16_t a = 1; a < 128; ++a) {
+		if (HAL_I2C_IsDeviceReady(&hi2c2, (a << 1), 1, 10) == HAL_OK) {
+			actual_a = a;
+			vTaskDelay(500);
+		}
+	}
+
+	if (actual_a == 0) vTaskDelay(500);
+
 	// its blinky now
 	status = adxl380_init();
 	vector3d_t data = {0};
 	adxl380_raw_accel_data_t raw_data = {0};
 
-	if (W_SUCCESS != status) vTaskDelay(500);
+	if (W_SUCCESS != status) {
+		vTaskDelay(500);
+	}
 	while (1) {
 		// gpio_toggle(GPIO_PIN_RED_LED, 1);
 		// vTaskDelay(500);
@@ -170,7 +182,9 @@ static void system_init_task(void *arg) {
 		// vTaskDelay(500);
 
 		status = adxl380_get_accel_data(&data, &raw_data);
-		if (W_SUCCESS != status) vTaskDelay(500);
+		if (W_SUCCESS != status) {
+			vTaskDelay(500);
+		}
 		vTaskDelay(500);
 	}
 }
