@@ -53,8 +53,7 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, ADXRS_ST1_Pin|ADXRS_ST2_Pin|CHG_MUX_EN_Pin|EN_EXT_5V_Pin
-                          |FLASH_CS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, ADXRS_ST1_Pin|ADXRS_ST2_Pin|CHG_MUX_EN_Pin|EN_EXT_5V_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, LED_R_Pin|LED_G_Pin|LED_B_Pin|PWR_EN_Pin, GPIO_PIN_RESET);
@@ -63,15 +62,16 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(M_SYNC_IN1_GPIO_Port, M_SYNC_IN1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(FLASH_CS_GPIO_Port, FLASH_CS_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, M_CAN_STB_Pin|R_CAN_STB_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(S_CAN_STB_GPIO_Port, S_CAN_STB_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : ADXRS_ST1_Pin ADXRS_ST2_Pin CHG_MUX_EN_Pin EN_EXT_5V_Pin
-                           FLASH_CS_Pin */
-  GPIO_InitStruct.Pin = ADXRS_ST1_Pin|ADXRS_ST2_Pin|CHG_MUX_EN_Pin|EN_EXT_5V_Pin
-                          |FLASH_CS_Pin;
+  /*Configure GPIO pins : ADXRS_ST1_Pin ADXRS_ST2_Pin CHG_MUX_EN_Pin EN_EXT_5V_Pin */
+  GPIO_InitStruct.Pin = ADXRS_ST1_Pin|ADXRS_ST2_Pin|CHG_MUX_EN_Pin|EN_EXT_5V_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -102,6 +102,13 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : FLASH_CS_Pin */
+  GPIO_InitStruct.Pin = FLASH_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(FLASH_CS_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : ADC_INT_Pin */
   GPIO_InitStruct.Pin = ADC_INT_Pin;

@@ -22,12 +22,15 @@ extern w_status_t check_watchdog_tasks(void);
 FAKE_VALUE_FUNC(w_status_t, adc_get_raw_volts, adc_channel_t, uint32_t *, uint32_t);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
-FAKE_VALUE_FUNC(bool, build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, uint16_t,
-				can_msg_t *);
+FAKE_VOID_FUNC(
+    build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, can_msg_t *
+);
 // FAKE_VALUE_FUNC(TaskHandle_t, xTaskGetCurrentTaskHandle);
 FAKE_VOID_FUNC(log_text, uint32_t, const char *, const char *, void *);
-FAKE_VALUE_FUNC(bool, build_analog_data_msg, can_msg_prio_t, uint16_t, can_analog_sensor_id_t,
-				uint16_t, can_msg_t *);
+FAKE_VOID_FUNC(
+    build_analog_sensor_32bit_msg, can_msg_prio_t, uint16_t, can_analog_sensor_id_t, uint32_t,
+    can_msg_t *
+);
 
 // Mock implementations for all the module get_status functions
 FAKE_VALUE_FUNC(uint32_t, i2c_get_status);
@@ -70,7 +73,7 @@ protected:
 		RESET_FAKE(timer_get_ms);
 		RESET_FAKE(can_handler_transmit);
 		RESET_FAKE(build_general_board_status_msg);
-		RESET_FAKE(build_analog_data_msg);
+		RESET_FAKE(build_analog_sensor_32bit_msg);
 		RESET_FAKE(can_handler_transmit);
 		RESET_FAKE(xTaskGetCurrentTaskHandle);
 		RESET_FAKE(xTaskGetTickCount);
@@ -96,7 +99,6 @@ protected:
 		adc_get_raw_volts_fake.return_val = W_SUCCESS;
 		timer_get_ms_fake.return_val = W_SUCCESS;
 		can_handler_transmit_fake.return_val = W_SUCCESS;
-		build_general_board_status_msg_fake.return_val = true;
 
 		// Set default return values for module status functions
 		i2c_get_status_fake.return_val = W_SUCCESS;
@@ -175,8 +177,6 @@ TEST_F(HealthChecksTest, NominalHealthCheck) {
 	SetAdcValue(
 		// +1 for integer rounding
 		nominal_current * R_SENSE * INA180A3_GAIN / (ADC_VREF * 1000.0f) * ADC_MAX_COUNTS_MOCK + 1);
-	build_general_board_status_msg_fake.return_val = true;
-	build_analog_data_msg_fake.return_val = true;
 
 	// Act
 	w_status_t result = health_check_exec();
@@ -186,10 +186,10 @@ TEST_F(HealthChecksTest, NominalHealthCheck) {
 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 1);
 	EXPECT_EQ(build_general_board_status_msg_fake.arg0_val, PRIO_LOW);
 	EXPECT_EQ(build_general_board_status_msg_fake.arg2_val, E_NOMINAL);
-	EXPECT_EQ(build_analog_data_msg_fake.call_count, 1);
-	EXPECT_EQ(build_analog_data_msg_fake.arg0_val, PRIO_LOW);
-	EXPECT_EQ(build_analog_data_msg_fake.arg2_val, SENSOR_5V_CURR);
-	EXPECT_EQ(build_analog_data_msg_fake.arg3_val, nominal_current);
+	EXPECT_EQ(build_analog_sensor_32bit_msg_fake.call_count, 1);
+	EXPECT_EQ(build_analog_sensor_32bit_msg_fake.arg0_val, PRIO_LOW);
+	EXPECT_EQ(build_analog_sensor_32bit_msg_fake.arg2_val, SENSOR_5V_CURR);
+	EXPECT_EQ(build_analog_sensor_32bit_msg_fake.arg3_val, nominal_current);
 }
 
 TEST_F(HealthChecksTest, OvercurrentHealthCheck) {
@@ -200,8 +200,6 @@ TEST_F(HealthChecksTest, OvercurrentHealthCheck) {
 	SetAdcValue(
 		over_current * R_SENSE * INA180A3_GAIN / (ADC_VREF * 1000.0f) * ADC_MAX_COUNTS_MOCK + 1);
 
-	build_general_board_status_msg_fake.return_val = true;
-	build_analog_data_msg_fake.return_val = true;
 
 	// Act
 	w_status_t result = health_check_exec();
@@ -211,31 +209,33 @@ TEST_F(HealthChecksTest, OvercurrentHealthCheck) {
 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 1);
 	EXPECT_EQ(build_general_board_status_msg_fake.arg0_val, PRIO_LOW);
 	EXPECT_EQ(build_general_board_status_msg_fake.arg2_val, 1 << E_5V_OVER_CURRENT_OFFSET);
-	EXPECT_EQ(build_analog_data_msg_fake.arg0_val, PRIO_LOW);
-	EXPECT_EQ(build_analog_data_msg_fake.arg2_val, SENSOR_5V_CURR);
-	EXPECT_EQ(build_analog_data_msg_fake.arg3_val, over_current);
+	EXPECT_EQ(build_analog_sensor_32bit_msg_fake.arg0_val, PRIO_LOW);
+	EXPECT_EQ(build_analog_sensor_32bit_msg_fake.arg2_val, SENSOR_5V_CURR);
+	EXPECT_EQ(build_analog_sensor_32bit_msg_fake.arg3_val, over_current);
 }
 
-TEST_F(HealthChecksTest, FailureHealthCheck) {
-	// Arrange
-	SetTimerMs(1000);
-	uint32_t nominal_current = 300;
-	// +1 for integer rounding
-	SetAdcValue(
-		nominal_current * R_SENSE * INA180A3_GAIN / (ADC_VREF * 1000.0f) * ADC_MAX_COUNTS_MOCK + 1);
-	build_general_board_status_msg_fake.return_val = false;
-	build_analog_data_msg_fake.return_val = true;
+// TODO: revive test once a similar test with new system is determined
+// TEST_F(HealthChecksTest, FailureHealthCheck) {
+//     // Arrange
+//     SetTimerMs(1000);
+//     uint32_t nominal_current = 300;
+//     // +1 for integer rounding
+//     SetAdcValue(
+//         nominal_current * R_SENSE * INA180A3_GAIN / (ADC_VREF * 1000.0f) * ADC_MAX_COUNTS_MOCK + 1
+//     );
+//     build_general_board_status_msg_fake.return_val = false;
+//     build_analog_data_msg_fake.return_val = true;
 
-	// Act
-	w_status_t result = health_check_exec();
+// 	// Act
+// 	w_status_t result = health_check_exec();
 
-	// Assert
-	EXPECT_EQ(W_FAILURE, result);
-	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 1);
-	EXPECT_EQ(build_analog_data_msg_fake.arg0_val, PRIO_LOW);
-	EXPECT_EQ(build_analog_data_msg_fake.arg2_val, SENSOR_5V_CURR);
-	EXPECT_EQ(build_analog_data_msg_fake.arg3_val, nominal_current);
-}
+// 	// Assert
+// 	EXPECT_EQ(W_FAILURE, result);
+// 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 1);
+// 	EXPECT_EQ(build_analog_data_msg_fake.arg0_val, PRIO_LOW);
+// 	EXPECT_EQ(build_analog_data_msg_fake.arg2_val, SENSOR_5V_CURR);
+// 	EXPECT_EQ(build_analog_data_msg_fake.arg3_val, nominal_current);
+// }
 
 TEST_F(HealthChecksTest, WatchdogRegisterAndKick) {
 	// Arrange
@@ -272,8 +272,7 @@ TEST_F(HealthChecksTest, WatchdogTimeout) {
 
 	check_watchdog_tasks();
 
-	build_general_board_status_msg_fake.return_val = true;
-	can_handler_transmit_fake.return_val = W_SUCCESS;
+    can_handler_transmit_fake.return_val = W_SUCCESS;
 
 	// Advance time beyond timeout
 	SetTimerMs(1200); // 200ms later, should trigger timeout
