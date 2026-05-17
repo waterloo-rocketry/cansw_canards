@@ -64,7 +64,7 @@ static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
-	vTaskDelay(500);
+	vTaskDelay(5000);
 
 	// initialize timer first to make sure other modules can use it
 	if (W_SUCCESS != timer_init()) {
@@ -160,7 +160,7 @@ static void system_init_task(void *arg) {
 	vTaskDelay(2000);
 
 	if (W_SUCCESS != motor_status) {
-		vTaskDelay(500);
+		vTaskDelay(50000);
 	} else {
 		ak45_get_latest_feedback(&fb);
 	}
@@ -169,20 +169,27 @@ static void system_init_task(void *arg) {
 
 	float32_t motor_targets[10] = {-10, 4, 3, -4, 6, -7, -9, 1, 9, 10};
 	uint8_t i = 0;
+	volatile bool test_reset = false;
 	while (1) {
-		vTaskDelay(20);
+		gpio_toggle(GPIO_PIN_RED_LED, 1);
+		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		vTaskDelay(200);
 		ak45_get_latest_feedback(&fb);
 		// ak45_send_position_cmd(motor_targets[i]);
 		// i = (i+1)%10;
 
 		motor_angle++;
-		ak45_send_position_cmd(motor_angle);
+		if (ak45_send_position_cmd(motor_angle) != W_SUCCESS) {
+			vTaskDelay(1000);
+		}
 
 		if (10 < motor_angle) {
 			vTaskDelay(1000);
 			motor_angle = -10;
 			ak45_send_position_cmd(motor_angle);
 			vTaskDelay(500);
+			NVIC_SystemReset();
 		}
 		// vTaskDelay(2);
 		// ak45_get_latest_feedback(&fb);
