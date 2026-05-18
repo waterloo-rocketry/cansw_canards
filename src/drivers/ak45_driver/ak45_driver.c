@@ -34,6 +34,7 @@ static FDCAN_HandleTypeDef *g_ak45_hfdcan = NULL;
 static QueueHandle_t g_feedback_queue = NULL;
 static uint32_t g_tx_errors = 0;
 static bool is_init = false;
+static bool recieved_can_msg = false;
 
 /**
  * @brief Transmit 29-bit ID via FDCAN
@@ -99,6 +100,8 @@ static void ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
 	}
 }
 
+w_status_t ak45_send_position_cmd(float angle_deg);
+
 w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 	if (NULL == hfdcan) {
 		log_text(LOG_WAIT_MS, "ak45", "Invalid pointers");
@@ -127,7 +130,8 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 		return W_FAILURE;
 	}
 
-	// TODO added: manually start clock and enable interrupts
+	recieved_can_msg = false;
+
 	if (HAL_FDCAN_Start(g_ak45_hfdcan) != HAL_OK) {
 		log_text(LOG_WAIT_MS, "ak45", "FDCAN start failed");
 		return W_FAILURE;
@@ -136,10 +140,15 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan) {
 		log_text(LOG_WAIT_MS, "ak45", "FDCAN activate notification failed");
 		return W_FAILURE;
 	}
-
-	// set current time to 0
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE << 8) | AK45_DRIVER_ID;
-	uint8_t zero_data[1] = {1};
+
+	// make sure we recieved a can msg before we send one
+	while (!recieved_can_msg) {
+		vTaskDelay(500);
+	}
+
+	// set current position to 0
+	uint8_t zero_data[1] = {0};
 	if (ak45_can_transmit_ext(ext_id, zero_data, 1) != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, "ak45", "ERROR: failed to reset to 0");
 		return W_FAILURE;
@@ -207,6 +216,7 @@ uint32_t ak45_get_tx_errors(void) {
  * is received. Parses the feedback and puts it in the queue.
  */
 static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
+	recieved_can_msg = true;
 	if (0 == (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)) {
 		return;
 	}

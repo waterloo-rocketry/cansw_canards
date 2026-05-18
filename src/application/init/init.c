@@ -8,6 +8,7 @@
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
+#include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
@@ -92,6 +93,7 @@ static void system_init_task(void *arg) {
 	status |= flight_phase_init();
 	status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
+	status |= ak45_driver_init(&hfdcan1);
 	// status |= controller_init;
 	// status |= ekf_init;
 
