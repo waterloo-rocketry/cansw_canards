@@ -157,7 +157,6 @@ static void system_init_task(void *arg) {
 	// HAL_StatusTypeDef hal_status = HAL_FDCAN_Start(&hfdcan1);
 
 	ak45_feedback_t fb = {0};
-	vTaskDelay(2000);
 
 	if (W_SUCCESS != motor_status) {
 		vTaskDelay(50000);
