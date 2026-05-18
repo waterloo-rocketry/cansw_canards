@@ -17,6 +17,7 @@
 #include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/motor_handler/motor_handler.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -39,6 +40,7 @@ TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
+TaskHandle_t motor_handler_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
@@ -50,6 +52,7 @@ const uint32_t can_handler_rx_priority = 45;
 const uint32_t can_handler_tx_priority = 40;
 const uint32_t movella_task_priority = 20;
 const uint32_t log_task_priority = 15;
+const uint32_t motor_handler_task_priority = 12; // placeholder value for now
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
