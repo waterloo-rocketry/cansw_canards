@@ -1,10 +1,7 @@
 #ifndef IIS2MDC_H
 #define IIS2MDC_H
 
-#include "application/logger/log.h"
-#include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
-#include <stdbool.h>
 #include <stdint.h>
 
 // I2C slave address (7 bit)
