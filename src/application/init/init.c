@@ -28,6 +28,9 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
+// TEST
+#include <inttypes.h> // Required for PRIu32
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -146,15 +149,28 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
-	adxrs649_init();
-
+	w_status_t data_status = W_SUCCESS;
+	float64_t data = 0;
+	uint32_t raw_data = 0;
+	uint16_t i = 0;
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(500);
+
+		if (i == 100) {
+			gpio_toggle(GPIO_PIN_RED_LED, 1);
+			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+			i =0;
+		} else {
+			i++;
+		}
+		
+
+		data_status = adxrs649_get_gyro_data(&data, &raw_data);
+		if (data_status != W_SUCCESS) vTaskDelay(500);
+
+		log_text(10, "SystemInit", "ADXRS649: data (deg/s): %lf, raw: %" PRIu32 ".", data, raw_data);
+
+		vTaskDelay(10);
 	}
 }
 
