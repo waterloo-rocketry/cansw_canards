@@ -172,18 +172,18 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 	}
 	while (1) {
-		// gpio_toggle(GPIO_PIN_RED_LED, 1);
-		// vTaskDelay(500);
-		// gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		// vTaskDelay(500);
-		// gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		// vTaskDelay(500);
+		gpio_toggle(GPIO_PIN_RED_LED, 1);
+		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 
 		status = adxl380_get_accel_data(&data, &raw_data);
+		
 		if (W_SUCCESS != status) {
 			vTaskDelay(500);
 		}
 		vTaskDelay(500);
+			
+		log_text(10, "SystemInit", "ADXL380 DATA: corrected: x %lf y %lf z %lf raw: x %d y %d z %d", data.x, data.y, data.z, raw_data.x, raw_data.y, raw_data.z);
 	}
 }
 
