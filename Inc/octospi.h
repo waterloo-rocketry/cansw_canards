@@ -1,9 +1,9 @@
 /* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file    rtc.h
+  * @file    octospi.h
   * @brief   This file contains all the function prototypes for
-  *          the rtc.c file
+  *          the octospi.c file
   ******************************************************************************
   * @attention
   *
@@ -18,8 +18,8 @@
   */
 /* USER CODE END Header */
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __RTC_H__
-#define __RTC_H__
+#ifndef __OCTOSPI_H__
+#define __OCTOSPI_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,13 +32,13 @@ extern "C" {
 
 /* USER CODE END Includes */
 
-extern RTC_HandleTypeDef hrtc;
+extern OSPI_HandleTypeDef hospi1;
 
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
-void MX_RTC_Init(void);
+void MX_OCTOSPI1_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 
@@ -48,5 +48,5 @@ void MX_RTC_Init(void);
 }
 #endif
 
-#endif /* __RTC_H__ */
+#endif /* __OCTOSPI_H__ */
 

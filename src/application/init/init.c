@@ -1,13 +1,24 @@
-#include "application/init/init.h"
+// Add these includes for hardware handles
+#include "FreeRTOS.h"
+#include "adc.h" // For hadc1
+#include "fdcan.h" // For hfdcan1
+#include "i2c.h" // For hi2c2, hi2c4
+#include "stm32h7xx_hal.h"
+#include "task.h"
+#include "usart.h"
+
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/estimator/ekf.h"
 #include "application/estimator/estimator.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
+#include "application/init/init.h"
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
+#include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
@@ -15,14 +26,6 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
-#include "stm32h7xx_hal.h"
-// Add these includes for hardware handles
-#include "FreeRTOS.h"
-#include "adc.h" // For hadc1
-#include "fdcan.h" // For hfdcan1
-#include "i2c.h" // For hi2c2, hi2c4
-#include "task.h"
-#include "usart.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -32,78 +35,35 @@
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
-TaskHandle_t estimator_task_handle = NULL;
+TaskHandle_t fsm_task_handle = NULL;
 TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
-TaskHandle_t controller_task_handle = NULL;
-TaskHandle_t flight_phase_task_handle = NULL;
-TaskHandle_t imu_handler_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
 
 // Task priorities
-// flight phase must have highest priority to preempt everything else
-const uint32_t flight_phase_task_priority = configMAX_PRIORITIES - 1;
+// TODO: set fsm priority
+const uint32_t fsm_task_priority = configMAX_PRIORITIES - 1;
 // prioritize not missing injectorvalveopen msg
 // TODO: could dynamically reduce this priority after flight starts?
 const uint32_t can_handler_rx_priority = 45;
 // in general, prioritize consumers (estimator) over producers (imus) to avoid congestion
 const uint32_t can_handler_tx_priority = 40;
-const uint32_t controller_task_priority = 30;
-const uint32_t estimator_task_priority = 25;
-const uint32_t imu_handler_task_priority = 20;
 const uint32_t movella_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
-
-// Initialize a function with retry logic
-static w_status_t init_with_retry(w_status_t (*init_fn)(void)) {
-	w_status_t status;
-	uint32_t retry_count = 0;
-
-	while (retry_count < MAX_INIT_RETRIES) {
-		status = init_fn();
-
-		if (W_SUCCESS == status) {
-			return W_SUCCESS;
-		}
-
-		retry_count++;
-		if (retry_count < MAX_INIT_RETRIES) {
-			HAL_Delay(INIT_RETRY_DELAY_MS);
-		}
-	}
-
-	return W_FAILURE;
-}
-
-// Initialize a function with retry logic and parameter
-static w_status_t init_with_retry_param(w_status_t (*init_fn)(void *), void *param) {
-	w_status_t status;
-	uint32_t retry_count = 0;
-
-	while (retry_count < MAX_INIT_RETRIES) {
-		status = init_fn(param);
-
-		if (status == W_SUCCESS) {
-			return W_SUCCESS;
-		}
-
-		retry_count++;
-		if (retry_count < MAX_INIT_RETRIES) {
-			HAL_Delay(INIT_RETRY_DELAY_MS);
-		}
-	}
-
-	return W_FAILURE;
-}
 
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
 	vTaskDelay(500);
+
+	// initialize timer first to make sure other modules can use it
+	if (W_SUCCESS != timer_init()) {
+		proc_handle_fatal_error("timerinit");
+	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
@@ -116,22 +76,22 @@ static void system_init_task(void *arg) {
 	w_status_t status = W_SUCCESS;
 
 	// INIT REQUIRED MODULES
-	status |= timer_init();
 	status |= gpio_init();
-	status |= i2c_init(I2C_BUS_2, &hi2c2, 0);
-	status |= i2c_init(I2C_BUS_4, &hi2c4, 0);
-	status |= uart_init(UART_DEBUG_SERIAL, &huart4, 100);
-	status |= uart_init(UART_MOVELLA, &huart8, 100);
-	status |= adc_init(&hadc1);
+	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
+	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
+	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
+	status |= uart_init(UART_MOVELLA, &huart3, 100);
+	// status |= adc_init(&hadc1);
 	status |= estimator_init();
-	status |= health_check_init();
-	status |= init_with_retry(altimu_init);
-	status |= init_with_retry(movella_init);
-	status |= init_with_retry(flight_phase_init);
-	status |= init_with_retry(imu_handler_init);
-	status |= init_with_retry_param((w_status_t (*)(void *))can_handler_init, &hfdcan1);
-	status |= init_with_retry(controller_init);
-	status |= init_with_retry(ekf_init);
+	// status |= health_check_init();
+	status |= movella_init();
+	status |= flight_phase_init();
+	status |= imu_handler_init();
+	status |= can_handler_init(&hfdcan3);
+	status |= controller_init();
+	status |= fsm_init();
+	status |= adxrs649_init();
+	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -144,26 +104,19 @@ static void system_init_task(void *arg) {
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	task_status &= xTaskCreate(flight_phase_task,
-							   "flight phase",
-							   256,
+	task_status &= xTaskCreate(fsm_task,
+							   "fsm",
+							   8192, // TODO: set the correct size
 							   NULL,
-							   flight_phase_task_priority,
-							   &flight_phase_task_handle);
+							   fsm_task_priority,
+							   &fsm_task_handle);
 
-	task_status &= xTaskCreate(health_check_task,
-							   "health",
-							   512,
-							   NULL,
-							   health_checks_task_priority,
-							   &health_checks_task_handle);
-
-	task_status &= xTaskCreate(imu_handler_task,
-							   "imu handler",
-							   512,
-							   NULL,
-							   imu_handler_task_priority,
-							   &imu_handler_task_handle);
+	// task_status &= xTaskCreate(health_check_task,
+	//     "health",
+	//     512,
+	//     NULL,
+	//     health_checks_task_priority,
+	//     &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
@@ -184,16 +137,6 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
-	task_status &= xTaskCreate(controller_task,
-							   "controller",
-							   512,
-							   NULL,
-							   controller_task_priority,
-							   &controller_task_handle);
-
-	task_status &= xTaskCreate(
-		estimator_task, "estimator", 8192, NULL, estimator_task_priority, &estimator_task_handle);
-
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
 		log_text(10, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
@@ -204,9 +147,11 @@ static void system_init_task(void *arg) {
 	// its blinky now
 	while (1) {
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
+		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(1000);
+		vTaskDelay(500);
 	}
 }
 

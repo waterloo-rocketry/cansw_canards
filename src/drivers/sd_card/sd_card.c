@@ -2,10 +2,9 @@
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
 #include "canlib.h"
-#include "fatfs.h"
 #include "semphr.h"
 
-FATFS g_fs_obj;
+// FATFS g_fs_obj;
 
 sd_card_health_t sd_card_health = {0};
 
@@ -28,9 +27,9 @@ w_status_t sd_card_init(void) {
 	// depends on the systick timer, which is disabled if all interrupts are masked.
 	// Freertos masks all interrupts before scheduler starts. Thus this function
 	// must only be called AFTER scheduler starts.
-	if (f_mount(&g_fs_obj, "", 1) != FR_OK) {
-		return W_FAILURE;
-	}
+	// if (f_mount(&g_fs_obj, "", 1) != FR_OK) {
+	// 	return W_FAILURE;
+	// }
 
 	/*
 	 * Create a mutex for thread-safe SD card operations.
@@ -39,7 +38,7 @@ w_status_t sd_card_init(void) {
 	 */
 	sd_mutex = xSemaphoreCreateMutex();
 	if (NULL == sd_mutex) {
-		f_mount(NULL, "", 0); // Unmount
+		// f_mount(NULL, "", 0); // Unmount
 		return W_FAILURE;
 	}
 
@@ -61,28 +60,28 @@ w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t bytes
 		return W_FAILURE;
 	}
 
-	FIL file;
-	FRESULT res;
+	// FIL file;
+	// FRESULT res;
 
 	/* Open the file in read mode. */
-	res = f_open(&file, file_name, FA_READ);
-	if (res != FR_OK) {
-		xSemaphoreGive(sd_mutex);
-		sd_card_health.err_count++;
-		return W_FAILURE;
-	}
+	// res = f_open(&file, file_name, FA_READ);
+	// if (res != FR_OK) {
+	// 	xSemaphoreGive(sd_mutex);
+	// 	sd_card_health.err_count++;
+	// 	return W_FAILURE;
+	// }
 
 	// read into provided buffer
-	res = f_read(&file, buffer, bytes_to_read, (UINT *)bytes_read);
-	if (res != FR_OK) {
-		f_close(&file);
-		xSemaphoreGive(sd_mutex);
-		sd_card_health.err_count++;
-		return W_FAILURE;
-	}
+	// res = f_read(&file, buffer, bytes_to_read, (UINT *)bytes_read);
+	// if (res != FR_OK) {
+	// 	f_close(&file);
+	// 	xSemaphoreGive(sd_mutex);
+	// 	sd_card_health.err_count++;
+	// 	return W_FAILURE;
+	// }
 
 	/* Close the file and release the mutex. */
-	f_close(&file);
+	// f_close(&file);
 	xSemaphoreGive(sd_mutex);
 	sd_card_health.read_count++;
 	return W_SUCCESS;
@@ -101,43 +100,43 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 		return W_FAILURE;
 	}
 
-	FIL file;
-	FRESULT res;
+	// FIL file;
+	// FRESULT res;
 
 	/* Open the file in write mode.
 	 * Use FA_WRITE | FA_OPEN_APPEND to open always for safety in case file wasn't created
 	 * successfully for some reason. This is a failsafe
 	 */
-	res = f_open(&file, file_name, FA_WRITE | FA_OPEN_APPEND);
-	if (res != FR_OK) {
-		f_mount(NULL, "", 0); // unmount then remount
-		f_mount(&g_fs_obj, "", 1);
-		xSemaphoreGive(sd_mutex);
-		sd_card_health.err_count++;
-		return W_FAILURE;
-	}
+	// res = f_open(&file, file_name, FA_WRITE | FA_OPEN_APPEND);
+	// if (res != FR_OK) {
+	// 	f_mount(NULL, "", 0); // unmount then remount
+	// 	f_mount(&g_fs_obj, "", 1);
+	// 	xSemaphoreGive(sd_mutex);
+	// 	sd_card_health.err_count++;
+	// 	return W_FAILURE;
+	// }
 
 	// must deliberately move r/w ptr to start of file if not appending
-	if (false == append) {
-		if (f_lseek(&file, 0) != FR_OK) {
-			f_close(&file);
-			xSemaphoreGive(sd_mutex);
-			sd_card_health.err_count++;
-			return W_FAILURE;
-		}
-	}
+	// if (false == append) {
+	// 	if (f_lseek(&file, 0) != FR_OK) {
+	// 		f_close(&file);
+	// 		xSemaphoreGive(sd_mutex);
+	// 		sd_card_health.err_count++;
+	// 		return W_FAILURE;
+	// 	}
+	// }
 
 	/* Write data from buffer to file. */
-	res = f_write(&file, buffer, bytes_to_write, (UINT *)bytes_written);
-	if (res != FR_OK) {
-		f_close(&file);
-		xSemaphoreGive(sd_mutex);
-		sd_card_health.err_count++;
-		return W_FAILURE;
-	}
+	// res = f_write(&file, buffer, bytes_to_write, (UINT *)bytes_written);
+	// if (res != FR_OK) {
+	// 	f_close(&file);
+	// 	xSemaphoreGive(sd_mutex);
+	// 	sd_card_health.err_count++;
+	// 	return W_FAILURE;
+	// }
 
 	/* Close the file and release the mutex. */
-	f_close(&file);
+	// f_close(&file);
 	xSemaphoreGive(sd_mutex);
 	sd_card_health.write_count++;
 	return W_SUCCESS;
@@ -154,20 +153,20 @@ w_status_t sd_card_file_create(const char *file_name) {
 		return W_FAILURE;
 	}
 
-	FIL file;
-	FRESULT res;
+	// FIL file;
+	// FRESULT res;
 
 	/* Create a new file. The FA_CREATE_NEW flag causes the function to fail if the file already
 	 * exists. */
-	res = f_open(&file, file_name, FA_WRITE | FA_CREATE_NEW);
-	if (res != FR_OK) {
-		xSemaphoreGive(sd_mutex);
-		sd_card_health.err_count++;
-		return W_FAILURE;
-	}
+	// res = f_open(&file, file_name, FA_WRITE | FA_CREATE_NEW);
+	// if (res != FR_OK) {
+	// 	xSemaphoreGive(sd_mutex);
+	// 	sd_card_health.err_count++;
+	// 	return W_FAILURE;
+	// }
 
 	/* Close the file immediately since we just want to create it. */
-	f_close(&file);
+	// f_close(&file);
 	xSemaphoreGive(sd_mutex);
 	sd_card_health.file_create_count++;
 	return W_SUCCESS;

@@ -63,6 +63,82 @@ w_status_t ads1219_read_value_set_data(ads1219_handle_t *handle, uint32_t *value
     return W_SUCCESS;
 }
 
+uint8_t count1_ST = 0;
+w_status_t ads1219_ST_set_get_millivolts1(ads1219_handle_t *handle, float64_t *mv) {
+    if (0 == count1_ST) {
+        *mv = 150;
+    } else if (2 == count1_ST) {
+        *mv = -150;
+    } else {
+        *mv = 0;
+    }
+
+    count1_ST++;
+
+    return W_SUCCESS;
+}
+
+uint8_t count2_ST = 0;
+w_status_t ads1219_ST1_fail_set_get_millivolts(ads1219_handle_t *handle, float64_t *mv) {
+    if (0 == count2_ST) {
+        *mv = 90;
+    } else if (2 == count2_ST) {
+        *mv = -150;
+    } else {
+        *mv = 0;
+    }
+
+    count2_ST++;
+
+    return W_SUCCESS;
+}
+
+uint8_t count3_ST = 0;
+w_status_t ads1219_ST1_fail_set_get_millivolts2(ads1219_handle_t *handle, float64_t *mv) {
+    if (0 == count3_ST) {
+        *mv = 210;
+    } else if (2 == count3_ST) {
+        *mv = -150;
+    } else {
+        *mv = 0;
+    }
+
+    count3_ST++;
+
+    return W_SUCCESS;
+}
+
+
+uint8_t count4_ST = 0;
+w_status_t ads1219_ST2_fail_set_get_millivolts(ads1219_handle_t *handle, float64_t *mv) {
+    if (0 == count4_ST) {
+        *mv = 150;
+    } else if (2 == count4_ST) {
+        *mv = -90;
+    } else {
+        *mv = 0;
+    }
+
+    count4_ST++;
+
+    return W_SUCCESS;
+}
+
+uint8_t count5_ST = 0;
+w_status_t ads1219_ST2_fail_set_get_millivolts2(ads1219_handle_t *handle, float64_t *mv) {
+    if (0 == count5_ST) {
+        *mv = 150;
+    } else if (2 == count5_ST) {
+        *mv = -210;
+    } else {
+        *mv = 0;
+    }
+
+    count5_ST++;
+
+    return W_SUCCESS;
+}
+
 class ADXRS649 : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -88,7 +164,12 @@ protected:
         global_ads1219_conversion_ready = false;
         ads1219_conversion_ready_return = W_SUCCESS;  
         global_adc_output_mv = 0;
-        ads1219_set_millivolts_return = W_SUCCESS;   
+        ads1219_set_millivolts_return = W_SUCCESS;  
+        count1_ST = 0;
+        count2_ST = 0;
+        count3_ST = 0;
+        count4_ST = 0;
+        count5_ST = 0;
     }
 
     void TearDown() override {}
@@ -111,6 +192,7 @@ TEST_F(ADXRS649, initSuccess){
 
     // self-test
     gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST_set_get_millivolts1;
 
     // start
     ads1219_start_fake.return_val = W_SUCCESS;
@@ -136,6 +218,7 @@ TEST_F(ADXRS649, initFailAfterADS1219InitFail){
 
     // self-test
     gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST_set_get_millivolts1;
 
     // start
     ads1219_start_fake.return_val = W_SUCCESS;
@@ -161,6 +244,7 @@ TEST_F(ADXRS649, initFailAfterSetUpFail){
 
     // self-test
     gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST_set_get_millivolts1;
 
     // start
     ads1219_start_fake.return_val = W_SUCCESS;
@@ -188,6 +272,7 @@ TEST_F(ADXRS649, initFailAfterADCSanityCheckFail){
 
     // self-test
     gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST_set_get_millivolts1;
 
     // start
     ads1219_start_fake.return_val = W_SUCCESS;
@@ -213,9 +298,118 @@ TEST_F(ADXRS649, initFailAfterStartFail){
 
     // self-test
     gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST_set_get_millivolts1;
 
     // start
     ads1219_start_fake.return_val = W_FAILURE;
+
+    w_status_t status= adxrs649_init();
+    EXPECT_EQ(W_FAILURE, status);
+};
+
+// ST 1 Fail Low
+TEST_F(ADXRS649, initFailAfterST1FailLow){
+
+    // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_SUCCESS;
+
+    // self-test
+    gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST1_fail_set_get_millivolts;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    w_status_t status= adxrs649_init();
+    EXPECT_EQ(W_FAILURE, status);
+};
+
+// ST 1 Fail High
+TEST_F(ADXRS649, initFailAfterST1FailHigh){
+
+    // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_SUCCESS;
+
+    // self-test
+    gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST1_fail_set_get_millivolts2;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    w_status_t status= adxrs649_init();
+    EXPECT_EQ(W_FAILURE, status);
+};
+
+// ST 2 Fail High
+TEST_F(ADXRS649, initFailAfterST2FailHigh){
+
+    // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_SUCCESS;
+
+    // self-test
+    gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST2_fail_set_get_millivolts;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    w_status_t status= adxrs649_init();
+    EXPECT_EQ(W_FAILURE, status);
+};
+
+// ST 2 Fail Low
+TEST_F(ADXRS649, initFailAfterST2FailLow){
+
+    // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_SUCCESS;
+
+    // self-test
+    gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST2_fail_set_get_millivolts2;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
 
     w_status_t status= adxrs649_init();
     EXPECT_EQ(W_FAILURE, status);
@@ -334,7 +528,7 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMax){
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_FLOAT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_FLOAT_EQ((global_adc_output_mv / 0.1), data);
     EXPECT_EQ(1, raw_data);
 };
 
@@ -359,7 +553,7 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMin){
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_FLOAT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_FLOAT_EQ((global_adc_output_mv / 0.1), data);
     EXPECT_EQ(1, raw_data);
 };
 
@@ -384,7 +578,7 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorZero){
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_FLOAT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_FLOAT_EQ((global_adc_output_mv / 0.1), data);
     EXPECT_EQ(1, raw_data);
 };
 
@@ -409,6 +603,6 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorRegular){
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_FLOAT_EQ(((global_adc_output_mv - 2500) / 0.1), data);
+    EXPECT_FLOAT_EQ((global_adc_output_mv / 0.1), data);
     EXPECT_EQ(1, raw_data);
 };
