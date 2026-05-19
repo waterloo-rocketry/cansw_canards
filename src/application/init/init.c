@@ -17,6 +17,7 @@
 #include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -89,6 +90,7 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
+	status |= adxl380_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
