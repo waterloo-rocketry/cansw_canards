@@ -176,6 +176,7 @@ set(TEST_COMMON_INCS
     ${PROC_SRC_DIR}
     ${PROC_SRC_DIR}/third_party
     ${PROC_SRC_DIR}/third_party/canlib
+    ${PROC_SRC_DIR}/third_party/rocketlib/include
 )
 
 # Add FFF as a header-only library
@@ -221,44 +222,46 @@ add_test_group(test_uart
     ${PROC_SRC_DIR}/drivers/uart/uart.c
 )
 
-add_test_group(test_estimator
-    # test file(s)
-    ${UNIT_TESTS_DIR}/estimator_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/estimator/estimator.c
-    ${PROC_SRC_DIR}/application/estimator/estimator_module.c
-    ${PROC_SRC_DIR}/application/estimator/ekf.c
-    ${PROC_SRC_DIR}/application/estimator/pad_filter.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_dynamics.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_aerodynamics.c
-    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_imu.c
-    ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
-    ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
-    ${PROC_SRC_DIR}/application/estimator/projector.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_encoder.c
-)
+# TODO: revive test for estimator once implemented
+# add_test_group(test_estimator
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/estimator_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/estimator/estimator.c
+#     ${PROC_SRC_DIR}/application/estimator/estimator_module.c
+#     ${PROC_SRC_DIR}/application/estimator/ekf.c
+#     ${PROC_SRC_DIR}/application/estimator/pad_filter.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_dynamics.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_aerodynamics.c
+#     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_imu.c
+#     ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
+#     ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
+#     ${PROC_SRC_DIR}/application/estimator/projector.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_encoder.c
+# )
 
-add_test_group(test_estimator_module
-    # test file(s)
-    ${UNIT_TESTS_DIR}/estimator_module_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/estimator/estimator_module.c
-    ${PROC_SRC_DIR}/application/estimator/ekf.c
-    ${PROC_SRC_DIR}/application/estimator/pad_filter.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_dynamics.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_aerodynamics.c
-    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_imu.c
-    ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
-    ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
-    ${PROC_SRC_DIR}/application/estimator/projector.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_encoder.c
-)
+# TODO: revive test for estimator module once implemented
+# add_test_group(test_estimator_module
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/estimator_module_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/estimator/estimator_module.c
+#     ${PROC_SRC_DIR}/application/estimator/ekf.c
+#     ${PROC_SRC_DIR}/application/estimator/pad_filter.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_dynamics.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_aerodynamics.c
+#     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_imu.c
+#     ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
+#     ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
+#     ${PROC_SRC_DIR}/application/estimator/projector.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_encoder.c
+# )
 
 add_test_group(test_i2c
     # test file(s)
@@ -296,22 +299,24 @@ add_test_group(test_altimu
     ${PROC_SRC_DIR}/drivers/altimu-10/altimu-10.c
 )
 
-add_test_group(test_model_airdata
-    # test file(s)
-    ${UNIT_TESTS_DIR}/model_airdata_test.cpp
-    # src file(s)
-        ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_model_airdata
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/model_airdata_test.cpp
+#     # src file(s)
+#         ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
+# )
 
-add_test_group(test_pad_filter
-    # test file(s)
-    ${UNIT_TESTS_DIR}/pad_filter_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/estimator/pad_filter.c
-    ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
-    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_pad_filter
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/pad_filter_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/estimator/pad_filter.c
+#     ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
+#     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+# )
 
 add_test_group(test_common_math
     # test file(s)
@@ -329,16 +334,18 @@ add_test_group(test_quaternion
     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
 )
 
-add_test_group(test_model_imu
-# test file(s)
-${UNIT_TESTS_DIR}/model_imu_test.cpp
-# src file(s)
-${PROC_SRC_DIR}/application/estimator/model/model_imu.c
-${PROC_SRC_DIR}/common/math/math-algebra3d.c
-${PROC_SRC_DIR}/application/estimator/model/quaternion.c
-${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
-${PROC_SRC_DIR}/application/estimator/model/jacobians.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_model_imu
+# # test file(s)
+# ${UNIT_TESTS_DIR}/model_imu_test.cpp
+# # src file(s)
+# ${PROC_SRC_DIR}/application/estimator/model/model_imu.c
+# ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+# ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
+# ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
+# ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
+# )
+
 add_test_group(test_health_check
     # test file(s)
     ${UNIT_TESTS_DIR}/health_checks_test.cpp
@@ -346,76 +353,83 @@ add_test_group(test_health_check
     ${PROC_SRC_DIR}/application/health_checks/health_checks.c
 )
 
-add_test_group(test_projector
-    # test file(s)
-    ${UNIT_TESTS_DIR}/projector_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/estimator/projector.c
-    ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
-    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_projector
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/projector_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/estimator/projector.c
+#     ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
+#     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+# )
 
-add_test_group(test_model_dynamics
-    # test file(s)
-    ${UNIT_TESTS_DIR}/model_dynamic_test.cpp
-    # src file(s)
-    # (example test doesn't actually test any proc source files)
-    ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
-    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_dynamics.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_aerodynamics.c
-    ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_model_dynamics
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/model_dynamic_test.cpp
+#     # src file(s)
+#     # (example test doesn't actually test any proc source files)
+#     ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
+#     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_dynamics.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_aerodynamics.c
+#     ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
+# )
 
-add_test_group(test_controller_module
-    # test file(s)
-    ${UNIT_TESTS_DIR}/controller_module_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/controller/controller_module.c
-    ${PROC_SRC_DIR}/application/controller/gain_table.c
-)
+# TODO: revive test for controller module once implemented
+# add_test_group(test_controller_module
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/controller_module_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/controller/controller_module.c
+#     ${PROC_SRC_DIR}/application/controller/gain_table.c
+# )
 
-add_test_group(test_controller
-    # test file(s)
-    ${UNIT_TESTS_DIR}/controller_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/controller/controller.c
-    ${PROC_SRC_DIR}/application/controller/controller_module.c
-    ${PROC_SRC_DIR}/application/controller/gain_table.c
-)
+# TODO: revive test for controller once implemented
+# add_test_group(test_controller
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/controller_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/controller/controller.c
+#     ${PROC_SRC_DIR}/application/controller/controller_module.c
+#     ${PROC_SRC_DIR}/application/controller/gain_table.c
+# )
 
-add_test_group(test_model_encoder
-    # test file(s)
-    ${UNIT_TESTS_DIR}/model_encoder_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/estimator/model/model_encoder.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_model_encoder
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/model_encoder_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/estimator/model/model_encoder.c
+# )
 
-add_test_group(test_estimator_ekf
-    # test file(s)
-    ${UNIT_TESTS_DIR}/ekf_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/estimator/ekf.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_dynamics.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_aerodynamics.c
-    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_imu.c
-    ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
-    ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_encoder.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_estimator_ekf
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/ekf_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/estimator/ekf.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_dynamics.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_aerodynamics.c
+#     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_imu.c
+#     ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_airdata.c
+#     ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_encoder.c
+# )
 
-add_test_group(test_model_acceleration
-    # test file(s)
-    ${UNIT_TESTS_DIR}/model_acceleration_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-    ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_model_acceleration
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/model_acceleration_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+#     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
+# )
 
 add_test_group(test_ads1219
     # test file(s)

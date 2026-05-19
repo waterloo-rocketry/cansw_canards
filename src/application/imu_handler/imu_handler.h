@@ -1,7 +1,9 @@
 #ifndef IMU_HANDLER_H
 #define IMU_HANDLER_H
 
+#include "common/gnc/gnc_types.h"
 #include "drivers/altimu-10/altimu-10.h"
+
 #include "rocketlib/include/common.h"
 
 /**
@@ -22,11 +24,14 @@ typedef struct __attribute__((packed)) {
 w_status_t imu_handler_init(void);
 
 /**
- * @brief IMU handler task function for FreeRTOS
- * Should be created during system startup
- * @param argument Task argument (unused)
+ * @brief Curate fresh data from all sensors. This function executes instantly (non-blocking)
+ * to avoid delaying the control loop.
+ * @note !!! data that exceeds the sensor's freshness requirement is marked as dead !!!
+ *
+ * @param output pointer to update with the latest data
+ * @return Status of the execution
  */
-void imu_handler_task(void *argument);
+w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *output);
 
 /**
  * @brief Reports the current status of the IMU handler module

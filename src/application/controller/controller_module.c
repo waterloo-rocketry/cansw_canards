@@ -57,31 +57,14 @@ static w_status_t interpolate_gain(double p_dyn, double canard_coeff,
 	return W_SUCCESS;
 }
 
-// helper function
-static double get_commanded_angle(controller_gain_t gain, roll_state_t roll_state,
-								  float ref_signal) {
-	// compute commanded angle
-	double dot_prod = 0.0;
-	double output = 0.0;
-	for (int i = 0; i < ROLL_STATE_NUM; i++) {
-		dot_prod += gain.gain_k[i] * roll_state.roll_state_arr[i];
-	}
-
-	output = dot_prod + gain.gain_k_pre * ref_signal;
-
-	output = fmin(fmax(output, -max_commanded_angle), max_commanded_angle);
-
-	return output;
-}
-
 w_status_t controller_module(controller_input_t input, uint32_t act_allowed_ms,
-							 double *output_angle, float *ref_signal) {
+							 controller_output_t *output, float *ref_signal) {
 	// ref_signal
 	float r = 0.0f;
 	controller_gain_t controller_gain = {0};
 
 	// validate inputs
-	if ((NULL == output_angle) || (NULL == ref_signal)) {
+	if ((NULL == output) || (NULL == ref_signal)) {
 		log_text(10, "cntlmodule", "nullptrs");
 		return W_INVALID_PARAM;
 	}
@@ -118,7 +101,8 @@ w_status_t controller_module(controller_input_t input, uint32_t act_allowed_ms,
 	}
 
 	// %%% Feedback law
-	*output_angle = get_commanded_angle(controller_gain, input.roll_state, r);
+	// *output = get_commanded_angle(controller_gain, input.roll_state, r);
+	// TODO
 
 	*ref_signal = r;
 
