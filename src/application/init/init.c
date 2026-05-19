@@ -30,9 +30,6 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
-// test include
-#include "drivers/ad_breakout_board/ADXL380.h"
-
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -163,10 +160,11 @@ static void system_init_task(void *arg) {
 		}
 	}
 
-	if (actual_a == 0) vTaskDelay(500);
+	if (actual_a == 0) {
+		vTaskDelay(500);
+	}
 
 	// its blinky now
-	status = adxl380_init();
 	vector3d_t data = {0};
 	adxl380_raw_accel_data_t raw_data = {0};
 
