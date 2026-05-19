@@ -5,23 +5,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "application/controller/controller.h"
+#include "application/estimator/estimator.h"
 #include "application/estimator/estimator_types.h"
 #include "application/estimator/pad_filter.h"
-#include "application/flight_phase/flight_phase.h"
-
-/**
- * persistent state updated by estimator_module
- */
-typedef struct {
-	x_state_t x;
-	double P_flat[SIZE_STATE * SIZE_STATE];
-	y_imu_t bias_movella;
-	y_imu_t bias_pololu;
-	double t_sec; // previous timestamp
-	// estimator ctx must have exactly 1 pad filter ctx
-	pad_filter_ctx_t pad_filter_ctx;
-} estimator_module_ctx_t;
+#include "application/fsm/fsm.h"
+#include "common/gnc/gnc_types.h"
 
 /**
  * input to estimator_module function
@@ -43,8 +31,7 @@ typedef struct {
  * @param ctx persistent estimator context to read and update
  * @param output_to_controller pointer to write output cmd for controller
  */
-w_status_t estimator_module(const estimator_module_input_t *input,
-							flight_phase_state_t flight_phase, estimator_module_ctx_t *ctx,
-							controller_input_t *output_to_controller);
+w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t flight_phase,
+							estimator_module_ctx_t *ctx, controller_input_t *output_to_controller);
 
 #endif // ESTIMATOR_MODULE_H
