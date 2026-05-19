@@ -101,23 +101,6 @@ static const uint16_t FLIGHT_ADXL_CAN_LOG_RATE =
 
 static ad_task_ctx_t g_task_ctx = {};
 
-/**
- * @brief initalize both the breakout board sensor drivers
- * @return the status of initalization
- */
-w_status_t ad_beakout_board_init() {
-	w_status_t status = W_SUCCESS;
-
-	status |= adxrs649_init();
-	status |= adxl380_init();
-
-	if (W_SUCCESS != status) {
-		log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to initalize the drivers.");
-		return W_FAILURE;
-	}
-	return W_SUCCESS;
-}
-
 static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, const int32_t raw_gyro,
 												 const adxl380_raw_accel_data_t *g_raw_accel) {
 	return W_FAILURE;

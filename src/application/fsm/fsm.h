@@ -1,6 +1,8 @@
 #ifndef FSM_H
 #define FSM_H
 
+#include "rocketlib/include/common.h"
+
 /**
  * Enum representing phase of flight (state machine state)
  */

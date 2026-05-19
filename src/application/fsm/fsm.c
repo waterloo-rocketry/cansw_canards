@@ -8,6 +8,7 @@
 #include "application/fsm/fsm.h"
 #include "application/imu_handler/imu_handler.h"
 #include "drivers/timer/timer.h"
+#include "rocketlib/include/common.h"
 
 static const uint8_t FSM_PERIOD_MS = 2;
 

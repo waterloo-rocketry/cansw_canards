@@ -24,12 +24,6 @@ typedef struct {
 } ad_accelerometer_raw_mesurement_t;
 
 /**
- * @brief initalize both the breakout board sensor drivers
- * @return the status of initalization
- */
-w_status_t ad_beakout_board_init();
-
-/**
  * @brief the FreeRTOS Task for getting the sensor data
  */
 void ad_breakout_board_task(void *argument);
