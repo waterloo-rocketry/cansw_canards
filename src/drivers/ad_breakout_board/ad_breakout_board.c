@@ -132,17 +132,17 @@ void ad_breakout_board_task(void *argument) {
 
 		if (W_SUCCESS ==
 			adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[0].z_rate), &raw_gyro)) {
-			g_task_ctx.gyro_dual_buffer[0].is_dead = true;
-		} else {
 			g_task_ctx.gyro_dual_buffer[0].is_dead = false;
+		} else {
+			g_task_ctx.gyro_dual_buffer[0].is_dead = true;
 			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
 		}
 
 		if (W_SUCCESS ==
 			adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[0].accelerometer), &raw_accel)) {
-			g_task_ctx.accel_dual_buffer[0].is_dead = true;
-		} else {
 			g_task_ctx.accel_dual_buffer[0].is_dead = false;
+		} else {
+			g_task_ctx.accel_dual_buffer[0].is_dead = true;
 			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
 		}
 

@@ -36,4 +36,5 @@ void ad_breakout_board_task(void *argument);
  */
 w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *g_gyro_data,
 									  ad_accelerometer_mesurement_t *g_accel_data);
+
 #endif
