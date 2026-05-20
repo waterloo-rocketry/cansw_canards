@@ -148,10 +148,10 @@ static w_status_t process_module_status(health_status_t status) {
 		msg.data[2] = status.module_id;
 		msg.data[3] = status.error_code;
 		msg.data[4] = status.error_code;
-		msg.data[5] = status.error_code; //fix later, turn error code into bitfield
-		msg.data[7] = status.severity;                                            
+		msg.data[5] = status.error_code; // fix later, turn error code into bitfield
+		msg.data[7] = status.severity;
 
-		// temporary debug msg 
+		// temporary debug msg
 		build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), msg.data, &msg);
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			log_text(0, "health", "CAN send failure for module status msg");
@@ -176,22 +176,22 @@ static w_status_t process_module_status(health_status_t status) {
 static uint32_t check_modules_status(void) {
 	uint32_t status_bitfield = 0;
 
-    status_bitfield |= process_module_status(i2c_get_status());
-    status_bitfield |= process_module_status(adc_get_status());
-    status_bitfield |= process_module_status(can_handler_get_status());
-    status_bitfield |= process_module_status(estimator_get_status());
-    status_bitfield |= process_module_status(controller_get_status());
-    status_bitfield |= process_module_status(sd_card_get_status());
-    status_bitfield |= process_module_status(timer_get_status());
-    status_bitfield |= process_module_status(gpio_get_status());
-    status_bitfield |= process_module_status(flight_phase_get_status());
-    status_bitfield |= process_module_status(imu_handler_get_status());
-    status_bitfield |= process_module_status(uart_get_status());
-    status_bitfield |= process_module_status(logger_get_status());
+	status_bitfield |= process_module_status(i2c_get_status());
+	status_bitfield |= process_module_status(adc_get_status());
+	status_bitfield |= process_module_status(can_handler_get_status());
+	status_bitfield |= process_module_status(estimator_get_status());
+	status_bitfield |= process_module_status(controller_get_status());
+	status_bitfield |= process_module_status(sd_card_get_status());
+	status_bitfield |= process_module_status(timer_get_status());
+	status_bitfield |= process_module_status(gpio_get_status());
+	status_bitfield |= process_module_status(flight_phase_get_status());
+	status_bitfield |= process_module_status(imu_handler_get_status());
+	status_bitfield |= process_module_status(uart_get_status());
+	status_bitfield |= process_module_status(logger_get_status());
 
-    if (status_bitfield != 0) {
-        status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET); 
-    }
+	if (status_bitfield != 0) {
+		status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
+	}
 
 	return status_bitfield;
 }

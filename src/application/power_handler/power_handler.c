@@ -1,11 +1,11 @@
-#include "power_handler.h"
 #include "FreeRTOS.h"
-#include "application/can_handler/can_handler.h"
-#include "application/flight_phase/flight_phase.h"
-#include "application/logger/log.h"
-#include "drivers/gpio/gpio.h"
 #include "message_types.h"
 #include "queue.h"
+
+#include "application/can_handler/can_handler.h"
+#include "application/logger/log.h"
+#include "drivers/gpio/gpio.h"
+#include "power_handler.h"
 #include "rocketlib/include/common.h"
 
 /**

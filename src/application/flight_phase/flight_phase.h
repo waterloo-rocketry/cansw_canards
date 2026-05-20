@@ -3,32 +3,31 @@
 
 #include <stdint.h>
 
+#include "FreeRTOS.h"
+#include "queue.h"
+
+#include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
-
+#include "common/gnc/gnc_types.h"
 #include "rocketlib/include/common.h"
-
-/**
- * Enum representing phase of flight (state machine state)
- */
-typedef enum {
-	STATE_IDLE,
-	STATE_SE_INIT,
-	STATE_BOOST,
-	STATE_ACT_ALLOWED,
-	STATE_RECOVERY,
-	STATE_ERROR
-} flight_phase_state_t;
 
 /**
  * Enum representing a state transition event
  */
 typedef enum {
+	EVENT_NONE,
 	EVENT_ESTIMATOR_INIT,
 	EVENT_INJ_OPEN,
 	EVENT_ACT_DELAY_ELAPSED,
 	EVENT_FLIGHT_ELAPSED,
 	EVENT_RESET
 } flight_phase_event_t;
+
+typedef struct {
+	uint32_t launch_timestamp_ms;
+	uint32_t act_allowed_timestamp_ms;
+	uint8_t num_consec_detections;
+} flight_phase_ctx_t;
 
 /**
  * Intialize flight phase module.
@@ -38,23 +37,22 @@ typedef enum {
 w_status_t flight_phase_init(void);
 
 /**
- * Task to execute the state machine itself. Consumes events and transitions the state
- */
-void flight_phase_task(void *args);
-
-/**
- * Returns the current state of the state machine
- * Not ISR safe
- * @return STATE_ERROR if getting the current state failed/timed out, otherwise the current flight
- * phase
- */
-flight_phase_state_t flight_phase_get_state(void);
-
-/**
  * Send a flight phase event to the state machine
  * Not ISR safe
  */
 w_status_t flight_phase_send_event(flight_phase_event_t event);
+
+/**
+ * @brief get the next event that is waiting to be consumed. Does not block (no waiting)
+ * @return return the next event or return EVENT_NONE if no events are waiting
+ */
+flight_phase_event_t flight_phase_get_next_event(void);
+
+/**
+ * process 1 transition.
+ */
+fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t curr_state,
+									  flight_phase_ctx_t *p_ctx);
 
 /**
  * Resets the flight phase state machine to initial state
@@ -70,13 +68,15 @@ w_status_t flight_phase_reset(void);
 health_status_t flight_phase_get_status(void);
 
 /**
- * return time (ms) elapsed since the moment of launch
+ * @brief generate syncronous flight phase evnets
+ * @param p_context is the global flight phase global context
+ * @param curr_state current fsm state
+ * @param timestamp_ms is the current timestamp
+ * @param p_sensor_data pointer to the current sensor data
+ * @return the status of function
  */
-w_status_t flight_phase_get_flight_ms(uint32_t *flight_ms);
-
-/**
- * return time (ms) elapsed since the moment actuation-allowed started
- */
-w_status_t flight_phase_get_act_allowed_ms(uint32_t *act_allowed_ms);
+w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_state_t curr_state,
+										const uint32_t timestamp_ms,
+										const all_sensors_data_t *p_sensor_data);
 
 #endif
