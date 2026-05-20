@@ -28,6 +28,9 @@ static const uint8_t D2_CMD[] = {
 	MS5611_CMD_CONVERT_D2_OSR4096,
 };
 
+static const second_comp_temp_threshold = 2000; /* temperature (in centidegrees) below which second-order compensation is applied */
+static const second_comp_extreme_temp_threshold = -1500; /* temperature (in centidegrees) below which additional extreme cold compensation is applied */
+
 // modify this struct to toggle barometer settings
 static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom read
 								 .bus = I2C_BUS_4,
@@ -78,6 +81,8 @@ static w_status_t a_read_adc(uint32_t *out) {
  * @brief Perfroms the CRC check on the PROM coefficients readout.
  * @param n_prom Array of 8 uint16_t values read from the PROM (prom_coef[0]..prom_coef[7])
  * @param crc The CRC value read from the PROM (lower 4 bits of prom_coef[7])
+ * @return W_SUCCESS if CRC check passes, W_FAILURE if CRC check fails
+ * @note This function is from github repository: https://github.com/libdriver/ms5611/blob/main/src/driver_ms5611.h#L37
  */
 static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	uint8_t cnt;
@@ -109,6 +114,7 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	}
 	n_rem = (0x000F & (n_rem >> 12)); /* get rem */
 	n_prom[7] = crc_read; /* set crc read */
+	n_rem ^= 0x00;        /* xor */
 
 	if (n_rem != crc) {
 		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
@@ -223,17 +229,19 @@ w_status_t ms5611_init(void) {
  * stores the results in the provided struct.
  * @param result Pointer to store the raw pressure and temperature results
  * @note this function also applies the compensation algorithm, but does not convert units
- * (temperature in centidegrees prom_coef, pressure in centimbar)
+ * @note see MS5611 datasheet page 7 - 8 for details on the calculation
+ * (temperature in centidegrees prom_coef, pressure in centimbar) 
  */
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
-	uint32_t d1, d2;
-	int32_t dt, temp;
-	int64_t off, sens, p, off2, sens2;
+	uint32_t d1, d2; /* d1 is raw pressure reading, d2 is raw temperature reading */
+	int32_t dt, temp; /* dt is temperature difference, temp is compensated temperature */
+	int64_t off, sens, p, off2, sens2; /* prom coefficients */
 
 	if (NULL == result) {
 		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
 		return W_INVALID_PARAM;
 	}
+	
 	if (!handle.initialized) {
 		log_text(1, "ms5611", "ERROR: attempted to read pressure before successful initialization");
 		return W_FAILURE;
@@ -267,7 +275,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 
 	/* First-order compensation */
 	dt = (int32_t)d2 - ((int32_t)handle.prom_coef[MS5611_COEFF_TREF] << 8);
-	temp = 2000 + (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
+	temp = second_comp_temp_threshold + (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
 	off = ((int64_t)handle.prom_coef[MS5611_COEFF_OFF] << 16) +
 		  (((int64_t)handle.prom_coef[MS5611_COEFF_TCO] * dt) >> 7);
 	sens = ((int64_t)handle.prom_coef[MS5611_COEFF_SENS] << 15) +
@@ -277,13 +285,13 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 	off2 = 0;
 	sens2 = 0;
 
-	if (temp < 2000) {
-		off2 = 61 * (int64_t)(temp - 2000) * (temp - 2000) / 16;
-		sens2 = 29 * (int64_t)(temp - 2000) * (temp - 2000) / 16;
+	if (temp < second_comp_temp_threshold) {
+		off2 = 61 * (int64_t)(temp - second_comp_temp_threshold) * (temp - second_comp_temp_threshold) / 16;
+		sens2 = 29 * (int64_t)(temp - second_comp_temp_threshold) * (temp - second_comp_temp_threshold) / 16;
 
-		if (temp < -1500) {
-			off2 += 17 * (int64_t)(temp + 1500) * (temp + 1500);
-			sens2 += 9 * (int64_t)(temp + 1500) * (temp + 1500);
+		if (temp < second_comp_extreme_temp_threshold) {
+			off2 += 17 * (int64_t)(temp + second_comp_extreme_temp_threshold) * (temp + second_comp_extreme_temp_threshold);
+			sens2 += 9 * (int64_t)(temp + second_comp_extreme_temp_threshold) * (temp + second_comp_extreme_temp_threshold);
 		}
 	}
 
