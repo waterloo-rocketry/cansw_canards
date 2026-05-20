@@ -29,7 +29,7 @@ typedef enum {
 	MODULE_IMU_HANDLER = 9,
 	MODULE_UART = 10,
 	MODULE_LOGGER = 11,
-	MODULE_COUNT = 12, //number of modules
+	MODULE_COUNT = 12, // number of modules
 	MODULE_MAX = 31
 } module_id_t;
 

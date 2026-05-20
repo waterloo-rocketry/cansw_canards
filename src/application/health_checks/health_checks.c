@@ -172,18 +172,18 @@ static w_status_t process_module_status(health_status_t status) {
 }
 
 static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
-    [MODULE_I2C]          = i2c_get_status,
-    [MODULE_ADC]          = adc_get_status,
-    [MODULE_CAN_HANDLER]  = can_handler_get_status,
-    [MODULE_ESTIMATOR]    = estimator_get_status,
-    [MODULE_CONTROLLER]   = controller_get_status,
-    [MODULE_SD_CARD]      = sd_card_get_status,
-    [MODULE_TIMER]        = timer_get_status,
-    [MODULE_GPIO]         = gpio_get_status,
-    [MODULE_FLIGHT_PHASE] = flight_phase_get_status,
-    [MODULE_IMU_HANDLER]  = imu_handler_get_status,
-    [MODULE_UART]         = uart_get_status,
-    [MODULE_LOGGER]       = logger_get_status,
+	[MODULE_I2C] = i2c_get_status,
+	[MODULE_ADC] = adc_get_status,
+	[MODULE_CAN_HANDLER] = can_handler_get_status,
+	[MODULE_ESTIMATOR] = estimator_get_status,
+	[MODULE_CONTROLLER] = controller_get_status,
+	[MODULE_SD_CARD] = sd_card_get_status,
+	[MODULE_TIMER] = timer_get_status,
+	[MODULE_GPIO] = gpio_get_status,
+	[MODULE_FLIGHT_PHASE] = flight_phase_get_status,
+	[MODULE_IMU_HANDLER] = imu_handler_get_status,
+	[MODULE_UART] = uart_get_status,
+	[MODULE_LOGGER] = logger_get_status,
 };
 
 /**
@@ -193,17 +193,17 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
  */
 
 static uint32_t check_modules_status(void) {
-    uint32_t status_bitfield = 0;
+	uint32_t status_bitfield = 0;
 
-    for (int i = 0; i < MODULE_COUNT; i++) {
-        status_bitfield |= process_module_status(module_get_status_fns[i]());
-    }
+	for (int i = 0; i < MODULE_COUNT; i++) {
+		status_bitfield |= process_module_status(module_get_status_fns[i]());
+	}
 
-    if (status_bitfield != 0) {
-        status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
-    }
+	if (status_bitfield != 0) {
+		status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
+	}
 
-    return status_bitfield;
+	return status_bitfield;
 }
 
 // --- Fatal Error Handler Implementation ---
