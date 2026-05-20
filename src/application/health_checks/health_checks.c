@@ -35,7 +35,7 @@ typedef struct {
 } watchdog_task_t;
 
 // map for module IDs
-typedef health_status_t (*get_status_fn_t)(void);
+typedef health_status_t (*get_module_status_t)(void);
 
 // watchdog initiailsations
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
@@ -171,7 +171,7 @@ static w_status_t process_module_status(health_status_t status) {
 	return W_SUCCESS;
 }
 
-static const get_status_fn_t module_status_fns[MODULE_COUNT] = {
+static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
     [MODULE_I2C]          = i2c_get_status,
     [MODULE_ADC]          = adc_get_status,
     [MODULE_CAN_HANDLER]  = can_handler_get_status,
@@ -196,7 +196,7 @@ static uint32_t check_modules_status(void) {
     uint32_t status_bitfield = 0;
 
     for (int i = 0; i < MODULE_COUNT; i++) {
-        status_bitfield |= process_module_status(module_status_fns[i]());
+        status_bitfield |= process_module_status(module_get_status_fns[i]());
     }
 
     if (status_bitfield != 0) {
