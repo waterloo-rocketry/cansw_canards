@@ -145,14 +145,12 @@ static w_status_t process_module_status(health_status_t status) {
 				 "%s: sev=%d, err=%d",
 				 status.module_id,
 				 status.severity,
-				 status.error_code);
+				 status.error_bitfield);
 
 		can_msg_t msg = {0};
 		msg.data[2] = status.module_id;
-		msg.data[3] = status.error_code;
-		msg.data[4] = status.error_code;
-		msg.data[5] = status.error_code; // later implement error code as bitfield
-		msg.data[7] = status.severity;
+		msg.data[3] = status.error_bitfield;
+		msg.data[4] = status.severity;
 
 		// temporary debug msg
 		build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), msg.data, &msg);
@@ -163,7 +161,7 @@ static w_status_t process_module_status(health_status_t status) {
 		if (HEALTH_FATAL == status.severity) {
 			char error_msg[6];
 			// send error msg in the form "module id:error code"
-			snprintf_(error_msg, sizeof(error_msg), "%d:%d", status.module_id, status.error_code);
+			snprintf_(error_msg, sizeof(error_msg), "%d:%lu", status.module_id, status.error_bitfield);
 			proc_handle_fatal_error(error_msg);
 		}
 		return W_FAILURE;

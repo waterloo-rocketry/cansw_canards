@@ -208,13 +208,12 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 }
 
 health_status_t sd_card_get_status(void) {
-	if (sd_card_health.is_init == false) {
-		// status_bitfield |= (1 << E_FS_ERROR_OFFSET);
-		health_status_t status = {.severity = HEALTH_ERROR,
-								  .module_id = MODULE_SD_CARD,
-								  .error_code = MODULE_ERR_SD_CARD_NOT_INIT};
 
-		return status;
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_SD_CARD, .error_bitfield = 0};
+
+	if (sd_card_health.is_init == false) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_SD_CARD_NOT_INIT;
 	}
 
 	// Log operation statistics
@@ -225,8 +224,6 @@ health_status_t sd_card_get_status(void) {
 			 sd_card_health.file_create_count,
 			 sd_card_health.read_count,
 			 sd_card_health.write_count);
-
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_SD_CARD, .error_code = 0};
 
 	return status;
 }

@@ -168,7 +168,7 @@ health_status_t gpio_get_status(void) {
 			 gpio_status.accesses,
 			 gpio_status.access_fails);
 
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_GPIO, .error_code = 0};
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_GPIO, .error_bitfield = 0};
 
 	return status;
 }

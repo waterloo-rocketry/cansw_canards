@@ -50,7 +50,7 @@ typedef enum {
 typedef struct {
 	health_severity_t severity;
 	module_id_t module_id;
-	module_error_code_t error_code;
+	uint32_t error_bitfield;
 } health_status_t;
 
 /**

@@ -440,12 +440,12 @@ void log_task(void *argument) {
 }
 
 health_status_t logger_get_status(void) {
-	if (!logger_health.is_init) {
-		health_status_t status = {.severity = HEALTH_FATAL,
-								  .module_id = MODULE_LOGGER,
-								  .error_code = MODULE_ERR_LOGGER_NOT_INIT};
+	
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
 
-		return status;
+	if (!logger_health.is_init) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_LOGGER_NOT_INIT;
 	}
 
 	log_text(10,
@@ -468,8 +468,6 @@ health_status_t logger_get_status(void) {
 			 logger_health.no_full_buf_moments,
 			 logger_health.buffer_flush_fails,
 			 logger_health.unsafe_buffer_flushes);
-
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_code = 0};
 
 	return status;
 }
