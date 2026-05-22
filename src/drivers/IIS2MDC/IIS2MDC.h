@@ -4,16 +4,16 @@
 #include "rocketlib/include/common.h"
 #include <stdint.h>
 
-//I2C slave address
-#define IIS2MDC_I2C_ADDR     0x1E
+// I2C slave address
+#define IIS2MDC_I2C_ADDR 0x1E
 
-//Expected WHO_AM_I return value
+// Expected WHO_AM_I return value
 #define IIS2MDC_WHO_AM_I_VAL 0x40
 
-//Checks status register to see if new data is available
+// Checks status register to see if new data is available
 #define IIS2MDC_STATUS_ZYXDA (1 << 3)
 
-//Resets config registers
+// Resets config registers
 #define IIS2MDC_CFG_A_SOFT_RESET (1 << 5)
 
 /* Init configuration:
@@ -25,7 +25,7 @@
 #define IIS2MDC_INIT_CFG_B 0x02
 #define IIS2MDC_INIT_CFG_C 0x10
 
-//conversion factor from raw register values to gauss
+// conversion factor from raw register values to gauss
 const float IIS2MDC_SENSITIVITY_GAUSS_PER_LSB = 0.0015;
 
 /**
@@ -69,4 +69,4 @@ w_status_t iis2mdc_check_sanity(void);
  */
 w_status_t iis2mdc_get_data(iis2mdc_data_t *data, iis2mdc_raw_data_t *raw_data);
 
-#endif //IIS2MDC_H
+#endif // IIS2MDC_H
