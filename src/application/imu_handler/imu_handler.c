@@ -1,42 +1,41 @@
 #include <string.h>
 
-#include "FreeRTOS.h"
-#include "task.h"
-
 #include "application/can_handler/can_handler.h"
-#include "application/estimator/estimator.h"
+#include "application/estimator/estimator_types.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "canlib.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 
-#include "canlib.h"
-
 // Period of IMU sampling in milliseconds
 // slightly slower than 200 hz to always receive encoder which can be >5ms
-#define IMU_SAMPLING_PERIOD_MS 6
+static const int IMU_SAMPLING_PERIOD_MS = 6;
 
 // Timeout values for freshness check (in milliseconds)
-#define GYRO_FRESHNESS_TIMEOUT_MS 5
-#define MAG_FRESHNESS_TIMEOUT_MS 10
-#define ACCEL_FRESHNESS_TIMEOUT_MS 5
-#define BARO_FRESHNESS_TIMEOUT_MS 25
-#define ERROR_THRESHOLD 10
-#define MIN_SUCCESS_RATE 90.0f
+static const int GYRO_FRESHNESS_TIMEOUT_MS = 5;
+static const int MAG_FRESHNESS_TIMEOUT_MS = 10;
+static const int ACCEL_FRESHNESS_TIMEOUT_MS = 5;
+static const int BARO_FRESHNESS_TIMEOUT_MS = 25;
+static const int ERROR_THRESHOLD = 10;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
-#define IMU_HANDLER_CAN_TX_PERIOD_MS 100
-#define IMU_HANDLER_CAN_TX_RATE (IMU_HANDLER_CAN_TX_PERIOD_MS / IMU_SAMPLING_PERIOD_MS)
+static const int IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
+static const int IMU_HANDLER_CAN_TX_RATE = (IMU_HANDLER_CAN_TX_PERIOD_MS / IMU_SAMPLING_PERIOD_MS);
 
 // correct orientation from finn irl, may 4 2025
+// also default uncalibrated orientation until calibration module sets these
 // S1 (movella)
 static const matrix3d_t g_movella_upd_mat = {
 	.array = {{0, 0, 1.000000000}, {1.0000000, 0, 0}, {0, 1.0000000000, 0}}};
 // S2 (pololu)
 static const matrix3d_t g_pololu_upd_mat = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+
+// set to true once calibrated, initialized to false to prevent use before calibration
+static bool orientation_calibrated = false;
 
 // Module state tracking
 typedef struct {
@@ -53,76 +52,41 @@ typedef struct {
 
 static imu_handler_state_t imu_handler_state = {0};
 
-static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
-	// Log raw data to CAN
-	can_msg_t msg;
-	uint32_t timestamp = 0;
-	timer_get_ms(&timestamp);
-	bool build_sts = true;
-	w_status_t can_tx_sts = W_SUCCESS;
+// static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
+// 	// Log raw data to CAN
+// 	can_msg_t msg;
+// 	uint32_t timestamp = 0;
+// 	timer_get_ms(&timestamp);
+// 	w_status_t encode_status = W_SUCCESS;
+// 	w_status_t can_tx_status = W_SUCCESS;
 
-	// Build CAN message with raw data
-	build_sts &= build_imu_data_msg(PRIO_LOW,
-									(uint16_t)timestamp,
-									'X',
-									IMU_PROC_ALTIMU10,
-									raw_data->raw_acc.x,
-									raw_data->raw_gyro.x,
-									&msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+// 	// TODO: Currently using incorrect sensor for testing
+// 	// Encode messages
+// 	int16_t acc_x = 0, acc_y = 0, acc_z = 0;
+// 	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
+// 	int32_t mag_x = 0, mag_y = 0, mag_z = 0;
 
-	build_sts &= build_imu_data_msg(PRIO_LOW,
-									(uint16_t)timestamp,
-									'Y',
-									IMU_PROC_ALTIMU10,
-									raw_data->raw_acc.y,
-									raw_data->raw_gyro.y,
-									&msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+// 	// TODO: do CAN scaling and sending
 
-	build_sts &= build_imu_data_msg(PRIO_LOW,
-									(uint16_t)timestamp,
-									'Z',
-									IMU_PROC_ALTIMU10,
-									raw_data->raw_acc.z,
-									raw_data->raw_gyro.z,
-									&msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+// 	can_tx_status |= can_handler_transmit(&msg);
 
-	build_sts &= build_mag_data_msg(
-		PRIO_LOW, (uint16_t)timestamp, 'X', IMU_PROC_ALTIMU10, raw_data->raw_mag.x, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+// 	// Error handling
+// 	if (encode_status == W_MATH_ERROR) {
+// 		log_text(0, "IMUHandler", "IMU raw msg encode math error (NaN or Inf)");
+// 	} else if (encode_status != W_SUCCESS) {
+// 		log_text(0, "IMUHandler", "IMU raw msg scale / encode failed");
+// 	}
 
-	build_sts &= build_mag_data_msg(
-		PRIO_LOW, (uint16_t)timestamp, 'Y', IMU_PROC_ALTIMU10, raw_data->raw_mag.y, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
+// 	if (can_tx_status != W_SUCCESS) {
+// 		log_text(0, "IMUHandler", "IMU raw msg tx failed");
+// 	}
 
-	build_sts &= build_mag_data_msg(
-		PRIO_LOW, (uint16_t)timestamp, 'Z', IMU_PROC_ALTIMU10, raw_data->raw_mag.z, &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
-
-	build_sts &= build_baro_data_msg(PRIO_LOW,
-									 (uint16_t)timestamp,
-									 IMU_PROC_ALTIMU10,
-									 raw_data->raw_baro.pressure,
-									 raw_data->raw_baro.temperature,
-									 &msg);
-	can_tx_sts |= can_handler_transmit(&msg);
-
-	// Transmit CAN message
-	if (can_tx_sts != W_SUCCESS) {
-		log_text(0, "IMUHandler", "CAN tx failed");
-	}
-	if (!build_sts) {
-		log_text(0, "IMUHandler", "build raw CAN msg failed");
-	}
-
-	if ((can_tx_sts != W_SUCCESS) || !build_sts) {
-		imu_handler_state.error_count++;
-		return W_FAILURE;
-	}
-	return W_SUCCESS;
-}
+// 	if ((can_tx_status != W_SUCCESS) || (encode_status != W_SUCCESS)) {
+// 		imu_handler_state.error_count++;
+// 		return W_FAILURE;
+// 	}
+// 	return W_SUCCESS;
+// }
 
 /**
  * @brief Read data from the pololu AltIMU-10 sensor
@@ -135,8 +99,6 @@ static w_status_t read_pololu_imu(estimator_imu_measurement_t *imu_data,
 	w_status_t status = W_SUCCESS;
 
 	// Read accelerometer, gyro, and magnetometer data
-	// status |= altimu_get_acc_data(&imu_data->accelerometer, &raw_data->raw_acc);
-	// status |= altimu_get_gyro_data(&imu_data->gyroscope, &raw_data->raw_gyro);
 	status |= altimu_get_gyro_acc_data(
 		&imu_data->accelerometer, &imu_data->gyroscope, &raw_data->raw_acc, &raw_data->raw_gyro);
 	status |= altimu_get_mag_data(&imu_data->magnetometer, &raw_data->raw_mag);
@@ -216,20 +178,28 @@ w_status_t imu_handler_init(void) {
 	// Set initialized flag directly here instead of calling initialize_all_imus()
 	imu_handler_state.initialized = true;
 
-	log_text(10, "IMUHandler", "IMU Handler Initialized.");
+	if (orientation_calibrated != true) {
+		log_text(1,
+				 "IMUHandler",
+				 "WARN: IMU orientation correction matrices not calibrated yet, using default "
+				 "orientation.");
+	}
+
+	log_text(10, "IMUHandler", "INFO: IMU Handler Initialized.");
 	return W_SUCCESS;
 }
 
-/**
- * @brief Execute one iteration of the IMU handler processing
- * Reads data from all IMUs and updates the estimator
- * @param loop_count Number of loops run, for CAN send rate limiting
- * @note This function is non-static to allow exposed to unit tests
- * @return Status of the execution
- */
-w_status_t imu_handler_run(uint32_t loop_count) {
-	estimator_all_imus_input_t imu_data = {.pololu = {.is_dead = false},
-										   .movella = {.is_dead = false}};
+w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *imu_output) {
+	if (NULL == imu_output) {
+		log_text(10, "IMUHandler", "ERROR: get fresh meas invalid output ptr.");
+		return W_INVALID_PARAM;
+	}
+
+	// is this even necessary at all, since this assumes success before any process
+	// replacing original declaration
+	imu_output->movella.is_dead = false;
+	imu_output->pololu.is_dead = false;
+
 	raw_pololu_data_t raw_pololu_data = {0};
 	uint32_t current_time_ms;
 	w_status_t status = W_SUCCESS;
@@ -240,14 +210,15 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	}
 	uint32_t now_ms = (uint32_t)current_time_ms;
 
+	// TODO: update this with new IMU for correct behaviour
 	// Set timestamps for all IMUs
 	// Note: All IMUs get the same timestamp intentionally for synchronization
-	imu_data.pololu.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
-	imu_data.movella.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
+	imu_output->pololu.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
+	imu_output->movella.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
 
 	// Read from all IMUs, including orientation correction
-	w_status_t pololu_status = read_pololu_imu(&imu_data.pololu, &raw_pololu_data);
-	w_status_t movella_status = read_movella_imu(&imu_data.movella);
+	w_status_t pololu_status = read_pololu_imu(&(imu_output->pololu), &raw_pololu_data);
+	w_status_t movella_status = read_movella_imu(&(imu_output->movella));
 
 	// If both IMUs fail, consider it a system-level failure
 	if ((W_FAILURE == pololu_status) && (W_FAILURE == movella_status)) {
@@ -263,46 +234,46 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 
 	log_data_container_t log_payload = {0}; //{.imu_reading = imu_data.movella};
 
-	log_payload.imu_reading_pt1.accelerometer.x = (float)imu_data.movella.accelerometer.x;
-	log_payload.imu_reading_pt1.accelerometer.y = (float)imu_data.movella.accelerometer.y;
-	log_payload.imu_reading_pt1.accelerometer.z = (float)imu_data.movella.accelerometer.z;
+	log_payload.imu_reading_pt1.accelerometer.x = (float)imu_output->movella.accelerometer.x;
+	log_payload.imu_reading_pt1.accelerometer.y = (float)imu_output->movella.accelerometer.y;
+	log_payload.imu_reading_pt1.accelerometer.z = (float)imu_output->movella.accelerometer.z;
 	log_data(1, LOG_TYPE_MOVELLA_READING_PT1, &log_payload);
 
-	log_payload.imu_reading_pt2.gyroscope.x = (float)imu_data.movella.gyroscope.x;
-	log_payload.imu_reading_pt2.gyroscope.y = (float)imu_data.movella.gyroscope.y;
-	log_payload.imu_reading_pt2.gyroscope.z = (float)imu_data.movella.gyroscope.z;
+	log_payload.imu_reading_pt2.gyroscope.x = (float)imu_output->movella.gyroscope.x;
+	log_payload.imu_reading_pt2.gyroscope.y = (float)imu_output->movella.gyroscope.y;
+	log_payload.imu_reading_pt2.gyroscope.z = (float)imu_output->movella.gyroscope.z;
 	log_data(1, LOG_TYPE_MOVELLA_READING_PT2, &log_payload);
 
-	log_payload.imu_reading_pt3.magnetometer.x = (float)imu_data.movella.magnetometer.x;
-	log_payload.imu_reading_pt3.magnetometer.y = (float)imu_data.movella.magnetometer.y;
-	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_data.movella.magnetometer.z;
+	log_payload.imu_reading_pt3.magnetometer.x = (float)imu_output->movella.magnetometer.x;
+	log_payload.imu_reading_pt3.magnetometer.y = (float)imu_output->movella.magnetometer.y;
+	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_output->movella.magnetometer.z;
 
-	log_payload.imu_reading_pt3.barometer = imu_data.movella.barometer;
+	log_payload.imu_reading_pt3.barometer = imu_output->movella.barometer;
 	log_payload.imu_reading_pt3.timestamp_imu_ms =
-		(uint32_t)(imu_data.movella.timestamp_imu_sec * 1000);
-	log_payload.imu_reading_pt3.is_dead = imu_data.movella.is_dead;
+		(uint32_t)(imu_output->movella.timestamp_imu_sec * 1000);
+	log_payload.imu_reading_pt3.is_dead = imu_output->movella.is_dead;
 	log_data(1, LOG_TYPE_MOVELLA_READING_PT3, &log_payload);
 
 	// Log polulu data as seperate messages
 
-	log_payload.imu_reading_pt1.accelerometer.x = (float)imu_data.pololu.accelerometer.x;
-	log_payload.imu_reading_pt1.accelerometer.y = (float)imu_data.pololu.accelerometer.y;
-	log_payload.imu_reading_pt1.accelerometer.z = (float)imu_data.pololu.accelerometer.z;
+	log_payload.imu_reading_pt1.accelerometer.x = (float)imu_output->pololu.accelerometer.x;
+	log_payload.imu_reading_pt1.accelerometer.y = (float)imu_output->pololu.accelerometer.y;
+	log_payload.imu_reading_pt1.accelerometer.z = (float)imu_output->pololu.accelerometer.z;
 	log_data(1, LOG_TYPE_POLOLU_READING_PT1, &log_payload);
 
-	log_payload.imu_reading_pt2.gyroscope.x = (float)imu_data.pololu.gyroscope.x;
-	log_payload.imu_reading_pt2.gyroscope.y = (float)imu_data.pololu.gyroscope.y;
-	log_payload.imu_reading_pt2.gyroscope.z = (float)imu_data.pololu.gyroscope.z;
+	log_payload.imu_reading_pt2.gyroscope.x = (float)imu_output->pololu.gyroscope.x;
+	log_payload.imu_reading_pt2.gyroscope.y = (float)imu_output->pololu.gyroscope.y;
+	log_payload.imu_reading_pt2.gyroscope.z = (float)imu_output->pololu.gyroscope.z;
 	log_data(1, LOG_TYPE_POLOLU_READING_PT2, &log_payload);
 
-	log_payload.imu_reading_pt3.magnetometer.x = (float)imu_data.pololu.magnetometer.x;
-	log_payload.imu_reading_pt3.magnetometer.y = (float)imu_data.pololu.magnetometer.y;
-	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_data.pololu.magnetometer.z;
+	log_payload.imu_reading_pt3.magnetometer.x = (float)imu_output->pololu.magnetometer.x;
+	log_payload.imu_reading_pt3.magnetometer.y = (float)imu_output->pololu.magnetometer.y;
+	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_output->pololu.magnetometer.z;
 
-	log_payload.imu_reading_pt3.barometer = imu_data.pololu.barometer;
+	log_payload.imu_reading_pt3.barometer = imu_output->pololu.barometer;
 	log_payload.imu_reading_pt3.timestamp_imu_ms =
-		(uint32_t)(imu_data.pololu.timestamp_imu_sec * 1000);
-	log_payload.imu_reading_pt3.is_dead = imu_data.pololu.is_dead;
+		(uint32_t)(imu_output->pololu.timestamp_imu_sec * 1000);
+	log_payload.imu_reading_pt3.is_dead = imu_output->pololu.is_dead;
 	log_data(1, LOG_TYPE_POLOLU_READING_PT3, &log_payload);
 
 	// Log raw pololu data
@@ -315,55 +286,13 @@ w_status_t imu_handler_run(uint32_t loop_count) {
 	log_payload.raw_pololu_data_pt2.raw_baro = raw_pololu_data.raw_baro;
 	log_data(1, LOG_TYPE_POLOLU_RAW_PT2, &log_payload);
 
-	// do CAN logging as backup less frequently to avoid flooding can bus
-	if ((loop_count % IMU_HANDLER_CAN_TX_RATE) == 0) {
-		if (log_raw_to_can(&raw_pololu_data) != W_SUCCESS) {
-			log_text(0, "imuhandler", "raw log to CAN fail");
-		}
-	}
-
-	// Send data to estimator with status flags
-	w_status_t estimator_status = estimator_update_imu_data(&imu_data);
-	if (W_SUCCESS != estimator_status) {
-		status = estimator_status;
-		imu_handler_state.error_count++;
-		log_text(1, "IMUHandler", "estimator update fail (status: %d).", estimator_status);
-	}
+	// update queue with current IMU data for flight phase to read
+	// now this is done by the updated output data
 
 	imu_handler_state.sample_count++;
 
 	// Return overall status
 	return status;
-}
-
-/**
- * @brief IMU handler task function for FreeRTOS
- * @note This task will be created during system initialization
- * @param argument Task argument (unused)
- */
-void imu_handler_task(void *argument) {
-	(void)argument; // Unused parameter
-
-	// Variables for precise timing control
-	TickType_t last_wake_time = xTaskGetTickCount();
-	const TickType_t frequency = pdMS_TO_TICKS(IMU_SAMPLING_PERIOD_MS);
-
-	// track loop count for CAN tx rate limiting
-	uint32_t loop_count = 0;
-
-	// Main task loop
-	log_text(10, "IMUHandlerTask", "IMU Handler task started.");
-	while (1) {
-		w_status_t run_status = imu_handler_run(loop_count++);
-		if (W_SUCCESS != run_status) {
-			// Log or handle run failures if needed
-			imu_handler_state.error_count++;
-			log_text(1, "IMUHandlerTask", "run failed (status: %d).", run_status);
-		}
-
-		// Wait for next sampling period with precise timing
-		vTaskDelayUntil(&last_wake_time, frequency);
-	}
 }
 
 uint32_t imu_handler_get_status(void) {
