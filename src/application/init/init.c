@@ -170,7 +170,7 @@ static void system_init_task(void *arg) {
 
 		log_text(10, "SystemInit", "ADXRS649: data (deg/s): %lf, raw: %" PRIu32 ".", data, raw_data);
 
-		vTaskDelay(10);
+		vTaskDelay(5);
 	}
 }
 
