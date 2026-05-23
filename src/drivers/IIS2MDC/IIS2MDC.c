@@ -10,12 +10,14 @@
 #define IIS2MDC_REG_STATUS 0x67
 #define IIS2MDC_REG_OUTX_L 0x68
 
-w_status_t iis2mdc_init(void){
+w_status_t iis2mdc_init(void) {
 	return W_SUCCESS;
 }
-w_status_t iis2mdc_check_sanity(void){
+
+w_status_t iis2mdc_check_sanity(void) {
 	return W_SUCCESS;
 }
-w_status_t iis2mdc_get_data(iis2mdc_data_t *data, iis2mdc_raw_data_t *raw_data){
+
+w_status_t iis2mdc_get_data(iis2mdc_data_t *data, iis2mdc_raw_data_t *raw_data) {
 	return W_SUCCESS;
 }
