@@ -66,10 +66,6 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc) {
 }
 
 static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms) {
-	// Currently, there is only one channel which we read from, and our channel enum
-	// does not map directly to that channel, so handling multiple channels on the
-	// same ADC would require a lot more logic. For now, return an error if something tries to
-	// call a different adc channel
 	if (PROCESSOR_BOARD_VOLTAGE != channel) {
 		adc_error_stats.invalid_channels++;
 		return W_INVALID_PARAM;
