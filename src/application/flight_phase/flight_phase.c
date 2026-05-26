@@ -1,20 +1,23 @@
-#include "application/flight_phase/flight_phase.h"
-#include "application/can_handler/can_handler.h"
-#include "application/logger/log.h"
-#include "drivers/timer/timer.h"
-
-#include "canlib.h"
+#include <stdint.h>
 
 #include "FreeRTOS.h"
 #include "queue.h"
-#include "timers.h"
+
+#include "application/can_handler/can_handler.h"
+#include "application/flight_phase/flight_phase.h"
+#include "application/fsm/fsm.h"
+#include "application/logger/log.h"
+#include "canlib.h"
+#include "drivers/timer/timer.h"
 
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these
-#define ACT_DELAY_MS 11000 // Q - the minimum time after launch before allowing canards to actuate
-#define FLIGHT_TIMEOUT_MS 49000 // K - the approximate time between launch and apogee
+static const uint32_t ACT_DELAY_MS =
+	11000; // Q - the minimum time after launch before allowing canards to actuate
+static const uint32_t FLIGHT_TIMEOUT_MS =
+	49000; // K - the approximate time between launch and apogee
 
-#define TASK_TIMEOUT_MS 1000
+// #define TASK_TIMEOUT_MS 1000
 
 /**
  * module health status trackers
@@ -39,73 +42,29 @@ typedef struct {
 } flight_phase_status_t;
 
 // static members
-static flight_phase_state_t curr_state = STATE_IDLE;
-
-static QueueHandle_t state_mailbox = NULL;
 static QueueHandle_t event_queue = NULL;
-static TimerHandle_t act_delay_timer = NULL;
-static TimerHandle_t flight_timer = NULL;
 
-// timestamp of the moment of launch
-static uint32_t launch_timestamp_ms = 0;
-// timestamp of the moment actuation allowed started
-static uint32_t act_allowed_timestamp_ms = 0;
-
-static void act_delay_timer_callback(TimerHandle_t xTimer);
-static void flight_timer_callback(TimerHandle_t xTimer);
 static w_status_t act_cmd_callback(const can_msg_t *msg);
 
-static flight_phase_status_t flight_phase_status = {
-	.initialized = false,
-	.loop_run_errs = 0,
-	.state_transitions = 0,
-	.invalid_events = 0,
-	.event_counts = {0},
-	.event_queue_full_count = 0,
-};
+static flight_phase_status_t flight_phase_status = (flight_phase_status_t){.event_counts = {0}};
 
 /**
  * Intialize flight phase module.
- * Creates and allocates state/event queues and timers
- * Sets and populates the default state.
+ * Creates and allocates event queues
  */
 w_status_t flight_phase_init(void) {
-	state_mailbox = xQueueCreate(1, sizeof(flight_phase_state_t));
 	// larger size in case of burst events like multiple inj valve opens
 	event_queue = xQueueCreate(3, sizeof(flight_phase_event_t));
-	act_delay_timer = xTimerCreate(
-		"act delay", pdMS_TO_TICKS(ACT_DELAY_MS), pdFALSE, NULL, act_delay_timer_callback);
-	flight_timer = xTimerCreate(
-		"flight", pdMS_TO_TICKS(FLIGHT_TIMEOUT_MS), pdFALSE, NULL, flight_timer_callback);
 
-	if (NULL == state_mailbox || NULL == event_queue || NULL == act_delay_timer ||
-		NULL == flight_timer ||
+	if ((NULL == event_queue) ||
 		(W_SUCCESS != can_handler_register_callback(MSG_ACTUATOR_CMD, act_cmd_callback))) {
 		log_text(1, "FlightPhase", "ERROR: Failed to create queues/timers/register callback.");
 		return W_FAILURE;
 	}
 
-	xQueueOverwrite(state_mailbox, &curr_state); // initialize state queue
 	flight_phase_status.initialized = true;
 	log_text(10, "FlightPhase", "Flight Phase Initialized Successfully.");
 	return W_SUCCESS;
-}
-
-/**
- * Returns the current state of the state machine
- * Not ISR safe
- * @return STATE_ERROR if getting the current state failed/timed out, otherwise the current flight
- * phase
- */
-flight_phase_state_t flight_phase_get_state() {
-	flight_phase_state_t state = STATE_ERROR;
-	// Use a timeout of 0 to prevent blocking
-	if (xQueuePeek(state_mailbox, &state, 0) != pdPASS) {
-		// Log error if peek fails - this indicates a potentially serious issue
-		log_text(1, "FlightPhase", "ERROR: Failed to peek state mailbox.");
-		return STATE_ERROR;
-	}
-	return state;
 }
 
 /**
@@ -141,24 +100,6 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
-	// This cannot be allowed to block because it is called in the timer
-	// daemon task
-}
-
-/**
- * Timer callback for actuation delay timer
- */
-static void act_delay_timer_callback(TimerHandle_t xTimer) {
-	(void)xTimer;
-	flight_phase_send_event(EVENT_ACT_DELAY_ELAPSED);
-}
-
-/**
- * Timer callback for flight elapsed timer
- */
-static void flight_timer_callback(TimerHandle_t xTimer) {
-	(void)xTimer;
-	flight_phase_send_event(EVENT_FLIGHT_ELAPSED);
 }
 
 /**
@@ -166,14 +107,30 @@ static void flight_timer_callback(TimerHandle_t xTimer) {
  * Handles OX_INJECTOR_VALVE->OPEN and PROC_ESTIMATOR_INIT->OPEN
  */
 static w_status_t act_cmd_callback(const can_msg_t *msg) {
-	if ((ACTUATOR_OX_INJECTOR_VALVE == get_actuator_id(msg)) &&
-		(ACT_STATE_ON == get_cmd_actuator_state(msg))) {
+	can_actuator_id_t msg_id;
+	can_actuator_state_t msg_state;
+
+	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
+		(get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
+		log_text(1, "FlightPhase", "invalid actuator data");
+		return W_FAILURE;
+	}
+
+	if ((ACTUATOR_OX_INJECTOR_VALVE == msg_id) && (ACT_STATE_ON == msg_state)) {
 		return flight_phase_send_event(EVENT_INJ_OPEN);
-	} else if ((ACTUATOR_CANARD_PAD_FILTER == get_actuator_id(msg)) &&
-			   (ACT_STATE_ON == get_cmd_actuator_state(msg))) {
+	} else if ((ACTUATOR_CANARD_PAD_FILTER == msg_id) && (ACT_STATE_ON == msg_state)) {
 		return flight_phase_send_event(EVENT_ESTIMATOR_INIT);
 	}
 	return W_SUCCESS;
+}
+
+flight_phase_event_t flight_phase_get_next_event(void) {
+	flight_phase_event_t queue_event = EVENT_NONE;
+	// no waiting. Return immediately if no events are in the queue
+	if (pdPASS != xQueueReceive(event_queue, &queue_event, 0)) {
+		return EVENT_NONE;
+	}
+	return queue_event;
 }
 
 /**
@@ -183,66 +140,35 @@ w_status_t flight_phase_reset(void) {
 	return flight_phase_send_event(EVENT_RESET);
 }
 
-w_status_t flight_phase_get_flight_ms(uint32_t *flight_ms) {
-	if (NULL == flight_ms) {
-		return W_INVALID_PARAM;
-	}
-
-	// elapsed time is 0 if we havent launched yet
-	if (curr_state < STATE_BOOST) {
-		*flight_ms = 0;
-		return W_SUCCESS;
-	} else {
-		uint32_t current_time_ms = 0;
-		if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-			log_text(1, "FlightPhase", "get_ms fail");
-			return W_FAILURE;
-		}
-		*flight_ms = current_time_ms - launch_timestamp_ms;
-		return W_SUCCESS;
-	}
-}
-
-w_status_t flight_phase_get_act_allowed_ms(uint32_t *act_allowed_ms) {
-	if (NULL == act_allowed_ms) {
-		return W_INVALID_PARAM;
-	}
-
-	// elapsed time is 0 if we havent reached act-allowed yet
-	if (curr_state < STATE_ACT_ALLOWED) {
-		*act_allowed_ms = 0;
-		return W_SUCCESS;
-	} else {
-		uint32_t current_time_ms = 0;
-		if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-			log_text(1, "FlightPhase", "get_ms fail");
-			return W_FAILURE;
-		}
-		*act_allowed_ms = current_time_ms - act_allowed_timestamp_ms;
-		return W_SUCCESS;
-	}
-}
-
 /**
  * Updates the input state according to the input event
  * @return W_SUCCESS if the input state was valid, W_FAILURE otherwise (this means W_SUCCESS is
  * returned event if we go into STATE_ERROR)
  */
-w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_state_t *state) {
-	flight_phase_state_t previous_state = *state;
+fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t curr_state,
+									  flight_phase_ctx_t *p_ctx) {
+	if (NULL == p_ctx) {
+		log_text(5, "FlightPhase", "ERROR: Invalid ptrs in update states");
+		// just return the current state if invalid
+		return curr_state;
+	}
 
-	switch (*state) {
+	if (EVENT_NONE == event) {
+		return curr_state;
+	}
+
+	fsm_state_t new_state = curr_state;
+
+	switch (curr_state) {
 		case STATE_IDLE:
 			if (EVENT_ESTIMATOR_INIT == event) {
-				*state = STATE_SE_INIT;
+				new_state = STATE_SE_INIT;
 			} else if (EVENT_INJ_OPEN == event) {
 				// allowed to skip pad filter state in case it was forgotten or failed etc.
 				// not ideal but would rather run without pad filter than not fly at all
-				*state = STATE_BOOST;
+				new_state = STATE_BOOST;
 				// flight starts now
-				xTimerReset(act_delay_timer, 0);
-				xTimerReset(flight_timer, 0);
-				timer_get_ms(&launch_timestamp_ms);
+				timer_get_ms(&(p_ctx->launch_timestamp_ms));
 			} else {
 				// Ignore redundant PAD events or other unexpected events
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -251,11 +177,9 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 
 		case STATE_SE_INIT:
 			if (EVENT_INJ_OPEN == event) {
-				*state = STATE_BOOST;
+				new_state = STATE_BOOST;
 				// flight starts now
-				xTimerReset(act_delay_timer, 0);
-				xTimerReset(flight_timer, 0);
-				timer_get_ms(&launch_timestamp_ms);
+				timer_get_ms(&(p_ctx->launch_timestamp_ms));
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -264,12 +188,11 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 
 		case STATE_BOOST:
 			if (EVENT_ACT_DELAY_ELAPSED == event) {
-				*state = STATE_ACT_ALLOWED;
+				new_state = STATE_ACT_ALLOWED;
 				// record timestamp of actuation-allowed start (aka we just exited boost phase)
-				timer_get_ms(&act_allowed_timestamp_ms);
+				timer_get_ms(&(p_ctx->act_allowed_timestamp_ms));
 			} else if (EVENT_FLIGHT_ELAPSED == event) {
-				xTimerStop(act_delay_timer, 0);
-				*state = STATE_RECOVERY;
+				new_state = STATE_RECOVERY;
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -278,7 +201,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 
 		case STATE_ACT_ALLOWED:
 			if (EVENT_FLIGHT_ELAPSED == event) {
-				*state = STATE_RECOVERY;
+				new_state = STATE_RECOVERY;
 			} else {
 				// Ignore redundant or unexpected events - already in flight
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -287,7 +210,7 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 
 		case STATE_RECOVERY:
 			if (EVENT_RESET == event) {
-				*state = STATE_IDLE;
+				new_state = STATE_IDLE;
 			} else {
 				// Ignore redundant or unexpected events - already in flight
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -295,56 +218,33 @@ w_status_t flight_phase_update_state(flight_phase_event_t event, flight_phase_st
 			break;
 		case STATE_ERROR:
 			if (EVENT_RESET == event) {
-				*state = STATE_IDLE;
+				new_state = STATE_IDLE;
 			} else {
 				// Stay in error state, log repeated invalid event
 				log_text(1, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
 			}
 			break;
 		default:
-			log_text(10, "FlightPhase", "Unhandled state %d", *state);
-			*state = STATE_ERROR; // Ensure state becomes ERROR
-			return W_FAILURE;
+			log_text(10, "FlightPhase", "Unhandled state %d", curr_state);
+			new_state = curr_state; // return thee same state
 			break;
 	}
 
 	// Only count as a transition if the state actually changed
-	if (previous_state != *state) {
+	if (new_state != curr_state) {
 		flight_phase_status.state_transitions++;
 	}
 
-	return W_SUCCESS;
-}
-
-/**
- * Task to execute the state machine itself. Consumes events and transitions the state
- */
-void flight_phase_task(void *args) {
-	(void)args;
-	flight_phase_event_t event;
-	while (1) {
-		if (pdPASS == xQueueReceive(event_queue, &event, pdMS_TO_TICKS(TASK_TIMEOUT_MS))) {
-			log_text(10, "flight_phase", "transition\nentry-state:%d\nevent:%d", curr_state, event);
-
-			if (flight_phase_update_state(event, &curr_state) != W_SUCCESS) {
-				flight_phase_status.loop_run_errs++;
-			}
-
-			log_text(10, "flight_phase", "exit-state:%d", curr_state);
-
-			// pdPASS is guaranteed for a queue of length 1, so no error check needed
-			(void)xQueueOverwrite(state_mailbox, &curr_state);
-		} else {
-			log_text(10, "flight_phase", "curr state:%d", curr_state);
-		}
-	}
+	return new_state;
 }
 
 uint32_t flight_phase_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Get current state
-	flight_phase_state_t current_state = flight_phase_get_state();
+	// TODO: refactor this to match new design
+	// fsm_state_t current_state = flight_phase_get_state();
+	uint8_t current_state = 0;
 
 	// Map state enum to descriptive string for logging
 	const char *state_strings[] = {"IDLE", "PADFILTER", "BOOST", "ACTALLOWED", "RECOVERY", "ERROR"};
@@ -359,4 +259,68 @@ uint32_t flight_phase_get_status(void) {
 			 flight_phase_status.event_queue_full_count);
 
 	return status_bitfield;
+}
+
+/**
+ * @brief performs any timer based state transition detection
+ * @param p_context is the global flight phase global context
+ * @param curr_state current fsm state
+ * @param timestamp_ms is the current timestamp
+ * @return generated timer event
+ */
+static flight_phase_event_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx,
+														 const fsm_state_t curr_state,
+														 const uint32_t timestamp_ms) {
+	return EVENT_NONE;
+}
+
+/**
+ * @brief performs any sensor based state transition detection
+ * @param p_context pointer to the global flight phase global context
+ * @param curr_state current fsm state
+ * @param p_sensor_data pointer to the current sensor data
+ * @return generated sensor event
+ */
+static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
+														  const fsm_state_t curr_state,
+														  const all_sensors_data_t *p_sensor_data) {
+	return EVENT_NONE;
+}
+
+/**
+ * @brief generate syncronous flight phase evnets
+ * @param p_context is the global flight phase global context
+ * @param curr_state current fsm state
+ * @param timestamp_ms is the current timestamp
+ * @param p_sensor_data pointer to the current sensor data
+ * @return the status of function
+ */
+w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_state_t curr_state,
+										const uint32_t timestamp_ms,
+										const all_sensors_data_t *p_sensor_data) {
+	w_status_t status = W_SUCCESS;
+
+	// timer
+	flight_phase_event_t timer_event =
+		flight_phase_timer_detection(p_ctx, curr_state, timestamp_ms);
+
+	if (EVENT_NONE != timer_event) {
+		if (flight_phase_send_event(timer_event) != W_SUCCESS) {
+			log_text(1, "flight_phase", "ERROR: timer send event failed.");
+			status = W_FAILURE;
+		}
+	}
+
+	// sensor
+	flight_phase_event_t sensor_event =
+		flight_phase_sensor_detection(p_ctx, curr_state, p_sensor_data);
+
+	if (EVENT_NONE != sensor_event) {
+		if (flight_phase_send_event(sensor_event) != W_SUCCESS) {
+			log_text(1, "flight_phase", "ERROR: sensor send event failed.");
+			status = W_FAILURE;
+		}
+	}
+
+	return status;
 }

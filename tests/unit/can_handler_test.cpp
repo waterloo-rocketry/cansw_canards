@@ -17,7 +17,7 @@ FAKE_VALUE_FUNC(bool, can_init_stm, FDCAN_HandleTypeDef *, can_receive_callback)
 FAKE_VALUE_FUNC(bool, can_send, const can_msg_t *)
 
 // bool check_board_need_reset(const can_msg_t *msg)
-FAKE_VALUE_FUNC(bool, check_board_need_reset, const can_msg_t *)
+FAKE_VALUE_FUNC(w_status_t, check_board_need_reset, const can_msg_t *, bool *)
 
 // uint16_t get_message_type(const can_msg_t *msg)
 FAKE_VALUE_FUNC(uint16_t, get_message_type, const can_msg_t *)
