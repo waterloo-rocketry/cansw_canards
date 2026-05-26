@@ -9,16 +9,16 @@
 #define ADC_MAX_COUNTS 0xFFFF // 16 bit full scale, configured in ioc
 
 typedef enum {
-	PROCESSOR_BOARD_VOLTAGE = 0,
-	VSENS_BAT1,
+	VSENS_BAT1 = 0,
 	VSENS_BAT2,
 	VSENS_RKT,
+	ISENS_BAT2,
+	ISENS_BAT1,
 	VSENS_CHG,
 	VSENS_USB,
-	ISENS_BAT1,
-	ISENS_BAT2,
 	ISENS_3V3,
 	ISENS_5V,
+	PROCESSOR_BOARD_VOLTAGE, //does this channel exist 
 	ADC_CHANNEL_COUNT
 } adc_channel_t;
 
