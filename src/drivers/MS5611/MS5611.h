@@ -14,7 +14,7 @@ typedef enum {
 	MS5611_ADDRESS_CSB_LOW = 0x77,
 	MS5611_ADDRESS_CSB_HIGH = 0x76
 } ms5611_address_t;
-  
+
 // reset command
 #define MS5611_CMD_RESET 0x1E
 

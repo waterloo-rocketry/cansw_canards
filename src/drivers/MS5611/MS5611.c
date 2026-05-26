@@ -28,14 +28,18 @@ static const uint8_t D2_CMD[] = {
 	MS5611_CMD_CONVERT_D2_OSR4096,
 };
 
-static const second_comp_temp_threshold = 2000; /* temperature (in centidegrees) below which second-order compensation is applied */
-static const second_comp_extreme_temp_threshold = -1500; /* temperature (in centidegrees) below which additional extreme cold compensation is applied */
+static const int16_t second_comp_temp_threshold =
+	2000; /* temperature (in centidegrees) below which second-order compensation is applied */
+static const int16_t second_comp_extreme_temp_threshold =
+	-1500; /* temperature (in centidegrees) below which additional extreme cold compensation is
+			  applied */
 
 // modify this struct to toggle barometer settings
 static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom read
 								 .bus = I2C_BUS_4,
 								 .addr =
-									 MS5611_ADDRESS_CSB_LOW, // according to canard board schematic, CSB is tied to GND, so addr is 0x77
+									 MS5611_ADDRESS_CSB_LOW, // according to canard board schematic,
+															 // CSB is tied to GND, so addr is 0x77
 								 .osr = MS5611_OSR_1024,
 								 .initialized = false};
 
@@ -61,7 +65,7 @@ static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
  * @param cmd The command to write.
  */
 static w_status_t a_write_cmd(uint8_t cmd) {
-	return i2c_write_data(handle.bus, (uint8_t)handle.addr, cmd, NULL);
+	return i2c_write_data(handle.bus, (uint8_t)handle.addr, (uint8_t *)&cmd, (uint8_t)sizeof(cmd));
 }
 
 /**
@@ -82,7 +86,8 @@ static w_status_t a_read_adc(uint32_t *out) {
  * @param n_prom Array of 8 uint16_t values read from the PROM (prom_coef[0]..prom_coef[7])
  * @param crc The CRC value read from the PROM (lower 4 bits of prom_coef[7])
  * @return W_SUCCESS if CRC check passes, W_FAILURE if CRC check fails
- * @note This function is from github repository: https://github.com/libdriver/ms5611/blob/main/src/driver_ms5611.h#L37
+ * @note This function is from github repository:
+ * https://github.com/libdriver/ms5611/blob/main/src/driver_ms5611.h#L37
  */
 static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	uint8_t cnt;
@@ -114,12 +119,12 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	}
 	n_rem = (0x000F & (n_rem >> 12)); /* get rem */
 	n_prom[7] = crc_read; /* set crc read */
-	n_rem ^= 0x00;        /* xor */
+	n_rem ^= 0x00; /* xor */
 
 	if (n_rem != crc) {
 		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
 		return W_FAILURE;
-	} 
+	}
 
 	return W_SUCCESS;
 }
@@ -171,12 +176,12 @@ w_status_t ms5611_init(void) {
 	if (W_SUCCESS != a_write_cmd(MS5611_CMD_RESET)) {
 		log_text(1, "ms5611", "ERROR: initialization failed during command reset.");
 		return W_FAILURE;
-	} 
-	
+	}
+
 	if (W_SUCCESS != ms5611_prom_read()) {
 		log_text(1, "ms5611", "ERROR: initialization failed during PROM read .");
 		return W_FAILURE;
-	} 
+	}
 
 	handle.initialized = true;
 	log_text(1, "ms5611", "INFO: initialization successful");
@@ -190,19 +195,19 @@ w_status_t ms5611_init(void) {
  * @param result Pointer to store the raw pressure and temperature results
  * @note this function also applies the compensation algorithm, but does not convert units
  * @note see MS5611 datasheet page 7 - 8 for details on the calculation
- * (temperature in centidegrees prom_coef, pressure in centimbar) 
+ * (temperature in centidegrees prom_coef, pressure in centimbar)
  */
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 	uint32_t d1, d2; /* d1 is raw pressure reading, d2 is raw temperature reading */
 	int32_t dt, temp; /* dt is temperature difference, temp is compensated temperature */
-	int64_t off, sens, p;/* prom coefficients for first order */
+	int64_t off, sens, p; /* prom coefficients for first order */
 	int64_t T2, off2, sens2; /* second-order compensation terms */
 
 	if (NULL == result) {
 		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
 		return W_INVALID_PARAM;
 	}
-	
+
 	if (!handle.initialized) {
 		log_text(1, "ms5611", "ERROR: attempted to read pressure before successful initialization");
 		return W_FAILURE;
@@ -233,10 +238,11 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 		log_text(1, "ms5611", "ERROR: failed to read pressure ADC");
 		return W_FAILURE;
 	}
-	
+
 	/* First-order compensation */
 	dt = (int32_t)d2 - ((int32_t)handle.prom_coef[MS5611_COEFF_TREF] << 8);
-	temp = second_comp_temp_threshold + (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
+	temp = second_comp_temp_threshold +
+		   (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
 	off = ((int64_t)handle.prom_coef[MS5611_COEFF_OFF] << 16) +
 		  (((int64_t)handle.prom_coef[MS5611_COEFF_TCO] * dt) >> 7);
 	sens = ((int64_t)handle.prom_coef[MS5611_COEFF_SENS] << 15) +
@@ -250,12 +256,19 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 
 	if (temp < second_comp_temp_threshold) {
 		T2 = (int64_t)(dt * dt) >> 31;
-		off2 = 5 * (int64_t)((temp - second_comp_temp_threshold) * (temp - second_comp_temp_threshold)) >> 1;
-		sens2 = 5 * (int64_t)((temp - second_comp_temp_threshold) * (temp - second_comp_temp_threshold)) >> 2;
+		off2 = 5 * (int64_t)((temp - second_comp_temp_threshold) *
+							 (temp - second_comp_temp_threshold)) >>
+			   1;
+		sens2 = 5 * (int64_t)((temp - second_comp_temp_threshold) *
+							  (temp - second_comp_temp_threshold)) >>
+				2;
 
 		if (temp < second_comp_extreme_temp_threshold) {
-			off2 += 7 * (int64_t)(temp - second_comp_extreme_temp_threshold) * (temp - second_comp_extreme_temp_threshold);
-			sens2 += 11 * (int64_t)((temp - second_comp_extreme_temp_threshold) * (temp - second_comp_extreme_temp_threshold)) >> 1;
+			off2 += 7 * (int64_t)(temp - second_comp_extreme_temp_threshold) *
+					(temp - second_comp_extreme_temp_threshold);
+			sens2 += 11 * (int64_t)((temp - second_comp_extreme_temp_threshold) *
+									(temp - second_comp_extreme_temp_threshold)) >>
+					 1;
 		}
 
 		temp -= T2;
