@@ -19,7 +19,6 @@
 #include "application/logger/log.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
-#include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
