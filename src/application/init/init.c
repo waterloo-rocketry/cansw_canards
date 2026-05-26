@@ -152,6 +152,8 @@ static void system_init_task(void *arg) {
 	float64_t data = 0;
 	uint32_t raw_data = 0;
 	uint16_t i = 0;
+
+	TickType_t last_wake_time = xTaskGetTickCount();
 	while (1) {
 
 		if (i >= 500) {
@@ -167,9 +169,9 @@ static void system_init_task(void *arg) {
 		data_status = adxrs649_get_gyro_data(&data, &raw_data);
 		if (data_status != W_SUCCESS) log_text(10, "SystemInit", "ADXRS649: error, %d", data_status);
 
-		log_text(10, "SystemInit", "ADXRS649: data (deg/s): %lf, raw: %" PRIu32 ".", data, raw_data);
+		log_text(10, "SystemInit", "ADXRS649: at data (deg/s): %lf, raw: %" PRIu32 ".", data, raw_data);
 
-		vTaskDelay(1);
+		xTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(1));
 	}
 }
 
