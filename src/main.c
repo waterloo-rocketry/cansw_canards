@@ -23,6 +23,7 @@
 #include "cmsis_os2.h"
 #include "cordic.h"
 #include "dma.h"
+#include "fatfs.h"
 #include "fdcan.h"
 #include "fmac.h"
 #include "gpio.h"
@@ -130,6 +131,7 @@ int main(void) {
 	MX_TIM1_Init();
 	MX_UART7_Init();
 	MX_TIM2_Init();
+	MX_FATFS_Init();
 	/* USER CODE BEGIN 2 */
 
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
