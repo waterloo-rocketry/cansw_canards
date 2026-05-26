@@ -61,7 +61,7 @@ static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
  * @param cmd The command to write.
  */
 static w_status_t a_write_cmd(uint8_t cmd) {
-	return i2c_write_reg(handle.bus, (uint8_t)handle.addr, cmd, NULL, 0);
+	return i2c_write_data(handle.bus, (uint8_t)handle.addr, cmd, NULL);
 }
 
 /**
@@ -69,11 +69,11 @@ static w_status_t a_write_cmd(uint8_t cmd) {
  * @param out Pointer to store the read ADC value.
  */
 static w_status_t a_read_adc(uint32_t *out) {
-	uint8_t crc_buf[3];
-	if (a_read(MS5611_CMD_ADC_READ, crc_buf, 3) != W_SUCCESS) {
+	uint8_t prom_buf[3];
+	if (a_read(MS5611_CMD_ADC_READ, prom_buf, 3) != W_SUCCESS) {
 		return W_FAILURE;
 	}
-	*out = ((uint32_t)crc_buf[0] << 16) | ((uint32_t)crc_buf[1] << 8) | crc_buf[2];
+	*out = ((uint32_t)prom_buf[0] << 16) | ((uint32_t)prom_buf[1] << 8) | prom_buf[2];
 	return W_SUCCESS;
 }
 
@@ -129,14 +129,14 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
  * handle struct.
  */
 static w_status_t ms5611_prom_read(void) {
-	uint8_t i, crc_buf[2];
+	uint8_t i, prom_buf[2];
 	uint16_t prom_coef[8];
 	w_status_t status = W_SUCCESS;
 
 	// copy into a local var first to avoid modifying the handle with corrupt data on read failure
 	for (i = 0; i < 8; i++) {
-		status |= a_read(MS5611_CMD_PROM_READ_BASE + i * 2, crc_buf, 2);
-		prom_coef[i] = ((uint16_t)crc_buf[0] << 8) | crc_buf[1];
+		status |= a_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
+		prom_coef[i] = ((uint16_t)prom_buf[0] << 8) | prom_buf[1];
 	}
 
 	status |= a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0F));
@@ -164,41 +164,6 @@ static w_status_t ms5611_prom_read(void) {
 }
 
 /**
- * @brief Performs a sanity check on the sensor by re-reading the PROM coefficients and verifying
- * with CRC.
- */
-w_status_t ms5611_check_sanity(void) {
-	w_status_t status = W_SUCCESS;
-
-	if (!handle.initialized) {
-		log_text(1, "ms5611", "WARN: sanity check called before successful initialization");
-		return W_FAILURE;
-	}
-
-	uint8_t crc_buf[2];
-	uint16_t prom_coef[8];
-
-	// read prom coefficients agaisoftware onboardingn
-	for (uint8_t i = 0; i < 8; i++) {
-		if (W_SUCCESS !=
-			i2c_read_reg(
-				handle.bus, (uint8_t)handle.addr, MS5611_CMD_PROM_READ_BASE + i * 2, crc_buf, 2)) {
-			log_text(1, "ms5611", "ERROR: failed to read PROM coefficient %u in sanity check", i);
-			return W_FAILURE;
-		}
-		prom_coef[i] = ((uint16_t)crc_buf[0] << 8) | crc_buf[1];
-	}
-
-	// perform crc check on prom coefficients
-	if (W_FAILURE == a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0F))) {
-		log_text(1, "ms5611", "ERROR: CRC check failed in sanity check");
-		return W_FAILURE;
-	}
-
-	return W_SUCCESS;
-}
-
-/**
  * @brief Initialized the sensor by resetting it, reading calibration coeff from PROM, and perform
  * crc check on the coefficients.
  */
@@ -212,11 +177,6 @@ w_status_t ms5611_init(void) {
 		log_text(1, "ms5611", "ERROR: initialization failed during PROM read .");
 		return W_FAILURE;
 	} 
-	
-	if (W_SUCCESS != ms5611_check_sanity()) {
-		log_text(1, "ms5611", "ERROR: initialization failed during sanity check.");
-		return W_FAILURE;
-	}
 
 	handle.initialized = true;
 	log_text(1, "ms5611", "INFO: initialization successful");
@@ -235,7 +195,8 @@ w_status_t ms5611_init(void) {
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 	uint32_t d1, d2; /* d1 is raw pressure reading, d2 is raw temperature reading */
 	int32_t dt, temp; /* dt is temperature difference, temp is compensated temperature */
-	int64_t off, sens, p, off2, sens2; /* prom coefficients */
+	int64_t off, sens, p;/* prom coefficients for first order */
+	int64_t T2, off2, sens2; /* second-order compensation terms */
 
 	if (NULL == result) {
 		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
@@ -272,7 +233,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 		log_text(1, "ms5611", "ERROR: failed to read pressure ADC");
 		return W_FAILURE;
 	}
-
+	
 	/* First-order compensation */
 	dt = (int32_t)d2 - ((int32_t)handle.prom_coef[MS5611_COEFF_TREF] << 8);
 	temp = second_comp_temp_threshold + (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
@@ -280,24 +241,27 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 		  (((int64_t)handle.prom_coef[MS5611_COEFF_TCO] * dt) >> 7);
 	sens = ((int64_t)handle.prom_coef[MS5611_COEFF_SENS] << 15) +
 		   (((int64_t)handle.prom_coef[MS5611_COEFF_TCS] * dt) >> 8);
+	p = ((((int64_t)d1 * sens) >> 21) - off) >> 15;
 
 	/* Second-order cold compensation */
+	T2 = 0;
 	off2 = 0;
 	sens2 = 0;
 
 	if (temp < second_comp_temp_threshold) {
-		off2 = 61 * (int64_t)(temp - second_comp_temp_threshold) * (temp - second_comp_temp_threshold) / 16;
-		sens2 = 29 * (int64_t)(temp - second_comp_temp_threshold) * (temp - second_comp_temp_threshold) / 16;
+		T2 = (int64_t)(dt * dt) >> 31;
+		off2 = 5 * (int64_t)((temp - second_comp_temp_threshold) * (temp - second_comp_temp_threshold)) >> 1;
+		sens2 = 5 * (int64_t)((temp - second_comp_temp_threshold) * (temp - second_comp_temp_threshold)) >> 2;
 
 		if (temp < second_comp_extreme_temp_threshold) {
-			off2 += 17 * (int64_t)(temp + second_comp_extreme_temp_threshold) * (temp + second_comp_extreme_temp_threshold);
-			sens2 += 9 * (int64_t)(temp + second_comp_extreme_temp_threshold) * (temp + second_comp_extreme_temp_threshold);
+			off2 += 7 * (int64_t)(temp - second_comp_extreme_temp_threshold) * (temp - second_comp_extreme_temp_threshold);
+			sens2 += 11 * (int64_t)((temp - second_comp_extreme_temp_threshold) * (temp - second_comp_extreme_temp_threshold)) >> 1;
 		}
-	}
 
-	off -= off2;
-	sens -= sens2;
-	p = ((((int64_t)d1 * sens) >> 21) - off) >> 15;
+		temp -= T2;
+		off -= off2;
+		sens -= sens2;
+	}
 
 	result->temperature_centideg = temp;
 	result->pressure_centimbar = (int32_t)p;
