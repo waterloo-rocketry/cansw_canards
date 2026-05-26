@@ -200,6 +200,7 @@ w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 	}
 
 	if (!new_data) {
+		log_text(10, "ADXRS649", "ERROR: no new data");
 		return W_FAILURE;
 	}
 
@@ -209,6 +210,7 @@ w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 
 	float64_t data_mv = 0;
 	if (W_SUCCESS != ads1219_millivolts(&g_ads_handle, (int32_t)*p_raw_data, &data_mv)) {
+		log_text(10, "ADXRS649", "ERROR: adc fail");
 		return W_FAILURE;
 	}
 

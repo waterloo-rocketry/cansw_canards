@@ -154,22 +154,22 @@ static void system_init_task(void *arg) {
 	uint16_t i = 0;
 	while (1) {
 
-		if (i == 100) {
+		if (i >= 500) {
 			gpio_toggle(GPIO_PIN_RED_LED, 1);
 			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-			i =0;
+			i = 0;
 		} else {
 			i++;
 		}
 		
 
 		data_status = adxrs649_get_gyro_data(&data, &raw_data);
-		if (data_status != W_SUCCESS) vTaskDelay(500);
+		if (data_status != W_SUCCESS) log_text(10, "SystemInit", "ADXRS649: error, %d", data_status);
 
 		log_text(10, "SystemInit", "ADXRS649: data (deg/s): %lf, raw: %" PRIu32 ".", data, raw_data);
 
-		vTaskDelay(5);
+		vTaskDelay(1);
 	}
 }
 
