@@ -4,7 +4,15 @@
 #include "semphr.h"
 
 #define ADC_CONV_TIMEOUT_TICKS pdMS_TO_TICKS(1)
-#define V_REF 3.3f //check this later
+#define V_REF 3.3f // check this later
+#define ADC1_NUM_CHANNELS 5
+#define ADC2_NUM_CHANNELS 2
+#define ADC3_NUM_CHANNELS 2
+
+// DMA buffers
+static uint32_t adc1_raw_counts[ADC1_NUM_CHANNELS]; // ranks 1-5
+static uint32_t adc2_raw_counts[ADC2_NUM_CHANNELS]; // ranks 1-2
+static uint32_t adc3_raw_counts[ADC3_NUM_CHANNELS]; // ranks 1-2
 
 static ADC_HandleTypeDef *adc_handle;
 static SemaphoreHandle_t adc_conversion_semaphore = NULL;
@@ -80,7 +88,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc) {
 }
 
 static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms) {
-	if (PROCESSOR_BOARD_VOLTAGE != channel) {
+	if (channel >= ADC_CHANNEL_COUNT) {
 		adc_error_stats.invalid_channels++;
 		return W_INVALID_PARAM;
 	}
@@ -118,10 +126,11 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, ui
 w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms) {
 	uint32_t counts = 0;
 	w_status_t status = adc_get_raw_counts(channel, &counts, 0);
-	if (status != W_SUCCESS)
+	if (status != W_SUCCESS) {
 		return status;
+	}
 
-	*output = ((float)counts / ADC_MAX_COUNTS) * V_REF ;	
+	*output = ((float)counts / ADC_MAX_COUNTS) * V_REF;
 	return W_SUCCESS;
 }
 
