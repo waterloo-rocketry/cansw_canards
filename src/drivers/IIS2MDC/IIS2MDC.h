@@ -7,13 +7,13 @@
 #include "rocketlib/include/common.h"
 
 /**
- * @brief Raw magnetometer data for each axis.
- * @note Sensitivity is 1.5 mgauss/LSB, multiply raw by 0.0015 to convert to gauss.
+ * @brief Raw magnetometer register data for each axis
+ * @note Sensitivity is 1.5 mgauss/LSB, multiply raw by 0.0015 to convert to gauss
  */
 typedef struct {
-	int16_t x;
-	int16_t y;
-	int16_t z;
+	uint16_t x;
+	uint16_t y;
+	uint16_t z;
 } iis2mdc_raw_data_t;
 
 /**
@@ -29,7 +29,7 @@ w_status_t iis2mdc_init(void);
  *       no new data is available. On success, reads six output registers
  *       and converts raw counts to gauss.
  * @param[out] data Pointer to store the converted magnetic field values in gauss
- * @param[out] raw_data Pointer to store the raw signed 16-bit counts
+ * @param[out] raw_data Pointer to store the raw unsigned 16-bit register values
  * @return W_SUCCESS if a new sample was read, W_FAILURE if not (should probably distinguish
  * within failure cases later)
  */
