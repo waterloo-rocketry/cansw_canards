@@ -10,9 +10,9 @@
 #define ADC3_NUM_CHANNELS 2
 
 // DMA buffers
-static uint32_t adc1_raw_counts[ADC1_NUM_CHANNELS]; 
+static uint32_t adc1_raw_counts[ADC1_NUM_CHANNELS];
 static uint32_t adc2_raw_counts[ADC2_NUM_CHANNELS];
-static uint32_t adc3_raw_counts[ADC3_NUM_CHANNELS]; 
+static uint32_t adc3_raw_counts[ADC3_NUM_CHANNELS];
 
 static ADC_HandleTypeDef *adc_handle;
 static SemaphoreHandle_t adc_conversion_semaphore = NULL;
@@ -28,28 +28,28 @@ static void ADC1_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-static const uint8_t channel_to_dma_index[ADC_CHANNEL_COUNT-1] = {
-    [VSENS_BAT1]  = 0, 
-    [VSENS_BAT2]  = 1, 
-    [VSENS_RKT]   = 2, 
-    [ISENS_BAT2]  = 3, 
-    [ISENS_BAT1]  = 4, 
-    [VSENS_CHG]   = 0, 
-    [VSENS_USB]   = 1, 
-    [ISENS_3V3]   = 0,
-    [ISENS_5V]    = 1,
+static const uint32_t channel_to_dma_index[ADC_CHANNEL_COUNT - 1] = {
+	[VSENS_BAT1] = 0,
+	[VSENS_BAT2] = 1,
+	[VSENS_RKT] = 2,
+	[ISENS_BAT2] = 3,
+	[ISENS_BAT1] = 4,
+	[VSENS_CHG] = 0,
+	[VSENS_USB] = 1,
+	[ISENS_3V3] = 0,
+	[ISENS_5V] = 1,
 };
 
-static const uint8_t channel_to_adc[ADC_CHANNEL_COUNT-1] = {
-    [VSENS_BAT1]  = 1,
-    [VSENS_BAT2]  = 1,
-    [VSENS_RKT]   = 1,
-    [ISENS_BAT2]  = 1,
-    [ISENS_BAT1]  = 1,
-    [VSENS_CHG]   = 2,
-    [VSENS_USB]   = 2,
-    [ISENS_3V3]   = 3,
-    [ISENS_5V]    = 3,
+static const uint32_t channel_to_adc[ADC_CHANNEL_COUNT - 1] = {
+	[VSENS_BAT1] = 1,
+	[VSENS_BAT2] = 1,
+	[VSENS_RKT] = 1,
+	[ISENS_BAT2] = 1,
+	[ISENS_BAT1] = 1,
+	[VSENS_CHG] = 2,
+	[VSENS_USB] = 2,
+	[ISENS_3V3] = 3,
+	[ISENS_5V] = 3,
 };
 
 static const float conversion_table[ADC_CHANNEL_COUNT] = {
@@ -112,7 +112,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc) {
 }
 
 static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms) {
-	if (channel >= ADC_CHANNEL_COUNT-1) {
+	if (channel >= ADC_CHANNEL_COUNT - 1) {
 		adc_error_stats.invalid_channels++;
 		return W_INVALID_PARAM;
 	}
@@ -122,11 +122,9 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, ui
 
 	if (1 == adc) {
 		*output = adc1_raw_counts[index];
-	}
-	else if (2 == adc) {
+	} else if (2 == adc) {
 		*output = adc2_raw_counts[index];
-	}
-	else {
+	} else {
 		*output = adc3_raw_counts[index];
 	}
 
