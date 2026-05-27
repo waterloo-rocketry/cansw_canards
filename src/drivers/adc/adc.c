@@ -30,8 +30,7 @@ static const float conversion_table[ADC_CHANNEL_COUNT] = {
 	[VSENS_USB] = 0,
 	[ISENS_3V3] = 0,
 	[ISENS_5V] = 0,
-	[PROCESSOR_BOARD_VOLTAGE] = 0
-};
+	[PROCESSOR_BOARD_VOLTAGE] = 0};
 
 w_status_t adc_init(ADC_HandleTypeDef *hadc) {
 	if (NULL == hadc) {
@@ -122,6 +121,13 @@ w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output, uint32_t t
 }
 
 w_status_t adc_get_converted_val(adc_channel_t channel, uint32_t *output) {
+	uint32_t raw_volts = 0;
+	w_status_t status = adc_get_raw_volts(channel, &raw_volts, 0);
+	if (status != W_SUCCESS) {
+		return status;
+	}
+
+	*output = raw_volts * conversion_table[channel];
 	return W_SUCCESS;
 }
 

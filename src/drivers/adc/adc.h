@@ -18,7 +18,7 @@ typedef enum {
 	VSENS_USB,
 	ISENS_3V3,
 	ISENS_5V,
-	PROCESSOR_BOARD_VOLTAGE, //does this channel exist 
+	PROCESSOR_BOARD_VOLTAGE, // does this channel exist
 	ADC_CHANNEL_COUNT
 } adc_channel_t;
 
