@@ -4,6 +4,7 @@
 #include "semphr.h"
 
 #define ADC_CONV_TIMEOUT_TICKS pdMS_TO_TICKS(1)
+#define V_REF 3.3f //check this later
 
 static ADC_HandleTypeDef *adc_handle;
 static SemaphoreHandle_t adc_conversion_semaphore = NULL;
@@ -115,8 +116,12 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output, ui
 }
 
 w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms) {
-	// temporary call to avoid defined but not used error
-	adc_get_raw_counts(channel, output, timeout_ms);
+	uint32_t counts = 0;
+	w_status_t status = adc_get_raw_counts(channel, &counts, 0);
+	if (status != W_SUCCESS)
+		return status;
+
+	*output = ((float)counts / ADC_MAX_COUNTS) * V_REF ;	
 	return W_SUCCESS;
 }
 
