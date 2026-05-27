@@ -19,6 +19,20 @@ static void ADC1_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+static const float conversion_table[ADC_CHANNEL_COUNT] = {
+	// temporarily values for scaling multiplier
+	[VSENS_BAT1] = 0,
+	[VSENS_BAT2] = 0,
+	[VSENS_RKT] = 0,
+	[ISENS_BAT2] = 0,
+	[ISENS_BAT1] = 0,
+	[VSENS_CHG] = 0,
+	[VSENS_USB] = 0,
+	[ISENS_3V3] = 0,
+	[ISENS_5V] = 0,
+	[PROCESSOR_BOARD_VOLTAGE] = 0
+};
+
 w_status_t adc_init(ADC_HandleTypeDef *hadc) {
 	if (NULL == hadc) {
 		return W_INVALID_PARAM;
