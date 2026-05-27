@@ -25,10 +25,13 @@ w_status_t iis2mdc_init(void);
 
 /**
  * @brief Retrieves magnetic field reading for all three axes.
- * @note Polls STATUS_REG until a new sample is available then reads output registers
- * @param[out] data Pointer to store the converted magnetic field values
- * @param[out] raw_data Pointer to store the raw magnetometer readings
- * @return Status of the operation, timeout if no data arrived in time.
+ * @note Non-blocking: checks STATUS_REG.Zyxda once and returns W_FAILURE immediately if
+ *       no new data is available. On success, reads six output registers
+ *       and converts raw counts to gauss.
+ * @param[out] data Pointer to store the converted magnetic field values in gauss
+ * @param[out] raw_data Pointer to store the raw signed 16-bit counts
+ * @return W_SUCCESS if a new sample was read, W_FAILURE if not (should probably distinguish
+ * within failure cases later)
  */
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data);
 
