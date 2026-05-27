@@ -177,9 +177,6 @@ static void system_init_task(void *arg) {
 
 		if (27 < motor_angle) {
 			vTaskDelay(1000);
-			// motor_angle = -27;
-			// ak45_send_position_cmd(motor_angle);
-			vTaskDelay(500);
 			NVIC_SystemReset();
 		}
 		// vTaskDelay(2);
