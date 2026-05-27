@@ -71,4 +71,4 @@ w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb);
  */
 uint32_t ak45_get_tx_errors(void);
 
-#endif // MOTOR_DRIVER_H
+#endif // AK45_DRIVER_H

@@ -37,7 +37,7 @@ static FDCAN_HandleTypeDef *g_ak45_hfdcan = NULL;
 static QueueHandle_t g_feedback_queue = NULL;
 static uint32_t g_tx_errors = 0;
 static bool is_init = false;
-static bool recieved_can_msg = false;
+static volatile bool received_can_msg = false;
 
 /**
  * @brief Transmit 29-bit ID via FDCAN
@@ -49,7 +49,7 @@ static bool recieved_can_msg = false;
  */
 static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, uint8_t len) {
 	if ((NULL == g_ak45_hfdcan) || (NULL == data) || (len > 8)) {
-		log_text(LOG_WAIT_MS, "ak45", "ERROR: Invalid pointers");
+		log_text(LOG_WAIT_MS, "ak45", "ERROR: Invalid pointer");
 		return W_FAILURE;
 	}
 
@@ -79,10 +79,9 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
  * @param[in]  data   8-byte feedback payload
  * @param[out] fb     Decoded feedback struct
  */
-static void ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
+static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
 	if ((NULL == data) || (NULL == fb)) {
-		log_text(LOG_WAIT_MS, "ak45", "ERROR: Invalid pointers");
-		return;
+		return W_FAILURE;
 	}
 
 	int16_t raw_pos = (int16_t)(((uint16_t)data[0] << 8) | data[1]);
@@ -100,6 +99,17 @@ static void ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
 	uint32_t ms = 0;
 	if (timer_get_ms(&ms) == W_SUCCESS) {
 		fb->timestamp_ms = ms;
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}
+
+/* used to stop the general can bus*/
+static void ak45_stop_can() {
+	// turn off fdcan so can restart
+	if (HAL_FDCAN_Stop(g_ak45_hfdcan) != HAL_OK) {
+		log_text(LOG_WAIT_MS, "ak45", "ERROR: FDCAN stop failed");
 	}
 }
 
@@ -140,7 +150,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	FDCAN_FilterTypeDef motor_filter = {0};
 	motor_filter.IdType = FDCAN_EXTENDED_ID;
 	motor_filter.FilterIndex = 0;
-	motor_filter.FilterType = FDCAN_FILTER_MASK;
+	motor_filter.FilterType = FDCAN_FILTER_DUAL;
 	motor_filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
 	motor_filter.FilterID1 = (uint32_t)(CAN_REAL_TIME_FEEDBACK << 8) | AK45_DRIVER_ID;
 	motor_filter.FilterID2 = (uint32_t)(CAN_START_FRAME << 8) | AK45_DRIVER_ID;
@@ -150,18 +160,18 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		return W_FAILURE;
 	}
 
-	recieved_can_msg = false;
-
 	if (HAL_FDCAN_Start(g_ak45_hfdcan) != HAL_OK) {
 		log_text(LOG_WAIT_MS, "ak45", "ERROR: FDCAN start failed");
+		ak45_stop_can();
 		return W_FAILURE;
 	}
 
 	// to check if there has been a new can msg since start
-	recieved_can_msg = false;
+	received_can_msg = false;
 
 	if (HAL_FDCAN_ActivateNotification(g_ak45_hfdcan, FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) != HAL_OK) {
 		log_text(LOG_WAIT_MS, "ak45", "ERROR: FDCAN activate notification failed");
+		ak45_stop_can();
 		return W_FAILURE;
 	}
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE << 8) | AK45_DRIVER_ID;
@@ -170,24 +180,27 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	uint32_t start_can_init_time_ms = 0;
 	if (timer_get_ms(&start_can_init_time_ms) != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, "ak45", "ERROR: Failed to get time");
+		ak45_stop_can();
 		return W_FAILURE;
 	}
 
 	uint32_t curr_time_ms = start_can_init_time_ms;
 
-	while ((!recieved_can_msg) &&
+	while ((!received_can_msg) &&
 		   ((curr_time_ms - start_can_init_time_ms) <= can_init_timeout_ms)) {
 		vTaskDelay(500);
 
 		if (timer_get_ms(&curr_time_ms) != W_SUCCESS) {
 			log_text(LOG_WAIT_MS, "ak45", "ERROR: Failed to get time");
+			ak45_stop_can();
 			return W_FAILURE;
 		}
 	}
 
 	// return error if no response from motor
-	if (!recieved_can_msg) {
+	if (!received_can_msg) {
 		log_text(LOG_WAIT_MS, "ak45", "ERROR: Unable to connect to AK45 CAN");
+		ak45_stop_can();
 		return W_FAILURE;
 	}
 
@@ -195,6 +208,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	uint8_t zero_data[1] = {0};
 	if (ak45_can_transmit_ext(ext_id, zero_data, FDCAN_DLC_BYTES_1) != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, "ak45", "ERROR: failed to reset to 0");
+		ak45_stop_can();
 		return W_FAILURE;
 	}
 
@@ -213,7 +227,7 @@ w_status_t ak45_send_disable_cmd(void) {
 
 w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
 	if ((NULL == fb) || (!is_init)) {
-		log_text(LOG_WAIT_MS, "ak45", "ERRROR: Invalid pointers or not initalized");
+		log_text(LOG_WAIT_MS, "ak45", "ERROR: Invalid pointers or not initialized");
 		return W_FAILURE;
 	}
 
@@ -235,7 +249,7 @@ uint32_t ak45_get_tx_errors(void) {
  * is received. Parses the feedback and puts it in the queue.
  */
 static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
-	recieved_can_msg = true;
+	received_can_msg = true;
 
 	// checks if the new message bit is not 0 (FDCAN_IT_RX_FIFO1_NEW_MESSAGE is the bit mask)
 	if (0 == (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)) {
