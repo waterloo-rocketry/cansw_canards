@@ -36,9 +36,10 @@ typedef struct {
  * Sets up internal queues and configures the FDCAN RX filter for the servo's extended ID.
  *
  * @param[in] hfdcan Pointer to FDCAN handle
+ * @param[in] can_init_timeout_ms timeout in ms for waiting for AK45's CAN to initialize
  * @return W_SUCCESS on success, W_FAILURE on error
  */
-w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan);
+w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms);
 
 /**
  * @brief Send a position command to the servo
