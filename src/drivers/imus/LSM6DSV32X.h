@@ -7,13 +7,17 @@
 #include <limits.h>
 #include <stdio.h>
 
-enum {
+enum imu_buffer{
 	IMU_READ_BUFFER = 0,
 	IMU_WRITE_BUFFER = 1,
+};
 
+enum imu_data_state{
 	IMU_DATA_STALE = 1,
 	IMU_DATA_READY = 0,
+};
 
+enum imu_bus_state{
 	IMU_BUS_BUSY = 0,
 	IMU_BUS_FREE = 1
 };
