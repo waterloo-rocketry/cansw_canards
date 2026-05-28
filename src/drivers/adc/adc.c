@@ -4,15 +4,15 @@
 #include "semphr.h"
 
 #define ADC_CONV_TIMEOUT_TICKS pdMS_TO_TICKS(1)
-#define V_REF 3.3f // check this later
+#define V_REF 2.5f 
 #define ADC1_NUM_CHANNELS 5
 #define ADC2_NUM_CHANNELS 2
 #define ADC3_NUM_CHANNELS 2
 
 // DMA buffers
-static uint32_t adc1_raw_counts[ADC1_NUM_CHANNELS];
-static uint32_t adc2_raw_counts[ADC2_NUM_CHANNELS];
-static uint32_t adc3_raw_counts[ADC3_NUM_CHANNELS];
+static uint16_t adc1_raw_counts[ADC1_NUM_CHANNELS];
+static uint16_t adc2_raw_counts[ADC2_NUM_CHANNELS];
+static uint16_t adc3_raw_counts[ADC3_NUM_CHANNELS];
 
 static ADC_HandleTypeDef *adc1_handle;
 static ADC_HandleTypeDef *adc2_handle;
@@ -41,16 +41,18 @@ static const uint32_t channel_to_adc[ADC_CHANNEL_COUNT] = {[VSENS_BAT1] = 1,
 														   [ISENS_5V] = 3};
 
 static const float conversion_table[ADC_CHANNEL_COUNT] = {
-	// temporarily values for scaling multiplier
-	[VSENS_BAT1] = 0,
-	[VSENS_BAT2] = 0,
-	[VSENS_RKT] = 0,
-	[ISENS_BAT2] = 0,
-	[ISENS_BAT1] = 0,
-	[VSENS_CHG] = 0,
-	[VSENS_USB] = 0,
-	[ISENS_3V3] = 0,
-	[ISENS_5V] = 0,
+    // Voltage Multipliers (V)
+    [VSENS_BAT1] = 11.0f,      // 100k / 10k divider
+    [VSENS_BAT2] = 11.0f,      // 100k / 10k divider
+    [VSENS_RKT]  = 6.2356f,    // 100k / 19.1k divider
+    [VSENS_CHG]  = 6.2356f,    // 100k / 19.1k divider
+    [VSENS_USB]  = 2.0f,       // 100k / 100k divider
+
+	// Current multipliers (mA)
+    [ISENS_BAT1] = 11111.1f,   // LM74910-Q1 IMON (1mR shunt, 100R R_SET, 10k R_MON)
+    [ISENS_BAT2] = 11111.1f,   // LM74910-Q1 IMON (1mR shunt, 100R R_SET, 10k R_MON)
+    [ISENS_3V3]  = 10000.0f,      // INA180A3 (1mR shunt, 100 V/V gain)
+    [ISENS_5V]   = 10000.0f       // INA180A3 (1mR shunt, 100 V/V gain)
 };
 
 w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_HandleTypeDef *hadc3) {
@@ -70,9 +72,9 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
 	}
 
 	// Start continuous DMA
-	if (HAL_OK != HAL_ADC_Start_DMA(adc1_handle, adc1_raw_counts, ADC1_NUM_CHANNELS) ||
-		HAL_OK != HAL_ADC_Start_DMA(adc2_handle, adc2_raw_counts, ADC2_NUM_CHANNELS) ||
-		HAL_OK != HAL_ADC_Start_DMA(adc3_handle, adc3_raw_counts, ADC3_NUM_CHANNELS)) {
+	if (HAL_OK != HAL_ADC_Start_DMA(adc1_handle, (uint32_t *)adc1_raw_counts, ADC1_NUM_CHANNELS) ||
+		HAL_OK != HAL_ADC_Start_DMA(adc2_handle, (uint32_t *)adc2_raw_counts, ADC2_NUM_CHANNELS) ||
+		HAL_OK != HAL_ADC_Start_DMA(adc3_handle, (uint32_t *)adc3_raw_counts, ADC3_NUM_CHANNELS)) {
 		log_text(1, "adc", "initfaildma");
 		return W_FAILURE;
 	}
@@ -111,7 +113,7 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
 	return W_SUCCESS;
 }
 
-w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output) {
+w_status_t adc_get_raw_volts(adc_channel_t channel, float *output) {
 	uint32_t counts = 0;
 	w_status_t status = adc_get_raw_counts(channel, &counts);
 	if (status != W_SUCCESS) {
@@ -122,8 +124,8 @@ w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output) {
 	return W_SUCCESS;
 }
 
-w_status_t adc_get_converted_val(adc_channel_t channel, uint32_t *output) {
-	uint32_t raw_volts = 0;
+w_status_t adc_get_converted_val(adc_channel_t channel, float *output) {
+	float raw_volts = 0;
 	w_status_t status = adc_get_raw_volts(channel, &raw_volts);
 	if (status != W_SUCCESS) {
 		return status;

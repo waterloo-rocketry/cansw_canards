@@ -44,7 +44,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
  * @param output Pointer to store output value of the ADC channel
  * @return Status of the read operation
  */
-w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output);
+w_status_t adc_get_raw_volts(adc_channel_t channel, float *output);
 
 /**
  * @brief Convert the raw voltage into actual value it measures (empty stub for now)
@@ -55,7 +55,7 @@ w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output);
  * @param output Pointer to store converted value
  * @return Status of the read operation
  */
-w_status_t adc_get_converted_val(adc_channel_t channel, uint32_t *output);
+w_status_t adc_get_converted_val(adc_channel_t channel, float *output);
 
 /**
  * @brief Report ADC module health status
