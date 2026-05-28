@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 // device addresses and configuration
-#define LSM6DSV32X_ADDR 0x6A // addr sel pin LOW 
+#define LSM6DSV32X_ADDR 0x6A // addr sel pin LOW
 
 #define IMU_INT1_PORT GPIOD
 #define IMU_INT1_PIN GPIO_PIN_7
@@ -119,9 +119,10 @@ w_status_t lsm6dsv32x_init() {
 	// disable offset, untill imu calibration
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL9_XL, 0x29);
 
-	//register the I2C callback for the end of the DMA read to call the dma complete handker function
-	HAL_I2C_RegisterCallback(lsm6dsv32x_ctx->hi2c,HAL_I2C_MEM_RX_COMPLETE_CB_ID ,lsm6dsv32x_dma_complete_handle);
-
+	// register the I2C callback for the end of the DMA read to call the dma complete handker
+	// function
+	HAL_I2C_RegisterCallback(
+		lsm6dsv32x_ctx->hi2c, HAL_I2C_MEM_RX_COMPLETE_CB_ID, lsm6dsv32x_dma_complete_handle);
 
 	status |= lsm6dsv32x_check_sanity();
 
@@ -135,11 +136,11 @@ w_status_t lsm6dsv32x_init() {
 w_status_t lsm6dsv32x_int1_isr_handler() {
 	w_status_t status = W_SUCCESS;
 
-	// set the bus to occupied meanining that data is 
-	//actively being streamed via DMA into the Buffer from the IMU
+	// set the bus to occupied meanining that data is
+	// actively being streamed via DMA into the Buffer from the IMU
 	lsm6dsv32x_ctx->bus_status = IMU_BUS_BUSY;
 
-	//store the timestamp when the data is recieved
+	// store the timestamp when the data is recieved
 	status |= timer_get_ms(&lsm6dsv32x_ctx->timestamp[IMU_WRITE_BUFFER]);
 
 	// begin dma read to the main buffer
@@ -165,21 +166,21 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 /**
  * @brief handler for after the DMA is completed
  */
-w_status_t lsm6dsv32x_dma_complete_handle() {
-	// allow access to the buss
+void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
+	if (hi2c != lsm6dsv32x_ctx->hi2c) {
+		return;
+	}
+
 	lsm6dsv32x_ctx->bus_status = IMU_BUS_FREE;
 
 	memcpy(lsm6dsv32x_ctx->dual_buffer[IMU_READ_BUFFER],
 		   lsm6dsv32x_ctx->dual_buffer[IMU_WRITE_BUFFER],
 		   12);
-	lsm6dsv32x_ctx->stale_data = IMU_DATA_READY;
 
-	return W_SUCCESS;
+	lsm6dsv32x_ctx->stale_data = IMU_DATA_READY;
 }
 
 // TODO: make below function into a seperate module, interupts or gpio or dma
-
-
 
 /**
  * @brief Retrives all 12 bytes of imu data

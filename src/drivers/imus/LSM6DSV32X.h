@@ -7,17 +7,17 @@
 #include <limits.h>
 #include <stdio.h>
 
-enum imu_buffer{
+enum imu_buffer {
 	IMU_READ_BUFFER = 0,
-	IMU_WRITE_BUFFER = 1,
+	IMU_WRITE_BUFFER = 1
 };
 
-enum imu_data_state{
+enum imu_data_state {
 	IMU_DATA_STALE = 1,
-	IMU_DATA_READY = 0,
+	IMU_DATA_READY = 0
 };
 
-enum imu_bus_state{
+enum imu_bus_state {
 	IMU_BUS_BUSY = 0,
 	IMU_BUS_FREE = 1
 };
@@ -55,13 +55,15 @@ w_status_t lsm6dsv32x_check_sanity();
  * @note Must be called to wake up imu
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_init(imu_ctx_t *new_imu_ctx);
+w_status_t lsm6dsv32x_init();
 
 /**
  * @brief ISR for the interupt pin that begins DMA data transfor
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_int1_isr_handler();
+
+void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c);
 
 /**
  * @brief Retrives all 12 bytes of imu data
