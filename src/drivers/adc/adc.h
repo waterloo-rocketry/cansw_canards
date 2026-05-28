@@ -18,7 +18,6 @@ typedef enum {
 	VSENS_USB,
 	ISENS_3V3,
 	ISENS_5V,
-	PROCESSOR_BOARD_VOLTAGE, // does this channel exist
 	ADC_CHANNEL_COUNT
 } adc_channel_t;
 
@@ -28,7 +27,6 @@ typedef enum {
 typedef struct {
 	bool is_init; /**< Initialization status flag */
 	uint32_t conversion_timeouts; /**< Count of ADC conversion timeouts */
-	uint32_t mutex_timeouts; /**< Count of mutex acquisition timeouts */
 	uint32_t invalid_channels; /**< Count of attempts to read invalid channels */
 	uint32_t overflow_errors; /**< Count of ADC value overflow errors */
 } adc_error_data_t;
@@ -44,11 +42,9 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
  * @brief Convert the raw counts of a channel into voltage (empty stub for now)
  * @param channel The adc channel to read from
  * @param output Pointer to store output value of the ADC channel
- * @param timeout_ms How long to wait to acquire the mutex. Conversion timeout is fixed at 1ms in
- * addition to this
  * @return Status of the read operation
  */
-w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output, uint32_t timeout_ms);
+w_status_t adc_get_raw_volts(adc_channel_t channel, uint32_t *output);
 
 /**
  * @brief Convert the raw voltage into actual value it measures (empty stub for now)

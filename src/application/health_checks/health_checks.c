@@ -41,15 +41,15 @@ static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
 static uint32_t num_watchdog_tasks = 0;
 
 w_status_t get_adc_current(uint32_t *adc_current_mA) {
-	w_status_t status = W_SUCCESS;
-	uint32_t adc_value;
+	// w_status_t status = W_SUCCESS;
+	// uint32_t adc_value;
 
-	status |= adc_get_raw_volts(PROCESSOR_BOARD_VOLTAGE, &adc_value, TASK_DELAY_MS);
-	if (status != W_SUCCESS) {
-		return status;
-	}
+	// status |= adc_get_raw_volts(PROCESSOR_BOARD_VOLTAGE, &adc_value, TASK_DELAY_MS);
+	// if (status != W_SUCCESS) {
+	// 	return status;
+	// }
 
-	*adc_current_mA = (uint32_t)(adc_value * CONV_ADC_COUNTS_TO_CURRENT_mA);
+	// *adc_current_mA = (uint32_t)(adc_value * CONV_ADC_COUNTS_TO_CURRENT_mA);
 
 	return W_SUCCESS;
 }
