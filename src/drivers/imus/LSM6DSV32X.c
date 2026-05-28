@@ -227,4 +227,3 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 
 	return W_SUCCESS;
 }
-
