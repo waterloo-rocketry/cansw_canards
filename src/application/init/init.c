@@ -27,6 +27,10 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
+// TEST INCLUDE
+#include "drivers/imus/LSM6DSV32X.h"
+#include <inttypes.h>
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -145,13 +149,33 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+	uint8_t i = 0;
+	TickType_t last_wake_time = xTaskGetTickCount();
+
+	vector3d_t acc_data = {0};
+	vector3d_t gyro_data = {0};
+	lsm6dsv32x_raw_imu_data_t raw_acc = {0};
+	lsm6dsv32x_raw_imu_data_t raw_gyro = {0};
+	w_status_t imu_status = W_SUCCESS;
+
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(500);
+		if (100 == i) {
+			gpio_toggle(GPIO_PIN_RED_LED, 1);
+			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+		} else {
+			i++;
+		}
+		imu_status = lsm6dsv32x_get_gyro_acc_data(&acc_data, &gyro_data, &raw_acc, &raw_gyro);
+		if (imu_status != W_SUCCESS) log_text(10, "SystemInit", "LSM6 ERROR.");
+
+		log_text(10, "SystemInit", "LSM6 ACCEL x %lf, y %lf, z %lf, RAW: x "PRIu16", y "PRIu16", z "PRIu16".", 
+			acc_data.x, acc_data.y, acc_data.z, raw_acc.x, raw_acc.y, raw_acc.z);
+
+		log_text(10, "SystemInit", "LSM6 GYRO  x %lf, y %lf, z %lf, RAW: x "PRIu16", y "PRIu16", z "PRIu16".", 
+			gyro_data.x, gyro_data.y, gyro_data.z, raw_gyro.x, raw_gyro.y, raw_gyro.z);
+
+		xTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(1));
 	}
 }
 
