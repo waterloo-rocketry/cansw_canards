@@ -1,5 +1,10 @@
+#include "FreeRTOS.h"
+#include "task.h"
+
+#include "application/logger/log.h"
 #include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/timer/timer.h"
 
 // I2C bus and slave address
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
@@ -83,70 +88,6 @@ static void a_convert(const uint8_t *buf, iis2mdc_raw_data_t *raw, vector3d_t *d
 	data->x = (float64_t)(int16_t)raw->x * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
 	data->y = (float64_t)(int16_t)raw->y * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
 	data->z = (float64_t)(int16_t)raw->z * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
-}
-
-/**
- * @brief Performs a sanity check by verifying device identity and running a self test
- * @return W_SUCCESS if the device passes self test and identity verification
- */
-w_status_t iis2mdc_sanity_check(void) {
-	uint8_t id;
-
-	if (W_SUCCESS != a_read(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
-		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
-		return W_FAILURE;
-	}
-	if (IIS2MDC_WHO_AM_I_VAL != id) {
-		log_text(1,
-				 "iis2mdc",
-				 "ERROR: WHO_AM_I mismatch: expected %u, got %u",
-				 IIS2MDC_WHO_AM_I_VAL,
-				 id);
-		return W_FAILURE;
-	}
-
-	if (W_SUCCESS != iis2mdc_self_test()) {
-		log_text(1, "iis2mdc", "ERROR: self-test failed");
-		return W_FAILURE;
-	}
-
-	return W_SUCCESS;
-}
-
-w_status_t iis2mdc_init(void) {
-	// soft reset clears config registers
-	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
-		log_text(1, "iis2mdc", "ERROR: soft reset failed");
-		return W_FAILURE;
-	}
-
-	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A) ||
-		W_SUCCESS != a_write(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B) ||
-		W_SUCCESS != a_write(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
-		log_text(1, "iis2mdc", "ERROR: failed to write configuration registers");
-		return W_FAILURE;
-	}
-
-	return W_SUCCESS;
-}
-
-w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
-							float64_t *timestamp_ms) {
-	uint8_t buf[6] = 0;
-
-	if (NULL == data || NULL == raw_data || NULL == timestamp_ms) {
-		log_text(1, "iis2mdc", "ERROR: NULL pointer cannot be used as input to get_data function");
-		return W_FAILURE;
-	}
-
-	if (W_SUCCESS != a_read(IIS2MDC_REG_OUTX_L, buf, 6)) {
-		log_text(1, "iis2mdc", "ERROR: failed to read output registers");
-		return W_FAILURE;
-	}
-
-	a_convert(buf, raw_data, data);
-	*timestamp_ms = timer_get_ms();
-	return W_SUCCESS;
 }
 
 /**
@@ -259,5 +200,77 @@ static w_status_t iis2mdc_self_test(void) {
 		return W_FAILURE;
 	}
 
+	return W_SUCCESS;
+}
+
+/**
+ * @brief Performs a sanity check by verifying device identity and running a self test
+ * @return W_SUCCESS if the device passes self test and identity verification
+ */
+w_status_t iis2mdc_sanity_check(void) {
+	uint8_t id;
+
+	if (W_SUCCESS != a_read(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
+		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
+		return W_FAILURE;
+	}
+	if (IIS2MDC_WHO_AM_I_VAL != id) {
+		log_text(1,
+				 "iis2mdc",
+				 "ERROR: WHO_AM_I mismatch: expected %u, got %u",
+				 IIS2MDC_WHO_AM_I_VAL,
+				 id);
+		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != iis2mdc_self_test()) {
+		log_text(1, "iis2mdc", "ERROR: self-test failed");
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}
+
+w_status_t iis2mdc_init(void) {
+	// soft reset clears config registers
+	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
+		log_text(1, "iis2mdc", "ERROR: soft reset failed");
+		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A) ||
+		W_SUCCESS != a_write(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B) ||
+		W_SUCCESS != a_write(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
+		log_text(1, "iis2mdc", "ERROR: failed to write configuration registers");
+		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != iis2mdc_sanity_check()) {
+		log_text(1, "iis2mdc", "ERROR: sanity check failed");
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}
+
+w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
+							float64_t *timestamp_ms) {
+	uint8_t buf[6] = {0};
+
+	if (NULL == data || NULL == raw_data || NULL == timestamp_ms) {
+		log_text(1, "iis2mdc", "ERROR: NULL pointer cannot be used as input to get_data function");
+		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != a_read(IIS2MDC_REG_OUTX_L, buf, 6)) {
+		log_text(1, "iis2mdc", "ERROR: failed to read output registers");
+		return W_FAILURE;
+	}
+
+	a_convert(buf, raw_data, data);
+
+	uint32_t now = 0;
+	(void)timer_get_ms(&now);
+	*timestamp_ms = (float64_t)now;
 	return W_SUCCESS;
 }
