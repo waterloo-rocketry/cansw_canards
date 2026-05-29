@@ -38,9 +38,6 @@ static const uint32_t IIS2MDC_INIT_CFG_C = 0x10;
 // conversion factor from raw register values to gauss
 static const float64_t IIS2MDC_SENSITIVITY_GAUSS_PER_LSB = 0.0015;
 
-// background polling task period matching the sensor ODR of 100hz.
-static const uint32_t IIS2MDC_POLL_PERIOD_MS = 10;
-
 /**
  * @brief Helper function to read one or more consecutive bytes over I2C
  * @note IIS2MDC auto-increments the sub-address if MSB is 1, so multi-byte reads only need the
