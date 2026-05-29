@@ -31,6 +31,7 @@ w_status_t iis2mdc_init(void);
  * @param[out] timestamp_ms Pointer to store the read timestamp (ms since startup)
  * @return W_SUCCESS if a new sample was read and converted, W_FAILURE if not (todo: specify)
  */
-w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, float64_t *timestamp_ms);
+w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
+							float64_t *timestamp_ms);
 
 #endif // IIS2MDC_H

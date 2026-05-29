@@ -43,7 +43,8 @@ static const uint32_t IIS2MDC_POLL_PERIOD_MS = 10;
 
 /**
  * @brief Helper function to read one or more consecutive bytes over I2C
- * @note IIS2MDC auto-increments the sub-address if MSB is 1, so multi-byte reads only need the start register.
+ * @note IIS2MDC auto-increments the sub-address if MSB is 1, so multi-byte reads only need the
+ * start register.
  */
 static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
 	return i2c_read_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, data, len);
@@ -58,7 +59,7 @@ static w_status_t a_write(uint8_t reg, uint8_t val) {
 
 /**
  * @brief Helper function to convert six output register bytes into raw counts and gauss.
- * @note Each output register is uint8, two registers form a piece of data 
+ * @note Each output register is uint8, two registers form a piece of data
  * for an axis. This is casted to uint16 for raw data and int16 for gauss.
  */
 static void a_convert(const uint8_t *buf, iis2mdc_raw_data_t *raw, vector3d_t *data) {
