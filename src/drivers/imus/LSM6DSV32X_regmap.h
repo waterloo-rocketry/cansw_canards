@@ -12,6 +12,7 @@ enum LSM6DSV32X_reg {
 	CTRL1_XL = 0x10,
 	CTRL2_G = 0x11,
 	CTRL3 = 0x12,
+	CTRL4 = 0x13,
 	CTRL5 = 0x14,
 	CTRL6_G = 0x15,
 	CTRL7_G = 0x16,
@@ -24,6 +25,8 @@ enum LSM6DSV32X_reg {
 	FIFO_CTRL4 = 0x0A,
 
 	CTRL_STATUS = 0x1A,
+
+	FUNC_ENABLE = 0x50,
 
 	FIFO_READ_BEGIN = 0x78
 };
