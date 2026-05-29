@@ -80,7 +80,7 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
-	// status |= adc_init(&hadc1);
+	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
 	// status |= health_check_init();
 	status |= movella_init();
