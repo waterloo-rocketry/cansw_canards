@@ -6,13 +6,16 @@ static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
 static const uint8_t IIS2MDC_I2C_ADDR = 0x1E;
 
 // Register addresses
-static const uint32_t IIS2MDC_REG_OFFSET_X_L = 0x45; // add other axes later
+static const uint32_t IIS2MDC_REG_OFFSET_X_L = 0x45; // How are we planning to calibrate sensors irl?
 static const uint32_t IIS2MDC_REG_WHO_AM_I = 0x4F;
 static const uint32_t IIS2MDC_REG_CFG_A = 0x60;
 static const uint32_t IIS2MDC_REG_CFG_B = 0x61;
 static const uint32_t IIS2MDC_REG_CFG_C = 0x62;
 static const uint32_t IIS2MDC_REG_STATUS = 0x67;
 static const uint32_t IIS2MDC_REG_OUTX_L = 0x68;
+
+// SUB MSB that enables auto-increment for multi-byte reads. Since all registers are less than 0x80 we can freely use this bit
+static const uint32_t IIS2MDC_SUB_AUTO_INC = 0x80;
 
 // Expected WHO_AM_I return value
 static const uint32_t IIS2MDC_WHO_AM_I_VAL = 0x40;
@@ -44,6 +47,9 @@ static const float64_t IIS2MDC_SENSITIVITY_GAUSS_PER_LSB = 0.0015;
  * start register.
  */
 static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
+	if (len > 1) {
+		reg |= IIS2MDC_SUB_AUTO_INC;
+	}
 	return i2c_read_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, data, len);
 }
 
@@ -105,6 +111,20 @@ w_status_t iis2mdc_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data) {
+w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, float64_t *timestamp_ms) {
+	uint8_t buf[6] = 0;
+	
+	if (NULL == data || NULL == raw_data || NULL == timestamp_ms) {
+		log_text(1, "iis2mdc", "ERROR: NULL pointer cannot be used as input to get_data function");
+		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != a_read(IIS2MDC_REG_OUTX_L, buf, 6)) {
+		log_text(1, "iis2mdc", "ERROR: failed to read output registers");
+		return W_FAILURE;
+	}
+
+	a_convert(buf, raw_data, data);
+	*timestamp_ms = timer_get_ms();
 	return W_SUCCESS;
 }
