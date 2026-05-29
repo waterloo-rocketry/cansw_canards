@@ -29,7 +29,7 @@ w_status_t iis2mdc_init(void);
  * @param[out] data Pointer to store the converted magnetic field values in gauss
  * @param[out] raw_data Pointer to store the raw unsigned 16-bit counts
  * @param[out] timestamp_ms Pointer to store the read timestamp (ms since startup)
- * @return W_SUCCESS if a new sample was read and converted, W_FAILURE if not (todo: specify)
+ * @return W_SUCCESS on successful read and conversion of most recent sample
  */
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 							float64_t *timestamp_ms);
