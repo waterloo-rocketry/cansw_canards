@@ -29,7 +29,7 @@ static const uint8_t IIS2MDC_CFG_C_SELF_TEST = (1 << 1);
 /* Init configuration:
  CFG_REG_A = 0x8C  COMP_TEMP_EN=1, LP=0(high-res), ODR=11 (100 Hz), MD=00 (continuous)
  CFG_REG_B = 0x02  OFF_CANC=1 (continuous offset cancellation)
- CFG_REG_C = 0x10  BDU=1 (block data update, DRDY pin unused, host polls status register)
+ CFG_REG_C = 0x10  BDU=1 (not sure if this is still needed with the current design scope?)
  */
 static const uint32_t IIS2MDC_INIT_CFG_A = 0x8C;
 static const uint32_t IIS2MDC_INIT_CFG_B = 0x02;
@@ -78,7 +78,30 @@ static w_status_t iis2mdc_check_sanity(void) {
 }
 
 w_status_t iis2mdc_init(void) {
+	uint8_t id = 0;
+
+	if (W_SUCCESS != a_read(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
+		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
+		return W_FAILURE;
+	}
+	if (IIS2MDC_WHO_AM_I_VAL != id) {
+		log_text(1,
+				 "iis2mdc",
+				 "ERROR: WHO_AM_I mismatch: expected %u, got %u",
+				 IIS2MDC_WHO_AM_I_VAL,
+				 id);
+		return W_FAILURE;
+	}
+	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A) ||
+		W_SUCCESS != a_write(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B) ||
+		W_SUCCESS != a_write(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
+		log_text(1, "iis2mdc", "ERROR: failed to write to configuration registers");
+		return W_FAILURE;
+	}
+
 	iis2mdc_check_sanity();
+
+	log_text(1, "iis2mdc", "INFO: initialization successful");
 	return W_SUCCESS;
 }
 
