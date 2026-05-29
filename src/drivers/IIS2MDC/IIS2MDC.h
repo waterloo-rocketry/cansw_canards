@@ -7,8 +7,8 @@
 #include "rocketlib/include/common.h"
 
 /**
- * @brief Raw magnetometer data for each axis.
- * @note Sensitivity is 1.5 mgauss/LSB, multiply raw by 0.0015 to convert to gauss.
+ * @brief Raw magnetometer register data for each axis
+ * @note Sensitivity is 1.5 mgauss/LSB, multiply raw by 0.0015 to convert to gauss
  */
 typedef struct {
 	uint16_t x;
