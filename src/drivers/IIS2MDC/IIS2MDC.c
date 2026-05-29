@@ -86,19 +86,11 @@ static void a_convert(const uint8_t *buf, iis2mdc_raw_data_t *raw, vector3d_t *d
 }
 
 /**
- * @brief Performs a sanity check by verifying device identity and initialization configs.
- * @return W_SUCCESS if the device responds with the expected values, W_FAILURE otherwise
+ * @brief Performs a sanity check by verifying device identity and running a self test
+ * @return W_SUCCESS if the device passes self test and identity verification
  */
-static w_status_t iis2mdc_check_sanity(void) {
-	if (W_SUCCESS != iis2mdc_self_test()) {
-		log_text(1, "iis2mdc", "ERROR: self-test failed");
-		return W_FAILURE;
-	}
-	return W_SUCCESS;
-}
-
-w_status_t iis2mdc_init(void) {
-	uint8_t id = 0;
+w_status_t iis2mdc_sanity_check(void) {
+	uint8_t id;
 
 	if (W_SUCCESS != a_read(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
 		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
@@ -112,16 +104,29 @@ w_status_t iis2mdc_init(void) {
 				 id);
 		return W_FAILURE;
 	}
-	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A) ||
-		W_SUCCESS != a_write(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B) ||
-		W_SUCCESS != a_write(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
-		log_text(1, "iis2mdc", "ERROR: failed to write to configuration registers");
+
+	if (W_SUCCESS != iis2mdc_self_test()) {
+		log_text(1, "iis2mdc", "ERROR: self-test failed");
 		return W_FAILURE;
 	}
 
-	iis2mdc_check_sanity();
+	return W_SUCCESS;
+}
 
-	log_text(1, "iis2mdc", "INFO: initialization successful");
+w_status_t iis2mdc_init(void) {
+	// soft reset clears config registers
+	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
+		log_text(1, "iis2mdc", "ERROR: soft reset failed");
+		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A) ||
+		W_SUCCESS != a_write(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B) ||
+		W_SUCCESS != a_write(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
+		log_text(1, "iis2mdc", "ERROR: failed to write configuration registers");
+		return W_FAILURE;
+	}
+
 	return W_SUCCESS;
 }
 
