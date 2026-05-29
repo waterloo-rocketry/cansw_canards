@@ -435,5 +435,5 @@ add_test_group(test_ms5611_baro
     # test3 file(s)
     ${UNIT_TESTS_DIR}/ms5611_test.cpp
     # src file(s)
-    ${PROC_SRC_DIR}/drivers/MS5611/ms5611.c
+    ${PROC_SRC_DIR}/drivers/MS5611/MS5611.c
 )
