@@ -65,7 +65,7 @@ static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
  * @param cmd The command to write.
  */
 static w_status_t a_write_cmd(uint8_t cmd) {
-	return i2c_write_data(handle.bus, (uint8_t)handle.addr, (uint8_t *)&cmd, (uint8_t)sizeof(cmd));
+	return i2c_write_data(handle.bus, (uint8_t)handle.addr, &cmd, 1);
 }
 
 /**
@@ -173,6 +173,8 @@ static w_status_t ms5611_prom_read(void) {
  * crc check on the coefficients.
  */
 w_status_t ms5611_init(void) {
+	handle.initialized = false;
+
 	if (W_SUCCESS != a_write_cmd(MS5611_CMD_RESET)) {
 		log_text(1, "ms5611", "ERROR: initialization failed during command reset.");
 		return W_FAILURE;
@@ -187,6 +189,17 @@ w_status_t ms5611_init(void) {
 	log_text(1, "ms5611", "INFO: initialization successful");
 
 	return W_SUCCESS;
+}
+
+/**
+ * @brief Deinitializes the driver by clearing the PROM coefficients and setting initialized to
+ * false. This is useful for resetting the driver state between tests.
+ */
+void ms5611_deinit(void) {
+	handle.initialized = false;
+	for (size_t i = 0; i < 8; ++i) {
+		handle.prom_coef[i] = 0;
+	}
 }
 
 /**
@@ -216,7 +229,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 	/* D2: temperature conversion */
 	if (W_FAILURE == a_write_cmd(D2_CMD[handle.osr])) {
 		log_text(1, "ms5611", "ERROR: failed to write temperature conversion command");
-		return W_FAILURE;
+		return W_IO_ERROR;
 	}
 
 	delay_us(CONV_TIME_US[handle.osr]);
@@ -229,14 +242,14 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 	/* D1: pressure conversion */
 	if (W_FAILURE == a_write_cmd(D1_CMD[handle.osr])) {
 		log_text(1, "ms5611", "ERROR: failed to write pressure conversion command");
-		return W_FAILURE;
+		return W_IO_ERROR;
 	}
 
 	delay_us(CONV_TIME_US[handle.osr]);
 
 	if (W_FAILURE == a_read_adc(&d1)) {
 		log_text(1, "ms5611", "ERROR: failed to read pressure ADC");
-		return W_FAILURE;
+		return W_IO_ERROR;
 	}
 
 	/* First-order compensation */

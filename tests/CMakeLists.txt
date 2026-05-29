@@ -428,5 +428,12 @@ add_test_group(test_health_check
 #     ${UNIT_TESTS_DIR}/model_acceleration_test.cpp
 #     # src file(s)
 #     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-#     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
+#     ${PROC_SRC_DIR}/apptlication/estimator/model/model_acceleration.c
 # )
+
+add_test_group(test_ms5611_baro
+    # test3 file(s)
+    ${UNIT_TESTS_DIR}/ms5611_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/MS5611/ms5611.c
+)

@@ -73,7 +73,7 @@ typedef struct {
 } ms5611_raw_result_t;
 
 w_status_t ms5611_init(void);
-w_status_t ms5611_check_sanity(void);
+void ms5611_deinit(void);
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result);
 
 #endif // MS5611_H
