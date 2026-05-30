@@ -67,22 +67,12 @@ w_status_t lsm6dsv32x_check_sanity() {
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_init() {
-	lsm6dsv32x_ctx.bus_status = IMU_BUS_FREE;
 	lsm6dsv32x_ctx.hi2c = &hi2c1;
 	lsm6dsv32x_ctx.stale_data = IMU_DATA_STALE;
 
 	w_status_t status = W_SUCCESS;
 
-	// Drive addr sel pin HIGH to use each device's "default" i2c addr
-	// status |= gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
-
 	// LSM6DSV32X: https://www.st.com/resource/en/datasheet/lsm6dsv32x.pdf
-
-	// turn off INT1 to start. So that we can read a rising edge
-	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x00);
-
-	// have time for this to load
-	vTaskDelay(1);
 
 	// Accel ODR: 960 Hz
 	// Accel mode: high performance
@@ -92,26 +82,10 @@ w_status_t lsm6dsv32x_init() {
 	// Gyro mode: high performance
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL2_G, 0x09);
 
-	// Accel ODR: 960 Hz
-	// Accel mode: high performance
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL1_XL, 0x9);
-
-	// Gyro ODR: 960 Hz
-	// Gyro mode: high performance
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL2_G, 0x09);
-
-	// set FIFO watermark at a singular sample
+	// turn off all FIFO commands
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL1, 0x00);
-
-	// keep settings default for now.. might change
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL2, 0x00);
-
-	// gyro and accel batch data rate: 960 Hz (same as ODR)
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL3, 0x00);
-
-	// Batch timestamps for every sample
-	// Dont batch any temperature data
-	// FIFO mode: continous (overwrite old data when full)
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x00);
 
 	// set gyro range to +-4000dps
@@ -132,29 +106,30 @@ w_status_t lsm6dsv32x_init() {
 	// disable offset, untill imu calibration
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL9_XL, 0x29);
 
-	// register the I2C callback for the end of the DMA read to call the dma complete handker
-	// function
-	HAL_I2C_RegisterCallback(
-		lsm6dsv32x_ctx.hi2c, HAL_I2C_MASTER_RX_COMPLETE_CB_ID, lsm6dsv32x_dma_complete_handle);
-
-	
-	// pulse drdy
+	// pulse drdy, so we can get rising edge
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL4, 0x02);
 
 	status |= lsm6dsv32x_check_sanity();
 
+	// Trigger INT1 when we get either data ready
+	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x01);
 
+	// load all settings and end use of all i2c driver before switch to dma
+	vTaskDelay(1);
 
-	// Trigger INT1 when the FIFO is full
-	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x03);
+	// register the I2C callback for the end of the DMA read to call the dma complete handker
+	// function
+	HAL_I2C_RegisterCallback(
+		lsm6dsv32x_ctx.hi2c, HAL_I2C_MEM_RX_COMPLETE_CB_ID, lsm6dsv32x_dma_complete_handle);
 
-	uint8_t i2c_read_data[12] = {0};
-
-	status |= i2c_read_reg(I2C_BUS_1, LSM6DSV32X_ADDR, 0x22, i2c_read_data, 12);
+	// AFTER THIS POINT NEVER USE OLD I2C OR VERY BAD ERRORS
 
 	if (status != W_SUCCESS) {
 		log_text(1, "LSM6DSV32X", "initfail");
 	}
+
+	// only open the i2c bus once fully ready
+	lsm6dsv32x_ctx.bus_status = IMU_BUS_FREE;
 
 	return status;
 }
@@ -170,15 +145,17 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	status |= timer_get_ms(&lsm6dsv32x_ctx.timestamp[IMU_WRITE_BUFFER]);
 
 	// begin dma read to the main buffer
-	// status |= 
+	// status |=
 
-	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c,
-								   LSM6DSV32X_ADDR,
-								   0x22,
-								   I2C_MEMADD_SIZE_8BIT,
-								   lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
-								   CTX_BUFFER_SIZE);
+	HAL_StatusTypeDef hal_status =
+		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c,
+							 (LSM6DSV32X_ADDR << 1),
+							 0x22,
+							 I2C_MEMADD_SIZE_8BIT,
+							 lsm6dsv32x_ctx.dual_buffer[IMU_WRITE_BUFFER],
+							 CTX_BUFFER_SIZE);
 	if (hal_status != HAL_OK) {
+		lsm6dsv32x_ctx.bus_status = IMU_BUS_FREE; // so that we can attempt send again
 		return W_FAILURE;
 	}
 
