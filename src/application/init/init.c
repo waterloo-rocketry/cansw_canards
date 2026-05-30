@@ -17,6 +17,7 @@
 #include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -79,6 +80,7 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
+	status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG (IIS2MDC)
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	// status |= adc_init(&hadc1);
 	status |= estimator_init();
@@ -89,6 +91,7 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
+	status |= iis2mdc_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -142,14 +145,36 @@ static void system_init_task(void *arg) {
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
+	uint16_t i = 0;
+	TickType_t last_wake_time = xTaskGetTickCount();
+
 	// its blinky now
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(500);
+		i++;
+		if (i %  100 == 0) {
+			gpio_toggle(GPIO_PIN_RED_LED, 1);
+			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+			i = 0;
+		}
+		vector3d_t mag_data = {0};
+		iis2mdc_raw_data_t mag_raw = {0};
+		uint32_t mag_timestamp_ms = 0;
+		if (W_SUCCESS != iis2mdc_get_data(&mag_data, &mag_raw, &mag_timestamp_ms)) {
+			log_text(1, "iis2mdc", "ERROR: failed to read data in main loop");
+		} else {
+			log_text(1,
+					 "iis2mdc",
+					 "mag data: t=%lu x=%f y=%f z=%f raw_x=%u raw_y=%u raw_z=%u",
+					 mag_timestamp_ms,
+					 mag_data.x,
+					 mag_data.y,
+					 mag_data.z,
+					 mag_raw.x,
+					 mag_raw.y,
+					 mag_raw.z);
+		}
+		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(5));
 	}
 }
 
