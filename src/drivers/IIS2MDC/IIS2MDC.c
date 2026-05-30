@@ -85,9 +85,9 @@ static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, 
 	raw->y = (uint16_t)(((uint16_t)buf[3] << 8) | buf[2]);
 	raw->z = (uint16_t)(((uint16_t)buf[5] << 8) | buf[4]);
 
-	data->x = (float64_t)(int16_t)raw->x * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
-	data->y = (float64_t)(int16_t)raw->y * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
-	data->z = (float64_t)(int16_t)raw->z * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
+	data->x = ((float64_t)((int16_t)raw->x)) * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
+	data->y = ((float64_t)((int16_t)raw->y)) * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
+	data->z = ((float64_t)((int16_t)raw->z)) * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
 }
 
 /**
@@ -128,6 +128,8 @@ static w_status_t st_read_sample(vector3d_t *out) {
 
 /**
  * @brief Discards the first sample, then averages 50 data samples
+ * @details Used for self-test to get a stable baseline and test value, 
+ * procedure is done according to the AN 5080 document from ST.
  */
 static w_status_t st_collect_average(vector3d_t *avg) {
 	vector3d_t sample;

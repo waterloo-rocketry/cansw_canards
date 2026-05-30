@@ -6,6 +6,7 @@
 #include "stm32h7xx_hal.h"
 #include "task.h"
 #include "usart.h"
+#include "math.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
@@ -149,6 +150,9 @@ static void system_init_task(void *arg) {
 	TickType_t last_wake_time = xTaskGetTickCount();
 
 	// its blinky now
+	
+	float64_t mag_magnitude = 0.0f;
+	float64_t movella_mag = 0.0f;
 	while (1) {
 		i++;
 		if (i %  100 == 0) {
@@ -160,20 +164,32 @@ static void system_init_task(void *arg) {
 		vector3d_t mag_data = {0};
 		iis2mdc_raw_data_t mag_raw = {0};
 		uint32_t mag_timestamp_ms = 0;
+		movella_data_t movella_data = {0};
 		if (W_SUCCESS != iis2mdc_get_data(&mag_data, &mag_raw, &mag_timestamp_ms)) {
 			log_text(1, "iis2mdc", "ERROR: failed to read data in main loop");
 		} else {
+			mag_magnitude = sqrt(mag_data.x * mag_data.x + mag_data.y * mag_data.y + mag_data.z * mag_data.z);
 			log_text(1,
 					 "iis2mdc",
-					 "mag data: t=%lu x=%f y=%f z=%f raw_x=%u raw_y=%u raw_z=%u",
+					 "mag data: t=%lu x=%f y=%f z=%f raw_x=%u raw_y=%u raw_z=%u, magnitude=%f",
 					 mag_timestamp_ms,
 					 mag_data.x,
 					 mag_data.y,
 					 mag_data.z,
 					 mag_raw.x,
 					 mag_raw.y,
-					 mag_raw.z);
+					 mag_raw.z,
+					 mag_magnitude);
 		}
+		if (W_SUCCESS != movella_get_data(&movella_data, 1)) {
+			log_text(1, "movella", "ERROR: failed to read data in main loop");
+		}
+		else {
+			movella_mag = sqrt(movella_data.mag.x * movella_data.mag.x + movella_data.mag.y * movella_data.mag.y + movella_data.mag.z * movella_data.mag.z);
+			log_text(1, "movella", "movella mag: x=%f y=%f z=%f, magnitude=%f", movella_data.mag.x, movella_data.mag.y, movella_data.mag.z, movella_mag);
+		}
+
+		if (mag_magnitude== 0 && movella_mag == 0) log_text(1, "movella", "ERROR: failed to read data in main loop");
 		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(5));
 	}
 }
