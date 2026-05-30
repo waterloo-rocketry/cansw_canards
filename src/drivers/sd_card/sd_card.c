@@ -192,8 +192,8 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 }
 
 health_status_t sd_card_get_status(void) {
-
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_SD_CARD, .error_bitfield = 0};
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_SD_CARD, .error_bitfield = 0};
 
 	if (sd_card_health.is_init == false) {
 		status.severity = HEALTH_ERROR;

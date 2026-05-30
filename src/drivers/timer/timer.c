@@ -133,7 +133,8 @@ health_status_t timer_get_status(void) {
 				 timer_health.timer_invalid);
 	}
 
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_TIMER, .error_bitfield = 0};
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_TIMER, .error_bitfield = 0};
 
 	return status;
 }

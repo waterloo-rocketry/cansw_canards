@@ -440,8 +440,8 @@ void log_task(void *argument) {
 }
 
 health_status_t logger_get_status(void) {
-	
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
 
 	if (!logger_health.is_init) {
 		status.severity = HEALTH_ERROR;

@@ -126,7 +126,8 @@ uint32_t check_watchdog_tasks(void) {
 		} else {
 			// report watchdog timeout
 			can_msg_t msg = {0};
-			msg.data[0] = pcTaskGetName(watchdog_tasks[i].task_handle);
+			char *task_name = pcTaskGetName(watchdog_tasks[i].task_handle);
+			msg.data[0] = *(uint8_t *)task_name;
 			build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), msg.data, &msg);
 			log_text(10, "health_checks", "task timeout: %d", i);
 			status_bitfield |= 1 << E_WATCHDOG_TIMEOUT_OFFSET;
@@ -161,7 +162,8 @@ static w_status_t process_module_status(health_status_t status) {
 		if (HEALTH_FATAL == status.severity) {
 			char error_msg[6];
 			// send error msg in the form "module id:error code"
-			snprintf_(error_msg, sizeof(error_msg), "%d:%lu", status.module_id, status.error_bitfield);
+			snprintf_(
+				error_msg, sizeof(error_msg), "%d:%lu", status.module_id, status.error_bitfield);
 			proc_handle_fatal_error(error_msg);
 		}
 		return W_FAILURE;
