@@ -18,8 +18,8 @@ typedef struct {
 
 /**
  * @brief Initializes the IIS2MDC magnetometer.
- * @note Performs a soft reset and applies the configuration registers, initializing the
- * magnetometer.
+ * @note Performs a soft reset, applies the configuration registers, verifies WHO_AM_I, and
+ * runs the on-chip self-test. Blocks for ~100 ms during the self-test.
  * @return Status of the operation
  */
 w_status_t iis2mdc_init(void);
@@ -31,7 +31,6 @@ w_status_t iis2mdc_init(void);
  * @param[out] timestamp_ms Pointer to store the read timestamp (ms since startup)
  * @return W_SUCCESS on successful read and conversion of most recent sample
  */
-w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
-							float64_t *timestamp_ms);
+w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, uint32_t *timestamp_ms);
 
 #endif // IIS2MDC_H

@@ -61,7 +61,7 @@ static const float64_t IIS2MDC_SENSITIVITY_GAUSS_PER_LSB = 0.0015;
  * @note IIS2MDC auto-increments the sub-address if MSB is 1, so multi-byte reads only need the
  * start register.
  */
-static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
+static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 	if (len > 1) {
 		reg |= IIS2MDC_SUB_AUTO_INC;
 	}
@@ -71,7 +71,7 @@ static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
 /**
  * @brief Helper function to write a single byte over I2C
  */
-static w_status_t a_write(uint8_t reg, uint8_t val) {
+static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
 	return i2c_write_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, &val, 1);
 }
 
@@ -80,7 +80,7 @@ static w_status_t a_write(uint8_t reg, uint8_t val) {
  * @note Each output register is uint8, two registers form a piece of data
  * for an axis. This is casted to uint16 for raw data and int16 for gauss.
  */
-static void a_convert(const uint8_t *buf, iis2mdc_raw_data_t *raw, vector3d_t *data) {
+static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, vector3d_t *data) {
 	raw->x = (uint16_t)(((uint16_t)buf[1] << 8) | buf[0]);
 	raw->y = (uint16_t)(((uint16_t)buf[3] << 8) | buf[2]);
 	raw->z = (uint16_t)(((uint16_t)buf[5] << 8) | buf[4]);
@@ -94,11 +94,11 @@ static void a_convert(const uint8_t *buf, iis2mdc_raw_data_t *raw, vector3d_t *d
  * @brief Polls status register until a new sample is ready (ZYXDA), waits 1ms between polls
  * @note Bounded by IIS2MDC_ST_TIMEOUT_MS (20ms, 2 sample period at 100hz)
  */
-static w_status_t st_wait_data_ready(void) {
+static w_status_t st_wait_datiis2mdc_read_regy(void) {
 	uint8_t status;
 
 	for (uint32_t i = 0; i < IIS2MDC_ST_TIMEOUT_MS; i++) {
-		if (W_SUCCESS != a_read(IIS2MDC_REG_STATUS, &status, 1)) {
+		if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_STATUS, &status, 1)) {
 			return W_FAILURE;
 		}
 		if (status & IIS2MDC_STATUS_ZYXDA) {
@@ -116,13 +116,13 @@ static w_status_t st_read_sample(vector3d_t *out) {
 	uint8_t buf[6];
 	iis2mdc_raw_data_t raw;
 
-	if (W_SUCCESS != st_wait_data_ready()) {
+	if (W_SUCCESS != st_wait_datiis2mdc_read_regy()) {
 		return W_FAILURE;
 	}
-	if (W_SUCCESS != a_read(IIS2MDC_REG_OUTX_L, buf, 6)) {
+	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_OUTX_L, buf, 6)) {
 		return W_FAILURE;
 	}
-	a_convert(buf, &raw, out);
+	iis2mdc_convert_sample(buf, &raw, out);
 	return W_SUCCESS;
 }
 
@@ -171,7 +171,8 @@ static w_status_t iis2mdc_self_test(void) {
 	}
 
 	// enable self-test and wait 60ms for field to settle (specified in AN 5080)
-	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C | IIS2MDC_CFG_C_SELF_TEST)) {
+	if (W_SUCCESS !=
+		iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C | IIS2MDC_CFG_C_SELF_TEST)) {
 		log_text(1, "iis2mdc", "ERROR: failed to enable self-test");
 		return W_FAILURE;
 	}
@@ -180,7 +181,7 @@ static w_status_t iis2mdc_self_test(void) {
 	w_status_t read_status = st_collect_average(&avg_on);
 
 	// restore normal config regardless of the read outcome
-	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
+	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
 		log_text(1, "iis2mdc", "ERROR: failed to restore configs after self-test");
 		return W_FAILURE;
 	}
@@ -207,10 +208,10 @@ static w_status_t iis2mdc_self_test(void) {
  * @brief Performs a sanity check by verifying device identity and running a self test
  * @return W_SUCCESS if the device passes self test and identity verification
  */
-w_status_t iis2mdc_sanity_check(void) {
+static w_status_t iis2mdc_sanity_check(void) {
 	uint8_t id;
 
-	if (W_SUCCESS != a_read(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
+	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
 		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
 		return W_FAILURE;
 	}
@@ -233,14 +234,14 @@ w_status_t iis2mdc_sanity_check(void) {
 
 w_status_t iis2mdc_init(void) {
 	// soft reset clears config registers
-	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
+	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
 		log_text(1, "iis2mdc", "ERROR: soft reset failed");
 		return W_FAILURE;
 	}
 
-	if (W_SUCCESS != a_write(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A) ||
-		W_SUCCESS != a_write(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B) ||
-		W_SUCCESS != a_write(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
+	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A) ||
+		W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B) ||
+		W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
 		log_text(1, "iis2mdc", "ERROR: failed to write configuration registers");
 		return W_FAILURE;
 	}
@@ -254,7 +255,7 @@ w_status_t iis2mdc_init(void) {
 }
 
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
-							float64_t *timestamp_ms) {
+							uint32_t *timestamp_ms) {
 	uint8_t buf[6] = {0};
 
 	if (NULL == data || NULL == raw_data || NULL == timestamp_ms) {
@@ -262,15 +263,18 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 		return W_FAILURE;
 	}
 
-	if (W_SUCCESS != a_read(IIS2MDC_REG_OUTX_L, buf, 6)) {
+	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_OUTX_L, buf, 6)) {
 		log_text(1, "iis2mdc", "ERROR: failed to read output registers");
 		return W_FAILURE;
 	}
 
-	a_convert(buf, raw_data, data);
+	iis2mdc_convert_sample(buf, raw_data, data);
 
 	uint32_t now = 0;
-	(void)timer_get_ms(&now);
-	*timestamp_ms = (float64_t)now;
+	if (W_SUCCESS != timer_get_ms(&now)) {
+		log_text(1, "iis2mdc", "ERROR: failed to get timestamp");
+		return W_FAILURE;
+	}
+	*timestamp_ms = (uint32_t)now;
 	return W_SUCCESS;
 }
