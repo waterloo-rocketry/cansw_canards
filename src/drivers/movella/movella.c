@@ -18,7 +18,7 @@
 // sensor ranges. these must be selected using the i2c init regs
 static const double MOVELLA_ACC_RANGE = 10.0 * 9.81; // m/s^2
 static const double MOVELLA_GYRO_RANGE = 2000.0 * DEG_PER_RAD; // rad/s
-static const double MOVELLA_MAG_RANGE = 2.0; // "arbitrary units" normalized to 1, so shouldnt be >1
+static const double MOVELLA_MAG_RANGE = 20.0; // "arbitrary units" normalized to 1, so shouldnt be >1
 // mti-630 baro range is actually smaller than this, but we deemed better to "extend" the range and
 // gamble on possible undefined values, as thats better than saturating for estimator
 static const double MOVELLA_BARO_MAX = 110000; // conservative max Pa at sea level
