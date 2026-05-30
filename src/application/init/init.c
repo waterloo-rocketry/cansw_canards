@@ -163,6 +163,7 @@ static void system_init_task(void *arg) {
 			gpio_toggle(GPIO_PIN_RED_LED, 1);
 			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+			i = 0;
 		} else {
 			i++;
 		}
@@ -175,7 +176,7 @@ static void system_init_task(void *arg) {
 		log_text(10, "SystemInit", "LSM6 GYRO  x %lf, y %lf, z %lf, RAW: x "PRIu16", y "PRIu16", z "PRIu16".", 
 			gyro_data.x, gyro_data.y, gyro_data.z, raw_gyro.x, raw_gyro.y, raw_gyro.z);
 
-		xTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(1));
+		xTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(2));
 	}
 }
 
