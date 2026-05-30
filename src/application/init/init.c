@@ -27,6 +27,8 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
+#include <inttypes.h>
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -147,13 +149,42 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+	uint8_t i = 0;
+	TickType_t last_wake_time = xTaskGetTickCount();
+
+	w_status_t motor_status = W_SUCCESS;
+
+	ak45_feedback_t feedback = {0};
+
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(500);
+		if (i == 100) {
+			gpio_toggle(GPIO_PIN_RED_LED, 1);
+			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+			i = 0;
+		} else {
+			i++;
+		}
+
+		motor_status = ak45_get_latest_feedback(&feedback);
+		
+		if (W_SUCCESS != motor_status) log_text(10, "SystemInit", "ERROR: motor failed %d", motor_status);
+
+		log_text(10, "SystemInit", "AK45 Pos: %f deg/s rpm: %f, Current: %f A, Temp %d C, Fault %d, Timestamp %" PRIu32 " ms", 
+		feedback.position_deg, feedback.speed_erpm, feedback.current_a, feedback.temperature_c, feedback.fault_code, feedback.timestamp_ms);
+
+		if (i%2 == 0) {
+			if (i > 80) {
+				ak45_send_position_cmd(60 - (3 * (i - 80)));
+			} else if (i > 20){
+				ak45_send_position_cmd(i - 20);
+			}else {
+				ak45_send_position_cmd(0);
+			}
+		}
+
+		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(5)); // 200 hz
+		
 	}
 }
 
