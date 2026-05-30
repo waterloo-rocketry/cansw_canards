@@ -82,13 +82,13 @@ static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
  * for an axis. This is casted to uint16 for raw data and int16 for gauss.
  */
 static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, vector3d_t *data) {
-	raw->x = (uint16_t)(((uint16_t)buf[1] << 8) | buf[0]);
-	raw->y = (uint16_t)(((uint16_t)buf[3] << 8) | buf[2]);
-	raw->z = (uint16_t)(((uint16_t)buf[5] << 8) | buf[4]);
+	raw->x = (uint16_t)((((uint16_t)buf[1]) << 8) | buf[0]);
+	raw->y = (uint16_t)((((uint16_t)buf[3]) << 8) | buf[2]);
+	raw->z = (uint16_t)((((uint16_t)buf[5]) << 8) | buf[4]);
 
-	data->x = (float64_t)(int16_t)raw->x * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
-	data->y = (float64_t)(int16_t)raw->y * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
-	data->z = (float64_t)(int16_t)raw->z * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
+	data->x = ((float64_t)((int16_t)raw->x)) * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
+	data->y = ((float64_t)((int16_t)raw->y)) * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
+	data->z = ((float64_t)((int16_t)raw->z)) * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
 }
 
 /**
@@ -164,9 +164,9 @@ static w_status_t st_collect_average(vector3d_t *avg) {
 		sum_z += sample.z;
 	}
 
-	avg->x = sum_x / (float64_t)IIS2MDC_ST_SAMPLES;
-	avg->y = sum_y / (float64_t)IIS2MDC_ST_SAMPLES;
-	avg->z = sum_z / (float64_t)IIS2MDC_ST_SAMPLES;
+	avg->x = sum_x / ((float64_t)IIS2MDC_ST_SAMPLES);
+	avg->y = sum_y / ((float64_t)IIS2MDC_ST_SAMPLES);
+	avg->z = sum_z / ((float64_t)IIS2MDC_ST_SAMPLES);
 	return W_SUCCESS;
 }
 
@@ -177,9 +177,6 @@ static w_status_t st_collect_average(vector3d_t *avg) {
  */
 static w_status_t iis2mdc_self_test(void) {
 	vector3d_t avg_off, avg_on;
-
-	// wait for stable output after power-up before sampling (specified in AN 5080)
-	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_ST_POWERUP_MS));
 
 	// discard the first sample, then average with self-test disabled
 	if (W_SUCCESS != st_collect_average(&avg_off)) {
@@ -213,7 +210,7 @@ static w_status_t iis2mdc_self_test(void) {
 	float64_t dz = fabs(avg_on.z - avg_off.z);
 
 	if ((dx < IIS2MDC_ST_MIN_GAUSS) || (dx > IIS2MDC_ST_MAX_GAUSS) || (dy < IIS2MDC_ST_MIN_GAUSS) ||
-		dy > IIS2MDC_ST_MAX_GAUSS || dz < IIS2MDC_ST_MIN_GAUSS || dz > IIS2MDC_ST_MAX_GAUSS) {
+		(dy > IIS2MDC_ST_MAX_GAUSS) || (dz < IIS2MDC_ST_MIN_GAUSS) || (dz > IIS2MDC_ST_MAX_GAUSS)) {
 		log_text(1, "iis2mdc", "ERROR: self-test out of range: x=%f y=%f z=%f", dx, dy, dz);
 		return W_FAILURE;
 	}
@@ -250,15 +247,18 @@ static w_status_t iis2mdc_sanity_check(void) {
 }
 
 w_status_t iis2mdc_init(void) {
+	// wait for stable output after power-up before any access (specified in AN 5080)
+	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_ST_POWERUP_MS));
+
 	// soft reset clears config registers
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
 		log_text(1, "iis2mdc", "ERROR: soft reset failed");
 		return W_FAILURE;
 	}
 
-	if (W_SUCCESS != (iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A)) ||
-		W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B) ||
-		W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
+	if ((W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A)) ||
+		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B)) ||
+		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C))) {
 		log_text(1, "iis2mdc", "ERROR: failed to write configuration registers");
 		return W_FAILURE;
 	}
