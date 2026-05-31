@@ -12,6 +12,9 @@
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
 static const uint8_t IIS2MDC_I2C_ADDR = 0x1E;
 
+// HAL takes the 8-bit left shifted address for HAL_I2C_Mem_Read_DMA calls.
+static const uint16_t IIS2MDC_HAL_ADDR = (uint16_t)(IIS2MDC_I2C_ADDR << 1);
+
 // external definition of hi2c for i2c bus 4;
 extern I2C_HandleTypeDef hi2c4;
 
@@ -284,7 +287,26 @@ static w_status_t iis2mdc_sanity_check(void) {
 	return status;
 }
 
-w_status_t iis2mdc_handle_drdy_irq(void) {}
+w_status_t iis2mdc_handle_drdy_irq(void) {
+	// stand down while sanity checking or uninitialized
+	if (IIS2MDC_STATE_READY != iis2mdc_state) {
+		return W_FAILURE;
+	}
+	// stand down if last DMA is still in progress
+	if (iis2mdc_dma_busy) {
+		return W_FAILURE;
+	}
+	iis2mdc_dma_busy = true;
+
+	if (HAL_OK != HAL_I2C_Mem_Read_DMA(&hi2c4,
+									   IIS2MDC_HAL_ADDR,
+									   IIS2MDC_REG_OUTX_L | IIS2MDC_SUB_AUTO_INC,
+									   I2C_MEMADD_SIZE_8BIT,
+									   iis2mdc_dma_buf,
+									   sizeof(iis2mdc_dma_buf))) {
+		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
+	}
+}
 
 /**
  * @brief I2C DMA completion, converts raw bytes and sends to the cache.
@@ -292,7 +314,22 @@ w_status_t iis2mdc_handle_drdy_irq(void) {}
  *		 sign interpretation, and scaling to gauss happen here so that iis2mdc_get_data does not
  * block.
  */
-static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {}
+static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
+	if (hi2c != &hi2c4) {
+		return;
+	}
+
+	uint32_t timestamp_ms = 0;
+	if (W_SUCCESS != timer_get_ms(&timestamp_ms)){
+		return;
+	}
+
+	iis2mdc_convert_sample(iis2mdc_dma_buf, &iis2mdc_cache.raw, &iis2mdc_cache.data);
+	iis2mdc_cache.timestamp_ms = timestamp_ms;
+	iis2mdc_cache.valid = true;
+
+	iis2mdc_dma_busy = false;
+}
 
 w_status_t iis2mdc_init(void) {
 	// wait for stable output after power-up before any access to registers
