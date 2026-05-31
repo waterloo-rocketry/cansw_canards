@@ -31,9 +31,9 @@ static const uint32_t IIS2MDC_WHO_AM_I_VAL = 0x40;
 
 // Checks if new data is available
 static const uint32_t IIS2MDC_STATUS_ZYXDA = (1 << 3);
-00
-	// Resets config registers
-	static const uint32_t IIS2MDC_CFG_A_SOFT_RESET = (1 << 5);
+
+// Resets config registers
+static const uint32_t IIS2MDC_CFG_A_SOFT_RESET = (1 << 5);
 
 // Enables self-testing
 static const uint8_t IIS2MDC_CFG_C_SELF_TEST = (1 << 1);
