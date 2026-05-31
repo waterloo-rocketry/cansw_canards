@@ -73,6 +73,10 @@ typedef struct {
 } navigator_input_t;
 
 typedef struct {
+
+} 
+
+typedef struct {
 	// TODO
 } navigator_output_t;
 
@@ -105,5 +109,31 @@ typedef struct {
 	double commanded_angle; // radians
 	uint32_t timestamp; // ms
 } controller_output_t;
+
+
+
+// codegen controller
+typedef struct {
+	double b_time;
+    double dt_ctrl;
+	double xR[2];
+    double pdyn;
+    double delta;
+	double w_old;
+	double coeffs[2];
+	double P_minus[4];
+    double d_old;
+    double w_dot_old;
+} controller_codegen_input_t;
+
+typedef struct {
+	double u;
+	double b_r;
+	double coeffs_ret[2];
+	double w_old_ret;
+	double P_minus_ret[4];
+	double d_old_ret;
+	double w_dot_old_ret;
+} controller_codegen_output_t;
 
 #endif

@@ -41,96 +41,6 @@
 #include "third_party/codegen/navigation_codegen_entry.h"
 #include "third_party/codegen/rt_nonfinite.h"
 
-/* Function Declarations */
-// static void argInit_2x1_real_T(double result[2]);
-
-static void argInit_3x1_real_T(double result[3]);
-
-static bool argInit_boolean_T(void);
-
-static double argInit_real_T(void);
-
-static struct0_T argInit_struct0_T(void);
-
-static struct1_T argInit_struct1_T(void);
-
-/* Function Definitions */
-/*
- * Arguments    : double result[2]
- * Return Type  : void
- */
-// static void argInit_2x1_real_T(double result[2])
-// {
-//   int idx0;
-//   /* Loop over the array to initialize each element. */
-//   for (idx0 = 0; idx0 < 2; idx0++) {
-//     /* Set the value of the array element.
-// Change this value to the value that the application requires. */
-//     result[idx0] = argInit_real_T();
-//   }
-// }
-
-/*
- * Arguments    : double result[3]
- * Return Type  : void
- */
-static void argInit_3x1_real_T(double result[3])
-{
-  int idx0;
-  /* Loop over the array to initialize each element. */
-  for (idx0 = 0; idx0 < 3; idx0++) {
-    /* Set the value of the array element.
-Change this value to the value that the application requires. */
-    result[idx0] = argInit_real_T();
-  }
-}
-
-/*
- * Arguments    : void
- * Return Type  : bool
- */
-static bool argInit_boolean_T(void)
-{
-  return false;
-}
-
-/*
- * Arguments    : void
- * Return Type  : double
- */
-static double argInit_real_T(void)
-{
-  return 0.0;
-}
-
-/*
- * Arguments    : void
- * Return Type  : struct0_T
- */
-static struct0_T argInit_struct0_T(void)
-{
-  struct0_T result;
-  /* Set the value of each structure field.
-Change this value to the value that the application requires. */
-  argInit_3x1_real_T(result.meas);
-  result.status = argInit_boolean_T();
-  return result;
-}
-
-/*
- * Arguments    : void
- * Return Type  : struct1_T
- */
-static struct1_T argInit_struct1_T(void)
-{
-  struct1_T result;
-  /* Set the value of each structure field.
-Change this value to the value that the application requires. */
-  result.meas = argInit_real_T();
-  result.status = argInit_boolean_T();
-  return result;
-}
-
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -256,40 +166,40 @@ static void system_init_task(void *arg) {
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 		vTaskDelay(500);
 
-          struct0_T board_accel_tmp;
-  struct1_T b_r;
-  struct1_T r1;
-  struct2_T state;
-  struct3_T airdata;
-  double roll_state[2];
-  double cov_norm;
-  /* Initialize function 'navigation_codegen_entry' input arguments. */
-  /* Initialize function input argument 'board_accel'. */
-  board_accel_tmp = argInit_struct0_T();
-  /* Initialize function input argument 'board_gyro'. */
-  /* Initialize function input argument 'mti_accel'. */
-  /* Initialize function input argument 'mti_gyro'. */
-  /* Initialize function input argument 'ad_accel'. */
-  /* Initialize function input argument 'ad_gyro'. */
-  /* Initialize function input argument 'board_baro'. */
-  /* Initialize function input argument 'board_mag'. */
-  /* Initialize function input argument 'mti_baro'. */
-  /* Initialize function input argument 'mti_mag'. */
-  /* Call the entry-point 'navigation_codegen_entry'. */
-  b_r = argInit_struct1_T();
-  r1 = argInit_struct1_T();
-  volatile uint32_t timestart = HAL_GetTick();
+        //   struct0_T board_accel_tmp;
+//   struct1_T b_r;
+//   struct1_T r1;
+//   struct2_T state;
+//   struct3_T airdata;
+//   double roll_state[2];
+//   double cov_norm;
+//   /* Initialize function 'navigation_codegen_entry' input arguments. */
+//   /* Initialize function input argument 'board_accel'. */
+//   board_accel_tmp = argInit_struct0_T();
+//   /* Initialize function input argument 'board_gyro'. */
+//   /* Initialize function input argument 'mti_accel'. */
+//   /* Initialize function input argument 'mti_gyro'. */
+//   /* Initialize function input argument 'ad_accel'. */
+//   /* Initialize function input argument 'ad_gyro'. */
+//   /* Initialize function input argument 'board_baro'. */
+//   /* Initialize function input argument 'board_mag'. */
+//   /* Initialize function input argument 'mti_baro'. */
+//   /* Initialize function input argument 'mti_mag'. */
+//   /* Call the entry-point 'navigation_codegen_entry'. */
+//   b_r = argInit_struct1_T();
+//   r1 = argInit_struct1_T();
+//   volatile uint32_t timestart = HAL_GetTick();
 
-  navigation_codegen_entry(argInit_real_T(), argInit_boolean_T(),
-                           &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
-                           &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
-                           &b_r, &board_accel_tmp, &r1, &board_accel_tmp,
-                           &state, &cov_norm, &airdata, roll_state);
+//   navigation_codegen_entry(argInit_real_T(), argInit_boolean_T(),
+//                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
+//                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
+//                            &b_r, &board_accel_tmp, &r1, &board_accel_tmp,
+//                            &state, &cov_norm, &airdata, roll_state);
 
-    volatile uint32_t timeend = HAL_GetTick();
+//     volatile uint32_t timeend = HAL_GetTick();
 
-    volatile uint32_t timediff = timeend - timestart;
-    (void)timediff; // Suppress unused variable warning
+//     volatile uint32_t timediff = timeend - timestart;
+//     (void)timediff; // Suppress unused variable warning
 	}
 }
 
