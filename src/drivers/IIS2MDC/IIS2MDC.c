@@ -306,6 +306,7 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
 									   sizeof(iis2mdc_dma_buf))) {
 		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
 	}
+	return W_SUCCESS;
 }
 
 /**
@@ -320,7 +321,7 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 	}
 
 	uint32_t timestamp_ms = 0;
-	if (W_SUCCESS != timer_get_ms(&timestamp_ms)){
+	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
 		return;
 	}
 
