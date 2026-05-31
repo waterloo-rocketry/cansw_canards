@@ -98,11 +98,6 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 	}
 }
 
-void fsm_do_transitions(fsm_ctx_t *p_ctx) {
-	p_ctx->curr_state = flight_phase_update_state(
-		flight_phase_get_next_event(), p_ctx->curr_state, p_ctx->p_flight_phase_context);
-}
-
 void fsm_task(void *args) {
 	(void)args;
 	TickType_t last_wake_time = xTaskGetTickCount();
