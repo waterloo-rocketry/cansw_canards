@@ -7,6 +7,7 @@
 #include "canlib.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 
@@ -89,23 +90,30 @@ static imu_handler_state_t imu_handler_state = {0};
 // }
 
 /**
- * @brief Read data from the pololu AltIMU-10 sensor
+ * @brief Read data from the board
  * @param imu_data Pointer to store the converted data
  * @param raw_data Pointer to store the raw data
  * @return Status of the read operation
  */
-static w_status_t read_pololu_imu(estimator_imu_measurement_t *imu_data,
-								  raw_pololu_data_t *raw_data) {
+static w_status_t read_board_meas(estimator_board_meas_t *imu_data, raw_board_meas_t *raw_data) {
 	w_status_t status = W_SUCCESS;
 
-	// Read accelerometer, gyro, and magnetometer data
-	status |= altimu_get_gyro_acc_data(
-		&imu_data->accelerometer, &imu_data->gyroscope, &raw_data->raw_acc, &raw_data->raw_gyro);
-	status |= altimu_get_mag_data(&imu_data->magnetometer, &raw_data->raw_mag);
+	// Read accelerometer and gyro data
+	imu_data->imu_is_dead = true;
+	if (W_SUCCESS != lsm6dsv32x_get_gyro_acc_data(&(imu_data->board_accel),
+												  &(imu_data->board_gyro),
+												  &(raw_data->raw_board_accel),
+												  &(raw_data->raw_board_gyro))) {
+		imu_data->imu_is_dead = true;
+	}
 
-	// Read barometer data
-	altimu_barometer_data_t baro_data;
-	status |= altimu_get_baro_data(&baro_data, &raw_data->raw_baro);
+	// get mag
+	if (W_SUCCESS !=) {
+		// get baro
+
+		// Read barometer data
+		altimu_barometer_data_t baro_data;
+	}
 
 	if (W_SUCCESS == status) {
 		// convert gyro from dps to rad/sec
@@ -195,12 +203,12 @@ w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *imu_output) {
 		return W_INVALID_PARAM;
 	}
 
-	// is this even necessary at all, since this assumes success before any process
-	// replacing original declaration
-	imu_output->movella.is_dead = false;
-	imu_output->pololu.is_dead = false;
+	// assume data are all dead until you read
+	imu_output->mti_meas.is_dead = true;
+	imu_output->ad_meas.is_dead = true;
+	imu_output->movella.is_dead = true;
 
-	raw_pololu_data_t raw_pololu_data = {0};
+	// m/s^2, rad/s, pascals, mag is in gauss
 	uint32_t current_time_ms;
 	w_status_t status = W_SUCCESS;
 
