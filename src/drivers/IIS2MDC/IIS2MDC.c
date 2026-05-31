@@ -53,7 +53,8 @@ static const uint32_t IIS2MDC_SELF_TEST_POLLING_PERIOD_MS = 1;
 /* Init configuration:
  CFG_REG_A = 0x8C  COMP_TEMP_EN=1, LP=0(high-res), ODR=11 (100 Hz), MD=00 (continuous)
  CFG_REG_B = 0x02  OFF_CANC=1 (continuous offset cancellation)
- CFG_REG_C = 0x11  Block data updates to keep data coherent, DRDY_ON_PIN routes data ready to interrupt pin
+ CFG_REG_C = 0x11  Block data updates to keep data coherent, DRDY_ON_PIN routes data ready to
+ interrupt pin
  */
 static const uint32_t IIS2MDC_INIT_CFG_A = 0x8C;
 static const uint32_t IIS2MDC_INIT_CFG_B = 0x02;
@@ -62,7 +63,8 @@ static const uint32_t IIS2MDC_INIT_CFG_C = 0x11;
 // conversion factor from raw register values to gauss
 static const float64_t IIS2MDC_SENSITIVITY_GAUSS_PER_LSB = 0.0015;
 
-// Buffer the DMA writes into, the completion handler function converts and puts data into the cache.
+// Buffer the DMA writes into, the completion handler function converts and puts data into the
+// cache.
 static uint8_t iis2mdc_dma_buf[6];
 
 // Guards against starting a new DMA read while one is still in progress, cleared on DMA completion
@@ -78,7 +80,7 @@ typedef struct {
 
 static iis2mdc_cache_t iis2mdc_cache = {0};
 
-/* Module state. CHECKING is set while the sanity check runs, UNINIT is set before init or if init 
+/* Module state. CHECKING is set while the sanity check runs, UNINIT is set before init or if init
 fails, READY is set when data is ready to be read and cached. */
 typedef enum {
 	IIS2MDC_STATE_UNINIT = 0, // before init, or init failed
@@ -282,12 +284,13 @@ static w_status_t iis2mdc_sanity_check(void) {
 	return status;
 }
 
-w_status_t iis2mdc_handle_drdy_irq(void){}
+w_status_t iis2mdc_handle_drdy_irq(void) {}
 
 /**
  * @brief I2C DMA completion, converts raw bytes and sends to the cache.
- * @note Registered on hi2c4 via HAL_I2C_RegisterCallback in iis2mdc_init. All byte-combining, 
- *		 sign interpretation, and scaling to gauss happen here so that iis2mdc_get_data does not block.
+ * @note Registered on hi2c4 via HAL_I2C_RegisterCallback in iis2mdc_init. All byte-combining,
+ *		 sign interpretation, and scaling to gauss happen here so that iis2mdc_get_data does not
+ * block.
  */
 static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {}
 

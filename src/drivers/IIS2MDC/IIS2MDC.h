@@ -18,8 +18,8 @@ typedef struct {
 
 /**
  * @brief Runs in interrupt context on the IIS2MDC DRDY pin.
- * @note starts a non-blocking DMA read of the six output registers, the DMA-completion callback 
- *       converts and publishes the result. Disabled while the module isn't in ready state 
+ * @note starts a non-blocking DMA read of the six output registers, the DMA-completion callback
+ *       converts and publishes the result. Disabled while the module isn't in ready state
  *  	 (uninnitialized or under a sanity check).
  */
 w_status_t iis2mdc_handle_drdy_irq(void);
