@@ -143,8 +143,6 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
-	float vsens_usb;
-	float isens_3v3;
 	while (1) {
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
 		vTaskDelay(500);
@@ -152,11 +150,6 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 		vTaskDelay(500);
-		w_status_t status = adc_get_converted_val(VSENS_USB, &vsens_usb);
-		w_status_t status2 = adc_get_converted_val(ISENS_3V3, &isens_3v3);
-		if (vsens_usb > 1 && status == W_SUCCESS)  {
-			log_text(0, "a", "a");
-		}
 	}
 }
 

@@ -87,7 +87,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
 	return W_SUCCESS;
 }
 
-static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
+w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
 	if (channel >= ADC_CHANNEL_COUNT) {
 		adc_error_stats.invalid_channels++;
 		return W_INVALID_PARAM;
@@ -109,7 +109,8 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
 
 	taskEXIT_CRITICAL();
 
-	if (*output > ADC_MAX_COUNTS) {
+	if ((*output > ADC1_MAX_COUNTS && 1 == adc) || (*output > ADC2_MAX_COUNTS && 2 == adc) ||
+		(*output > ADC3_MAX_COUNTS && 3 == adc)) {
 		adc_error_stats.overflow_errors++;
 		return W_OVERFLOW;
 	}
@@ -124,12 +125,22 @@ w_status_t adc_get_raw_volts(adc_channel_t channel, float *output) {
 		return status;
 	}
 
-	*output = ((float)counts / ADC_MAX_COUNTS) * V_REF;
+	uint32_t adc = channel_to_adc[channel];
+
+	if (1 == adc) {
+		*output = ((float)counts / ADC1_MAX_COUNTS) * V_REF;
+	}
+	if (2 == adc) {
+		*output = ((float)counts / ADC2_MAX_COUNTS) * V_REF;
+	}
+	if (3 == adc) {
+		*output = ((float)counts / ADC3_MAX_COUNTS) * V_REF;
+	}
+
 	return W_SUCCESS;
 }
 
 w_status_t adc_get_converted_val(adc_channel_t channel, float *output) {
-	
 	float raw_volts = 0;
 	w_status_t status = adc_get_raw_volts(channel, &raw_volts);
 	if (status != W_SUCCESS) {
