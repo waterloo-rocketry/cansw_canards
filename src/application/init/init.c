@@ -157,7 +157,7 @@ static void system_init_task(void *arg) {
 	ak45_feedback_t feedback = {0};
 
 	while (1) {
-		if (i == 100) {
+		if (i == 200) {
 			gpio_toggle(GPIO_PIN_RED_LED, 1);
 			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
@@ -174,12 +174,12 @@ static void system_init_task(void *arg) {
 		feedback.position_deg, feedback.speed_erpm, feedback.current_a, feedback.temperature_c, feedback.fault_code, feedback.timestamp_ms);
 
 		if (i%2 == 0) {
-			if (i > 80) {
-				ak45_send_position_cmd(60 - (2 * (i - 80)));
-			} else if (i > 60) {
-				ak45_send_position_cmd(40);
-			} else if (i > 20){
-				ak45_send_position_cmd(i - 20);
+			if (i > 175) {
+				ak45_send_position_cmd(-10 + (10 * (i - 175) / 25));
+			} else if (i > 125) {
+				ak45_send_position_cmd(10 - (20 * (i - 125) / 50));
+			} else if (i > 100){
+				ak45_send_position_cmd(10 * (i - 100) / 25);
 			}else {
 				ak45_send_position_cmd(0);
 			}
