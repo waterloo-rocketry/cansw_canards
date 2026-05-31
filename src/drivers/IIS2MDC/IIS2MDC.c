@@ -269,16 +269,14 @@ static w_status_t iis2mdc_sanity_check(void) {
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
 		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
 		status = W_FAILURE;
-	}
-	if (IIS2MDC_WHO_AM_I_VAL != id) {
+	} else if (IIS2MDC_WHO_AM_I_VAL != id) {
 		log_text(1,
 				 "iis2mdc",
 				 "ERROR: WHO_AM_I mismatch: expected %u, got %u",
 				 IIS2MDC_WHO_AM_I_VAL,
 				 id);
 		status = W_FAILURE;
-	}
-	if (W_SUCCESS != iis2mdc_self_test()) {
+	} else if (W_SUCCESS != iis2mdc_self_test()) {
 		log_text(1, "iis2mdc", "ERROR: self-test failed");
 		status = W_FAILURE;
 	}
@@ -370,23 +368,21 @@ w_status_t iis2mdc_init(void) {
 
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 							uint32_t *timestamp_ms) {
-	uint8_t buf[6] = {0};
-
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {
 		log_text(1, "iis2mdc", "ERROR: NULL pointer cannot be used as input to get_data function");
 		return W_FAILURE;
 	}
 
-	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_OUTX_L, buf, 6)) {
-		log_text(1, "iis2mdc", "ERROR: failed to read output registers");
-		return W_FAILURE;
+	bool ready = (IIS2MDC_STATE_READY == iis2mdc_state) && iis2mdc_cache.valid;
+	if (!ready) {
+		return W_IO_ERROR;
 	}
 
-	iis2mdc_convert_sample(buf, raw_data, data);
+	taskENTER_CRITICAL();
+	*data = iis2mdc_cache.data;
+	*raw_data = iis2mdc_cache.raw;
+	*timestamp_ms = iis2mdc_cache.timestamp_ms;
+	taskEXIT_CRITICAL();
 
-	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
-		log_text(1, "iis2mdc", "ERROR: failed to get timestamp");
-		return W_FAILURE;
-	}
 	return W_SUCCESS;
 }
