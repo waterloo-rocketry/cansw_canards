@@ -175,7 +175,9 @@ static void system_init_task(void *arg) {
 
 		if (i%2 == 0) {
 			if (i > 80) {
-				ak45_send_position_cmd(60 - (3 * (i - 80)));
+				ak45_send_position_cmd(60 - (2 * (i - 80)));
+			} else if (i > 60) {
+				ak45_send_position_cmd(40);
 			} else if (i > 20){
 				ak45_send_position_cmd(i - 20);
 			}else {
