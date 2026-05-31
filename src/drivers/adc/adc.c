@@ -9,7 +9,12 @@
 #define ADC2_NUM_CHANNELS 2
 #define ADC3_NUM_CHANNELS 2
 
-// DMA buffers
+// Active DMA buffers
+static uint16_t adc1_dma_counts[ADC1_NUM_CHANNELS];
+static uint16_t adc2_dma_counts[ADC2_NUM_CHANNELS];
+static uint16_t adc3_dma_counts[ADC3_NUM_CHANNELS];
+
+// Copied 'safe' buffers
 static uint16_t adc1_raw_counts[ADC1_NUM_CHANNELS];
 static uint16_t adc2_raw_counts[ADC2_NUM_CHANNELS];
 static uint16_t adc3_raw_counts[ADC3_NUM_CHANNELS];
@@ -71,9 +76,9 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
 	}
 
 	// Start continuous DMA
-	if (HAL_OK != HAL_ADC_Start_DMA(adc1_handle, (uint32_t *)adc1_raw_counts, ADC1_NUM_CHANNELS) ||
-		HAL_OK != HAL_ADC_Start_DMA(adc2_handle, (uint32_t *)adc2_raw_counts, ADC2_NUM_CHANNELS) ||
-		HAL_OK != HAL_ADC_Start_DMA(adc3_handle, (uint32_t *)adc3_raw_counts, ADC3_NUM_CHANNELS)) {
+	if (HAL_OK != HAL_ADC_Start_DMA(adc1_handle, (uint32_t *)adc1_dma_counts, ADC1_NUM_CHANNELS) ||
+		HAL_OK != HAL_ADC_Start_DMA(adc2_handle, (uint32_t *)adc2_dma_counts, ADC2_NUM_CHANNELS) ||
+		HAL_OK != HAL_ADC_Start_DMA(adc3_handle, (uint32_t *)adc3_dma_counts, ADC3_NUM_CHANNELS)) {
 		log_text(1, "adc", "initfaildma");
 		return W_FAILURE;
 	}
@@ -96,13 +101,18 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
 	uint32_t index = channel_to_dma_index[channel];
 	uint32_t adc = channel_to_adc[channel];
 	// don't use magic numbers like 1 and 2
+
+	taskENTER_CRITICAL();
+
 	if (1 == adc) {
 		*output = adc1_raw_counts[index];
 	} else if (2 == adc) {
-		*output = adc2_raw_counts[index];
+		*output = adc2_dma_counts[index];
 	} else {
 		*output = adc3_raw_counts[index];
 	}
+
+	taskEXIT_CRITICAL();
 
 	if (*output > ADC_MAX_COUNTS) {
 		adc_error_stats.overflow_errors++;
@@ -124,6 +134,7 @@ w_status_t adc_get_raw_volts(adc_channel_t channel, float *output) {
 }
 
 w_status_t adc_get_converted_val(adc_channel_t channel, float *output) {
+	
 	float raw_volts = 0;
 	w_status_t status = adc_get_raw_volts(channel, &raw_volts);
 	if (status != W_SUCCESS) {
@@ -132,6 +143,18 @@ w_status_t adc_get_converted_val(adc_channel_t channel, float *output) {
 
 	*output = raw_volts * conversion_table[channel];
 	return W_SUCCESS;
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+	if (hadc == adc1_handle) {
+		memcpy(adc1_raw_counts, adc1_dma_counts, ADC1_NUM_CHANNELS);
+	} else if (hadc == adc2_handle) {
+		memcpy(adc2_raw_counts, adc2_dma_counts, ADC2_NUM_CHANNELS);
+	} else if (hadc == adc3_handle) {
+		memcpy(adc3_raw_counts, adc3_dma_counts, ADC3_NUM_CHANNELS);
+	} else {
+		return;
+	}
 }
 
 uint32_t adc_get_status(void) {
