@@ -12,6 +12,9 @@
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
 static const uint8_t IIS2MDC_I2C_ADDR = 0x1E;
 
+// external definition of hi2c for i2c bus 4;
+extern I2C_HandleTypeDef hi2c4;
+
 // Register addresses
 static const uint32_t IIS2MDC_REG_OFFSET_X_L =
 	0x45; // How are we planning to calibrate sensors irl?
@@ -50,14 +53,40 @@ static const uint32_t IIS2MDC_SELF_TEST_POLLING_PERIOD_MS = 1;
 /* Init configuration:
  CFG_REG_A = 0x8C  COMP_TEMP_EN=1, LP=0(high-res), ODR=11 (100 Hz), MD=00 (continuous)
  CFG_REG_B = 0x02  OFF_CANC=1 (continuous offset cancellation)
- CFG_REG_C = 0x10  BDU=1 (not sure if this is still needed with the current design scope?)
+ CFG_REG_C = 0x11  Block data updates to keep data coherent, DRDY_ON_PIN routes data ready to interrupt pin
  */
 static const uint32_t IIS2MDC_INIT_CFG_A = 0x8C;
 static const uint32_t IIS2MDC_INIT_CFG_B = 0x02;
-static const uint32_t IIS2MDC_INIT_CFG_C = 0x10;
+static const uint32_t IIS2MDC_INIT_CFG_C = 0x11;
 
 // conversion factor from raw register values to gauss
 static const float64_t IIS2MDC_SENSITIVITY_GAUSS_PER_LSB = 0.0015;
+
+// Buffer the DMA writes into, the completion handler function converts and puts data into the cache.
+static uint8_t iis2mdc_dma_buf[6];
+
+// Guards against starting a new DMA read while one is still in progress, cleared on DMA completion
+static volatile bool iis2mdc_dma_busy = false;
+
+// cache for newest data sample, updated by the DMA completion handler
+typedef struct {
+	vector3d_t data; // converted field, gauss
+	iis2mdc_raw_data_t raw; // raw register counts
+	uint32_t timestamp_ms; // when this sample was published
+	bool valid; // true once at least one sample has been cached
+} iis2mdc_cache_t;
+
+static iis2mdc_cache_t iis2mdc_cache = {0};
+
+/* Module state. CHECKING is set while the sanity check runs, UNINIT is set before init or if init 
+fails, READY is set when data is ready to be read and cached. */
+typedef enum {
+	IIS2MDC_STATE_UNINIT = 0, // before init, or init failed
+	IIS2MDC_STATE_CHECKING, // sanity check in progress
+	IIS2MDC_STATE_READY // normal operation
+} iis2mdc_state_t;
+
+static volatile iis2mdc_state_t iis2mdc_state = IIS2MDC_STATE_UNINIT;
 
 /**
  * @brief Helper function to read one or more consecutive bytes over I2C
@@ -223,14 +252,18 @@ static w_status_t iis2mdc_self_test(void) {
 
 /**
  * @brief Performs a sanity check by verifying device identity and running a self test
+ * @note Blocks DMA reads during this time by setting state to CHECKING
  * @return W_SUCCESS if the device passes self test and identity verification
  */
 static w_status_t iis2mdc_sanity_check(void) {
 	uint8_t id;
+	iis2mdc_state_t prev_state = iis2mdc_state;
+	w_status_t status = W_SUCCESS;
+	iis2mdc_state = IIS2MDC_STATE_CHECKING;
 
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
 		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
-		return W_FAILURE;
+		status = W_FAILURE;
 	}
 	if (IIS2MDC_WHO_AM_I_VAL != id) {
 		log_text(1,
@@ -238,16 +271,25 @@ static w_status_t iis2mdc_sanity_check(void) {
 				 "ERROR: WHO_AM_I mismatch: expected %u, got %u",
 				 IIS2MDC_WHO_AM_I_VAL,
 				 id);
-		return W_FAILURE;
+		status = W_FAILURE;
 	}
-
 	if (W_SUCCESS != iis2mdc_self_test()) {
 		log_text(1, "iis2mdc", "ERROR: self-test failed");
-		return W_FAILURE;
+		status = W_FAILURE;
 	}
 
-	return W_SUCCESS;
+	iis2mdc_state = prev_state;
+	return status;
 }
+
+w_status_t iis2mdc_handle_drdy_irq(void){}
+
+/**
+ * @brief I2C DMA completion, converts raw bytes and sends to the cache.
+ * @note Registered on hi2c4 via HAL_I2C_RegisterCallback in iis2mdc_init. All byte-combining, 
+ *		 sign interpretation, and scaling to gauss happen here so that iis2mdc_get_data does not block.
+ */
+static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {}
 
 w_status_t iis2mdc_init(void) {
 	// wait for stable output after power-up before any access to registers
@@ -274,6 +316,14 @@ w_status_t iis2mdc_init(void) {
 		return W_FAILURE;
 	}
 
+	// register completion callback on the mag's I2C handle.
+	if (HAL_OK !=
+		HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) {
+		log_text(1, "iis2mdc", "ERROR: failed to register DMA complete callback");
+		return W_FAILURE;
+	}
+
+	iis2mdc_state = IIS2MDC_STATE_READY;
 	return W_SUCCESS;
 }
 
