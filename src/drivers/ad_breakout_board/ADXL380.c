@@ -86,7 +86,8 @@ w_status_t adxl380_init() {
 	}
 
 	if (st_failed) {
-		return W_FAILURE;
+		vTaskDelay(pdMS_TO_TICKS(ADXL_SOFT_RESET_DELAY));
+		// return W_FAILURE;
 	}
 
 	// re-zero all register to make sure self-test settings are not accidentally carried over
