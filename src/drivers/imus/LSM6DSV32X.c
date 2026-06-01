@@ -23,8 +23,12 @@ static const float ACC_RANGE = 32.0; // g
 static const float GYRO_RANGE = 4000.0; // dps
 
 // AltIMU conversion factors - based on config settings below
-static const float ACC_FS = ACC_RANGE / INT16_MAX; // g / LSB
-static const float GYRO_FS = GYRO_RANGE / INT16_MAX; // dps / LSB
+//static const float ACC_FS = ACC_RANGE / INT16_MAX; // g / LSB
+//static const float GYRO_FS = GYRO_RANGE / INT16_MAX; // dps / LSB
+
+//AltIMU conversion factors based on datasheet
+static const float ACC_FS = 0.000976; // g / LSB
+static const float GYRO_FS = 0.140; // dps / LSB
 
 static imu_ctx_t lsm6dsv32x_ctx = {0};
 
