@@ -73,10 +73,6 @@ typedef struct {
 } navigator_input_t;
 
 typedef struct {
-
-} 
-
-typedef struct {
 	// TODO
 } navigator_output_t;
 
