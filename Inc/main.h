@@ -207,6 +207,7 @@ void Error_Handler(void);
 #define MAG_SDA_GPIO_Port GPIOB
 #define INT_MAG_Pin GPIO_PIN_0
 #define INT_MAG_GPIO_Port GPIOE
+#define INT_MAG_EXTI_IRQn EXTI0_IRQn
 #define INT1_MAG_ACCEL_Pin GPIO_PIN_1
 #define INT1_MAG_ACCEL_GPIO_Port GPIOE
 
