@@ -39,13 +39,13 @@ static const uint32_t IIS2MDC_CFG_A_SOFT_RESET = (1 << 5);
 static const uint8_t IIS2MDC_CFG_C_SELF_TEST = (1 << 1);
 
 // Self-test parameters (AN5080)
-static const float64_t IIS2MDC_ST_MIN_GAUSS = 0.015;
-static const float64_t IIS2MDC_ST_MAX_GAUSS = 0.500;
-static const uint32_t IIS2MDC_ST_SAMPLES = 50;
-static const uint32_t IIS2MDC_ST_POWERUP_MS = 20;
-static const uint32_t IIS2MDC_ST_SETTLE_MS = 60;
-static const uint32_t IIS2MDC_ST_TIMEOUT_MS = 20;
-static const uint32_t IIS2MDC_ST_POLLING_PERIOD_MS = 1;
+static const float64_t IIS2MDC_SELF_TEST_MIN_GAUSS = 0.015;
+static const float64_t IIS2MDC_SELF_TEST_MAX_GAUSS = 0.500;
+static const uint32_t IIS2MDC_SELF_TEST_SAMPLES = 50;
+static const uint32_t IIS2MDC_SELF_TEST_POWERUP_MS = 20;
+static const uint32_t IIS2MDC_SELF_TEST_SETTLE_MS = 60;
+static const uint32_t IIS2MDC_SELF_TEST_TIMEOUT_MS = 20;
+static const uint32_t IIS2MDC_SELF_TEST_POLLING_PERIOD_MS = 1;
 
 /* Init configuration:
  CFG_REG_A = 0x8C  COMP_TEMP_EN=1, LP=0(high-res), ODR=11 (100 Hz), MD=00 (continuous)
@@ -95,9 +95,9 @@ static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, 
 
 /**
  * @brief Polls status register until a new sample is ready (ZYXDA), waits 1ms between polls
- * @note Bounded by IIS2MDC_ST_TIMEOUT_MS (20ms, 2 sample period at 100hz)
+ * @note Bounded by IIS2MDC_SELF_TEST_TIMEOUT_MS (20ms, 2 sample period at 100hz)
  */
-static w_status_t st_wait_data_ready(void) {
+static w_status_t self_test_wait_data_ready(void) {
 	uint8_t status = 0;
 	uint32_t start_ms = 0;
 
@@ -107,7 +107,7 @@ static w_status_t st_wait_data_ready(void) {
 
 	uint32_t now_ms = start_ms;
 
-	while ((now_ms - start_ms) < IIS2MDC_ST_TIMEOUT_MS) {
+	while ((now_ms - start_ms) < IIS2MDC_SELF_TEST_TIMEOUT_MS) {
 		if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_STATUS, &status, 1)) {
 			return W_FAILURE;
 		}
@@ -118,7 +118,7 @@ static w_status_t st_wait_data_ready(void) {
 		if ((status & IIS2MDC_STATUS_ZYXDA) == IIS2MDC_STATUS_ZYXDA) {
 			return W_SUCCESS;
 		}
-		vTaskDelay(pdMS_TO_TICKS(IIS2MDC_ST_POLLING_PERIOD_MS));
+		vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_POLLING_PERIOD_MS));
 
 		if (W_SUCCESS != timer_get_ms(&now_ms)) {
 			return W_FAILURE;
@@ -129,12 +129,13 @@ static w_status_t st_wait_data_ready(void) {
 
 /**
  * @brief Waits for a fresh sample, then reads and converts the output registers to gauss.
+ * @note Used for self-test only, not intended for regular data reads
  */
-static w_status_t st_read_sample(vector3d_t *out) {
+static w_status_t self_test_read_sample(vector3d_t *out) {
 	uint8_t buf[6];
 	iis2mdc_raw_data_t raw;
 
-	if (W_SUCCESS != st_wait_data_ready()) {
+	if (W_SUCCESS != self_test_wait_data_ready()) {
 		return W_FAILURE;
 	}
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_OUTX_L, buf, 6)) {
@@ -147,17 +148,17 @@ static w_status_t st_read_sample(vector3d_t *out) {
 /**
  * @brief Discards the first sample, then averages 50 data samples
  */
-static w_status_t st_collect_average(vector3d_t *avg) {
+static w_status_t self_test_collect_average(vector3d_t *avg) {
 	vector3d_t sample;
 	float64_t sum_x = 0.0, sum_y = 0.0, sum_z = 0.0;
 
 	// discard the first sample after a mode change
-	if (W_SUCCESS != st_read_sample(&sample)) {
+	if (W_SUCCESS != self_test_read_sample(&sample)) {
 		return W_FAILURE;
 	}
 
-	for (uint32_t i = 0; i < IIS2MDC_ST_SAMPLES; i++) {
-		if (W_SUCCESS != st_read_sample(&sample)) {
+	for (uint32_t i = 0; i < IIS2MDC_SELF_TEST_SAMPLES; i++) {
+		if (W_SUCCESS != self_test_read_sample(&sample)) {
 			return W_FAILURE;
 		}
 		sum_x += sample.x;
@@ -165,9 +166,9 @@ static w_status_t st_collect_average(vector3d_t *avg) {
 		sum_z += sample.z;
 	}
 
-	avg->x = sum_x / ((float64_t)IIS2MDC_ST_SAMPLES);
-	avg->y = sum_y / ((float64_t)IIS2MDC_ST_SAMPLES);
-	avg->z = sum_z / ((float64_t)IIS2MDC_ST_SAMPLES);
+	avg->x = sum_x / ((float64_t)IIS2MDC_SELF_TEST_SAMPLES);
+	avg->y = sum_y / ((float64_t)IIS2MDC_SELF_TEST_SAMPLES);
+	avg->z = sum_z / ((float64_t)IIS2MDC_SELF_TEST_SAMPLES);
 	return W_SUCCESS;
 }
 
@@ -180,7 +181,7 @@ static w_status_t iis2mdc_self_test(void) {
 	vector3d_t avg_off, avg_on;
 
 	// discard the first sample, then average with self-test disabled
-	if (W_SUCCESS != st_collect_average(&avg_off)) {
+	if (W_SUCCESS != self_test_collect_average(&avg_off)) {
 		log_text(1, "iis2mdc", "ERROR: self-test baseline read failed");
 		return W_FAILURE;
 	}
@@ -191,9 +192,9 @@ static w_status_t iis2mdc_self_test(void) {
 		log_text(1, "iis2mdc", "ERROR: failed to enable self-test");
 		return W_FAILURE;
 	}
-	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_ST_SETTLE_MS));
+	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_SETTLE_MS));
 
-	w_status_t read_status = st_collect_average(&avg_on);
+	w_status_t read_status = self_test_collect_average(&avg_on);
 
 	// restore normal config regardless of the read outcome
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
@@ -210,8 +211,9 @@ static w_status_t iis2mdc_self_test(void) {
 	float64_t dy = fabs(avg_on.y - avg_off.y);
 	float64_t dz = fabs(avg_on.z - avg_off.z);
 
-	if ((dx < IIS2MDC_ST_MIN_GAUSS) || (dx > IIS2MDC_ST_MAX_GAUSS) || (dy < IIS2MDC_ST_MIN_GAUSS) ||
-		(dy > IIS2MDC_ST_MAX_GAUSS) || (dz < IIS2MDC_ST_MIN_GAUSS) || (dz > IIS2MDC_ST_MAX_GAUSS)) {
+	if ((dx < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dx > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
+		(dy < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dy > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
+		(dz < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dz > IIS2MDC_SELF_TEST_MAX_GAUSS)) {
 		log_text(1, "iis2mdc", "ERROR: self-test out of range: x=%f y=%f z=%f", dx, dy, dz);
 		return W_FAILURE;
 	}
@@ -249,7 +251,7 @@ static w_status_t iis2mdc_sanity_check(void) {
 
 w_status_t iis2mdc_init(void) {
 	// wait for stable output after power-up before any access to registers
-	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_ST_POWERUP_MS));
+	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_POWERUP_MS));
 
 	// soft reset clears config registers
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
@@ -258,7 +260,7 @@ w_status_t iis2mdc_init(void) {
 	}
 
 	// wait before writing to registers again after soft reset
-	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_ST_POWERUP_MS));
+	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_POWERUP_MS));
 
 	if ((W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B)) ||
