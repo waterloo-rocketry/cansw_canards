@@ -447,3 +447,25 @@ add_test_group(test_controller_codegen
     ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics.c
     ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics_jacobian.c
 )
+
+
+add_test_group(test_navigator_codegen
+    # test file(s)
+    ${UNIT_TESTS_DIR}/navigator_codegen_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/navigation_codegen_entry.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_data.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_initialize.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_terminate.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/diag.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/eye.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/rt_nonfinite.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/airdata_atmos.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/atan2.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/ekf_correct.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/inv.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/norm.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics_jacobian.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/mpower.c
+)

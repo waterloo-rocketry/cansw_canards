@@ -11,6 +11,7 @@
 
 #include "application/controller/gain_table.h"
 #include "common/math/math.h"
+#include "navigation_codegen_entry.h"
 
 // ---------- SENSOR TYPES ----------
 
@@ -107,6 +108,37 @@ typedef struct {
 } controller_output_t;
 
 
+/* CODEGEN STATES WILL BE INTEGRATED BETTER LATER*/
+// typedef struct2_T codegenSensor3D_t;
+// typedef struct4_T codegenSensor1D_t;
+
+typedef struct {
+	double dt;
+	bool flight_phase; 
+	double x[11];
+	double P[121];
+
+    struct0_T b;
+	struct1_T sf;
+	struct2_T board_accel;
+	struct2_T board_gyro;
+	struct2_T mti_accel;
+	struct2_T mti_gyro;
+	struct2_T ad_accel;
+	struct2_T ad_gyro;
+	struct3_T board_baro;
+	struct2_T board_mag;
+	struct3_T mti_baro;
+	struct2_T mti_mag;
+
+} navigator_codegen_input_t;
+
+typedef struct {
+	double x_ret[11];
+	double P_ret[121];
+    struct0_T b_ret;
+	struct1_T sf_ret;
+} navigator_codegen_output_t;
 
 // codegen controller
 typedef struct {
