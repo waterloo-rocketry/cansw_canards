@@ -23,7 +23,7 @@ typedef enum {
  */
 typedef struct {
 	float32_t position_deg;
-	float32_t speed_erpm;
+	float32_t speed_erpm; // RPM counted electrically
 	float32_t current_a;
 	int8_t temperature_c;
 	ak45_fault_code_t fault_code;

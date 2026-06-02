@@ -33,7 +33,7 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
-static const uint32_t MOTOR_TIMEOUT_MS = 10 * 1000; // 10 seconds
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -70,6 +70,7 @@ static void system_init_task(void *arg) {
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
+	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
@@ -90,7 +91,6 @@ static void system_init_task(void *arg) {
 	status |= flight_phase_init();
 	status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
-	status |= ak45_driver_init(&hfdcan1, MOTOR_TIMEOUT_MS);
 	status |= controller_init();
 	status |= fsm_init();
 	// status |= ekf_init();

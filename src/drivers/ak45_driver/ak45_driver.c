@@ -8,7 +8,9 @@
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/timer/timer.h"
 
-// Motor CAN driver ID configurable on the servo, default 1
+// TODO: add health checks for motor
+
+// Motor CAN driver ID
 static const uint16_t AK45_DRIVER_ID = 0x45;
 static const uint16_t LOG_WAIT_MS = 1;
 
@@ -28,10 +30,11 @@ static const uint16_t CAN_REAL_TIME_FEEDBACK = 0x29;
 static const uint16_t CAN_START_FRAME = 0x2C;
 
 // Scaling factors
-static const float32_t AK45_POS_CMD_SCALE = 10000.0f; // Position: degrees * 10000
-static const float32_t AK45_POS_FB_SCALE = 0.1f; // Feedback position: raw * 0.1 = degrees
-static const float32_t AK45_SPEED_FB_SCALE = 10.0f; // speed feedback: raw * 10.0 = ERPM
-static const float32_t AK45_CURRENT_FB_SCALE = 0.01f; // current feedback: raw * 0.01 = Amps
+static const float32_t AK45_POS_CMD_DEG_TO_POS = 10000.0f; // Position: degrees * 10000
+static const float32_t AK45_POS_FB_TO_DEG = 0.1f; // Feedback position: raw * 0.1 = degrees
+// eRPM is electrically counted RPM
+static const float32_t AK45_SPEED_FB_TO_ERPM = 10.0f; // speed feedback: raw * 10.0 = ERPM
+static const float32_t AK45_CURRENT_FB_TO_A = 0.01f; // current feedback: raw * 0.01 = Amps
 
 static FDCAN_HandleTypeDef *g_ak45_hfdcan = NULL;
 static QueueHandle_t g_feedback_queue = NULL;
@@ -81,17 +84,19 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
  */
 static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
 	if ((NULL == data) || (NULL == fb)) {
+		log_text(
+			LOG_WAIT_MS, "ak45", "ERROR: Invalid pointers or not initialized for Parse Feedback");
 		return W_FAILURE;
 	}
 
 	int16_t raw_pos = (int16_t)(((uint16_t)data[0] << 8) | data[1]);
-	fb->position_deg = (float32_t)raw_pos * AK45_POS_FB_SCALE;
+	fb->position_deg = (float32_t)raw_pos * AK45_POS_FB_TO_DEG;
 
 	int16_t raw_speed = (int16_t)(((uint16_t)data[2] << 8) | data[3]);
-	fb->speed_erpm = (float32_t)raw_speed * AK45_SPEED_FB_SCALE;
+	fb->speed_erpm = (float32_t)raw_speed * AK45_SPEED_FB_TO_ERPM;
 
 	int16_t raw_current = (int16_t)(((uint16_t)data[4] << 8) | data[5]);
-	fb->current_a = (float32_t)raw_current * AK45_CURRENT_FB_SCALE;
+	fb->current_a = (float32_t)raw_current * AK45_CURRENT_FB_TO_A;
 
 	fb->temperature_c = (int8_t)data[6];
 	fb->fault_code = (ak45_fault_code_t)data[7];
@@ -99,10 +104,10 @@ static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) 
 	uint32_t ms = 0;
 	if (timer_get_ms(&ms) == W_SUCCESS) {
 		fb->timestamp_ms = ms;
-		return W_FAILURE;
+		return W_SUCCESS;
 	}
 
-	return W_SUCCESS;
+	return W_FAILURE;
 }
 
 /* used to stop the general can bus*/
@@ -116,7 +121,7 @@ static void ak45_stop_can() {
 w_status_t ak45_send_position_cmd(float32_t angle_deg) {
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | AK45_DRIVER_ID;
 
-	int32_t pos_raw = (int32_t)(angle_deg * AK45_POS_CMD_SCALE);
+	int32_t pos_raw = (int32_t)(angle_deg * AK45_POS_CMD_DEG_TO_POS);
 	uint8_t data[4];
 	data[0] = (uint8_t)((pos_raw >> 24) & 0xFF);
 	data[1] = (uint8_t)((pos_raw >> 16) & 0xFF);
@@ -127,6 +132,8 @@ w_status_t ak45_send_position_cmd(float32_t angle_deg) {
 }
 
 w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms) {
+	// TODO: REPORT TO HEALTH CHECKS IF DRIVER FAILED TO INIT
+
 	// check if the driver has inited
 	if (is_init) {
 		log_text(LOG_WAIT_MS, "ak45", "ERROR: attempting to reinit ak45 driver");
@@ -186,6 +193,8 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 
 	uint32_t curr_time_ms = start_can_init_time_ms;
 
+	// This will terminate either after recieving a CAN msg from the motor or worse case after the
+	// described timeout
 	while ((!received_can_msg) &&
 		   ((curr_time_ms - start_can_init_time_ms) <= can_init_timeout_ms)) {
 		vTaskDelay(500);
@@ -249,6 +258,8 @@ uint32_t ak45_get_tx_errors(void) {
  * is received. Parses the feedback and puts it in the queue.
  */
 static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
+	// the motor should be sending periodic state messages at 300hz so even if the motor's CAN
+	// starts the STM we willl still recieve a msg
 	received_can_msg = true;
 
 	// checks if the new message bit is not 0 (FDCAN_IT_RX_FIFO1_NEW_MESSAGE is the bit mask)
@@ -260,12 +271,14 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 	uint8_t rx_data[8];
 
 	if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) != HAL_OK) {
+		g_tx_errors++;
 		return;
 	}
 
 	uint32_t expected_id = ((uint32_t)CAN_REAL_TIME_FEEDBACK << 8) | AK45_DRIVER_ID;
 
 	if (rx_header.IdType != FDCAN_EXTENDED_ID || rx_header.Identifier != expected_id) {
+		g_tx_errors++;
 		return;
 	}
 
