@@ -28,7 +28,6 @@
 #include "drivers/uart/uart.h"
 
 // TEST INCLUDE
-#include "drivers/imus/LSM6DSV32X.h"
 #include <inttypes.h>
 
 // Maximum number of initialization retries before giving up
