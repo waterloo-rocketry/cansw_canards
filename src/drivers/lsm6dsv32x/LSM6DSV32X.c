@@ -3,13 +3,14 @@
 #include "main.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/i2c/i2c.h"
-#include "drivers/imus/LSM6DSV32X.h"
-#include "drivers/imus/LSM6DSV32X_regmap.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X_regmap.h"
 #include "drivers/timer/timer.h"
 
 typedef enum {
@@ -34,8 +35,9 @@ typedef struct {
 	uint32_t timestamp_ms[2];
 	volatile lsm6dsv32x_data_state_t stale_data;
 	volatile lsm6dsv32x_bus_state bus_status;
+	bool switched_callback;
 
-} imu_ctx_t;
+} lsm6dsv32x_ctx_t;
 
 // device addresses and configuration
 static const uint16_t LSM6DSV32X_ADDR = 0x6A; // addr sel pin LOW
@@ -53,7 +55,7 @@ static const float64_t GYRO_FS = 0.140; // dps / LSB
 
 static const uint8_t LSM6DSV32X_EXPECTED_WHO_AM_I = 0x70;
 
-static imu_ctx_t lsm6dsv32x_ctx = {0};
+static lsm6dsv32x_ctx_t lsm6dsv32x_ctx = {.switched_callback = false};
 
 static const uint8_t CTX_BUFFER_SIZE = sizeof(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER]);
 
@@ -68,6 +70,11 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
  * @return Status of the operation
  */
 static w_status_t lsm6dsv32x_check_sanity() {
+	if (lsm6dsv32x_ctx.switched_callback) {
+		log_text(1, "LSM6DSV32X", "ERROR: Attempting to reinitialize after switching callback.");
+		return W_FAILURE;
+	}
+
 	w_status_t i2c_status = W_SUCCESS;
 	w_status_t device_status = W_SUCCESS;
 
@@ -109,6 +116,10 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_init() {
+	if (lsm6dsv32x_ctx.switched_callback) {
+		log_text(1, "LSM6DSV32X", "ERROR: Attempting to reinitialize after switching callback.");
+		return W_FAILURE;
+	}
 	lsm6dsv32x_ctx.hi2c = &hi2c1;
 	lsm6dsv32x_ctx.stale_data = LSM6DSV32X_DATA_STALE;
 
@@ -159,6 +170,8 @@ w_status_t lsm6dsv32x_init() {
 	// load all settings and end use of all i2c driver before switch to dma
 	vTaskDelay(1);
 
+	lsm6dsv32x_ctx.switched_callback = true;
+
 	// register the I2C callback for the end of the DMA read to call the dma complete handler
 	// function
 	HAL_I2C_RegisterCallback(
@@ -181,6 +194,12 @@ w_status_t lsm6dsv32x_init() {
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_int1_isr_handler() {
+	if (!lsm6dsv32x_ctx.switched_callback) {
+		log_text(
+			1, "LSM6DSV32X", "ERROR: Attempting to complete DMA callback before new callback.");
+		return W_FAILURE;
+	}
+
 	w_status_t status = W_SUCCESS;
 
 	// set the bus to occupied meanining that data is
@@ -212,7 +231,8 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
  * @brief interrupt handler for the int1 pin
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if ((IMU_INT1_Pin == GPIO_Pin) && (LSM6DSV32X_BUS_FREE == lsm6dsv32x_ctx.bus_status)) {
+	if ((IMU_INT1_Pin == GPIO_Pin) && (LSM6DSV32X_BUS_FREE == lsm6dsv32x_ctx.bus_status) &&
+		lsm6dsv32x_ctx.switched_callback) {
 		lsm6dsv32x_int1_isr_handler();
 	}
 }
@@ -231,7 +251,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
-	if (LSM6DSV32X_DATA_READY == lsm6dsv32x_ctx.stale_data) {
+	if ((LSM6DSV32X_DATA_READY == lsm6dsv32x_ctx.stale_data) && lsm6dsv32x_ctx.switched_callback) {
 		taskENTER_CRITICAL();
 
 		// enter a critical section while copying the data
