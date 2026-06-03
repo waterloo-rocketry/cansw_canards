@@ -99,6 +99,13 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *data, uint8_t len);
 
 /**
+ * @brief turn off i2c module for this specific bus
+ * @param[in] bus Bus to turn off
+ * @retval status of function call
+ */
+w_status_t i2c_deinit_module(i2c_bus_t bus);
+
+/**
  * @brief Report I2C module health status
  *
  * Retrieves and reports I2C error statistics and initialization status
