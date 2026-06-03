@@ -19,6 +19,8 @@ enum LSM6DSV32X_reg {
 	CTRL8_XL = 0x17,
 	CTRL9_XL = 0X18,
 
+	OUTX_L_G = 0x22,
+
 	FIFO_CTRL1 = 0x07,
 	FIFO_CTRL2 = 0x08,
 	FIFO_CTRL3 = 0x09,
