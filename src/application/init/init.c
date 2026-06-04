@@ -1,7 +1,7 @@
 // Add these includes for hardware handles
 #include "FreeRTOS.h"
 #include "adc.h" // For hadc1
-#include "fdcan.h" // For hfdcan1
+#include "fdcan.h" // For hfdcan1 and hfdcan3
 #include "i2c.h" // For hi2c2, hi2c4
 #include "stm32h7xx_hal.h"
 #include "task.h"
@@ -18,6 +18,7 @@
 #include "application/init/init.h"
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
+#include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
@@ -31,6 +32,8 @@
 
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
+
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -67,6 +70,7 @@ static void system_init_task(void *arg) {
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
+	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
