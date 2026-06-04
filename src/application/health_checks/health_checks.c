@@ -2,10 +2,10 @@
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
-#include "application/estimator/estimator.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "application/navigator/navigator.h"
 #include "can.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
@@ -196,7 +196,7 @@ static uint32_t check_modules_status(void) {
 	status_bitfield |= i2c_get_status();
 	status_bitfield |= adc_get_status();
 	status_bitfield |= can_handler_get_status();
-	status_bitfield |= estimator_get_status();
+	status_bitfield |= navigator_get_status();
 	status_bitfield |= controller_get_status();
 	status_bitfield |= sd_card_get_status();
 	status_bitfield |= timer_get_status();

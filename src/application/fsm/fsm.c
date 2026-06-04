@@ -2,19 +2,19 @@
 #include "task.h"
 
 #include "application/controller/controller.h"
-#include "application/estimator/estimator.h"
-#include "application/estimator/estimator_module.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/imu_handler/imu_handler.h"
+#include "application/navigator/navigator.h"
 #include "drivers/timer/timer.h"
 
 static const uint8_t FSM_PERIOD_MS = 2;
 
 typedef struct {
-	estimator_module_ctx_t *estimator_context; // global instance of estimator
+	navigator_module_ctx_t *estimator_context; // global instance of estimator
 	controller_ctx_t *p_controller_context; // global instance of controller
 	uint32_t timestamp_ms; // curr timestamp
+	uint32_t timestamp_tenth_ms; // curr timestamp
 	fsm_state_t curr_state;
 	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
 } fsm_ctx_t;
@@ -23,7 +23,7 @@ typedef struct {
 static fsm_ctx_t g_ctx = {0};
 
 // create all of the global instances
-static estimator_module_ctx_t g_estimator_context = {0};
+static navigator_module_ctx_t g_estimator_context = {0};
 
 // make sure controller_output_t is initalized to 0 and valid to read to match original design
 static controller_ctx_t g_controller_context = {0};
@@ -37,11 +37,10 @@ w_status_t fsm_init() {
 		// TODO how to deal with error
 		return W_FAILURE;
 	}
-	g_estimator_context.t_sec =
-		((float64_t)init_time_tenth_ms) / 10000.0; // convert 0.1ms to seconds
-	g_estimator_context.x.attitude = (quaternion_t){.w = 1.0, .x = 0.0, .y = 0.0, .z = 0.0};
-	g_estimator_context.x.altitude = 420;
-	g_estimator_context.x.CL = 3;
+	g_estimator_context.last_run_tenth_ms = init_time_tenth_ms;
+	// g_estimator_context.x.attitude = (quaternion_t){.w = 1.0, .x = 0.0, .y = 0.0, .z = 0.0};
+	// g_estimator_context.x.altitude = 420;
+	// g_estimator_context.x.CL = 3;
 
 	// init rest of input
 	g_ctx.estimator_context = &g_estimator_context;
@@ -74,18 +73,19 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 		case STATE_SE_INIT:
 			// TODO: how to tell estimator it needs to pad filter
 		case STATE_BOOST:
-			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
+			navigator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
 			break;
 
 			// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
-			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
+			navigator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
 
+			// roll more into input structs
 			controller_step(p_ctx->p_controller_context,
 							&controller_input,
 							&controller_output,
-							p_ctx->p_flight_phase_context->act_allowed_timestamp_ms,
+							p_ctx->p_flight_phase_context->launch_timestamp_ms,
 							p_ctx->timestamp_ms);
 			// TODO: motor
 			break;
@@ -104,6 +104,10 @@ void fsm_task(void *args) {
 
 	while (1) {
 		if (W_SUCCESS != timer_get_ms(&(g_ctx.timestamp_ms))) {
+			// TODO: error handling
+		}
+
+		if (W_SUCCESS != timer_get_tenth_ms(&(g_ctx.timestamp_tenth_ms))) {
 			// TODO: error handling
 		}
 

@@ -10,13 +10,13 @@
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/estimator/ekf.h"
-#include "application/estimator/estimator.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/navigator/navigator.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -33,13 +33,6 @@
 #include "i2c.h" // For hi2c2, hi2c4
 #include "task.h"
 #include "usart.h"
-#include "third_party/codegen/controller_codegen_entry.h"
-#include "third_party/codegen/GNC_codegen_initialize.h"
-#include "third_party/codegen/GNC_codegen_terminate.h"
-#include "third_party/codegen/GNC_codegen_types.h"
-#include "third_party/codegen/controller_codegen_entry.h"
-#include "third_party/codegen/navigation_codegen_entry.h"
-#include "third_party/codegen/rt_nonfinite.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -80,7 +73,7 @@ static void system_init_task(void *arg) {
 	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status = W_SUCCESS;//sd_card_init();
+	w_status_t non_crit_status = W_SUCCESS; // sd_card_init();
 	non_crit_status |= log_init();
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
@@ -96,7 +89,7 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	// status |= adc_init(&hadc1);
-	status |= estimator_init();
+	status |= navigator_init();
 	// status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
@@ -166,40 +159,40 @@ static void system_init_task(void *arg) {
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 		vTaskDelay(500);
 
-        //   struct0_T board_accel_tmp;
-//   struct1_T b_r;
-//   struct1_T r1;
-//   struct2_T state;
-//   struct3_T airdata;
-//   double roll_state[2];
-//   double cov_norm;
-//   /* Initialize function 'navigation_codegen_entry' input arguments. */
-//   /* Initialize function input argument 'board_accel'. */
-//   board_accel_tmp = argInit_struct0_T();
-//   /* Initialize function input argument 'board_gyro'. */
-//   /* Initialize function input argument 'mti_accel'. */
-//   /* Initialize function input argument 'mti_gyro'. */
-//   /* Initialize function input argument 'ad_accel'. */
-//   /* Initialize function input argument 'ad_gyro'. */
-//   /* Initialize function input argument 'board_baro'. */
-//   /* Initialize function input argument 'board_mag'. */
-//   /* Initialize function input argument 'mti_baro'. */
-//   /* Initialize function input argument 'mti_mag'. */
-//   /* Call the entry-point 'navigation_codegen_entry'. */
-//   b_r = argInit_struct1_T();
-//   r1 = argInit_struct1_T();
-//   volatile uint32_t timestart = HAL_GetTick();
+		//   struct0_T board_accel_tmp;
+		//   struct1_T b_r;
+		//   struct1_T r1;
+		//   struct2_T state;
+		//   struct3_T airdata;
+		//   double roll_state[2];
+		//   double cov_norm;
+		//   /* Initialize function 'navigation_codegen_entry' input arguments. */
+		//   /* Initialize function input argument 'board_accel'. */
+		//   board_accel_tmp = argInit_struct0_T();
+		//   /* Initialize function input argument 'board_gyro'. */
+		//   /* Initialize function input argument 'mti_accel'. */
+		//   /* Initialize function input argument 'mti_gyro'. */
+		//   /* Initialize function input argument 'ad_accel'. */
+		//   /* Initialize function input argument 'ad_gyro'. */
+		//   /* Initialize function input argument 'board_baro'. */
+		//   /* Initialize function input argument 'board_mag'. */
+		//   /* Initialize function input argument 'mti_baro'. */
+		//   /* Initialize function input argument 'mti_mag'. */
+		//   /* Call the entry-point 'navigation_codegen_entry'. */
+		//   b_r = argInit_struct1_T();
+		//   r1 = argInit_struct1_T();
+		//   volatile uint32_t timestart = HAL_GetTick();
 
-//   navigation_codegen_entry(argInit_real_T(), argInit_boolean_T(),
-//                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
-//                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
-//                            &b_r, &board_accel_tmp, &r1, &board_accel_tmp,
-//                            &state, &cov_norm, &airdata, roll_state);
+		//   navigation_codegen_entry(argInit_real_T(), argInit_boolean_T(),
+		//                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
+		//                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
+		//                            &b_r, &board_accel_tmp, &r1, &board_accel_tmp,
+		//                            &state, &cov_norm, &airdata, roll_state);
 
-//     volatile uint32_t timeend = HAL_GetTick();
+		//     volatile uint32_t timeend = HAL_GetTick();
 
-//     volatile uint32_t timediff = timeend - timestart;
-//     (void)timediff; // Suppress unused variable warning
+		//     volatile uint32_t timediff = timeend - timestart;
+		//     (void)timediff; // Suppress unused variable warning
 	}
 }
 

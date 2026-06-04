@@ -35,6 +35,7 @@ typedef struct {
  * state of a controller instance.
  */
 typedef struct {
+	controller_codegen_ctx_t codegen_ctx;
 	uint32_t last_run_ms; // last time the controller did a full loop. use for rate-limiting
 } controller_ctx_t;
 
@@ -50,12 +51,11 @@ w_status_t controller_init(void);
  * @param context pointer to controller global context
  * @param input pointer to new inputs for this iteration
  * @param output pointer to the output struct to update with new command
- * @param act_allowed_timestamp_ms the timestamp at which act_allowed was set (only used when passed
- * actuation allowed)
+ * @param launch_timestamp_ms the timestamp at which rocket launch
  * @param curr_timestamp_ms the currrent timestamp
  */
 w_status_t controller_step(controller_ctx_t *context, const controller_input_t *input,
-						   controller_output_t *output, const uint32_t act_allowed_timestamp_ms,
+						   controller_output_t *output, const uint32_t launch_timestamp_ms,
 						   const uint32_t curr_timestamp_ms);
 
 /**

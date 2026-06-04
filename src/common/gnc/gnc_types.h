@@ -6,12 +6,11 @@
 #ifndef GNC_TYPES_H
 #define GNC_TYPES_H
 
+#include "common/math/math.h"
+#include "application/fsm/fsm.h"
+#include "navigation_codegen_entry.h"
 #include <stdbool.h>
 #include <stdint.h>
-
-#include "application/controller/gain_table.h"
-#include "common/math/math.h"
-#include "navigation_codegen_entry.h"
 
 // ---------- SENSOR TYPES ----------
 
@@ -70,43 +69,34 @@ typedef struct {
 
 // ---------- NAVIGATOR TYPES ----------
 typedef struct {
-	// TODO
+	uint32_t curr_timestamp_tenth_ms;
+	fsm_state_t fsm_state;
+	all_sensors_data_t *sensor_data;
 } navigator_input_t;
 
 typedef struct {
-	// TODO
+	uint32_t timestamp_tenth_ms;
+	double cov_norm;
+	// TODO: update after Tristan update codegen
+	struct0_T airdata;
+	double roll_state[2];
 } navigator_output_t;
 
 // ---------- CONTROLLER TYPES ----------
-#define FEEDBACK_GAIN_NUM (GAIN_NUM - 1) // subtract 1 for the pre-gain
-#define ROLL_STATE_NUM (FEEDBACK_GAIN_NUM)
-#define MIN_COOR_BOUND 0
-
-typedef union {
-	double roll_state_arr[ROLL_STATE_NUM];
-
-	struct {
-		double roll_angle;
-		double roll_rate;
-		double canard_angle;
-	};
-} roll_state_t;
 
 // output from navigator aka input to controller
 typedef struct {
-	// Roll state
-	roll_state_t roll_state;
-	// Scheduling variables (flight condition)
-	double pressure_dynamic;
-	double canard_coeff;
+	float64_t motor_angle_rad; /// delta
+	float64_t xR[2];
+	float64_t pdyn;
 } controller_input_t;
 
 // Output of controller: latest commanded canard angle
 typedef struct {
-	double commanded_angle; // radians
-	uint32_t timestamp; // ms
+	float64_t motor_command_angle_rad; // radians
+	float64_t ref_roll_angle_rad;
+	uint32_t timestamp_ms; // ms
 } controller_output_t;
-
 
 /* CODEGEN STATES WILL BE INTEGRATED BETTER LATER*/
 typedef struct1_T navigator_codegen_bias_t;
@@ -117,38 +107,13 @@ typedef struct4_T navigator_sensor_3D_t;
 typedef struct5_T navigator_sensor_1D_t;
 
 typedef struct {
-	navigator_codegen_bias_t *bias;
-	navigator_codegen_sensor_filter_t *filter;
+	navigator_codegen_bias_t bias;
+	navigator_codegen_sensor_filter_t sensor_filter;
 	float64_t x[11];
 	float64_t P[121];
 } navigator_codegen_ctx_t;
 
-typedef struct {
-	float64_t dt;
-	bool flight_phase; 
-
-	navigator_codegen_sensor_input_t* p_sensor_input;
-} navigator_codegen_input_t;
-
-typedef struct {
-	float64_t x_ret[11];
-	float64_t P_ret[121];
-} navigator_codegen_output_t;
-
 // codegen controller
 typedef struct0_T controller_codegen_ctx_t;
-
-typedef struct {
-	float64_t b_time;
-    float64_t dt_ctrl;
-	float64_t xR[2];
-    float64_t pdyn;
-    float64_t delta;
-} controller_codegen_input_t;
-
-typedef struct {
-	float64_t u;
-	float64_t b_r;
-} controller_codegen_output_t;
 
 #endif

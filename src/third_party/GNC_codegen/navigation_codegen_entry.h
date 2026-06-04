@@ -26,7 +26,10 @@ extern void navigation_codegen_entry(
     double dt, bool flight_phase, const double x[11], const double P[121],
     struct1_T *bias, const struct2_T *sens_filt, const struct3_T *sens_input,
     double x_ret[11], double P_ret[121], struct1_T *bias_ret,
-    struct2_T *sens_filt_ret);
+    struct2_T *sens_filt_ret, 
+    // TMEP INPUTS FOR CODEGEN
+    double *conv_norm, struct0_T *airdata, double roll_state[2]
+);
 
 #ifdef __cplusplus
 }

@@ -5,10 +5,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "application/estimator/estimator.h"
 #include "application/estimator/estimator_types.h"
 #include "application/estimator/pad_filter.h"
 #include "application/fsm/fsm.h"
+#include "application/navigator/navigator.h"
 #include "common/gnc/gnc_types.h"
 
 /**
@@ -32,6 +32,6 @@ typedef struct {
  * @param output_to_controller pointer to write output cmd for controller
  */
 w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t flight_phase,
-							estimator_module_ctx_t *ctx, controller_input_t *output_to_controller);
+							navigator_module_ctx_t *ctx, controller_input_t *output_to_controller);
 
 #endif // ESTIMATOR_MODULE_H

@@ -8,14 +8,15 @@
 #include "canlib.h"
 
 #include "application/can_handler/can_handler.h"
-#include "application/estimator/estimator.h"
-#include "application/estimator/estimator_module.h"
 #include "application/logger/log.h"
+#include "application/fsm/fsm.h"
+#include "application/navigator/navigator.h"
 #include "drivers/timer/timer.h"
 
 // ---------- private variables ----------
 // IDEAL task period, for calculating CAN send rate limiter
 static const uint32_t ESTIMATOR_TASK_PERIOD_MS = 5;
+static const float64_t TENTH_MS_TO_SEC = 0.0001;
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 // TODO: if kept change to static const
 #define ESTIMATOR_CAN_TX_PERIOD_MS 100
@@ -24,7 +25,7 @@ static const uint32_t ESTIMATOR_TASK_PERIOD_MS = 5;
 #define DATA_WAIT_MS 10
 
 // Error tracking
-static estimator_error_data_t estimator_error_stats = {0};
+static navigator_error_data_t estimator_error_stats = {0};
 
 // TODO remove this once we get encorder reintegrated into the system
 // latest encoder reading (millidegrees) from CAN
@@ -32,7 +33,7 @@ static QueueHandle_t encoder_data_queue_rad = NULL;
 
 // ---------- public functions ----------
 
-w_status_t estimator_init(void) {
+w_status_t navigator_init(void) {
 	// create queues for imu data, encoder data, and controller cmd
 	encoder_data_queue_rad = xQueueCreate(1, sizeof(float));
 
@@ -42,20 +43,41 @@ w_status_t estimator_init(void) {
 	}
 
 	// Initialize error tracking
-	estimator_error_stats = (estimator_error_data_t){.is_init = true};
+	estimator_error_stats = (navigator_error_data_t){.is_init = true};
 
 	return W_SUCCESS;
 }
 
-w_status_t estimator_step(estimator_module_ctx_t *ctx, const navigator_input_t *p_input,
+w_status_t navigator_step(navigator_module_ctx_t *ctx, const navigator_input_t *p_input,
 						  navigator_output_t *p_output) {
-	(void)ctx;
-	(void)p_input;
-	(void)p_output;
+	// calculate remainder navigator data
+	float64_t dt_sec = ((p_input->curr_timestamp_tenth_ms) - (ctx->last_run_tenth_ms)) * TENTH_MS_TO_SEC;
+	bool in_flight_phase = (STATE_SE_INIT != p_input->fsm_state); // since earliest entry point is pad filter
+
+	// construct sensor inputs
+	// TODO: add sensor data convert type (firmware->matlab)
+	const navigator_codegen_sensor_input_t sensor_input = {
+		.ad_accel = {0}
+	};
+
+	navigator_codegen_ctx_t output_ctx = {0};
+
+	navigation_codegen_entry(dt_sec, in_flight_phase, ctx->codegen_ctx.x, ctx->codegen_ctx.P,
+    &(ctx->codegen_ctx.bias), &(ctx->codegen_ctx.sensor_filter), &sensor_input,
+    output_ctx.x, output_ctx.P, &(output_ctx.bias),
+    &(output_ctx.sensor_filter),
+	// TEMP INPUTS
+	&(p_output->cov_norm), &(p_output->airdata), p_output->roll_state
+	);
+
+	// update codegen ctx
+	memcpy(&(ctx->codegen_ctx), &output_ctx, sizeof(navigator_codegen_ctx_t));
+
+	ctx->last_run_tenth_ms = p_input->curr_timestamp_tenth_ms;
 	return W_SUCCESS;
 }
 
-w_status_t estimator_log_state_to_can(const x_state_t *current_state) {
+w_status_t navigator_log_state_to_can(const x_state_t *current_state) {
 	can_msg_t msg;
 	uint32_t current_time_ms;
 	w_status_t status = W_SUCCESS;
@@ -89,7 +111,7 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state) {
 	return status;
 }
 
-uint32_t estimator_get_status(void) {
+uint32_t navigator_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log all error statistics
