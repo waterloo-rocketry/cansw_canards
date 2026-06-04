@@ -109,59 +109,46 @@ typedef struct {
 
 
 /* CODEGEN STATES WILL BE INTEGRATED BETTER LATER*/
-// typedef struct2_T codegenSensor3D_t;
-// typedef struct4_T codegenSensor1D_t;
+typedef struct1_T navigator_codegen_bias_t;
+typedef struct2_T navigator_codegen_sensor_filter_t;
+typedef struct3_T navigator_codegen_sensor_input_t;
+
+typedef struct4_T navigator_sensor_3D_t;
+typedef struct5_T navigator_sensor_1D_t;
 
 typedef struct {
-	double dt;
+	navigator_codegen_bias_t *bias;
+	navigator_codegen_sensor_filter_t *filter;
+	float64_t x[11];
+	float64_t P[121];
+} navigator_codegen_ctx_t;
+
+typedef struct {
+	float64_t dt;
 	bool flight_phase; 
-	double x[11];
-	double P[121];
 
-    struct0_T b;
-	struct1_T sf;
-	struct2_T board_accel;
-	struct2_T board_gyro;
-	struct2_T mti_accel;
-	struct2_T mti_gyro;
-	struct2_T ad_accel;
-	struct2_T ad_gyro;
-	struct3_T board_baro;
-	struct2_T board_mag;
-	struct3_T mti_baro;
-	struct2_T mti_mag;
-
+	navigator_codegen_sensor_input_t* p_sensor_input;
 } navigator_codegen_input_t;
 
 typedef struct {
-	double x_ret[11];
-	double P_ret[121];
-    struct0_T b_ret;
-	struct1_T sf_ret;
+	float64_t x_ret[11];
+	float64_t P_ret[121];
 } navigator_codegen_output_t;
 
 // codegen controller
+typedef struct0_T controller_codegen_ctx_t;
+
 typedef struct {
-	double b_time;
-    double dt_ctrl;
-	double xR[2];
-    double pdyn;
-    double delta;
-	double w_old;
-	double coeffs[2];
-	double P_minus[4];
-    double d_old;
-    double w_dot_old;
+	float64_t b_time;
+    float64_t dt_ctrl;
+	float64_t xR[2];
+    float64_t pdyn;
+    float64_t delta;
 } controller_codegen_input_t;
 
 typedef struct {
-	double u;
-	double b_r;
-	double coeffs_ret[2];
-	double w_old_ret;
-	double P_minus_ret[4];
-	double d_old_ret;
-	double w_dot_old_ret;
+	float64_t u;
+	float64_t b_r;
 } controller_codegen_output_t;
 
 #endif
