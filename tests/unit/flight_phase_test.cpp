@@ -40,7 +40,7 @@ xQueuePeek_state_pad(QueueHandle_t xQueue, void *const pvBuffer, TickType_t xTic
 
 }
 
-flight_phase_event_t queue_send_event = EVENT_RESET;
+flight_phase_event_t queue_send_event = EVENT_NONE;
 BaseType_t xQueueSend_check_input_event(QueueHandle_t xQueue, const void * pvItemToQueue, TickType_t xTicksToWait) {
     queue_send_event = *((flight_phase_event_t*)pvItemToQueue);
     return pdPASS;
@@ -60,7 +60,7 @@ protected:
         RESET_FAKE(get_cmd_actuator_state);
         RESET_FAKE(timer_get_ms);
         FFF_RESET_HISTORY();
-        queue_send_event = EVENT_RESET;
+        queue_send_event = EVENT_NONE;
     }
 
     void TearDown() override {}
@@ -125,18 +125,6 @@ TEST_F(FlightPhaseTest, SendEventFails) {
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
-}
-
-TEST_F(FlightPhaseTest, ResetSendsResetEvent) {
-    // Arrange
-    xQueueSend_fake.return_val = pdPASS;
-
-    // Act
-    w_status_t status = flight_phase_reset();
-
-    // Assert
-    EXPECT_EQ(xQueueSend_fake.call_count, 1);
-    EXPECT_EQ(status, W_SUCCESS);
 }
 
 // TODO: update launch and act allowed timestamps
@@ -350,7 +338,7 @@ TEST_F(FlightPhaseTest, BoostToBoost2) {
     fsm_state_t curr_state = STATE_BOOST;
 
     // Act
-    fsm_state_t new_state = flight_phase_update_state(EVENT_RECOVERY_RATE, curr_state, &ctx);
+    fsm_state_t new_state = flight_phase_update_state(EVENT_RECOVERY_START, curr_state, &ctx);
 
     // Assert
     EXPECT_EQ(new_state, STATE_BOOST);
@@ -362,7 +350,7 @@ TEST_F(FlightPhaseTest, ActAllowedToRecovery) {
     fsm_state_t curr_state = STATE_ACT_ALLOWED;
 
     // Act
-    fsm_state_t new_state = flight_phase_update_state(EVENT_RECOVERY_RATE, curr_state, &ctx);
+    fsm_state_t new_state = flight_phase_update_state(EVENT_RECOVERY_START, curr_state, &ctx);
 
     // Assert
     EXPECT_EQ(new_state, STATE_RECOVERY);
@@ -386,7 +374,7 @@ TEST_F(FlightPhaseTest, ActAllowedToActAllowed2) {
     fsm_state_t curr_state = STATE_ACT_ALLOWED;
 
     // Act
-    fsm_state_t new_state = flight_phase_update_state(EVENT_SLEEP_RATE, curr_state, &ctx);
+    fsm_state_t new_state = flight_phase_update_state(EVENT_SLEEP_START, curr_state, &ctx);
 
     // Assert
     EXPECT_EQ(new_state, STATE_ACT_ALLOWED);
@@ -398,7 +386,7 @@ TEST_F(FlightPhaseTest, RecoveryToSleepy) {
     fsm_state_t curr_state = STATE_RECOVERY;
 
     // Act
-    fsm_state_t new_state = flight_phase_update_state(EVENT_SLEEP_RATE, curr_state, &ctx);
+    fsm_state_t new_state = flight_phase_update_state(EVENT_SLEEP_START, curr_state, &ctx);
 
     // Assert
     EXPECT_EQ(new_state, STATE_SLEEPY);
@@ -410,7 +398,7 @@ TEST_F(FlightPhaseTest, RecoveryToRecovery) {
     fsm_state_t curr_state = STATE_RECOVERY;
 
     // Act
-    fsm_state_t new_state = flight_phase_update_state(EVENT_RECOVERY_RATE, curr_state, &ctx);
+    fsm_state_t new_state = flight_phase_update_state(EVENT_RECOVERY_START, curr_state, &ctx);
 
     // Assert
     EXPECT_EQ(new_state, STATE_RECOVERY);
@@ -434,7 +422,7 @@ TEST_F(FlightPhaseTest, SleepyToSleepy) {
     fsm_state_t curr_state = STATE_SLEEPY;
 
     // Act
-    fsm_state_t new_state = flight_phase_update_state(EVENT_SLEEP_RATE, curr_state, &ctx);
+    fsm_state_t new_state = flight_phase_update_state(EVENT_SLEEP_START, curr_state, &ctx);
 
     // Assert
     EXPECT_EQ(new_state, STATE_SLEEPY);
@@ -634,7 +622,7 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventRecoActAllowed) {
     EXPECT_EQ(ctx.num_consec_detections, 0);
 
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
-    EXPECT_EQ(queue_send_event, EVENT_RECOVERY_RATE);
+    EXPECT_EQ(queue_send_event, EVENT_RECOVERY_START);
 }
 
 TEST_F(FlightPhaseTest, GenSyncNoEventRecov) {
@@ -686,7 +674,7 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventSleepyRecov) {
     EXPECT_EQ(ctx.num_consec_detections, 0);
 
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
-    EXPECT_EQ(queue_send_event, EVENT_SLEEP_RATE);
+    EXPECT_EQ(queue_send_event, EVENT_SLEEP_START);
 }
 
 TEST_F(FlightPhaseTest, GenSyncNoEventSleepy) {

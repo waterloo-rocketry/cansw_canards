@@ -20,9 +20,8 @@ typedef enum {
 	EVENT_LAUNCH_ACCEL,
 	EVENT_INJ_OPEN,
 	EVENT_ACT_DELAY_ELAPSED,
-	EVENT_RECOVERY_RATE, // This is event recovery log rate timer event
-	EVENT_SLEEP_RATE, // get into sleep rate
-	EVENT_RESET
+	EVENT_RECOVERY_START, // This is event recovery log rate timer event
+	EVENT_SLEEP_START // get into sleep rate
 } flight_phase_event_t;
 
 typedef struct {
@@ -55,11 +54,6 @@ flight_phase_event_t flight_phase_get_next_event(void);
  */
 fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t curr_state,
 									  flight_phase_ctx_t *p_ctx);
-
-/**
- * Resets the flight phase state machine to initial state
- */
-w_status_t flight_phase_reset(void);
 
 /**
  * @brief Reports the current status of the flight phase module

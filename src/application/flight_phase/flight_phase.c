@@ -15,16 +15,14 @@
 static const uint32_t ACT_DELAY_MS =
 	7000; // Q - the minimum time after launch before allowing canards to actuate
 
+// TODO: updated once better times are out
 static const uint32_t RECOVERY_LOG_TIMEOUT_MS =
 	300000; // K - the approximate time between launch and 2+ minute after nominal flight.
 // This is done to make sure we exit high rate logging
 
-// TODO:
 // to be matched with main at apogee time
 static const uint32_t SLEEPY_LOG_TIMEOUT_MS =
 	1600000; // K - the approximate time between launch and main at apogee launch to land time
-
-// go to idle log rate
 
 // #define TASK_TIMEOUT_MS 1000
 
@@ -101,14 +99,11 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 		case EVENT_ACT_DELAY_ELAPSED:
 			flight_phase_status.event_counts.act_delay_elapsed++;
 			break;
-		case EVENT_RECOVERY_RATE:
+		case EVENT_RECOVERY_START:
 			flight_phase_status.event_counts.recovery_rate++;
 			break;
-		case EVENT_SLEEP_RATE:
+		case EVENT_SLEEP_START:
 			flight_phase_status.event_counts.sleep_rate++;
-			break;
-		case EVENT_RESET:
-			flight_phase_status.event_counts.reset++;
 			break;
 		default:
 			// Unexpected event type
@@ -125,7 +120,7 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 
 /**
  * Global CAN callback for messages of type MSG_ACTUATOR_CMD
- * Handles OX_INJECTOR_VALVE->OPEN and PROC_ESTIMATOR_INIT->OPEN
+ * Handles OX_INJECTOR_VALVE->OPEN and CANARD_PAD_FILTER->OPEN
  */
 static w_status_t act_cmd_callback(const can_msg_t *msg) {
 	can_actuator_id_t msg_id;
@@ -153,13 +148,6 @@ flight_phase_event_t flight_phase_get_next_event(void) {
 		return EVENT_NONE;
 	}
 	return queue_event;
-}
-
-/**
- * Resets the flight phase state machine to initial state
- */
-w_status_t flight_phase_reset(void) {
-	return flight_phase_send_event(EVENT_RESET);
 }
 
 /**
@@ -229,7 +217,6 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 				// record timestamp of actuation-allowed start (aka we just exited boost phase)
 				timer_get_ms(&(p_ctx->act_allowed_timestamp_ms));
 
-				// these are backup functions to make sure in case we miss a timer
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -237,7 +224,7 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 			break;
 
 		case STATE_ACT_ALLOWED:
-			if (EVENT_RECOVERY_RATE == event) {
+			if (EVENT_RECOVERY_START == event) {
 				new_state = STATE_RECOVERY;
 
 			} else {
@@ -247,7 +234,7 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 			break;
 
 		case STATE_RECOVERY:
-			if (EVENT_SLEEP_RATE == event) {
+			if (EVENT_SLEEP_START == event) {
 				new_state = STATE_SLEEPY;
 			} else {
 				// Ignore redundant or unexpected events - already in flight
@@ -262,12 +249,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 		// deprecate time?
 		case STATE_ERROR:
-			if (EVENT_RESET == event) {
-				new_state = STATE_IDLE;
-			} else {
-				// Stay in error state, log repeated invalid event
-				log_text(1, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
-			}
+			// Stay in error state, log repeated invalid event
+			log_text(1, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
 			break;
 		default:
 			log_text(10, "FlightPhase", "Unhandled state %d", curr_state);
@@ -327,14 +310,14 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
 		// act recovery state
 		case STATE_ACT_ALLOWED:
 			if (RECOVERY_LOG_TIMEOUT_MS <= launch_elapsed_time_ms) {
-				output_state = EVENT_RECOVERY_RATE;
+				output_state = EVENT_RECOVERY_START;
 			}
 			break;
 
 		// act sleep state
 		case STATE_RECOVERY:
 			if (SLEEPY_LOG_TIMEOUT_MS <= launch_elapsed_time_ms) {
-				output_state = EVENT_SLEEP_RATE;
+				output_state = EVENT_SLEEP_START;
 			}
 			break;
 
