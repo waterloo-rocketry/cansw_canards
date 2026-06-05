@@ -173,23 +173,6 @@ w_status_t sd_card_file_create(const char *file_name) {
 	return W_SUCCESS;
 }
 
-// commenting this out to prevent accidentally deleting files somehow
-// w_status_t sd_card_file_delete(char *file_name) {
-//     /* Acquire the mutex. */
-//     if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
-//         return W_FAILURE;
-//     }
-
-//     FRESULT res;
-//     res = f_unlink(file_name);
-//     xSemaphoreGive(sd_mutex);
-
-//     if (res != FR_OK) {
-//         return W_FAILURE;
-//     }
-//     return W_SUCCESS;
-// }
-
 w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 	/*
 	 * It uses HAL_SD_GetCardState() on the SD handle (&hsd1) to check if the card is in the
