@@ -66,26 +66,26 @@ static power_handler_status_t power_handler_status = {0};
 static w_status_t power_actuator_callback(const can_msg_t *msg) {
 	// TO DO: Uncomment the code once 5V external and low power mode commands are merged to main
 	// TO DO: find out what pins to get information from in new board
-	// if (get_actuator_id(msg) == CANARD_5V_OUTPUT && get_cmd_actuator_state(msg) == ACT_STATE_ON)
-	// {
-	//     return power_handler_set_5V_external(true); // turn on 5V external
-	// }
-	// else if (get_actuator_id(msg) == CANARD_5V_OUTPUT && get_cmd_actuator_state(msg) ==
-	// ACT_STATE_OFF) {
-	//     return power_handler_set_5V_external(false); // turn off 5V external
-	// }
-	// else if (get_actuator_id(msg) == CANARD_LIPO_ON && get_cmd_actuator_state(msg) ==
-	// ACT_STATE_ON) {
-	//     // enable LiPo via GPIO
-	// 	power_handler_status.low_power_mode = false; // turn off low power
-	// 	return gpio_write(GPIO_PIN_LIPO, GPIO_LEVEL_HIGH, 5);
-	// }
-	// else if (get_actuator_id(msg) == CANARD_LIPO_ON && get_cmd_actuator_state(msg) ==
-	// ACT_STATE_OFF) {
-	//     // TODO: disable LiPo via GPIO
-	// 	power_handler_status.low_power_mode = true; // turn on low power
-	// 	return gpio_write(GPIO_PIN_LIPO, GPIO_LEVEL_LOW, 5);
-	// }
+	if (get_actuator_id(msg) == CANARD_5V_OUTPUT && get_cmd_actuator_state(msg) == ACT_STATE_ON)
+	{
+	    return power_handler_set_5V_external(true); // turn on 5V external
+	}
+	else if (get_actuator_id(msg) == CANARD_5V_OUTPUT && get_cmd_actuator_state(msg) ==
+	ACT_STATE_OFF) {
+	    return power_handler_set_5V_external(false); // turn off 5V external
+	}
+	else if (get_actuator_id(msg) == CANARD_LIPO_ON && get_cmd_actuator_state(msg) ==
+	ACT_STATE_ON) {
+	    // enable LiPo via GPIO
+		power_handler_status.low_power_mode = false; // turn off low power
+		return gpio_write(GPIO_PIN_LIPO, GPIO_LEVEL_HIGH, 5);
+	}
+	else if (get_actuator_id(msg) == CANARD_LIPO_ON && get_cmd_actuator_state(msg) ==
+	ACT_STATE_OFF) {
+	    // TODO: disable LiPo via GPIO
+		power_handler_status.low_power_mode = true; // turn on low power
+		return gpio_write(GPIO_PIN_LIPO, GPIO_LEVEL_LOW, 5);
+	}
 	(void)msg;
 	return W_SUCCESS;
 }
@@ -151,22 +151,22 @@ uint32_t power_handler_get_status(void) {
 	uint32_t adc_value = 0;
 
 	// TO DO: Configure the fault pins so this following code works
-	// gpio_level_t flt1 = GPIO_LEVEL_HIGH;
-	// gpio_level_t flt2 = GPIO_LEVEL_HIGH;
+	gpio_level_t flt1 = GPIO_LEVEL_HIGH;
+	gpio_level_t flt2 = GPIO_LEVEL_HIGH;
 
-	// gpio_read(BAT_FLT1, &flt1, 5);
-	// gpio_read(BAT_FLT2, &flt2, 5);
+	gpio_read(BAT_FLT1, &flt1, 5);
+	gpio_read(BAT_FLT2, &flt2, 5);
 
-	// if (flt1 == GPIO_LEVEL_LOW)
-	// {
-	// 	status_bitfield |= 1;
-	// 	power_handler_status.fault_bat1 = true;
-	// }
-	// if (flt2 == GPIO_LEVEL_LOW)
-	// {
-	// 	status_bitfield |= 1;
-	// 	power_handler_status.fault_bat2 = true;
-	// }
+	if (flt1 == GPIO_LEVEL_LOW)
+	{
+		status_bitfield |= 1;
+		power_handler_status.fault_bat1 = true;
+	}
+	if (flt2 == GPIO_LEVEL_LOW)
+	{
+		status_bitfield |= 1;
+		power_handler_status.fault_bat2 = true;
+	}
 
 	if (power_handler_status.external_5v_enabled) {
 		if (adc_get_value(ISENS_5V, &adc_value, TASK_DELAY_MS) == W_SUCCESS) {
