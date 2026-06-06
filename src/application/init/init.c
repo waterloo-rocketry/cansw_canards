@@ -22,6 +22,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
@@ -93,6 +94,7 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
+	status |= lsm6dsv32x_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
