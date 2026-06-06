@@ -1,6 +1,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
+#include "timers.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
@@ -9,26 +10,23 @@
 #include "message_types.h"
 #include "power_handler.h"
 #include "rocketlib/include/common.h"
-#include "rocketlib/include/timing_util.h"
 
-// TODO: add thresholds for various components
 // LiPo Thresholds
-static const uint32_t VBAT_MIN = 10;
-static const uint32_t VBAT_MAX = 10;
-static const uint32_t IBAT_MAX = 10;
+static const uint32_t VBAT_MIN = 22.2;
+static const uint32_t VBAT_MAX = 25.4;
+static const uint32_t IBAT_MAX = 8000; // 8A in mA
 
 // Rocket Thresholds
-static const uint32_t VRKT_MIN = 10;
-static const uint32_t VRKT_MAX = 10;
+static const uint32_t VRKT_MIN = 11.1;
+static const uint32_t VRKT_MAX = 12.8;
 
 // Charge Line Thresholds
-static const uint32_t VCHG_MIN = 10;
-static const uint32_t VCHG_MAX = 10;
+static const uint32_t VCHG_MIN = 9;
+static const uint32_t VCHG_MAX = 14;
 
-// 5V External Thresholds
-static const uint32_t V5V_EXTERNAL_MIN = 10;
-static const uint32_t V5V_EXTERNAL_MAX = 10;
-static const uint32_t I5V_EXTERNAL_MAX = 10;
+// power rail thresholds (mA)
+static const uint32_t I3V3_MAX = 500; 
+static const uint32_t I5V_MAX = 4000; 
 
 // TODO: Get the correct number for task delay.
 #define TASK_DELAY_MS 3000
