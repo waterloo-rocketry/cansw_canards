@@ -2,7 +2,6 @@
 #ifndef NAVIGATOR_H
 #define NAVIGATOR_H
 
-#include "application/estimator/estimator_types.h"
 #include "application/fsm/fsm.h"
 #include "common/gnc/gnc_types.h"
 #include "common/math/math.h"
@@ -38,16 +37,17 @@ typedef struct {
  */
 w_status_t navigator_init();
 
-/**
- * @brief Sends the complete state estimation data over CAN.
- *
- * Iterates through each state ID, builds a CAN message for it using the
- * current state data, and transmits it.
- *
- * @param current_state Pointer to the current state estimation data (x_state_t).
- * @return W_SUCCESS if all messages were sent successfully, W_FAILURE otherwise.
- */
-w_status_t navigator_log_state_to_can(const x_state_t *current_state);
+// TODO: to be REVIVED
+// /**
+//  * @brief Sends the complete state estimation data over CAN.
+//  *
+//  * Iterates through each state ID, builds a CAN message for it using the
+//  * current state data, and transmits it.
+//  *
+//  * @param current_state Pointer to the current state estimation data (x_state_t).
+//  * @return W_SUCCESS if all messages were sent successfully, W_FAILURE otherwise.
+//  */
+// w_status_t navigator_log_state_to_can(const x_state_t *current_state);
 
 /**
  * @brief Report navigator module health status

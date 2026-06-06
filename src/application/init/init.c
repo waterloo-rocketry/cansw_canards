@@ -10,7 +10,6 @@
 #include "GNC_codegen_initialize.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
-#include "application/estimator/ekf.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"

@@ -139,39 +139,40 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, const navigator_input_t
 	return W_SUCCESS;
 }
 
-w_status_t navigator_log_state_to_can(const x_state_t *current_state) {
-	can_msg_t msg;
-	uint32_t current_time_ms;
-	w_status_t status = W_SUCCESS;
+// TODO: to be revived
+// w_status_t navigator_log_state_to_can(const x_state_t *current_state) {
+// 	can_msg_t msg;
+// 	uint32_t current_time_ms;
+// 	w_status_t status = W_SUCCESS;
 
-	if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
-		current_time_ms = 0; // Default to 0 if timer fails
-	}
-	uint16_t timestamp_16bit = (uint16_t)current_time_ms;
+// 	if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
+// 		current_time_ms = 0; // Default to 0 if timer fails
+// 	}
+// 	uint16_t timestamp_16bit = (uint16_t)current_time_ms;
 
-	// TODO: Redo how messages are built and sent
-	// Iterate through all defined state IDs
-	// for (can_state_est_id_t state_id = 0; state_id < STATE_ID_ENUM_MAX; ++state_id) {
-	// 	// The x_state_t union maps directly to the enum order if accessed as an array
-	// 	// Convert the doubles in x_state_t to floats for CAN message
-	// 	float state_value = (float)current_state->array[state_id];
+// 	// TODO: Redo how messages are built and sent
+// 	// Iterate through all defined state IDs
+// 	for (can_state_est_id_t state_id = 0; state_id < STATE_ID_ENUM_MAX; ++state_id) {
+// 		// The x_state_t union maps directly to the enum order if accessed as an array
+// 		// Convert the doubles in x_state_t to floats for CAN message
+// 		float state_value = (float)current_state->array[state_id];
 
-	// 	if (!build_state_est_data_msg(PRIO_LOW, timestamp_16bit, state_id, &state_value, &msg)) {
-	// 		log_text(0, "Estimator", "Failed to build CAN message for state ID %d", state_id);
-	// 		estimator_error_stats.can_log_fails++;
-	// 		status = W_FAILURE; // Mark as failure but continue trying other states
-	// 		continue;
-	// 	}
+// 		if (!build_state_est_data_msg(PRIO_LOW, timestamp_16bit, state_id, &state_value, &msg)) {
+// 			log_text(0, "Estimator", "Failed to build CAN message for state ID %d", state_id);
+// 			estimator_error_stats.can_log_fails++;
+// 			status = W_FAILURE; // Mark as failure but continue trying other states
+// 			continue;
+// 		}
 
-	// 	if (W_SUCCESS != can_handler_transmit(&msg)) {
-	// 		log_text(0, "Estimator", "Failed to transmit CAN message for state ID %d", state_id);
-	// 		estimator_error_stats.can_log_fails++;
-	// 		status = W_FAILURE; // Mark as failure but continue trying other states
-	// 	}
-	// }
+// 		if (W_SUCCESS != can_handler_transmit(&msg)) {
+// 			log_text(0, "Estimator", "Failed to transmit CAN message for state ID %d", state_id);
+// 			estimator_error_stats.can_log_fails++;
+// 			status = W_FAILURE; // Mark as failure but continue trying other states
+// 		}
+// 	}
 
-	return status;
-}
+// 	return status;
+// }
 
 uint32_t navigator_get_status(void) {
 	uint32_t status_bitfield = 0;
