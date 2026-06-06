@@ -25,6 +25,7 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#include "drivers/MS5611/MS5611.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -52,6 +53,51 @@ const uint32_t movella_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
+
+static void ms5611_frequency_test(void) {
+	w_status_t status = ms5611_init();
+	if (status != W_SUCCESS) {
+		log_text(10, "ms5611_test", "Failed to initialize MS5611");
+		return;
+	}
+
+	ms5611_raw_result_t result = {0};
+	uint32_t read_count = 0;
+	TickType_t xLastWakeTime = xTaskGetTickCount();
+	const TickType_t period_ticks = pdMS_TO_TICKS(5); // 5ms for 200Hz
+
+	while (1) {
+		uint32_t timestamp_ms;
+		if (ms5611_get_raw_pressure(&result, &timestamp_ms) == W_SUCCESS) {
+			read_count++;
+			log_text(1,
+					 "ms5611_test",
+					 "Read %lu: P=%ld mbar, T=%ld C, Timestamp: %lu ms",
+					 read_count,
+					 result.pressure_centimbar / 100,
+					 result.temperature_centideg / 100,
+					 timestamp_ms);
+		} else {
+			log_text(1, "ms5611_test", "Read failed");
+		}
+
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+		log_text(1, "ms5611_test", "random stuff...");
+
+		vTaskDelayUntil(&xLastWakeTime, period_ticks);
+	}
+}
 
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
@@ -141,6 +187,8 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
+
+	ms5611_frequency_test();
 
 	// its blinky now
 	while (1) {

@@ -75,6 +75,6 @@ typedef struct {
 
 w_status_t ms5611_init(void);
 void ms5611_deinit(void);
-w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t timestamp_ms);
+w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms);
 
 #endif // MS5611_H

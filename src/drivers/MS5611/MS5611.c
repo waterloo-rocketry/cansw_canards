@@ -37,7 +37,7 @@ static const int16_t second_comp_extreme_temp_threshold =
 
 // modify this struct to toggle barometer settings
 static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom read
-								 .bus = I2C_BUS_4,
+								 .bus = I2C_BUS_5,
 								 .addr =
 									 MS5611_ADDRESS_CSB_LOW, // according to canard board schematic,
 															 // CSB is tied to GND, so addr is 0x77
@@ -120,8 +120,7 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 		}
 	}
 	n_rem = (0x000F & (n_rem >> 12)); /* get rem */
-	n_prom[7] = crc_read; /* set crc read */
-	n_rem ^= 0x00; /* xor */
+	n_prom[7] = (0xFF00U & crc_read); /* set crc read */
 
 	if (n_rem != crc) {
 		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
@@ -212,7 +211,7 @@ void ms5611_deinit(void) {
  * @note see MS5611 datasheet page 7 - 8 for details on the calculation
  * (temperature in centidegrees prom_coef, pressure in centimbar)
  */
-w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t timestamp_ms) {
+w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
 	uint32_t d1, d2; /* d1 is raw pressure reading, d2 is raw temperature reading */
 	int32_t dt, temp; /* dt is temperature difference, temp is compensated temperature */
 	int64_t off, sens, p; /* prom coefficients for first order */
