@@ -10,6 +10,7 @@
 #include "message_types.h"
 #include "power_handler.h"
 #include "rocketlib/include/common.h"
+#include "drivers/timer/timer.h"
 
 // LiPo Thresholds
 static const uint32_t VBAT_MIN = 22.2;
@@ -259,7 +260,7 @@ uint32_t power_handler_get_status(void) {
 
 	if (power_handler_status.external_5v_enabled) {
 		if (adc_get_converted_val(ISENS_5V, &adc_value) == W_SUCCESS) {
-			if (adc_value > I5V_EXTERNAL_MAX) {
+			if (adc_value > I5V_MAX) {
 				status_bitfield |= FAULT_5V_EXT_CURR;
 			}
 		}
