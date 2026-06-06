@@ -17,59 +17,30 @@ static uint16_t adc1_dma_counts[ADC1_NUM_CHANNELS];
 static uint16_t adc2_dma_counts[ADC2_NUM_CHANNELS];
 static uint16_t adc3_dma_counts[ADC3_NUM_CHANNELS];
 
+typedef struct {
+	uint16_t *buffer; // DMA buffer
+	uint8_t rank; // rank index (see cubemx)
+	float conv_factor; // circuit scaling factor
+	uint32_t max_counts;
+} adc_channel_desc_t;
+
+static adc_channel_desc_t adc_map[ADC_CHANNEL_COUNT] = {
+	[VSENS_BAT1] = {adc1_dma_counts, 0, 11.0f, ADC1_MAX_COUNTS},
+	[VSENS_BAT2] = {adc1_dma_counts, 1, 11.0f, ADC1_MAX_COUNTS},
+	[VSENS_RKT] = {adc1_dma_counts, 2, 6.2356f, ADC1_MAX_COUNTS},
+	[ISENS_BAT2] = {adc1_dma_counts, 3, 11111.1f, ADC1_MAX_COUNTS},
+	[ISENS_BAT1] = {adc1_dma_counts, 4, 11111.1f, ADC1_MAX_COUNTS},
+	[VSENS_CHG] = {adc2_dma_counts, 0, 6.2356f, ADC2_MAX_COUNTS},
+	[VSENS_USB] = {adc2_dma_counts, 1, 2.0f, ADC2_MAX_COUNTS},
+	[ISENS_3V3] = {adc3_dma_counts, 0, 2000.0f, ADC3_MAX_COUNTS},
+	[ISENS_5V] = {adc3_dma_counts, 1, 2000.0f, ADC3_MAX_COUNTS},
+};
+
 static ADC_HandleTypeDef *adc1_handle;
 static ADC_HandleTypeDef *adc2_handle;
 static ADC_HandleTypeDef *adc3_handle;
 
 static adc_error_data_t adc_error_stats = {0};
-
-static const uint16_t *const channel_to_buffer[ADC_CHANNEL_COUNT] = {
-	[VSENS_BAT1] = adc1_dma_counts,
-	[VSENS_BAT2] = adc1_dma_counts,
-	[VSENS_RKT] = adc1_dma_counts,
-	[ISENS_BAT2] = adc1_dma_counts,
-	[ISENS_BAT1] = adc1_dma_counts,
-	[VSENS_CHG] = adc2_dma_counts,
-	[VSENS_USB] = adc2_dma_counts,
-	[ISENS_3V3] = adc3_dma_counts,
-	[ISENS_5V] = adc3_dma_counts,
-};
-
-static const uint32_t channel_to_max_counts[ADC_CHANNEL_COUNT] = {
-	[VSENS_BAT1] = ADC1_MAX_COUNTS,
-	[VSENS_BAT2] = ADC1_MAX_COUNTS,
-	[VSENS_RKT] = ADC1_MAX_COUNTS,
-	[ISENS_BAT2] = ADC1_MAX_COUNTS,
-	[ISENS_BAT1] = ADC1_MAX_COUNTS,
-	[VSENS_CHG] = ADC2_MAX_COUNTS,
-	[VSENS_USB] = ADC2_MAX_COUNTS,
-	[ISENS_3V3] = ADC3_MAX_COUNTS,
-	[ISENS_5V] = ADC3_MAX_COUNTS,
-};
-
-static const uint32_t channel_to_rank[ADC_CHANNEL_COUNT] = {[VSENS_BAT1] = 0,
-															[VSENS_BAT2] = 1,
-															[VSENS_RKT] = 2,
-															[ISENS_BAT2] = 3,
-															[ISENS_BAT1] = 4,
-															[VSENS_CHG] = 0,
-															[VSENS_USB] = 1,
-															[ISENS_3V3] = 0,
-															[ISENS_5V] = 1};
-
-static const float conversion_table[ADC_CHANNEL_COUNT] = {
-	// Voltage Multipliers (V)
-	[VSENS_BAT1] = 11.0f,
-	[VSENS_BAT2] = 11.0f,
-	[VSENS_RKT] = 6.2356f,
-	[VSENS_CHG] = 6.2356f,
-	[VSENS_USB] = 2.0f,
-
-	// Current multipliers (mA)
-	[ISENS_BAT1] = 11111.1f,
-	[ISENS_BAT2] = 11111.1f,
-	[ISENS_3V3] = 2000.0f,
-	[ISENS_5V] = 2000.0f};
 
 w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_HandleTypeDef *hadc3) {
 	if (NULL == hadc1 || NULL == hadc2 || NULL == hadc3) {
@@ -116,16 +87,16 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
 		return W_INVALID_PARAM;
 	}
 
-	uint32_t rank = channel_to_rank[channel];
-	const uint16_t *buffer = channel_to_buffer[channel];
+	const adc_channel_desc_t *adc_desc = &adc_map[channel];
 
-	taskENTER_CRITICAL();
+	if (NULL == adc_desc->buffer) {
+		adc_error_stats.invalid_channels++;
+		return W_INVALID_PARAM;
+	}
 
-	*output = buffer[rank];
+	*output = adc_desc->buffer[adc_desc->rank];
 
-	taskEXIT_CRITICAL();
-
-	if (*output > channel_to_max_counts[channel]) {
+	if (*output > adc_desc->max_counts) {
 		adc_error_stats.overflow_errors++;
 		return W_OVERFLOW;
 	}
@@ -146,7 +117,9 @@ static w_status_t adc_get_raw_volts(adc_channel_t channel, float *output) {
 		return status;
 	}
 
-	*output = ((float)counts / channel_to_max_counts[channel]) * V_REF;
+	const adc_channel_desc_t *adc_desc = &adc_map[channel];
+
+	*output = ((float)counts / adc_desc->max_counts) * V_REF;
 
 	return W_SUCCESS;
 }
@@ -158,7 +131,9 @@ w_status_t adc_get_converted_val(adc_channel_t channel, float *output) {
 		return status;
 	}
 
-	*output = raw_volts * conversion_table[channel];
+	const adc_channel_desc_t *adc_desc = &adc_map[channel];
+
+	*output = raw_volts * adc_desc->conv_factor;
 	return W_SUCCESS;
 }
 
