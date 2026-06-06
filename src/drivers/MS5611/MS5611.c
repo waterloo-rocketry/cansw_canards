@@ -1,4 +1,5 @@
 #include "drivers/MS5611/MS5611.h"
+#include "drivers/timer/timer.h"
 
 /* Conversion time in microseconds - max values from datasheet for safety */
 static const uint32_t CONV_TIME_US[] = {
@@ -40,7 +41,8 @@ static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom 
 								 .addr =
 									 MS5611_ADDRESS_CSB_LOW, // according to canard board schematic,
 															 // CSB is tied to GND, so addr is 0x77
-								 .osr = MS5611_OSR_1024,
+								 .osr_pressure = MS5611_OSR_1024,
+								 .osr_temperature = MS5611_OSR_256,
 								 .initialized = false};
 
 /**
@@ -210,11 +212,16 @@ void ms5611_deinit(void) {
  * @note see MS5611 datasheet page 7 - 8 for details on the calculation
  * (temperature in centidegrees prom_coef, pressure in centimbar)
  */
-w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
+w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t timestamp_ms) {
 	uint32_t d1, d2; /* d1 is raw pressure reading, d2 is raw temperature reading */
 	int32_t dt, temp; /* dt is temperature difference, temp is compensated temperature */
 	int64_t off, sens, p; /* prom coefficients for first order */
 	int64_t T2, off2, sens2; /* second-order compensation terms */
+
+	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
+		log_text(1, "ms5611", "ERROR: failed to get timestamp");
+		return W_FAILURE;
+	}
 
 	if (NULL == result) {
 		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
@@ -227,12 +234,12 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 	}
 
 	/* D2: temperature conversion */
-	if (W_FAILURE == a_write_cmd(D2_CMD[handle.osr])) {
+	if (W_FAILURE == a_write_cmd(D2_CMD[handle.osr_temperature])) {
 		log_text(1, "ms5611", "ERROR: failed to write temperature conversion command");
 		return W_IO_ERROR;
 	}
 
-	delay_us(CONV_TIME_US[handle.osr]);
+	delay_us(CONV_TIME_US[handle.osr_temperature]); // 600 us
 
 	if (W_FAILURE == a_read_adc(&d2)) {
 		log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
@@ -240,12 +247,12 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 	}
 
 	/* D1: pressure conversion */
-	if (W_FAILURE == a_write_cmd(D1_CMD[handle.osr])) {
+	if (W_FAILURE == a_write_cmd(D1_CMD[handle.osr_pressure])) {
 		log_text(1, "ms5611", "ERROR: failed to write pressure conversion command");
 		return W_IO_ERROR;
 	}
 
-	delay_us(CONV_TIME_US[handle.osr]);
+	delay_us(CONV_TIME_US[handle.osr_pressure]); // 2280 us
 
 	if (W_FAILURE == a_read_adc(&d1)) {
 		log_text(1, "ms5611", "ERROR: failed to read pressure ADC");
@@ -255,7 +262,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 	/* First-order compensation */
 	dt = (int32_t)d2 - ((int32_t)handle.prom_coef[MS5611_COEFF_TREF] << 8);
 	temp = second_comp_temp_threshold +
-		   (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
+		   ((int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23));
 	off = ((int64_t)handle.prom_coef[MS5611_COEFF_OFF] << 16) +
 		  (((int64_t)handle.prom_coef[MS5611_COEFF_TCO] * dt) >> 7);
 	sens = ((int64_t)handle.prom_coef[MS5611_COEFF_SENS] << 15) +
@@ -279,8 +286,8 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 		if (temp < second_comp_extreme_temp_threshold) {
 			off2 += 7 * (int64_t)(temp - second_comp_extreme_temp_threshold) *
 					(temp - second_comp_extreme_temp_threshold);
-			sens2 += 11 * (int64_t)((temp - second_comp_extreme_temp_threshold) *
-									(temp - second_comp_extreme_temp_threshold)) >>
+			sens2 += (11 * (int64_t)((temp - second_comp_extreme_temp_threshold) *
+									(temp - second_comp_extreme_temp_threshold))) >>
 					 1;
 		}
 
@@ -291,6 +298,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result) {
 
 	result->temperature_centideg = temp;
 	result->pressure_centimbar = (int32_t)p;
+	timestamp_ms += CONV_TIME_US[handle.osr_pressure] / 1000 + CONV_TIME_US[handle.osr_temperature] / 1000; // account for conversion time in timestamp
 
 	return W_SUCCESS;
 }

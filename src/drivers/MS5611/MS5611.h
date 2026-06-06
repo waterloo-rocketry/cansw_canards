@@ -61,7 +61,8 @@ typedef struct {
 	ms5611_address_t addr;
 
 	/* Selected OSR for pressure and temperature conversions */
-	ms5611_osr_t osr;
+	ms5611_osr_t osr_pressure;
+	ms5611_osr_t osr_temperature;
 
 	/* Set true once init succeeds */
 	bool initialized;
@@ -74,6 +75,6 @@ typedef struct {
 
 w_status_t ms5611_init(void);
 void ms5611_deinit(void);
-w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result);
+w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t timestamp_ms);
 
 #endif // MS5611_H
