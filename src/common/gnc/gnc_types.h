@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include "application/controller/gain_table.h"
-#include "common/math/math.h" // TODO: this file should be cleaned up during gnc impl this year
+#include "common/math/math.h"
 #include "third_party/rocketlib/include/common.h"
 
 // ---------- SENSOR TYPES ----------
@@ -41,13 +41,13 @@ typedef struct {
 	vector3d_t accel;
 	vector3d_t gyro;
 	bool is_dead;
-} navigator_imu_meas_t;
+} navigator_board_imu_meas_t;
 
 /**
  * @brief LSM6DSV32X (32G IMU), MS5611 (High-alt Barometer), and LSM303AGR (Compass) measurements
  */
 typedef struct {
-	navigator_imu_meas_t board_imu; // m/s^2 and rad/s
+	navigator_board_imu_meas_t board_imu; // m/s^2 and rad/s
 	navigator_1d_meas_t board_baro; // Pa
 	navigator_3d_meas_t board_mag; // gauss
 } navigator_board_meas_t;
