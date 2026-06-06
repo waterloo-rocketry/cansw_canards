@@ -91,7 +91,7 @@ TEST_F(Lsm6dsv32xTest, InitFailBySanityCheck) {
     EXPECT_EQ(lsm6dsv32x_init(), W_FAILURE);
 }
 
-TEST_F(Lsm6dsv32xTest, GetGyroAccDataFailsIfDataIsNotReady) {
+TEST_F(Lsm6dsv32xTest, GetGyroAccDataEvenIfNotFresh) {
     // Arrange
     // set up init
     i2c_write_reg_fake.return_val = W_SUCCESS;
@@ -112,7 +112,7 @@ TEST_F(Lsm6dsv32xTest, GetGyroAccDataFailsIfDataIsNotReady) {
     w_status_t status = lsm6dsv32x_get_gyro_acc_data(&acc_data, &gyro_data, &raw_acc, &raw_gyro);
 
     // Assert
-    EXPECT_EQ(status, W_IO_ERROR);
+    EXPECT_EQ(status, W_SUCCESS);
 }
 
 

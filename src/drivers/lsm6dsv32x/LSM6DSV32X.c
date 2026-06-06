@@ -33,7 +33,6 @@ typedef struct {
 	uint8_t dev_addr;
 	uint8_t dual_buffer[2][12];
 	uint32_t timestamp_ms[2];
-	volatile lsm6dsv32x_data_state_t stale_data;
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
 
@@ -106,8 +105,6 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 	memcpy(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER],
 		   lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER],
 		   CTX_BUFFER_SIZE);
-
-	lsm6dsv32x_ctx.stale_data = LSM6DSV32X_DATA_READY;
 }
 
 /**
@@ -121,7 +118,6 @@ w_status_t lsm6dsv32x_init() {
 		return W_FAILURE;
 	}
 	lsm6dsv32x_ctx.hi2c = &hi2c1;
-	lsm6dsv32x_ctx.stale_data = LSM6DSV32X_DATA_STALE;
 
 	w_status_t status = W_SUCCESS;
 
@@ -251,15 +247,12 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
-	if ((LSM6DSV32X_DATA_READY == lsm6dsv32x_ctx.stale_data) && lsm6dsv32x_ctx.switched_callback) {
+	if (lsm6dsv32x_ctx.switched_callback) {
 		taskENTER_CRITICAL();
 
 		// enter a critical section while copying the data
 		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER], CTX_BUFFER_SIZE);
 		raw_acc->timestamp_ms = lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER];
-
-		// set current data to stale once the buffer is read and copied into the function
-		lsm6dsv32x_ctx.stale_data = LSM6DSV32X_DATA_STALE;
 
 		taskEXIT_CRITICAL();
 
