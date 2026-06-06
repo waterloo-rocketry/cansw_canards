@@ -297,7 +297,8 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 
 	result->temperature_centideg = temp;
 	result->pressure_centimbar = (int32_t)p;
-	timestamp_ms += CONV_TIME_US[handle.osr_pressure] / 1000 + CONV_TIME_US[handle.osr_temperature] / 1000; // account for conversion time in timestamp
+
+	*timestamp_ms += ((CONV_TIME_US[handle.osr_pressure] / 1000) + (CONV_TIME_US[handle.osr_temperature] / 1000)); // account for conversion time in timestamp
 
 	return W_SUCCESS;
 }
