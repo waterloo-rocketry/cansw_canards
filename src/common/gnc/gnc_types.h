@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include "application/controller/gain_table.h"
-#include "common/math/math.h"// TODO: this file should be cleaned up during gnc impl this year
+#include "common/math/math.h" // TODO: this file should be cleaned up during gnc impl this year
 #include "third_party/rocketlib/include/common.h"
 
 // ---------- SENSOR TYPES ----------
@@ -26,7 +26,7 @@ typedef struct {
 	bool is_dead;
 } estimator_imu_measurement_t;
 
-// All of the units are follows m/s^2, rad/s, Pa, gauss
+// Units are as follows: m/s^2, rad/s, Pa, gauss.
 typedef struct {
 	float64_t meas;
 	bool is_dead;
