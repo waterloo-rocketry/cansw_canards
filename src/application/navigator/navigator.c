@@ -1,12 +1,12 @@
-#include "math.h"
-
 #include "FreeRTOS.h"
+#include "math.h"
 #include "queue.h"
 #include "semphr.h"
 #include "task.h"
 
 #include "canlib.h"
 
+#include "GNC_codegen.h"
 #include "application/can_handler/can_handler.h"
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
@@ -48,8 +48,9 @@ w_status_t navigator_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t navigator_step(navigator_module_ctx_t *p_ctx, const navigator_input_t *p_input,
-						  const all_sensors_data_t *p_sensor_data, navigator_output_t *p_output) {
+w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p_codegen_stack_data,
+						  const navigator_input_t *p_input, const all_sensors_data_t *p_sensor_data,
+						  navigator_output_t *p_output) {
 	// calculate remainder navigator data
 	float64_t dt_sec =
 		((p_input->curr_timestamp_tenth_ms) - (p_ctx->last_run_tenth_ms)) * TENTH_MS_TO_SEC;
@@ -116,7 +117,8 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, const navigator_input_t
 
 	navigator_codegen_ctx_t output_ctx = {0};
 
-	navigation_codegen_entry(dt_sec,
+	navigation_codegen_entry(p_codegen_stack_data,
+							 dt_sec,
 							 in_flight_phase,
 							 p_ctx->codegen_ctx.x,
 							 p_ctx->codegen_ctx.P,
@@ -127,7 +129,6 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, const navigator_input_t
 							 output_ctx.P,
 							 &(output_ctx.bias),
 							 &(output_ctx.sensor_filter),
-							 // TEMP INPUTS
 							 &(p_output->cov_norm),
 							 &(p_output->airdata),
 							 p_output->roll_state);

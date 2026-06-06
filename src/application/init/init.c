@@ -7,7 +7,7 @@
 #include "task.h"
 #include "usart.h"
 
-#include "GNC_codegen_initialize.h"
+#include "GNC_codegen.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
@@ -68,13 +68,18 @@ static void system_init_task(void *arg) {
 	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status = W_SUCCESS; // sd_card_init();
+	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
 	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
 	}
+
+	// initialize gnc
+	GNC_codegenPersistentData gnc_code_persistent = {0};
+	GNC_codegenStackData gnc_codegen_data = {.pd = &gnc_code_persistent};
+	GNC_codegen_initialize(&gnc_codegen_data);
 
 	w_status_t status = W_SUCCESS;
 
@@ -92,7 +97,7 @@ static void system_init_task(void *arg) {
 	status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
-	status |= fsm_init();
+	status |= fsm_init(&gnc_codegen_data);
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -102,9 +107,6 @@ static void system_init_task(void *arg) {
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}
-
-	// initialize gnc
-	GNC_codegen_initialize();
 
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;

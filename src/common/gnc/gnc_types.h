@@ -9,9 +9,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "GNC_codegen_types.h"
 #include "application/fsm/fsm.h"
 #include "common/math/math.h"
-#include "navigation_codegen_entry.h"
 #include "third_party/rocketlib/include/common.h"
 
 // ---------- SENSOR TYPES ----------

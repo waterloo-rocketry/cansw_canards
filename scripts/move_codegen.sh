@@ -1,3 +1,4 @@
+rm -rf src/third_party/GNC_codegen
 cd ../closedrocket
 # git checkout codegen
 # git pull
@@ -6,3 +7,6 @@ cp -r ../closedrocket/embedded-coder/codegen/lib/GNC_codegen src/third_party
 rm -rf src/third_party/GNC_codegen/examples
 rm -rf src/third_party/GNC_codegen/html
 rm -rf src/third_party/GNC_codegen/interface
+rm src/third_party/GNC_codegen/*.mat
+rm src/third_party/GNC_codegen/*.dmr
+rm src/third_party/GNC_codegen/*.tmw

@@ -3,10 +3,10 @@
 
 #include <math.h>
 
+#include "GNC_codegen.h"
 #include "application/controller/controller.h"
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
-#include "controller_codegen_entry.h"
 
 #define DATA_WAIT_MS 10
 #define LOG_WAIT_MS 10
@@ -29,8 +29,8 @@ w_status_t controller_init(void) {
 }
 
 // helper to run 1 iteration of the controller algo, including delaying where needed.
-w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *input,
-						   controller_output_t *output) {
+w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codegen_stack_data,
+						   const controller_input_t *input, controller_output_t *output) {
 	if (NULL == ctx) {
 		log_text(LOG_WAIT_MS, "controller", "ERROR: Invalid context ptr.");
 		return W_INVALID_PARAM;
@@ -46,7 +46,8 @@ w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *inpu
 
 	controller_codegen_ctx_t output_ctx = {0};
 
-	controller_codegen_entry(flight_time_ms,
+	controller_codegen_entry(p_codegen_stack_data,
+							 flight_time_ms,
 							 dt_controller_sec,
 							 input->xR,
 							 input->pdyn,

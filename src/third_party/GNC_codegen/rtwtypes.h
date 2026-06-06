@@ -1,17 +1,5 @@
-/*
- * Academic License - for use in teaching, academic research, and meeting
- * course requirements at degree granting institutions only.  Not for
- * government, commercial, or other organizational use.
- * File: rtwtypes.h
- *
- * MATLAB Coder version            : 25.2
- * C/C++ source code generated on  : 05-Jun-2026 20:31:45
- */
-
 #ifndef RTWTYPES_H
 #define RTWTYPES_H
-
-/* Include Files */
 
 #ifndef __cplusplus
 #include <stdbool.h>
@@ -23,12 +11,12 @@ extern "C" {
 
 /*=======================================================================*
  * Target hardware information
- *   Device type: Generic->32-bit Embedded Processor
+ *   Device type: ARM Compatible->ARM Cortex-M
  *   Number of bits:     char:   8    short:   16    int:  32
  *                       long:  32
  *                       native word size:  32
- *   Byte ordering: Unspecified
- *   Signed integer division rounds to: Undefined
+ *   Byte ordering: LittleEndian
+ *   Signed integer division rounds to: Zero
  *   Shift right on a signed integer as arithmetic shift: on
  *=======================================================================*/
 
@@ -145,8 +133,3 @@ typedef struct {
 }
 #endif
 #endif
-/*
- * File trailer for rtwtypes.h
- *
- * [EOF]
- */

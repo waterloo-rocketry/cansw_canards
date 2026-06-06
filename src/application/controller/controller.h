@@ -49,13 +49,14 @@ w_status_t controller_init(void);
 /**
  * @brief run 1 step of the controller
  * @param context pointer to controller global context
+ * @param p_codegen_stack_data codegen stack data
  * @param input pointer to new inputs for this iteration
  * @param output pointer to the output struct to update with new command
  * @param launch_timestamp_ms the timestamp at which rocket launch
  * @param curr_timestamp_ms the currrent timestamp
  */
-w_status_t controller_step(controller_ctx_t *context, const controller_input_t *input,
-						   controller_output_t *output);
+w_status_t controller_step(controller_ctx_t *context, GNC_codegenStackData *p_codegen_stack_data,
+						   const controller_input_t *input, controller_output_t *output);
 
 /**
  * Controller task function for RTOS

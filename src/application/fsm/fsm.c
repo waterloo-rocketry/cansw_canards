@@ -25,6 +25,7 @@ typedef struct {
 	uint32_t timestamp_tenth_ms; // curr timestamp
 	fsm_state_t curr_state;
 	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
+	GNC_codegenStackData *codegen_stack_data;
 } fsm_ctx_t;
 
 // global
@@ -39,7 +40,7 @@ static controller_ctx_t g_controller_context = {0};
 static flight_phase_ctx_t g_flight_phase_context = {.launch_timestamp_ms = UINT32_MAX,
 													.act_allowed_timestamp_ms = UINT32_MAX};
 
-w_status_t fsm_init() {
+w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
 	// init estimator context
 	// initialize ctx timestamp to current time
 	uint32_t init_time_tenth_ms = 0;
@@ -47,6 +48,10 @@ w_status_t fsm_init() {
 		// TODO how to deal with error
 		return W_FAILURE;
 	}
+
+	// init the stack data
+	g_ctx.codegen_stack_data = codegen_stack_data;
+
 	// g_estimator_context.x.attitude = (quaternion_t){.w = 1.0, .x = 0.0, .y = 0.0, .z = 0.0};
 	// g_estimator_context.x.altitude = 420;
 	// g_estimator_context.x.CL = 3;
@@ -92,15 +97,21 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			// TODO: enter into flight filter
 			/* fall through */
 		case STATE_BOOST:
-			navigator_step(
-				p_ctx->estimator_context, &navigator_input, p_sensor_data, &navigator_output);
+			navigator_step(p_ctx->estimator_context,
+						   p_ctx->codegen_stack_data,
+						   &navigator_input,
+						   p_sensor_data,
+						   &navigator_output);
 			break;
 
 			// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
-			navigator_step(
-				p_ctx->estimator_context, &navigator_input, p_sensor_data, &navigator_output);
+			navigator_step(p_ctx->estimator_context,
+						   p_ctx->codegen_stack_data,
+						   &navigator_input,
+						   p_sensor_data,
+						   &navigator_output);
 
 			// input the navigator outputs into controller
 			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(float64_t[2]));
@@ -114,7 +125,10 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			/****************************************************************/
 
 			// roll more into input structs
-			controller_step(p_ctx->p_controller_context, &controller_input, &controller_output);
+			controller_step(p_ctx->p_controller_context,
+							p_ctx->codegen_stack_data,
+							&controller_input,
+							&controller_output);
 
 			// TODO: switch to motor handler once exists
 			/****************************************************************/

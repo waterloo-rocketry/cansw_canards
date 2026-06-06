@@ -62,12 +62,14 @@ uint32_t navigator_get_status(void);
 /**
  * @brief 1 step of navigator
  * @param ctx pointer to navigator context
+ * @param p_codegen_stack_data codegen persistent data
  * @param p_input pointer to the new navigator input
  * @param p_output pointer to navigator output to update with new results
  * @param p_sensor_data pointer to the current sensor data
  * update with new actuation info
  */
-w_status_t navigator_step(navigator_module_ctx_t *p_ctx, const navigator_input_t *p_input,
-						  const all_sensors_data_t *p_sensor_data, navigator_output_t *p_output);
+w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p_codegen_stack_data,
+						  const navigator_input_t *p_input, const all_sensors_data_t *p_sensor_data,
+						  navigator_output_t *p_output);
 
 #endif
