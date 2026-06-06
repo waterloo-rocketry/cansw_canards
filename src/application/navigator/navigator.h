@@ -2,9 +2,9 @@
 #ifndef NAVIGATOR_H
 #define NAVIGATOR_H
 
+#include "application/estimator/estimator_types.h"
 #include "application/fsm/fsm.h"
 #include "common/gnc/gnc_types.h"
-#include "application/estimator/estimator_types.h"
 #include "common/math/math.h"
 
 #include "third_party/rocketlib/include/common.h"
@@ -64,9 +64,10 @@ uint32_t navigator_get_status(void);
  * @param ctx pointer to navigator context
  * @param p_input pointer to the new navigator input
  * @param p_output pointer to navigator output to update with new results
+ * @param p_sensor_data pointer to the current sensor data
  * update with new actuation info
  */
-w_status_t navigator_step(navigator_module_ctx_t *ctx, const navigator_input_t *p_input,
-						  navigator_output_t *p_output);
+w_status_t navigator_step(navigator_module_ctx_t *p_ctx, const navigator_input_t *p_input,
+						  const all_sensors_data_t *p_sensor_data, navigator_output_t *p_output);
 
 #endif

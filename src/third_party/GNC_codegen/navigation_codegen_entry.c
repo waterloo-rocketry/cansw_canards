@@ -45,8 +45,14 @@ void navigation_codegen_entry(double dt, bool flight_phase, const double x[11],
                               const struct2_T *sens_filt,
                               const struct3_T *sens_input, double x_ret[11],
                               double P_ret[121], struct1_T *bias_ret,
-                              struct2_T *sens_filt_ret)
+                              struct2_T *sens_filt_ret,
+    // TMEP INPUTS FOR CODEGEN
+    double *conv_norm, struct0_T *airdata_out, double roll_state[2]
+  )
 {
+  (void)conv_norm;
+  (void)airdata_out;
+  (void)roll_state;
   static const double Q[121] = {
       1.0E-10, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       1.0E-10, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,

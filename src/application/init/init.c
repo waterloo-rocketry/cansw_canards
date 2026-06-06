@@ -7,6 +7,7 @@
 #include "task.h"
 #include "usart.h"
 
+#include "GNC_codegen_initialize.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/estimator/ekf.h"
@@ -25,14 +26,6 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
-#include "stm32h7xx_hal.h"
-// Add these includes for hardware handles
-#include "FreeRTOS.h"
-#include "adc.h" // For hadc1
-#include "fdcan.h" // For hfdcan1
-#include "i2c.h" // For hi2c2, hi2c4
-#include "task.h"
-#include "usart.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -106,6 +99,9 @@ static void system_init_task(void *arg) {
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}
+
+	// initialize gnc
+	GNC_codegen_initialize();
 
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
