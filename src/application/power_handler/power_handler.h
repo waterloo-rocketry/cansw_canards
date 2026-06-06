@@ -32,4 +32,4 @@ w_status_t power_handler_set_5V_external(bool enabled);
  */
 w_status_t power_handler_set_low_power_mode(bool enabled);
 
-#endif
+#endif // POWER_HANDLER_H
