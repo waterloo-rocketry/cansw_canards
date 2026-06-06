@@ -3,7 +3,6 @@
  */
 
 #include "application/estimator/pad_filter.h"
-#include "application/estimator/estimator.h"
 #include "application/estimator/model/model_aerodynamics.h"
 #include "application/estimator/model/model_airdata.h"
 #include "application/estimator/model/quaternion.h"

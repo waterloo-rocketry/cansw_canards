@@ -1,11 +1,13 @@
 #include "application/estimator/estimator_module.h"
 #include "application/estimator/ekf.h"
+#include "application/estimator/pad_filter.h"
 #include "application/estimator/projector.h"
+#include "application/fsm/fsm.h"
 #include "application/logger/log.h"
+#include "common/gnc/gnc_types.h"
 
-w_status_t estimator_module(const estimator_module_input_t *input,
-							flight_phase_state_t flight_phase, estimator_module_ctx_t *ctx,
-							controller_input_t *output_to_controller) {
+w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t flight_phase,
+							estimator_module_ctx_t *ctx, controller_input_t *output_to_controller) {
 	w_status_t status = W_SUCCESS;
 
 	// calculate dt regardless of flight phase
@@ -26,13 +28,13 @@ w_status_t estimator_module(const estimator_module_input_t *input,
 	}
 
 	switch (flight_phase) {
-		// ------- if idle state: do nothing -------
+			// ------- if idle state: do nothing -------
 		case STATE_IDLE:
 			// do nothing.
 			break;
 
-		// ------- after SE-init CAN msg received: run pad filter -------
-		case STATE_SE_INIT:
+			// ------- after SE-init CAN msg received: run pad filter -------
+		case STATE_PAD_FILTER:
 			// initialize the pad filter if it hasn't been done yet
 			if (false == ctx->pad_filter_ctx.is_initialized) {
 				status |= pad_filter_init(&ctx->pad_filter_ctx, &last_movella, &last_pololu);
@@ -59,7 +61,7 @@ w_status_t estimator_module(const estimator_module_input_t *input,
 			}
 			break;
 
-		// ------- flight!! run ekf -------
+			// ------- flight!! run ekf -------
 		case STATE_BOOST:
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
@@ -77,7 +79,7 @@ w_status_t estimator_module(const estimator_module_input_t *input,
 						  input->encoder_is_dead);
 
 			// controller post-processing
-			*output_to_controller = estimator_controller_projector(&ctx->x);
+			// *output_to_controller = estimator_controller_projector(&ctx->x);
 			break;
 
 		default:

@@ -1,10 +1,11 @@
 #ifndef CAN_HANDLER_H
 #define CAN_HANDLER_H
 
+#include <stdint.h>
+
 #include "canlib.h"
 #include "rocketlib/include/common.h"
 #include "stm32h7xx_hal.h"
-#include <stdint.h>
 
 /**
  * @brief Structure to track CAN handler stats, errors and status
