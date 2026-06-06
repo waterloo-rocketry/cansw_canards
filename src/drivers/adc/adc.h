@@ -6,10 +6,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define ADC1_MAX_COUNTS 0xFFFF // 16 bit full scale, configured in ioc
-#define ADC2_MAX_COUNTS 0xFFFF // 16 bit full scale, configured in ioc
-#define ADC3_MAX_COUNTS 0x0FFF // 12 bit full scale, configured in ioc
-
 typedef enum {
 	VSENS_BAT1 = 0,
 	VSENS_BAT2,
@@ -39,17 +35,6 @@ typedef struct {
  * @return Status of the initialization
  */
 w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_HandleTypeDef *hadc3);
-
-/**
- * @brief Convert the raw counts of a channel into voltage (empty stub for now)
- * @param channel The adc channel to read from
- * @param output Pointer to store output value of the ADC channel
- * @return Status of the read operation
- */
-
-w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output);
-
-w_status_t adc_get_raw_volts(adc_channel_t channel, float *output);
 
 /**
  * @brief Convert the raw voltage into actual value it measures (empty stub for now)

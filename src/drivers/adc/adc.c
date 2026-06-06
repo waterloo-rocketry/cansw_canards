@@ -4,9 +4,12 @@
 #include "semphr.h"
 
 #define ADC_CONV_TIMEOUT_TICKS pdMS_TO_TICKS(1)
-#define V_REF 3.3f
+#define V_REF 2.5f
+#define ADC1_MAX_COUNTS 0xFFFF // 16 bit full scale, configured in ioc
 #define ADC1_NUM_CHANNELS 5
+#define ADC2_MAX_COUNTS 0xFFFF // 16 bit full scale, configured in ioc
 #define ADC2_NUM_CHANNELS 2
+#define ADC3_MAX_COUNTS 0x0FFF // 12 bit full scale, configured in ioc
 #define ADC3_NUM_CHANNELS 2
 
 // Active DMA buffers
@@ -20,33 +23,47 @@ static ADC_HandleTypeDef *adc3_handle;
 
 static adc_error_data_t adc_error_stats = {0};
 
-static const uint32_t channel_to_dma_index[ADC_CHANNEL_COUNT] = {[VSENS_BAT1] = 0,
-																 [VSENS_BAT2] = 1,
-																 [VSENS_RKT] = 2,
-																 [ISENS_BAT2] = 3,
-																 [ISENS_BAT1] = 4,
-																 [VSENS_CHG] = 0,
-																 [VSENS_USB] = 1,
-																 [ISENS_3V3] = 0,
-																 [ISENS_5V] = 1};
-// bad name
-static const uint32_t channel_to_adc[ADC_CHANNEL_COUNT] = {[VSENS_BAT1] = 1,
-														   [VSENS_BAT2] = 1,
-														   [VSENS_RKT] = 1,
-														   [ISENS_BAT2] = 1,
-														   [ISENS_BAT1] = 1,
-														   [VSENS_CHG] = 2,
-														   [VSENS_USB] = 2,
-														   [ISENS_3V3] = 3,
-														   [ISENS_5V] = 3};
+static const uint16_t *const channel_to_buffer[ADC_CHANNEL_COUNT] = {
+	[VSENS_BAT1] = adc1_dma_counts,
+	[VSENS_BAT2] = adc1_dma_counts,
+	[VSENS_RKT] = adc1_dma_counts,
+	[ISENS_BAT2] = adc1_dma_counts,
+	[ISENS_BAT1] = adc1_dma_counts,
+	[VSENS_CHG] = adc2_dma_counts,
+	[VSENS_USB] = adc2_dma_counts,
+	[ISENS_3V3] = adc3_dma_counts,
+	[ISENS_5V] = adc3_dma_counts,
+};
+
+static const uint32_t channel_to_max_counts[ADC_CHANNEL_COUNT] = {
+	[VSENS_BAT1] = ADC1_MAX_COUNTS,
+	[VSENS_BAT2] = ADC1_MAX_COUNTS,
+	[VSENS_RKT] = ADC1_MAX_COUNTS,
+	[ISENS_BAT2] = ADC1_MAX_COUNTS,
+	[ISENS_BAT1] = ADC1_MAX_COUNTS,
+	[VSENS_CHG] = ADC2_MAX_COUNTS,
+	[VSENS_USB] = ADC2_MAX_COUNTS,
+	[ISENS_3V3] = ADC3_MAX_COUNTS,
+	[ISENS_5V] = ADC3_MAX_COUNTS,
+};
+
+static const uint32_t channel_to_rank[ADC_CHANNEL_COUNT] = {[VSENS_BAT1] = 0,
+															[VSENS_BAT2] = 1,
+															[VSENS_RKT] = 2,
+															[ISENS_BAT2] = 3,
+															[ISENS_BAT1] = 4,
+															[VSENS_CHG] = 0,
+															[VSENS_USB] = 1,
+															[ISENS_3V3] = 0,
+															[ISENS_5V] = 1};
 
 static const float conversion_table[ADC_CHANNEL_COUNT] = {
 	// Voltage Multipliers (V)
-	[VSENS_BAT1] = 11.0f, // 100k / 10k divider
-	[VSENS_BAT2] = 11.0f, // 100k / 10k divider
-	[VSENS_RKT] = 6.2356f, // 100k / 19.1k divider
-	[VSENS_CHG] = 6.2356f, // 100k / 19.1k divider
-	[VSENS_USB] = 2.0f, // 100k / 100k divider
+	[VSENS_BAT1] = 11.0f,
+	[VSENS_BAT2] = 11.0f,
+	[VSENS_RKT] = 6.2356f,
+	[VSENS_CHG] = 6.2356f,
+	[VSENS_USB] = 2.0f,
 
 	// Current multipliers (mA)
 	[ISENS_BAT1] = 11111.1f,
@@ -70,7 +87,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
 		return W_FAILURE;
 	}
 
-	// Start continuous DMA
+	// Start ADC continuous conversion and circular DMA
 	if (HAL_OK != HAL_ADC_Start_DMA(adc1_handle, (uint32_t *)adc1_dma_counts, ADC1_NUM_CHANNELS) ||
 		HAL_OK != HAL_ADC_Start_DMA(adc2_handle, (uint32_t *)adc2_dma_counts, ADC2_NUM_CHANNELS) ||
 		HAL_OK != HAL_ADC_Start_DMA(adc3_handle, (uint32_t *)adc3_dma_counts, ADC3_NUM_CHANNELS)) {
@@ -87,30 +104,28 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
 	return W_SUCCESS;
 }
 
-w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
+/**
+ * @brief Get the raw ADC counts of a channel from DMA buffer
+ * @param channel The adc channel to read from
+ * @param output Pointer to store raw counts value
+ * @return Status of the read operation
+ */
+static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
 	if (channel >= ADC_CHANNEL_COUNT) {
 		adc_error_stats.invalid_channels++;
 		return W_INVALID_PARAM;
 	}
 
-	uint32_t index = channel_to_dma_index[channel];
-	uint32_t adc = channel_to_adc[channel];
-	// don't use magic numbers like 1 and 2
+	uint32_t rank = channel_to_rank[channel];
+	const uint16_t *buffer = channel_to_buffer[channel];
 
 	taskENTER_CRITICAL();
 
-	if (1 == adc) {
-		*output = adc1_dma_counts[index];
-	} else if (2 == adc) {
-		*output = adc2_dma_counts[index];
-	} else {
-		*output = adc3_dma_counts[index];
-	}
+	*output = buffer[rank];
 
 	taskEXIT_CRITICAL();
 
-	if ((*output > ADC1_MAX_COUNTS && 1 == adc) || (*output > ADC2_MAX_COUNTS && 2 == adc) ||
-		(*output > ADC3_MAX_COUNTS && 3 == adc)) {
+	if (*output > channel_to_max_counts[channel]) {
 		adc_error_stats.overflow_errors++;
 		return W_OVERFLOW;
 	}
@@ -118,24 +133,20 @@ w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
 	return W_SUCCESS;
 }
 
-w_status_t adc_get_raw_volts(adc_channel_t channel, float *output) {
+/**
+ * @brief Convert the raw counts of a channel into voltage
+ * @param channel The adc channel to read from
+ * @param output Pointer to store output value of the ADC channel
+ * @return Status of the read operation
+ */
+static w_status_t adc_get_raw_volts(adc_channel_t channel, float *output) {
 	uint32_t counts = 0;
 	w_status_t status = adc_get_raw_counts(channel, &counts);
 	if (status != W_SUCCESS) {
 		return status;
 	}
 
-	uint32_t adc = channel_to_adc[channel];
-
-	if (1 == adc) {
-		*output = ((float)counts / ADC1_MAX_COUNTS) * V_REF;
-	}
-	if (2 == adc) {
-		*output = ((float)counts / ADC2_MAX_COUNTS) * V_REF;
-	}
-	if (3 == adc) {
-		*output = ((float)counts / ADC3_MAX_COUNTS) * V_REF;
-	}
+	*output = ((float)counts / channel_to_max_counts[channel]) * V_REF;
 
 	return W_SUCCESS;
 }
