@@ -9,7 +9,7 @@
 // #include "application/can_handler/can_handler.h" // For can_callback_t, can_msg_t, etc.
 // #include "application/controller/controller_types.h" // For controller types
 // #include "application/estimator/ekf.h"
-// #include "application/estimator/estimator.h"
+// #include "application/navigator/navigator.h"
 // #include "application/estimator/estimator_module.h"
 // #include "application/estimator/pad_filter.h"
 // #include "application/fsm/fsm_types.h" // For fsm_state_t
@@ -21,8 +21,8 @@
 // #include "task.h"
 // #include "third_party/rocketlib/include/common.h" // For w_status_t
 
-//     extern w_status_t estimator_run_loop(estimator_module_ctx_t* ctx, uint32_t loop_count);
-//     extern w_status_t estimator_log_state_to_can(const x_state_t* current_state);
+//     extern w_status_t estimator_run_loop(navigator_module_ctx_t* ctx, uint32_t loop_count);
+//     extern w_status_t navigator_log_state_to_can(const x_state_t* current_state);
 // }
 
 // DEFINE_FFF_GLOBALS;
@@ -106,7 +106,7 @@
 //     xQueueCreate_fake.return_val = (QueueHandle_t)1; // Simulate successful queue creation
 
 //     // Act
-//     w_status_t actual_ret = estimator_init();
+//     w_status_t actual_ret = navigator_init();
 
 //     // Assert
 //     EXPECT_EQ(actual_ret, W_SUCCESS);
@@ -117,7 +117,7 @@
 //     xQueueCreate_fake.return_val = NULL; // Simulate failed queue creation
 
 //     // Act
-//     w_status_t actual_ret = estimator_init();
+//     w_status_t actual_ret = navigator_init();
 
 //     // Assert
 //     EXPECT_EQ(actual_ret, W_FAILURE);
@@ -148,7 +148,7 @@
 //     flight_phase_get_state_fake.return_val = STATE_IDLE; // Simulate flight phase state
 
 //     // Initialize required context
-//     estimator_module_ctx_t ctx = {0};
+//     navigator_module_ctx_t ctx = {0};
 
 //     // Act
 //     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -165,14 +165,14 @@
 //     // Arrange
 
 //     // Initialize required context
-//     estimator_module_ctx_t ctx = { 0 };
+//     navigator_module_ctx_t ctx = { 0 };
 //     fsm_state_t flight_phase_state = STATE_SE_INIT;
 //     all_sensors_data_t all_sensor_input = {0};
 //     controller_input_t new_input_state = {0};
 //     controller_output_t cmd_output = {0};
 
 //     // Act
-//     w_status_t actual_ret = estimator_step(&ctx, flight_phase_state, &all_sensor_input, &new_input_state, &cmd_output, 0);
+//     w_status_t actual_ret = navigator_step(&ctx, flight_phase_state, &all_sensor_input, &new_input_state, &cmd_output, 0);
 
 //     // Assert
 //     // data all 0 so expect pad filter err to avoid div by 0
@@ -194,7 +194,7 @@
 //     log_text_fake.return_val = W_SUCCESS;
 
 //     // Initialize required context
-//     estimator_module_ctx_t ctx = { 0 };
+//     navigator_module_ctx_t ctx = { 0 };
 //     fsm_state_t flight_phase_state = STATE_BOOST;
 //     all_sensors_data_t all_sensor_input = {0};
 //     controller_input_t new_input_state = {0};
@@ -202,7 +202,7 @@
 //     new_input_state.state_updated = false;
 
 //     // Act
-//     w_status_t actual_ret = estimator_step(&ctx, flight_phase_state, &all_sensor_input, &new_input_state, &cmd_output, 0);
+//     w_status_t actual_ret = navigator_step(&ctx, flight_phase_state, &all_sensor_input, &new_input_state, &cmd_output, 0);
 
 //     // Assert
 //     // TODO: expect pad filter to NOT be running
@@ -227,7 +227,7 @@
     // log_text_fake.return_val = W_SUCCESS; // Set return for FFF fake
 
 //     // Initialize required context
-//     estimator_module_ctx_t ctx = { 0 };
+//     navigator_module_ctx_t ctx = { 0 };
 //     fsm_state_t flight_phase_state = STATE_RECOVERY;
 //     all_sensors_data_t all_sensor_input = {0};
 //     controller_input_t new_input_state = {0};
@@ -235,7 +235,7 @@
 //     new_input_state.state_updated = false;
 
 //     // Act
-//     w_status_t actual_ret = estimator_step(&ctx, flight_phase_state, &all_sensor_input, &new_input_state, &cmd_output, 0);
+//     w_status_t actual_ret = navigator_step(&ctx, flight_phase_state, &all_sensor_input, &new_input_state, &cmd_output, 0);
 
 //     // Assert
 //     EXPECT_EQ(actual_ret, W_SUCCESS);
@@ -258,7 +258,7 @@
 //     log_text_fake.return_val = W_SUCCESS; // Set return for FFF fake
 
 //     // Initialize required context
-//     estimator_module_ctx_t ctx = {0};
+//     navigator_module_ctx_t ctx = {0};
 
 //     // Act
 //     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -285,7 +285,7 @@
 // //     update
 
 // //     // Initialize required context
-// //     estimator_module_ctx_t ctx = {0};
+// //     navigator_module_ctx_t ctx = {0};
 
 // //     // Act
 // //     w_status_t actual_ret = estimator_run_loop(&ctx, 0);
@@ -309,13 +309,13 @@
 //     controller_update_inputs_fake.return_val = W_SUCCESS; // Simulate successful controller update
 
 //     // Initialize required context
-//     estimator_module_ctx_t ctx = { 0 };
+//     navigator_module_ctx_t ctx = { 0 };
 //     fsm_state_t flight_phase_state = STATE_ACT_ALLOWED;
 //     all_sensors_data_t all_sensor_input = {0};
 //     controller_output_t cmd_output = {0};
 
 //     // Act
-//     w_status_t actual_ret = estimator_step(&ctx, flight_phase_state, &all_sensor_input, NULL, &cmd_output, 0);
+//     w_status_t actual_ret = navigator_step(&ctx, flight_phase_state, &all_sensor_input, NULL, &cmd_output, 0);
 
 //     // Assert
 //     EXPECT_EQ(actual_ret, W_INVALID_PARAM);
@@ -333,13 +333,13 @@
 //     controller_update_inputs_fake.return_val = W_SUCCESS; // Simulate successful controller update
 
 //     // Initialize required context
-//     estimator_module_ctx_t ctx = { 0 };
+//     navigator_module_ctx_t ctx = { 0 };
 //     fsm_state_t flight_phase_state = STATE_ACT_ALLOWED;
 //     all_sensors_data_t all_sensor_input = {0};
 //     controller_input_t new_input_state = {0};
 
 //     // Act
-//     w_status_t actual_ret = estimator_step(&ctx, flight_phase_state, &all_sensor_input, &new_input_state, NULL, 0);
+//     w_status_t actual_ret = navigator_step(&ctx, flight_phase_state, &all_sensor_input, &new_input_state, NULL, 0);
 
 //     // Assert
 //     EXPECT_EQ(actual_ret, W_INVALID_PARAM);
@@ -359,10 +359,10 @@
 // //     log_text_fake.return_val = W_SUCCESS; // Set return for FFF fake
 
 // //     // Initialize required context
-// //     estimator_module_ctx_t ctx = { 0 };
+// //     navigator_module_ctx_t ctx = { 0 };
 
 // //     // Act
-// //     w_status_t actual_ret = estimator_step(&ctx, 0);
+// //     w_status_t actual_ret = navigator_step(&ctx, 0);
 
 //     // Assert
 //     EXPECT_EQ(actual_ret, W_FAILURE);
@@ -375,7 +375,7 @@
 // }
 
 // TODO: revive these tests later
-// -------- Test estimator_log_state_to_can directly --------
+// -------- Test navigator_log_state_to_can directly --------
 // TEST_F(EstimatorTest, EstimatorLogStateToCan_Nominal) {
 //     // Arrange
 //     x_state_t test_state = create_test_state();
@@ -386,7 +386,7 @@
 //     log_text_fake.return_val = W_SUCCESS; // Set return for FFF fake
 
 //     // Act
-//     w_status_t status = estimator_log_state_to_can(&test_state);
+//     w_status_t status = navigator_log_state_to_can(&test_state);
 
 //     // Assert
 //     EXPECT_EQ(status, W_SUCCESS); // Expect overall success
@@ -431,7 +431,7 @@
 //     x_state_t test_state = create_test_state();
 
 //     // Act
-//     w_status_t status = estimator_log_state_to_can(&test_state);
+//     w_status_t status = navigator_log_state_to_can(&test_state);
 
 //     // Assert
 //     EXPECT_EQ(status, W_FAILURE); // Expect overall failure
@@ -452,7 +452,7 @@
 //     x_state_t test_state = create_test_state();
 
 //     // Act
-//     w_status_t status = estimator_log_state_to_can(&test_state);
+//     w_status_t status = navigator_log_state_to_can(&test_state);
 
 //     // Assert
 //     EXPECT_EQ(status, W_FAILURE); // Expect overall failure
@@ -482,7 +482,7 @@
 //     log_text_fake.return_val = W_SUCCESS;
 
 //     // Initialize required context
-//     estimator_module_ctx_t ctx = {0};
+//     navigator_module_ctx_t ctx = {0};
 
 //     // Act
 //     for (uint32_t i = 0; i < num_loops; ++i) {
@@ -493,7 +493,7 @@
 //     }
 
 //     // Assert
-//     // Check that functions inside estimator_log_state_to_can were called the correct number of
+//     // Check that functions inside navigator_log_state_to_can were called the correct number of
 //     // times
 //     EXPECT_EQ(build_state_est_data_msg_fake.call_count, expected_can_calls * STATE_ID_ENUM_MAX);
 //     EXPECT_EQ(can_handler_transmit_fake.call_count, expected_can_calls * STATE_ID_ENUM_MAX);

@@ -177,6 +177,7 @@ set(TEST_COMMON_INCS
     ${PROC_SRC_DIR}/third_party
     ${PROC_SRC_DIR}/third_party/canlib
     ${PROC_SRC_DIR}/third_party/rocketlib/include
+    ${PROC_SRC_DIR}/third_party/GNC_codegen
 )
 
 # Add FFF as a header-only library
@@ -430,3 +431,41 @@ add_test_group(test_health_check
 #     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
 #     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
 # )
+
+
+add_test_group(test_controller_codegen
+    # test file(s)
+    ${UNIT_TESTS_DIR}/controller_codegen_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/controller_codegen_entry.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_data.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_initialize.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_terminate.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/diag.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/eye.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/rt_nonfinite.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics_jacobian.c
+)
+
+
+add_test_group(test_navigator_codegen
+    # test file(s)
+    ${UNIT_TESTS_DIR}/navigator_codegen_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/navigation_codegen_entry.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_data.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_initialize.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_terminate.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/diag.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/eye.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/rt_nonfinite.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/airdata_atmos.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/atan2.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/ekf_correct.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/inv.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/norm.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics_jacobian.c
+    ${PROC_SRC_DIR}/third_party/GNC_codegen/mpower.c
+)

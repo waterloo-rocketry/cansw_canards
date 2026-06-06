@@ -4,14 +4,13 @@
 #include <math.h>
 
 #include "application/controller/controller.h"
-#include "application/controller/controller_module.h"
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
+#include "controller_codegen_entry.h"
 
 #define DATA_WAIT_MS 10
 #define LOG_WAIT_MS 10
-#define RECOVERY_PERIOD_MS 1000
-#define IDLE_PERIOD_MS 1
+static const float64_t MS_TO_SEC = 0.001;
 
 // these two are redundent but different health check structs, should we just have one instead???
 static controller_t controller_state = {0};
@@ -31,42 +30,40 @@ w_status_t controller_init(void) {
 
 // helper to run 1 iteration of the controller algo, including delaying where needed.
 w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *input,
-						   controller_output_t *output, const uint32_t act_allowed_timestamp_ms,
-						   const uint32_t curr_timestamp_ms) {
+						   controller_output_t *output) {
 	if (NULL == ctx) {
 		log_text(LOG_WAIT_MS, "controller", "ERROR: Invalid context ptr.");
 		return W_INVALID_PARAM;
 	}
 
-	log_data_container_t log_container = {0};
-	w_status_t status = W_SUCCESS;
+	// TODO: check with Tristan
 
-	uint32_t act_allowed_ms = curr_timestamp_ms - act_allowed_timestamp_ms;
+	uint32_t flight_time_ms = (input->curr_timestamp_ms) - (input->launch_timestamp_ms);
+	float64_t dt_controller_sec =
+		((float64_t)((input->curr_timestamp_ms) - (ctx->last_run_ms))) * MS_TO_SEC;
 
-	float ref_signal = 0.0f; // track latest reference signal for logging only
+	float64_t ref_signal = 0.0;
 
-	// TODO: call codegen to run controller module
-	// status |=
-	//     controller_module(ctx, act_allowed_ms, &output, &ref_signal);
-	(void)input;
+	controller_codegen_ctx_t output_ctx = {0};
 
-	// TODO: reorder structre to multiple return points
-	// send motor cmd if we can
-	if (W_SUCCESS == status) {
-		// TODO: motor
+	controller_codegen_entry(flight_time_ms,
+							 dt_controller_sec,
+							 input->xR,
+							 input->pdyn,
+							 input->motor_angle_rad,
+							 &(ctx->codegen_ctx),
+							 &(output->motor_command_angle_rad),
+							 &(output->ref_roll_angle_rad),
+							 &output_ctx);
 
-		log_container.controller.cmd_angle = (float)output->commanded_angle;
-		log_container.controller.ref_signal = ref_signal;
-		if (W_SUCCESS != log_data(5, LOG_TYPE_CANARD_CMD, &log_container)) {
-			log_text(LOG_WAIT_MS, "cntl act", "log cmd fail");
-			status |= W_FAILURE;
-		}
-	} else {
-		// if anything fails, send no cmd. MCB failsafes to 0 after some ms of silence
-		log_text(LOG_WAIT_MS, "cntl act", "fail; send no cmd");
-	}
+	// copy over the new ctx
+	memcpy(&(ctx->codegen_ctx), &output_ctx, sizeof(controller_codegen_ctx_t));
 
-	return status;
+	// update new timestamp
+	output->timestamp_ms = input->curr_timestamp_ms;
+	ctx->last_run_ms = input->curr_timestamp_ms;
+
+	return W_SUCCESS;
 }
 
 uint32_t controller_get_status(void) {

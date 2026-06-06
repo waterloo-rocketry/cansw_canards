@@ -89,7 +89,7 @@
 //     fsm_state_t flight_phase = STATE_SE_INIT;
 
 //     // Initializing the context
-//     estimator_module_ctx_t ctx = {0};
+//     navigator_module_ctx_t ctx = {0};
 //     controller_input_t controller_input = {0}; // Initialize controller_input_t to zero
 
 //     // Act
@@ -233,7 +233,7 @@
 
 //     fsm_state_t flight_phase = STATE_SE_INIT;
 
-//     estimator_module_ctx_t ctx = {0};
+//     navigator_module_ctx_t ctx = {0};
 //     controller_input_t controller_input = {0};
 
 //     // Act - First call
@@ -479,7 +479,7 @@
 
 //     fsm_state_t flight_phase = STATE_ACT_ALLOWED;
 
-//     estimator_module_ctx_t ctx = {
+//     navigator_module_ctx_t ctx = {
 //         .x =
 //             {.array =
 //                  {0.573781,

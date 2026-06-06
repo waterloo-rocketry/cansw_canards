@@ -7,7 +7,7 @@
 #include "common/gnc/gnc_types.h"
 
 w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t flight_phase,
-							estimator_module_ctx_t *ctx, controller_input_t *output_to_controller) {
+							navigator_module_ctx_t *ctx, controller_input_t *output_to_controller) {
 	w_status_t status = W_SUCCESS;
 
 	// calculate dt regardless of flight phase
@@ -37,7 +37,7 @@ w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t f
 		case STATE_PAD_FILTER:
 			// initialize the pad filter if it hasn't been done yet
 			if (false == ctx->pad_filter_ctx.is_initialized) {
-				status |= pad_filter_init(&ctx->pad_filter_ctx, &last_movella, &last_pololu);
+				status |= pad_filter_inits(&ctx->pad_filter_ctx, &last_movella, &last_pololu);
 
 				if (W_SUCCESS == status) {
 					log_text(5, "Estimator", "Pad filter init!");
@@ -47,14 +47,14 @@ w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t f
 			}
 
 			// run pad filter
-			status |= pad_filter(&ctx->pad_filter_ctx,
-								 &input->movella,
-								 &input->pololu,
-								 input->movella_is_dead,
-								 input->pololu_is_dead,
-								 &ctx->x,
-								 &ctx->bias_movella,
-								 &ctx->bias_pololu);
+			status |= pad_filters(&ctx->pad_filter_ctx,
+								  &input->movella,
+								  &input->pololu,
+								  input->movella_is_dead,
+								  input->pololu_is_dead,
+								  &ctx->x,
+								  &ctx->bias_movella,
+								  &ctx->bias_pololu);
 
 			if (status != W_SUCCESS) {
 				log_text(10, "Estimator", "ERROR: Pad filter run failed.");
