@@ -2,17 +2,11 @@
 #define MOTOR_HANDLER_H
 
 #include "FreeRTOS.h"
-#include "drivers/ak45-10/ak45-10.h"
+#include "drivers/ak45_driver/ak45_driver.h"
 #include "stm32h7xx_hal.h"
 #include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
-
-// Feedback timeout
-#define MOTOR_FEEDBACK_TIMEOUT_MS 500
-
-// Controller timeout
-#define CONTROLLER_TIMEOUT_MS = 100
 
 /**
  * @brief Error tracking for motor handler module
@@ -32,16 +26,6 @@ typedef struct {
  * @return W_SUCCESS on success, W_FAILURE on error
  */
 w_status_t motor_handler_init(FDCAN_HandleTypeDef *hfdcan);
-
-/**
- * @brief Motor handler task
- *
- * Checks flight phase (whether actuation is allowed)
- * Gets the commanded angle from the controller module
- * Sends position commands to the servo
- * Reads feedback and checks for fatal faults
- */
-void motor_handler_task(void *argument);
 
 /**
  * @brief Set the commanded motor angle, called by the controller module

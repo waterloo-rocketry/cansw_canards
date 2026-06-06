@@ -9,8 +9,13 @@
 #include <math.h>
 #include <string.h>
 
-#define MOTOR_TASK_PERIOD_MS 10 // 100 Hz command rate (poll slower when not actuating?)
 #define LOG_WAIT_MS 10
+
+// Feedback timeout
+#define MOTOR_FEEDBACK_TIMEOUT_MS 500
+
+// Controller timeout
+#define CONTROLLER_TIMEOUT_MS 100
 
 static motor_handler_error_data_t motor_error_stats = {0};
 static ak45_feedback_t latest_feedback = {0};
@@ -36,15 +41,6 @@ w_status_t motor_handler_set_angle_cmd(float angle_deg) {
 	// overwrite the current command in the angle cmd queue
 
 	return W_SUCCESS;
-}
-
-void motor_handler_task(void *argument) {
-	// todo: check flight phase, send commands, read feedback,
-	// check for fatal faults, log errors, check for timeouts
-	// from both controller and motor, log error stats
-
-	// Kick watchdog
-	watchdog_kick();
 }
 
 w_status_t motor_handler_get_latest_feedback(ak45_feedback_t *fb) {
