@@ -8,6 +8,13 @@
 #include "application/navigator/navigator.h"
 #include "drivers/timer/timer.h"
 
+// TODO: remove after motor_handler implemented
+/****************************************************************/
+#include "common/math/math.h"
+#include "drivers/ak45_driver/ak45_driver.h"
+static const float64_t DEG_TO_RAD = (M_PI / 180.0);
+/****************************************************************/
+
 static const uint8_t FSM_PERIOD_MS = 2;
 static const uint32_t MS_TO_TENTH_MS = 10;
 
@@ -59,11 +66,15 @@ w_status_t fsm_init() {
 
 void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 	(void)p_sensor_data;
-	// can't init to {0} as don't have any fields
-	// TODO: either init to {0} or with some value once implemented
-	navigator_input_t navigator_input = {};
-	navigator_output_t navigator_output = {};
-	controller_input_t controller_input = {0};
+	// set the inputs
+	navigator_input_t navigator_input = {.curr_timestamp_tenth_ms = p_ctx->timestamp_tenth_ms,
+										 .fsm_state = p_ctx->curr_state};
+	controller_input_t controller_input = {.curr_timestamp_ms = p_ctx->timestamp_ms,
+										   .launch_timestamp_ms =
+											   p_ctx->p_flight_phase_context->launch_timestamp_ms};
+
+	// initialize the outputs
+	navigator_output_t navigator_output = {0};
 	controller_output_t controller_output = {0};
 
 	// TODO: convert fsm_inputs into the nav/cntl inputs
@@ -91,13 +102,26 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			navigator_step(
 				p_ctx->estimator_context, &navigator_input, p_sensor_data, &navigator_output);
 
+			// input the navigator outputs into controller
+			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(float64_t[2]));
+			controller_input.pdyn = navigator_output.airdata.dynamic_pressure;
+
+			// TODO: switch to motor handler once exists
+			/****************************************************************/
+			ak45_feedback_t motor_feedback = {0};
+			ak45_get_latest_feedback(&motor_feedback);
+			controller_input.motor_angle_rad = motor_feedback.position_deg * DEG_TO_RAD;
+			/****************************************************************/
+
 			// roll more into input structs
-			controller_step(p_ctx->p_controller_context,
-							&controller_input,
-							&controller_output,
-							p_ctx->p_flight_phase_context->launch_timestamp_ms,
-							p_ctx->timestamp_ms);
-			// TODO: motor
+			controller_step(p_ctx->p_controller_context, &controller_input, &controller_output);
+
+			// TODO: switch to motor handler once exists
+			/****************************************************************/
+			float32_t motor_angle_deg =
+				(float32_t)(controller_output.motor_command_angle_rad / DEG_TO_RAD);
+			ak45_send_position_cmd(motor_angle_deg);
+			/****************************************************************/
 			break;
 
 			// etc for more cases...

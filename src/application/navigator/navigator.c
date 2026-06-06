@@ -54,7 +54,7 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, const navigator_input_t
 	float64_t dt_sec =
 		((p_input->curr_timestamp_tenth_ms) - (p_ctx->last_run_tenth_ms)) * TENTH_MS_TO_SEC;
 	bool in_flight_phase =
-		(STATE_SE_INIT != p_input->fsm_state); // since earliest entry point is pad filter
+		(STATE_PAD_FILTER != p_input->fsm_state); // since earliest entry point is pad filter
 
 	// construct sensor inputs
 	navigator_codegen_sensor_input_t codegen_sensor_input = {0};

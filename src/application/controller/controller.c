@@ -30,8 +30,7 @@ w_status_t controller_init(void) {
 
 // helper to run 1 iteration of the controller algo, including delaying where needed.
 w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *input,
-						   controller_output_t *output, const uint32_t launch_timestamp_ms,
-						   const uint32_t curr_timestamp_ms) {
+						   controller_output_t *output) {
 	if (NULL == ctx) {
 		log_text(LOG_WAIT_MS, "controller", "ERROR: Invalid context ptr.");
 		return W_INVALID_PARAM;
@@ -39,8 +38,9 @@ w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *inpu
 
 	// TODO: check with Tristan
 
-	uint32_t flight_time_ms = curr_timestamp_ms - launch_timestamp_ms;
-	float64_t dt_controller_sec = ((float64_t)(curr_timestamp_ms - (ctx->last_run_ms))) * MS_TO_SEC;
+	uint32_t flight_time_ms = (input->curr_timestamp_ms) - (input->launch_timestamp_ms);
+	float64_t dt_controller_sec =
+		((float64_t)((input->curr_timestamp_ms) - (ctx->last_run_ms))) * MS_TO_SEC;
 
 	float64_t ref_signal = 0.0;
 
@@ -60,8 +60,8 @@ w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *inpu
 	memcpy(&(ctx->codegen_ctx), &output_ctx, sizeof(controller_codegen_ctx_t));
 
 	// update new timestamp
-	output->timestamp_ms = curr_timestamp_ms;
-	ctx->last_run_ms = curr_timestamp_ms;
+	output->timestamp_ms = input->curr_timestamp_ms;
+	ctx->last_run_ms = input->curr_timestamp_ms;
 
 	return W_SUCCESS;
 }

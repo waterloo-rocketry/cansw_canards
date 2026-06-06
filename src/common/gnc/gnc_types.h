@@ -83,6 +83,16 @@ typedef struct {
 	estimator_imu_measurement_t pololu; // raw pololu data
 } all_sensors_data_t;
 
+// Codegen Type Rename
+typedef struct1_T navigator_codegen_bias_t;
+typedef struct2_T navigator_codegen_sensor_filter_t;
+typedef struct3_T navigator_codegen_sensor_input_t;
+
+typedef struct4_T navigator_codegen_sensor_3D_t;
+typedef struct5_T navigator_codegen_sensor_1D_t;
+
+typedef struct6_T airdata_codegen_t;
+
 // ---------- NAVIGATOR TYPES ----------
 typedef struct {
 	uint32_t curr_timestamp_tenth_ms;
@@ -93,7 +103,7 @@ typedef struct {
 	uint32_t timestamp_tenth_ms;
 	double cov_norm;
 	// TODO: update after Tristan update codegen
-	struct0_T airdata;
+	airdata_codegen_t airdata;
 	double roll_state[2];
 } navigator_output_t;
 
@@ -104,6 +114,8 @@ typedef struct {
 	float64_t motor_angle_rad; /// delta
 	float64_t xR[2];
 	float64_t pdyn;
+	uint32_t curr_timestamp_ms;
+	uint32_t launch_timestamp_ms;
 } controller_input_t;
 
 // Output of controller: latest commanded canard angle
@@ -112,14 +124,6 @@ typedef struct {
 	float64_t ref_roll_angle_rad;
 	uint32_t timestamp_ms; // ms
 } controller_output_t;
-
-/* CODEGEN STATES WILL BE INTEGRATED BETTER LATER*/
-typedef struct1_T navigator_codegen_bias_t;
-typedef struct2_T navigator_codegen_sensor_filter_t;
-typedef struct3_T navigator_codegen_sensor_input_t;
-
-typedef struct4_T navigator_sensor_3D_t;
-typedef struct5_T navigator_sensor_1D_t;
 
 typedef struct {
 	navigator_codegen_bias_t bias;

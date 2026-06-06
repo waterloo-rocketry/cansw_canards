@@ -55,8 +55,7 @@ w_status_t controller_init(void);
  * @param curr_timestamp_ms the currrent timestamp
  */
 w_status_t controller_step(controller_ctx_t *context, const controller_input_t *input,
-						   controller_output_t *output, const uint32_t launch_timestamp_ms,
-						   const uint32_t curr_timestamp_ms);
+						   controller_output_t *output);
 
 /**
  * Controller task function for RTOS
