@@ -136,66 +136,6 @@ static w_status_t power_reset_callback(const can_msg_t *msg) {
 }
 
 /**
- * Periodic monitoring task for power system health.
- */
-static void power_handler_monitor_task(void *argument) {
-	(void)argument;
-	TickType_t lastWakeTime = xTaskGetTickCount();
-
-	for (;;) {
-		uint32_t timestamp = 0;
-		timer_get_ms(&timestamp);
-		power_input_source_t active_input = get_active_input();
-
-		// Log active power source
-		switch (active_input) {
-		case POWER_INPUT_CHG:
-			log_text(10, "power_handler", "Active power source: CHG");
-			break;
-		case POWER_INPUT_RKT:
-			log_text(10, "power_handler", "Active power source: RKT");
-			break;
-		case POWER_INPUT_BAT:
-			log_text(10, "power_handler", "Active power source: BAT");
-			break;
-		}
-
-		// Send sensor data for voltages
-		uint32_t adc_value = 0;
-		can_msg_t msg = {0};
-
-		if (adc_get_converted_val(VSENS_BAT1, &adc_value) == W_SUCCESS) {
-			build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)timestamp,
-										 SENSOR_BATT_VOLT, adc_value, &msg);
-			can_handler_transmit(&msg);
-		}
-
-		if (adc_get_converted_val(VSENS_RKT, &adc_value) == W_SUCCESS) {
-			build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)timestamp,
-										 SENSOR_RA_MAG_VOLT_1, adc_value, &msg);
-			can_handler_transmit(&msg);
-		}
-
-		if (adc_get_converted_val(VSENS_CHG, &adc_value) == W_SUCCESS) {
-			build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)timestamp,
-										 SENSOR_CHARGE_VOLT, adc_value, &msg);
-			can_handler_transmit(&msg);
-		}
-
-		// Send fault status
-		uint32_t fault_status = power_handler_get_status();
-		if (fault_status != 0) {
-			log_text(10, "power_handler", "Power fault detected: 0x%lx", fault_status);
-			build_general_board_status_msg(PRIO_HIGH, (uint16_t)timestamp,
-										  fault_status, &msg);
-			can_handler_transmit(&msg);
-		}
-
-		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TASK_DELAY_MS));
-	}
-}
-
-/**
  * Initializes power handler.
  * Registers CAN callbacks for payload 5V and low power mode commands.
  * Defaults everything to ON.
@@ -357,25 +297,5 @@ w_status_t power_handler_set_low_power_mode(bool enabled) {
 	}
 
 	power_handler_status.low_power_mode = enabled;
-	return W_SUCCESS;
-}
-
-/**
- * Start the power handler monitoring task.
- * Should be called from the main initialization.
- */
-w_status_t power_handler_start_monitoring_task(void) {
-	BaseType_t task_status = xTaskCreate(power_handler_monitor_task,
-										 "power_monitor",
-										 1024,
-										 NULL,
-										 2,  // Priority
-										 NULL);
-
-	if (task_status != pdPASS) {
-		log_text(1, "power_handler", "ERROR: Failed to create monitoring task");
-		return W_FAILURE;
-	}
-
 	return W_SUCCESS;
 }
