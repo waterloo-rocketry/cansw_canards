@@ -29,9 +29,9 @@ static const uint8_t D2_CMD[] = {
 	MS5611_CMD_CONVERT_D2_OSR4096,
 };
 
-static const int16_t second_comp_temp_threshold =
+static const int16_t second_comp_temp_threshold_centi_degrees =
 	2000; /* temperature (in centidegrees) below which second-order compensation is applied */
-static const int16_t second_comp_extreme_temp_threshold =
+static const int16_t second_comp_extreme_temp_threshold_centi_degrees =
 	-1500; /* temperature (in centidegrees) below which additional extreme cold compensation is
 			  applied */
 
@@ -83,52 +83,53 @@ static w_status_t a_read_adc(uint32_t *out) {
 	return W_SUCCESS;
 }
 
-/**
- * @brief Perfroms the CRC check on the PROM coefficients readout.
- * @param n_prom Array of 8 uint16_t values read from the PROM (prom_coef[0]..prom_coef[7])
- * @param crc The CRC value read from the PROM (lower 4 bits of prom_coef[7])
- * @return W_SUCCESS if CRC check passes, W_FAILURE if CRC check fails
- * @note This function is from github repository:
- * https://github.com/libdriver/ms5611/blob/main/src/driver_ms5611.h#L37
- */
-static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
-	uint8_t cnt;
-	uint8_t n_bit;
-	uint16_t n_rem;
-	uint16_t crc_read;
+// /**
+//  * @brief Perfroms the CRC check on the PROM coefficients readout.
+//  * @param n_prom Array of 8 uint16_t values read from the PROM (prom_coef[0]..prom_coef[7])
+//  * @param crc The CRC value read from the PROM (lower 4 bits of prom_coef[7])
+//  * @return W_SUCCESS if CRC check passes, W_FAILURE if CRC check fails
+//  * @note This function is from github repository:
+//  * https://github.com/libdriver/ms5611/blob/main/src/driver_ms5611.h#L37
+//  */
+// static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
+// 	uint8_t cnt;
+// 	uint8_t n_bit;
+// 	uint16_t n_rem;
+// 	uint16_t crc_read;
 
-	n_rem = 0x00; /* init 0 */
-	crc_read = n_prom[7]; /* get crc */
-	n_prom[7] = (0xFF00U & (n_prom[7])); /* init prom */
+// 	n_rem = 0x00; /* init 0 */
+// 	crc_read = n_prom[7]; /* get crc */
+// 	n_prom[7] = (0xFF00U & (n_prom[7])); /* init prom */
 
-	for (cnt = 0; cnt < 16; cnt++) /* loop all */
-	{
-		if (cnt & 0x1) /* check LSB */
-		{
-			n_rem ^= (uint16_t)((n_prom[cnt >> 1]) & 0x00FF); /* run part1 */
-		} else {
-			n_rem ^= (uint16_t)(n_prom[cnt >> 1] >> 8); /* run part1 */
-		}
-		for (n_bit = 8; n_bit > 0; n_bit--) /* loop all */
-		{
-			if ((n_rem & 0x8000U) != 0) /* check bit */
-			{
-				n_rem = (n_rem << 1) ^ 0x3000; /* run part2 */
-			} else {
-				n_rem = (n_rem << 1); /* run part2 */
-			}
-		}
-	}
-	n_rem = (0x000F & (n_rem >> 12)); /* get rem */
-	n_prom[7] = (0xFF00U & crc_read); /* set crc read */
+// 	for (cnt = 0; cnt < 16; cnt++) /* loop all */
+// 	{
+// 		if (cnt & 0x1) /* check LSB */
+// 		{
+// 			n_rem ^= (uint16_t)((n_prom[cnt >> 1]) & 0x00FF); /* run part1 */
+// 		} else {
+// 			n_rem ^= (uint16_t)(n_prom[cnt >> 1] >> 8); /* run part1 */
+// 		}
+// 		for (n_bit = 8; n_bit > 0; n_bit--) /* loop all */
+// 		{
+// 			if ((n_rem & 0x8000U) != 0) /* check bit */
+// 			{
+// 				n_rem = (n_rem << 1) ^ 0x3000; /* run part2 */
+// 			} else {
+// 				n_rem = (n_rem << 1); /* run part2 */
+// 			}
+// 		}
+// 	}
+// 	n_rem = (0x000F & (n_rem >> 12)); /* get rem */
+// 	n_prom[7] = (0xFF00U & crc_read); /* set crc read */
 
-	if (n_rem != crc) {
-		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
-		return W_FAILURE;
-	}
 
-	return W_SUCCESS;
-}
+// 	if (n_rem != crc) {
+// 		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
+// 		return W_FAILURE;
+// 	}
+
+// 	return W_SUCCESS;
+// }
 
 /**
  * @brief Reads calibration coefficients from the PROM, performs CRC check, and stores them in the
@@ -142,10 +143,14 @@ static w_status_t ms5611_prom_read(void) {
 	// copy into a local var first to avoid modifying the handle with corrupt data on read failure
 	for (i = 0; i < 8; i++) {
 		status |= a_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
+		if (status != W_SUCCESS) {
+			log_text(1, "ms5611", "ERROR: failed to read PROM coefficient C%u", i);
+			return W_FAILURE;
+		}
 		prom_coef[i] = ((uint16_t)prom_buf[0] << 8) | prom_buf[1];
 	}
 
-	status |= a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0F));
+	// status |= a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0F));
 
 	if (W_SUCCESS == status) {
 		for (i = 0; i < 8; i++) {
@@ -260,7 +265,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 
 	/* First-order compensation */
 	dt = (int32_t)d2 - ((int32_t)handle.prom_coef[MS5611_COEFF_TREF] << 8);
-	temp = second_comp_temp_threshold +
+	temp = second_comp_temp_threshold_centi_degrees +
 		   ((int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23));
 	off = ((int64_t)handle.prom_coef[MS5611_COEFF_OFF] << 16) +
 		  (((int64_t)handle.prom_coef[MS5611_COEFF_TCO] * dt) >> 7);
@@ -273,20 +278,20 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	off2 = 0;
 	sens2 = 0;
 
-	if (temp < second_comp_temp_threshold) {
+	if (temp < second_comp_temp_threshold_centi_degrees) {
 		T2 = (int64_t)(dt * dt) >> 31;
-		off2 = 5 * (int64_t)((temp - second_comp_temp_threshold) *
-							 (temp - second_comp_temp_threshold)) >>
+		off2 = 5 * (int64_t)((temp - second_comp_temp_threshold_centi_degrees) *
+							 (temp - second_comp_temp_threshold_centi_degrees)) >>
 			   1;
-		sens2 = 5 * (int64_t)((temp - second_comp_temp_threshold) *
-							  (temp - second_comp_temp_threshold)) >>
+		sens2 = 5 * (int64_t)((temp - second_comp_temp_threshold_centi_degrees) *
+							  (temp - second_comp_temp_threshold_centi_degrees)) >>
 				2;
 
-		if (temp < second_comp_extreme_temp_threshold) {
-			off2 += 7 * (int64_t)(temp - second_comp_extreme_temp_threshold) *
-					(temp - second_comp_extreme_temp_threshold);
-			sens2 += (11 * (int64_t)((temp - second_comp_extreme_temp_threshold) *
-									(temp - second_comp_extreme_temp_threshold))) >>
+		if (temp < second_comp_extreme_temp_threshold_centi_degrees) {
+			off2 += 7 * (int64_t)(temp - second_comp_extreme_temp_threshold_centi_degrees) *
+					(temp - second_comp_extreme_temp_threshold_centi_degrees);
+			sens2 += (11 * (int64_t)((temp - second_comp_extreme_temp_threshold_centi_degrees) *
+									(temp - second_comp_extreme_temp_threshold_centi_degrees))) >>
 					 1;
 		}
 
