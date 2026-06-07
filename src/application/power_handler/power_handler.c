@@ -22,8 +22,8 @@ static const float32_t VRKT_MIN = 11.1;
 static const float32_t VRKT_MAX = 12.8;
 
 // Charge Line Thresholds
-static const float32_t VCHG_MIN = 9;
-static const float32_t VCHG_MAX = 14;
+static const uint32_t VCHG_MIN = 9;
+static const uint32_t VCHG_MAX = 14;
 
 // power rail thresholds (mA)
 static const uint32_t I3V3_MAX = 500; 
@@ -56,7 +56,8 @@ typedef struct {
 typedef enum {
 	POWER_INPUT_CHG,
 	POWER_INPUT_RKT,
-	POWER_INPUT_BAT
+	POWER_INPUT_BAT,
+	POWER_INPUT_NONE
 } power_input_source_t;
 
 static power_handler_status_t power_handler_status = {0};
@@ -68,17 +69,25 @@ static power_handler_status_t power_handler_status = {0};
 static power_input_source_t get_active_input(void) {
 	uint32_t vsens_chg = 0;
 	uint32_t vsens_rkt = 0;
+	uint32_t vsens_usb = 0;
+	uint32_t vsens_bat1 = 0;
+	uint32_t vsens_bat2 = 0;
 
 	adc_get_converted_val(VSENS_CHG, &vsens_chg);
 	adc_get_converted_val(VSENS_RKT, &vsens_rkt);
+	adc_get_converted_val(VSENS_USB, &vsens_usb);
+	adc_get_converted_val(VSENS_BAT1, &vsens_bat1);
+	adc_get_converted_val(VSENS_BAT2, &vsens_bat2);
 
-	if (vsens_chg > vsens_rkt && vsens_chg > 0) {
+	if (vsens_chg >= vsens_rkt && vsens_chg >= vsens_usb && vsens_chg >= vsens_bat1 && vsens_chg >= vsens_bat2) {
 		return POWER_INPUT_CHG;
-	} else if (vsens_rkt > 0) {
+	} else if (vsens_rkt >= vsens_chg && vsens_rkt >= vsens_usb && vsens_rkt >= vsens_bat1 && vsens_rkt >= vsens_bat2) {
 		return POWER_INPUT_RKT;
 	} else {
 		return POWER_INPUT_BAT;
 	}
+
+    return POWER_INPUT_NONE;
 }
 
 /**
@@ -206,7 +215,9 @@ uint32_t power_handler_get_status(void) {
 		}
 	}
 
-	if (get_active_input() == POWER_INPUT_BAT) {
+	power_input_source_t active_input = get_active_input();
+
+	if (active_input == POWER_INPUT_BAT) {
 		if (adc_get_converted_val(VSENS_BAT1, &adc_value) == W_SUCCESS) {
 			if ((adc_value < VBAT_MIN) || (adc_value > VBAT_MAX)) {
 				status_bitfield |= FAULT_BAT1_VOLT;
@@ -230,19 +241,72 @@ uint32_t power_handler_get_status(void) {
 				status_bitfield |= FAULT_BAT2_CURR;
 			}
 		}
-	} else if (get_active_input() == POWER_INPUT_RKT) {
+	} else if (active_input == POWER_INPUT_RKT) {
 		if (adc_get_converted_val(VSENS_RKT, &adc_value) == W_SUCCESS) {
 			if ((adc_value < VRKT_MIN) || (adc_value > VRKT_MAX)) {
 				status_bitfield |= FAULT_RKT_VOLT;
 			}
 		}
-	} else {
+	} else if (active_input == POWER_INPUT_CHG) {
 		if (adc_get_converted_val(VSENS_CHG, &adc_value) == W_SUCCESS) {
 			if ((adc_value < VCHG_MIN) || (adc_value > VCHG_MAX)) {
 				status_bitfield |= FAULT_CHG_VOLT;
 			}
 		}
+	} else {
+		log_text(1, "power_handler", "ERROR: Failed to read active power input");
 	}
+
+	// Log active power source
+	switch (active_input) {
+	case POWER_INPUT_CHG:
+		log_text(10, "power_handler", "Active power source: CHG");
+		break;
+	case POWER_INPUT_RKT:
+		log_text(10, "power_handler", "Active power source: RKT");
+		break;
+	case POWER_INPUT_BAT:
+		log_text(10, "power_handler", "Active power source: BAT");
+		break;
+	}
+
+	// uint32_t adc_value = 0;
+	can_msg_t msg = {0};
+
+	// TODO: write can lib msg builders for power handler and send them to rocketCAN for health monitoring
+	// uint32_t timestamp = 0;
+
+	// if (adc_get_converted_val(VSENS_BAT1, &adc_value) == W_SUCCESS) {
+	// 	timer_get_ms(&timestamp);
+	// 	build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)timestamp,
+	// 									SENSOR_BATT_VOLT, adc_value, &msg);
+	// 	can_handler_transmit(&msg);
+	// }
+
+	// if (adc_get_converted_val(VSENS_RKT, &adc_value) == W_SUCCESS) {
+	// 	timer_get_ms(&timestamp);
+	// 	build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)timestamp,
+	// 									SENSOR_RA_MAG_VOLT_1, adc_value, &msg);
+	// 	can_handler_transmit(&msg);
+	// }
+
+	// if (adc_get_converted_val(VSENS_CHG, &adc_value) == W_SUCCESS) {
+	// 	timer_get_ms(&timestamp);
+	// 	build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)timestamp,
+	// 									SENSOR_CHARGE_VOLT, adc_value, &msg);
+	// 	can_handler_transmit(&msg);
+	// }
+
+	// Send fault status
+	uint32_t fault_status = power_handler_get_status();
+	if (fault_status != 0) {
+		// timer_get_ms(&timestamp);
+		log_text(10, "power_handler", "Power fault detected: 0x%lx", fault_status);
+		// build_general_board_status_msg(PRIO_HIGH, (uint16_t)timestamp,
+		// 								fault_status, &msg);
+		// can_handler_transmit(&msg);
+	}
+
 
 	return status_bitfield;
 }
