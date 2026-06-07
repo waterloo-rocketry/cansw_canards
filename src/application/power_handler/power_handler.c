@@ -13,17 +13,17 @@
 #include "drivers/timer/timer.h"
 
 // LiPo Thresholds
-static const uint32_t VBAT_MIN = 22.2;
-static const uint32_t VBAT_MAX = 25.4;
+static const float32_t VBAT_MIN = 22.2;
+static const float32_t VBAT_MAX = 25.4;
 static const uint32_t IBAT_MAX = 8000; // 8A in mA
 
 // Rocket Thresholds
-static const uint32_t VRKT_MIN = 11.1;
-static const uint32_t VRKT_MAX = 12.8;
+static const float32_t VRKT_MIN = 11.1;
+static const float32_t VRKT_MAX = 12.8;
 
 // Charge Line Thresholds
-static const uint32_t VCHG_MIN = 9;
-static const uint32_t VCHG_MAX = 14;
+static const float32_t VCHG_MIN = 9;
+static const float32_t VCHG_MAX = 14;
 
 // power rail thresholds (mA)
 static const uint32_t I3V3_MAX = 500; 
@@ -144,9 +144,9 @@ w_status_t power_handler_init(void) {
 	w_status_t init_status = W_SUCCESS;
 	w_status_t cb_status = W_SUCCESS;
 
-	// Default: CHG_MUX_EN HIGH, external 5V OFF, LiPo ON
+	// Default: CHG_MUX_EN HIGH, external 5V ON, LiPo ON
 	gpio_write(GPIO_PIN_CHG_MUX_EN, GPIO_LEVEL_HIGH, 5);
-	gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_LOW, 5);
+	gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_HIGH, 5);
 	gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
 
 	// Register callbacks
@@ -159,7 +159,7 @@ w_status_t power_handler_init(void) {
 	}
 
 	power_handler_status.initialized = true;
-	power_handler_status.external_5v_enabled = false;
+	power_handler_status.external_5v_enabled = true;
 	power_handler_status.low_power_mode = false;
 
 	return init_status;
