@@ -11,12 +11,12 @@ extern "C" {
 
 /*=======================================================================*
  * Target hardware information
- *   Device type: ARM Compatible->ARM Cortex-M
+ *   Device type: Generic->32-bit Embedded Processor
  *   Number of bits:     char:   8    short:   16    int:  32
  *                       long:  32
  *                       native word size:  32
- *   Byte ordering: LittleEndian
- *   Signed integer division rounds to: Zero
+ *   Byte ordering: Unspecified
+ *   Signed integer division rounds to: Undefined
  *   Shift right on a signed integer as arithmetic shift: on
  *=======================================================================*/
 
@@ -117,6 +117,10 @@ typedef struct {
 #define MIN_int32_T ((int32_T)(-2147483647 - 1))
 #define MAX_uint32_T ((uint32_T)(0xFFFFFFFFU))
 #define MIN_uint32_T ((uint32_T)(0))
+
+/*===========================================================================*
+ * User defined type names                                                   *
+ *===========================================================================*/
 
 /* Logical type definitions */
 #if (!defined(__cplusplus)) && (!defined(__true_false_are_keywords)) &&        \
