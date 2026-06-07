@@ -58,7 +58,7 @@ static void delay_us(uint32_t us) {
  * @brief Reads one byte of data from the MS5611 sensor over I2C.
  * @param cmd The command to read from the sensor.
  */
-static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
+static w_status_t baro_read(uint8_t reg, uint8_t *data, uint8_t len) {
 	return i2c_read_reg(handle.bus, (uint8_t)handle.addr, reg, data, len);
 }
 
@@ -66,7 +66,7 @@ static w_status_t a_read(uint8_t reg, uint8_t *data, uint8_t len) {
  * @brief Writes a command to the MS5611 sensor.
  * @param cmd The command to write.
  */
-static w_status_t a_write_cmd(uint8_t cmd) {
+static w_status_t baro_write_cmd(uint8_t cmd) {
 	return i2c_write_data(handle.bus, (uint8_t)handle.addr, &cmd, 1);
 }
 
@@ -74,9 +74,9 @@ static w_status_t a_write_cmd(uint8_t cmd) {
  * @brief Reads the ADC value from the MS5611 sensor.
  * @param out Pointer to store the read ADC value.
  */
-static w_status_t a_read_adc(uint32_t *out) {
+static w_status_t baro_read_adc(uint32_t *out) {
 	uint8_t prom_buf[3];
-	if (a_read(MS5611_CMD_ADC_READ, prom_buf, 3) != W_SUCCESS) {
+	if (baro_read(MS5611_CMD_ADC_READ, prom_buf, 3) != W_SUCCESS) {
 		return W_FAILURE;
 	}
 	*out = ((uint32_t)prom_buf[0] << 16) | ((uint32_t)prom_buf[1] << 8) | prom_buf[2];
@@ -122,7 +122,6 @@ static w_status_t a_read_adc(uint32_t *out) {
 // 	n_rem = (0x000F & (n_rem >> 12)); /* get rem */
 // 	n_prom[7] = (0xFF00U & crc_read); /* set crc read */
 
-
 // 	if (n_rem != crc) {
 // 		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
 // 		return W_FAILURE;
@@ -142,7 +141,7 @@ static w_status_t ms5611_prom_read(void) {
 
 	// copy into a local var first to avoid modifying the handle with corrupt data on read failure
 	for (i = 0; i < 8; i++) {
-		status |= a_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
+		status |= baro_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
 		if (status != W_SUCCESS) {
 			log_text(1, "ms5611", "ERROR: failed to read PROM coefficient C%u", i);
 			return W_FAILURE;
@@ -181,7 +180,7 @@ static w_status_t ms5611_prom_read(void) {
 w_status_t ms5611_init(void) {
 	handle.initialized = false;
 
-	if (W_SUCCESS != a_write_cmd(MS5611_CMD_RESET)) {
+	if (W_SUCCESS != baro_write_cmd(MS5611_CMD_RESET)) {
 		log_text(1, "ms5611", "ERROR: initialization failed during command reset.");
 		return W_FAILURE;
 	}
@@ -238,27 +237,27 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	}
 
 	/* D2: temperature conversion */
-	if (W_FAILURE == a_write_cmd(D2_CMD[handle.osr_temperature])) {
+	if (W_FAILURE == baro_write_cmd(D2_CMD[handle.osr_temperature])) {
 		log_text(1, "ms5611", "ERROR: failed to write temperature conversion command");
 		return W_IO_ERROR;
 	}
 
 	delay_us(CONV_TIME_US[handle.osr_temperature]); // 600 us
 
-	if (W_FAILURE == a_read_adc(&d2)) {
+	if (W_FAILURE == baro_read_adc(&d2)) {
 		log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
 		return W_IO_ERROR;
 	}
 
 	/* D1: pressure conversion */
-	if (W_FAILURE == a_write_cmd(D1_CMD[handle.osr_pressure])) {
+	if (W_FAILURE == baro_write_cmd(D1_CMD[handle.osr_pressure])) {
 		log_text(1, "ms5611", "ERROR: failed to write pressure conversion command");
 		return W_IO_ERROR;
 	}
 
 	delay_us(CONV_TIME_US[handle.osr_pressure]); // 2280 us
 
-	if (W_FAILURE == a_read_adc(&d1)) {
+	if (W_FAILURE == baro_read_adc(&d1)) {
 		log_text(1, "ms5611", "ERROR: failed to read pressure ADC");
 		return W_IO_ERROR;
 	}
@@ -291,7 +290,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 			off2 += 7 * (int64_t)(temp - second_comp_extreme_temp_threshold_centi_degrees) *
 					(temp - second_comp_extreme_temp_threshold_centi_degrees);
 			sens2 += (11 * (int64_t)((temp - second_comp_extreme_temp_threshold_centi_degrees) *
-									(temp - second_comp_extreme_temp_threshold_centi_degrees))) >>
+									 (temp - second_comp_extreme_temp_threshold_centi_degrees))) >>
 					 1;
 		}
 
@@ -303,7 +302,9 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	result->temperature_centideg = temp;
 	result->pressure_centimbar = (int32_t)p;
 
-	*timestamp_ms += ((CONV_TIME_US[handle.osr_pressure] / 1000) + (CONV_TIME_US[handle.osr_temperature] / 1000)); // account for conversion time in timestamp
+	*timestamp_ms +=
+		((CONV_TIME_US[handle.osr_pressure] / 1000) +
+		 (CONV_TIME_US[handle.osr_temperature] / 1000)); // account for conversion time in timestamp
 
 	return W_SUCCESS;
 }

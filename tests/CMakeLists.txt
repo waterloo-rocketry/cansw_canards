@@ -431,9 +431,17 @@ add_test_group(test_health_check
 #     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
 # )
 
+<<<<<<< HEAD
 add_test_group(test_ms5611_baro
     # test3 file(s)
     ${UNIT_TESTS_DIR}/ms5611_test.cpp
     # src file(s)
     ${PROC_SRC_DIR}/drivers/MS5611/MS5611.c
+=======
+add_test_group(test_lsm6dsv32x
+    # test file(s)
+    ${UNIT_TESTS_DIR}/lsm6dsv32x_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/lsm6dsv32x/LSM6DSV32X.c
+>>>>>>> 964ac1757a2855629744abc9a9b7c84c00a2e59e
 )
