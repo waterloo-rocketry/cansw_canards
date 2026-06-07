@@ -437,3 +437,10 @@ add_test_group(test_ms5611_baro
     # src file(s)
     ${PROC_SRC_DIR}/drivers/MS5611/MS5611.c
 )
+
+add_test_group(test_lsm6dsv32x
+    # test file(s)
+    ${UNIT_TESTS_DIR}/lsm6dsv32x_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/lsm6dsv32x/LSM6DSV32X.c
+)
