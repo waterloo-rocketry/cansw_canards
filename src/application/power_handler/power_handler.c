@@ -106,7 +106,8 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 	}
 
 	if (actuator_id == ACTUATOR_CANARD_5V_OUTPUT) {
-		status = power_handler_set_5V_external(cmd_state == ACT_STATE_ON);
+		bool enable_5v = (cmd_state == ACT_STATE_ON);
+		status = power_handler_set_5V_external(enable_5v);
 	} else if (actuator_id == ACTUATOR_CANARD_LIPO_ON) {
 		bool lipo_enable = (cmd_state == ACT_STATE_ON);
 		status = power_handler_set_low_power_mode(!lipo_enable);
