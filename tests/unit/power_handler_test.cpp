@@ -1,12 +1,11 @@
 #include "fff.h"
 #include <gtest/gtest.h>
-#include "application/power_handler/power_handler.h"
 
 extern "C" {
     #include "FreeRTOS.h"
     #include "queue.h"
     #include "task.h"
-    #include "timers.h"
+    #include "application/power_handler/power_handler.h"
 
 // GPIO
 FAKE_VALUE_FUNC(w_status_t, gpio_write,
@@ -122,20 +121,19 @@ protected:
 };
 
 
-/******** */
+/***************/
 /*rocket can cmd*/
-/******** */
+/***************/
+
 // Shall enable or disable the 5V external payload rail in response to a CANARD_5V_OUTPUT actuator CAN command from the operator.
 TEST_F(power_handler_test, EN_5V_EXTERNAL_CMD) {
     // Arrange
-
+    power_handler_init();
+    power_handler_set_low_power_mode(false); // Ensure low power mode is disabled for this test
 
     // Act
-    // Call the function to be tested
-
+    
     // Assert
-    // Verify the expected behavior of the above Act
-    EXPECT_EQ(1, 1); // Example assertion
 }
 
 TEST_F(power_handler_test, DIS_5V_EXTERNAL_CMD) {
@@ -176,9 +174,9 @@ TEST_F(power_handler_test, EN_LIPO_CMD) {
     EXPECT_EQ(1, 1); // Example assertion
 }
 
-/******** */
+/*****************/
 /*gpio states*/
-/******** */
+/***************/
 
 // Shall default to lipo on
 TEST_F(power_handler_test, DEFAULT_LIPO_ON) {
@@ -244,13 +242,49 @@ TEST_F(power_handler_test, DEFAULT_CHG_MUX_EN_HIGH) {
     // Verify the expected behavior of the above Act
     EXPECT_EQ(1, 1); // Example assertion
 }
-// CHG_MUX_EN must be set LOW at all times when EN_EXT_5V is HIGH
-// Shall not allow external 5V when low power mode is enabled
-// Shall turn off lipos when low power mode is active
 
-/******** */
+// CHG_MUX_EN must be set LOW at all times when EN_EXT_5V is HIGH
+TEST_F(power_handler_test, DEFAULT_CHG_MUX_EN_HIGH) {
+    // Arrange
+    // Set up any necessary variables, mocks, etc
+
+    // Act
+    // Call the function to be tested
+
+    // Assert
+    // Verify the expected behavior of the above Act
+    EXPECT_EQ(1, 1); // Example assertion
+}
+
+// Shall not allow external 5V when low power mode is enabled
+TEST_F(power_handler_test, DEFAULT_CHG_MUX_EN_HIGH) {
+    // Arrange
+    // Set up any necessary variables, mocks, etc
+
+    // Act
+    // Call the function to be tested
+
+    // Assert
+    // Verify the expected behavior of the above Act
+    EXPECT_EQ(1, 1); // Example assertion
+}
+
+// Shall turn off lipos when low power mode is active
+TEST_F(power_handler_test, DEFAULT_CHG_MUX_EN_HIGH) {
+    // Arrange
+    // Set up any necessary variables, mocks, etc
+
+    // Act
+    // Call the function to be tested
+
+    // Assert
+    // Verify the expected behavior of the above Act
+    EXPECT_EQ(1, 1); // Example assertion
+}
+
+/*****************/
 /*status reports*/
-/******** */
+/***************/
 
 // Shall continuously read and report that power rail voltage are within threshold values to rocketCAN. (health checks) 
 TEST_F(power_handler_test, DEFAULT_CHG_MUX_EN_HIGH) {

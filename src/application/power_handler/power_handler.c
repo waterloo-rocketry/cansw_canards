@@ -3,14 +3,14 @@
 #include "task.h"
 #include "timers.h"
 
-#include "application/can_handler/can_handler.h" 
+#include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
+#include "drivers/timer/timer.h"
 #include "message_types.h"
 #include "power_handler.h"
 #include "rocketlib/include/common.h"
-#include "drivers/timer/timer.h"
 
 // LiPo Thresholds
 static const float32_t VBAT_MIN = 22.2;
@@ -26,8 +26,8 @@ static const uint32_t VCHG_MIN = 9;
 static const uint32_t VCHG_MAX = 14;
 
 // power rail thresholds (mA)
-static const uint32_t I3V3_MAX = 500; 
-static const uint32_t I5V_MAX = 4000; 
+static const uint32_t I3V3_MAX = 500;
+static const uint32_t I5V_MAX = 4000;
 
 // Fault bit positions
 #define FAULT_BAT1_VOLT (1 << 0)
@@ -80,9 +80,11 @@ static power_input_source_t get_active_input(void) {
 
 	if (vsens_chg == 0 && vsens_rkt == 0 && vsens_usb == 0 && vsens_bat1 == 0 && vsens_bat2 == 0) {
 		return POWER_INPUT_NONE;
-	} else if (vsens_chg >= vsens_rkt && vsens_chg >= vsens_usb && vsens_chg >= vsens_bat1 && vsens_chg >= vsens_bat2) {
+	} else if (vsens_chg >= vsens_rkt && vsens_chg >= vsens_usb && vsens_chg >= vsens_bat1 &&
+			   vsens_chg >= vsens_bat2) {
 		return POWER_INPUT_CHG;
-	} else if (vsens_rkt >= vsens_chg && vsens_rkt >= vsens_usb && vsens_rkt >= vsens_bat1 && vsens_rkt >= vsens_bat2) {
+	} else if (vsens_rkt >= vsens_chg && vsens_rkt >= vsens_usb && vsens_rkt >= vsens_bat1 &&
+			   vsens_rkt >= vsens_bat2) {
 		return POWER_INPUT_RKT;
 	} else {
 		return POWER_INPUT_BAT;
@@ -113,10 +115,12 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 
 		if (status == W_SUCCESS) {
 			timer_get_ms(&timestamp);
-			build_actuator_status_msg(PRIO_MEDIUM, (uint16_t)timestamp,
-									 ACTUATOR_CANARD_LIPO_ON, cmd_state,
-									 lipo_enable ? ACT_STATE_ON : ACT_STATE_OFF,
-									 &response_msg);
+			build_actuator_status_msg(PRIO_MEDIUM,
+									  (uint16_t)timestamp,
+									  ACTUATOR_CANARD_LIPO_ON,
+									  cmd_state,
+									  lipo_enable ? ACT_STATE_ON : ACT_STATE_OFF,
+									  &response_msg);
 			can_handler_transmit(&response_msg);
 		}
 	}
@@ -176,7 +180,8 @@ w_status_t power_handler_init(void) {
 
 /*
  * Transmits power status CAN messages and power fault CAN messages if faults are detected.
- * Power status messages include battery voltages and currents, rocket voltage, charge voltage, and 5V rail current. Fault messages include a bitfield of active faults. Called by health checks
+ * Power status messages include battery voltages and currents, rocket voltage, charge voltage, and
+ * 5V rail current. Fault messages include a bitfield of active faults. Called by health checks
  */
 void transmit_status_can_msg(uint32_t status_bitfield) {
 	can_msg_t status_msg = {0};
@@ -187,51 +192,57 @@ void transmit_status_can_msg(uint32_t status_bitfield) {
 
 	if (adc_get_converted_val(VSENS_BAT1, &adc_value) == W_SUCCESS) {
 		timer_get_ms(&timestamp);
-	 	build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_VOLT, adc_value, &msg);
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_VOLT, adc_value, &msg);
 		can_handler_transmit(&msg);
 	}
 
 	if (adc_get_converted_val(ISENS_BAT1, &adc_value) == W_SUCCESS) {
 		timer_get_ms(&timestamp);
-	 	build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_CURR, adc_value, &msg);
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_CURR, adc_value, &msg);
 		can_handler_transmit(&msg);
 	}
 
 	if (adc_get_converted_val(VSENS_BAT2, &adc_value) == W_SUCCESS) {
 		timer_get_ms(&timestamp);
-	 	build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_VOLT, adc_value, &msg);
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_VOLT, adc_value, &msg);
 		can_handler_transmit(&msg);
 	}
 
 	if (adc_get_converted_val(ISENS_BAT2, &adc_value) == W_SUCCESS) {
 		timer_get_ms(&timestamp);
-	 	build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_CURR, adc_value, &msg);
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_CURR, adc_value, &msg);
 		can_handler_transmit(&msg);
 	}
 
-	if(adc_get_converted_val(ISENS_5V, &adc_value) == W_SUCCESS) {
+	if (adc_get_converted_val(ISENS_5V, &adc_value) == W_SUCCESS) {
 		timer_get_ms(&timestamp);
-	 	build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_5V_CURR, adc_value, &msg);
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_5V_CURR, adc_value, &msg);
 		can_handler_transmit(&msg);
 	}
 
 	if (adc_get_converted_val(VSENS_RKT, &adc_value) == W_SUCCESS) {
 		timer_get_ms(&timestamp);
-	 	build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_12V_VOLT, adc_value, &msg);
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_12V_VOLT, adc_value, &msg);
 		can_handler_transmit(&msg);
 	}
 
 	if (adc_get_converted_val(VSENS_CHG, &adc_value) == W_SUCCESS) {
 		timer_get_ms(&timestamp);
-	 	build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_CHARGE_VOLT, adc_value, &msg);
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_CHARGE_VOLT, adc_value, &msg);
 		can_handler_transmit(&msg);
 	}
 
 	if (status_bitfield != 0) {
 		timer_get_ms(&timestamp);
 		log_text(10, "power_handler", "Power fault detected: 0x%lx", status_bitfield);
-		build_general_board_status_msg(PRIO_HIGH, (uint16_t)timestamp,
-										status_bitfield, &msg);
+		build_general_board_status_msg(PRIO_HIGH, (uint16_t)timestamp, status_bitfield, &msg);
 		can_handler_transmit(&msg);
 	}
 }
@@ -260,7 +271,9 @@ uint32_t power_handler_get_status(void) {
 
 	gpio_read(GPIO_PIN_BAT_FLT1, &flt1, 5);
 	gpio_read(GPIO_PIN_BAT_FLT2, &flt2, 5);
-	gpio_read(GPIO_PIN_PG_EXT_5V, &pg_ext_5v, 5); // check if external 5v supply is good or bad for health checks
+	gpio_read(GPIO_PIN_PG_EXT_5V,
+			  &pg_ext_5v,
+			  5); // check if external 5v supply is good or bad for health checks
 
 	if (flt1 == GPIO_LEVEL_LOW) {
 		status_bitfield |= FAULT_BAT1_VOLT;
@@ -273,11 +286,12 @@ uint32_t power_handler_get_status(void) {
 	}
 
 	// Check external 5V output fault
-	if(pg_ext_5v == GPIO_LEVEL_LOW) {
+	if (pg_ext_5v == GPIO_LEVEL_LOW) {
 		status_bitfield |= FAULT_5V_OUTPUT;
 	}
 
-	// external and internal 5V share the same current sense, so if either is overcurrent it will trigger the fault
+	// external and internal 5V share the same current sense, so if either is overcurrent it will
+	// trigger the fault
 	if (adc_get_converted_val(ISENS_5V, &adc_value) == W_SUCCESS) {
 		if (adc_value > I5V_MAX) {
 			status_bitfield |= FAULT_5V_CURR;
@@ -285,7 +299,7 @@ uint32_t power_handler_get_status(void) {
 		}
 	}
 
-	if( adc_get_converted_val(ISENS_3V3, &adc_value) == W_SUCCESS) {
+	if (adc_get_converted_val(ISENS_3V3, &adc_value) == W_SUCCESS) {
 		if (adc_value > I3V3_MAX) {
 			status_bitfield |= FAULT_3V3_CURR;
 			power_handler_status.overcurrent_count++;
@@ -333,7 +347,7 @@ uint32_t power_handler_get_status(void) {
 				}
 			}
 
-			if(adc_get_converted_val(ISENS_BAT2, &adc_value) == W_SUCCESS) {
+			if (adc_get_converted_val(ISENS_BAT2, &adc_value) == W_SUCCESS) {
 				if (adc_value > IBAT_MAX) {
 					status_bitfield |= FAULT_BAT2_CURR;
 					power_handler_status.overcurrent_count++;
@@ -372,7 +386,8 @@ w_status_t power_handler_set_5V_external(bool enabled) {
 		}
 
 		// Enable 5V external and set CHG_MUX_EN LOW
-		// since chg_mux MUST be disabled before enabling 5v, u MUST disable the chg mux en pin first! 
+		// since chg_mux MUST be disabled before enabling 5v, u MUST disable the chg mux en pin
+		// first!
 		gpio_write(GPIO_PIN_CHG_MUX_EN, GPIO_LEVEL_LOW, 5);
 		gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_HIGH, 5);
 	} else {

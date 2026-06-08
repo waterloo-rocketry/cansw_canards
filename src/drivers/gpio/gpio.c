@@ -50,17 +50,13 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 							.access_mutex = NULL},
 	[GPIO_PIN_PWR_EN] = {.port = PWR_EN_GPIO_Port, .pin = PWR_EN_Pin, .access_mutex = NULL},
 	[GPIO_PIN_PG_EXT_5V] = {.port = PG_EXT_5V_GPIO_Port,
-							 .pin = PG_EXT_5V_Pin,
-							 .access_mutex = NULL},
-	[GPIO_PIN_BAT_FLT1] = {.port = BAT_FLT1_GPIO_Port,
-						 .pin = BAT_FLT1_Pin,
-						 .access_mutex = NULL},
-	[GPIO_PIN_BAT_FLT2] = {.port = BAT_FLT2_GPIO_Port,
-						 .pin = BAT_FLT2_Pin,
-						 .access_mutex = NULL},
+							.pin = PG_EXT_5V_Pin,
+							.access_mutex = NULL},
+	[GPIO_PIN_BAT_FLT1] = {.port = BAT_FLT1_GPIO_Port, .pin = BAT_FLT1_Pin, .access_mutex = NULL},
+	[GPIO_PIN_BAT_FLT2] = {.port = BAT_FLT2_GPIO_Port, .pin = BAT_FLT2_Pin, .access_mutex = NULL},
 	[GPIO_PIN_CHG_MUX_EN] = {.port = CHG_MUX_EN_GPIO_Port,
-							   .pin = CHG_MUX_EN_Pin,
-							   .access_mutex = NULL},
+							 .pin = CHG_MUX_EN_Pin,
+							 .access_mutex = NULL},
 };
 
 // Public ---------------------------------------------------------------------
