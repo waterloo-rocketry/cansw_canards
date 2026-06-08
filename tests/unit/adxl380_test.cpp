@@ -304,6 +304,7 @@ TEST_F(ADXL380, initFailWithADXL38XUpdateBitFail){
 };
 
 TEST_F(ADXL380, getRawAccelFail){
+    adxl380_init();
 
     // set up function returns
     adxl38x_read_device_data_fake.return_val = W_FAILURE;
@@ -315,6 +316,7 @@ TEST_F(ADXL380, getRawAccelFail){
 };
 
 TEST_F(ADXL380, getRawAccelSuccessRegular){
+    adxl380_init();
 
     // set up function returns
     g_test_device_data_raw.x = 0xF840;
@@ -332,6 +334,7 @@ TEST_F(ADXL380, getRawAccelSuccessRegular){
 };
 
 TEST_F(ADXL380, getRawAccelSuccessEdgeCase){
+    adxl380_init();
 
     // set up function returns
     g_test_device_data_raw.x = 0x7FFF;
@@ -351,6 +354,7 @@ TEST_F(ADXL380, getRawAccelSuccessEdgeCase){
 
 
 TEST_F(ADXL380, getConvAccelFail){
+    adxl380_init();
 
     // set up function returns
     adxl38x_read_device_data_fake.return_val = W_FAILURE;
@@ -363,6 +367,7 @@ TEST_F(ADXL380, getConvAccelFail){
 };
 
 TEST_F(ADXL380, getConvAccelSuccessRegular){
+    adxl380_init();
 
     // set up function returns
     g_test_device_data_raw.x = 0xF840;
@@ -381,6 +386,7 @@ TEST_F(ADXL380, getConvAccelSuccessRegular){
 };
 
 TEST_F(ADXL380, getConvAccelSuccessEdgeCase){
+    adxl380_init();
 
     // set up function returns
     g_test_device_data_raw.x = 0x7FFF;

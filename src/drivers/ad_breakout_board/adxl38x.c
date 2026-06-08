@@ -700,9 +700,9 @@ w_status_t adxl38x_selftest(adxl38x_dev_t *p_dev, adxl38x_op_mode_t op_mode, boo
 			return ret;
 		}
 
-		x_sum += (int64_t)adxl38x_get_unaligned_be16(array_raw_data);
-		y_sum += (int64_t)adxl38x_get_unaligned_be16(array_raw_data + 2);
-		z_sum += (int64_t)adxl38x_get_unaligned_be16(array_raw_data + 4);
+		x_sum += (int64_t)((int16_t)adxl38x_get_unaligned_be16(array_raw_data));
+		y_sum += (int64_t)((int16_t)adxl38x_get_unaligned_be16(array_raw_data + 2));
+		z_sum += (int64_t)((int16_t)adxl38x_get_unaligned_be16(array_raw_data + 4));
 	}
 	st_positive_data[0] = adxl38x_sign_extend16((uint16_t)(x_sum / ADXL38X_SELFTEST_SAMPLE_COUNT));
 	st_positive_data[1] = adxl38x_sign_extend16((uint16_t)(y_sum / ADXL38X_SELFTEST_SAMPLE_COUNT));
@@ -723,9 +723,9 @@ w_status_t adxl38x_selftest(adxl38x_dev_t *p_dev, adxl38x_op_mode_t op_mode, boo
 			return ret;
 		}
 
-		x_sum += (int64_t)adxl38x_get_unaligned_be16(array_raw_data);
-		y_sum += (int64_t)adxl38x_get_unaligned_be16(array_raw_data + 2);
-		z_sum += (int64_t)adxl38x_get_unaligned_be16(array_raw_data + 4);
+		x_sum += (int64_t)((int16_t)adxl38x_get_unaligned_be16(array_raw_data));
+		y_sum += (int64_t)((int16_t)adxl38x_get_unaligned_be16(array_raw_data + 2));
+		z_sum += (int64_t)((int16_t)adxl38x_get_unaligned_be16(array_raw_data + 4));
 	}
 	st_negative_data[0] = adxl38x_sign_extend16((uint16_t)(x_sum / ADXL38X_SELFTEST_SAMPLE_COUNT));
 	st_negative_data[1] = adxl38x_sign_extend16((uint16_t)(y_sum / ADXL38X_SELFTEST_SAMPLE_COUNT));

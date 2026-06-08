@@ -22,12 +22,20 @@ static const int32_t ADXL_MICRO_G_G = 1000000;
 
 adxl38x_dev_t g_adx380_handle = {0};
 
+static bool is_initialized = false;
+
 /**
  * @brief this is initializes the ADXL380
  * @note Must be called after scheduler start
  * @return the status of the function call
  */
 w_status_t adxl380_init() {
+	// so that we don't reinitialize
+	if (is_initialized) {
+		log_text(0, "ADXL380", "ERROR: Reinitialization is not allowed.");
+		return W_FAILURE;
+	}
+
 	// init the handle
 	g_adx380_handle.i2c_addr = ADXL_ADDRS;
 	g_adx380_handle.i2c_bus = I2C_BUS_2; // TODO: To be corrected
@@ -116,6 +124,9 @@ w_status_t adxl380_init() {
 
 	if (W_SUCCESS != init_setting_status) {
 		log_text(0, "ADXL380", "ERROR: Failed to set up the correct initial register bit.");
+
+	} else {
+		is_initialized = true;
 	}
 
 	return init_setting_status;
@@ -127,6 +138,12 @@ w_status_t adxl380_init() {
  * @return the status of the function call
  */
 w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
+	// make sure have initialized
+	if (!is_initialized) {
+		log_text(0, "ADXL380", "ERROR: Not initialized.");
+		return W_FAILURE;
+	}
+
 	uint8_t raw_data_array[6] = {0};
 
 	if (W_SUCCESS !=
@@ -149,6 +166,12 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
  * @return the status of the function call
  */
 w_status_t adxl380_get_accel_data(vector3d_t *data, adxl380_raw_accel_data_t *p_raw_data) {
+	// make sure have initialized
+	if (!is_initialized) {
+		log_text(0, "ADXL380", "ERROR: Not initialized.");
+		return W_FAILURE;
+	}
+
 	if (W_SUCCESS != adxl380_get_raw_accel(p_raw_data)) {
 		log_text(0, "ADXL380", "ERROR: Failed to get raw acceleration.");
 		return W_FAILURE;
