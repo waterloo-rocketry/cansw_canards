@@ -129,7 +129,6 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p
 							 output_ctx.P,
 							 &(output_ctx.bias),
 							 &(output_ctx.sensor_filter),
-							 &(p_output->cov_norm),
 							 &(p_output->airdata),
 							 p_output->roll_state);
 

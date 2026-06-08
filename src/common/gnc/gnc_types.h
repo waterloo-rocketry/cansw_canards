@@ -101,7 +101,6 @@ typedef struct {
 
 typedef struct {
 	uint32_t timestamp_tenth_ms;
-	double cov_norm;
 	// TODO: update after Tristan update codegen
 	airdata_codegen_t airdata;
 	double roll_state[2];
