@@ -139,6 +139,31 @@ w_status_t ads1219_ST2_fail_set_get_millivolts2(ads1219_handle_t *handle, float6
     return W_SUCCESS;
 }
 
+
+void successful_adxrs649_init() {
+     // set up function returns
+    ads1219_init_fake.return_val = W_SUCCESS;
+
+    // set up
+    ads1219_set_channel_fake.return_val = W_SUCCESS;
+    ads1219_set_conversion_mode_fake.return_val = W_SUCCESS;
+    ads1219_set_gain_fake.return_val = W_SUCCESS;
+    ads1219_set_data_rate_fake.return_val = W_SUCCESS;
+    ads1219_set_vref_fake.return_val = W_SUCCESS;
+
+    // ADC Sanity Check
+    ads1219_sanity_check_fake.return_val = W_SUCCESS;
+
+    // self-test
+    gpio_write_fake.return_val = W_SUCCESS;
+    ads1219_get_millivolts_fake.custom_fake = ads1219_ST_set_get_millivolts1;
+
+    // start
+    ads1219_start_fake.return_val = W_SUCCESS;
+
+    adxrs649_init();
+}
+
 class ADXRS649 : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -416,6 +441,7 @@ TEST_F(ADXRS649, initFailAfterST2FailLow){
 };
 
 TEST_F(ADXRS649, getGyroDataFailByBothDRDYFail){
+    successful_adxrs649_init();
 
     // read DRDY
     gpio_read_fake.return_val = W_FAILURE;
@@ -432,6 +458,7 @@ TEST_F(ADXRS649, getGyroDataFailByBothDRDYFail){
 };
 
 TEST_F(ADXRS649, getGyroDataFailByGPIORead0){
+    successful_adxrs649_init();
 
     // read DRDY
     global_gpio_value = GPIO_LEVEL_HIGH;
@@ -451,6 +478,7 @@ TEST_F(ADXRS649, getGyroDataFailByGPIORead0){
 };
 
 TEST_F(ADXRS649, getGyroDataFailWithGPIOFailADS1219SuceessNotReady){
+    successful_adxrs649_init();
 
     // read DRDY
     gpio_read_fake.return_val = W_FAILURE;
@@ -472,6 +500,7 @@ TEST_F(ADXRS649, getGyroDataFailWithGPIOFailADS1219SuceessNotReady){
 };
 
 TEST_F(ADXRS649, getGyroDataFailByReadValFail){
+    successful_adxrs649_init();
 
     // read DRDY
     global_gpio_value = GPIO_LEVEL_LOW;
@@ -490,6 +519,7 @@ TEST_F(ADXRS649, getGyroDataFailByReadValFail){
 };
 
 TEST_F(ADXRS649, getGyroDataFailByConvFail){
+    successful_adxrs649_init();
 
     // read DRDY
     global_gpio_value = GPIO_LEVEL_LOW;
@@ -509,6 +539,7 @@ TEST_F(ADXRS649, getGyroDataFailByConvFail){
 
 TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMax){
 
+    successful_adxrs649_init();
     // read DRDY
     global_gpio_value = GPIO_LEVEL_LOW;
     gpio_return_value = W_SUCCESS; 
@@ -533,6 +564,7 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMax){
 };
 
 TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMin){
+    successful_adxrs649_init();
 
     // read DRDY
     global_gpio_value = GPIO_LEVEL_LOW;
@@ -558,6 +590,7 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMin){
 };
 
 TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorZero){
+    successful_adxrs649_init();
 
     // read DRDY
     global_gpio_value = GPIO_LEVEL_LOW;
@@ -583,6 +616,7 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorZero){
 };
 
 TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorRegular){
+    successful_adxrs649_init();
 
     // read DRDY
     global_gpio_value = GPIO_LEVEL_LOW;
