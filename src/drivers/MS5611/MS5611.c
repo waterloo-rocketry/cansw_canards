@@ -1,5 +1,5 @@
-#include "/workspaces/cansw_canards/src/drivers/MS5611/MS5611.h"
-#include "/workspaces/cansw_canards/src/drivers/timer/timer.h"
+#include "drivers/MS5611/MS5611.h"
+#include "drivers/timer/timer.h"
 
 /* Conversion time in microseconds - max values from datasheet for safety */
 static const uint32_t CONV_TIME_US[] = {
