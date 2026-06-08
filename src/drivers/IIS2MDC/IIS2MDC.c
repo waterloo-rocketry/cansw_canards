@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -5,8 +7,6 @@
 #include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/timer/timer.h"
-
-#include <math.h>
 
 // I2C bus and slave address
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
@@ -19,8 +19,9 @@ static const uint16_t IIS2MDC_HAL_ADDR = (uint16_t)(IIS2MDC_I2C_ADDR << 1);
 extern I2C_HandleTypeDef hi2c4;
 
 // Register addresses
-static const uint32_t IIS2MDC_REG_OFFSET_X_L =
-	0x45; // How are we planning to calibrate sensors irl?
+// TODO: Calibration needs to be done in a magnetic field to get offset values written into the
+// offset registers.
+static const uint32_t IIS2MDC_REG_OFFSET_X_L = 0x45;
 static const uint32_t IIS2MDC_REG_WHO_AM_I = 0x4F;
 static const uint32_t IIS2MDC_REG_CFG_A = 0x60;
 static const uint32_t IIS2MDC_REG_CFG_B = 0x61;
@@ -141,6 +142,10 @@ static w_status_t self_test_wait_data_ready(void) {
 
 	uint32_t now_ms = start_ms;
 
+	// within this loop, it checks if new data is ready by reading the status register every 1ms. If
+	// data is not ready, updates the current time. Loop exits if the time elapsed exceeds the
+	// timeout threshold, returning W_IO_TIMEOUT to indicate no new data was available during the
+	// timeout period.
 	while ((now_ms - start_ms) < IIS2MDC_SELF_TEST_TIMEOUT_MS) {
 		if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_STATUS, &status, 1)) {
 			return W_FAILURE;
@@ -366,6 +371,13 @@ w_status_t iis2mdc_init(void) {
 	return W_SUCCESS;
 }
 
+// with BDU enabled (CFG_REG_C) data corruption per-axis is avoided but it is still possible for
+// cross-axis data corruption. In the future async implementation using the interrupt pin, this
+// should not be a problem.
+
+// In the current design scope using synchronous polling reads, since the polling rate is 200hz and
+// the maximum ODR of the mag is 100hz, stale data is returned if no new data is available instead
+// of returning timeout or failure.
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 							uint32_t *timestamp_ms) {
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {

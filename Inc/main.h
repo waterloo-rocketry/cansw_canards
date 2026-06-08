@@ -191,12 +191,14 @@ void Error_Handler(void);
 #define SERVO4_RX_GPIO_Port GPIOD
 #define IMU_INT1_Pin GPIO_PIN_7
 #define IMU_INT1_GPIO_Port GPIOD
+#define IMU_INT1_EXTI_IRQn EXTI9_5_IRQn
 #define SD_D2_Pin GPIO_PIN_3
 #define SD_D2_GPIO_Port GPIOB
 #define SD_D3_Pin GPIO_PIN_4
 #define SD_D3_GPIO_Port GPIOB
 #define IMU_INT2_Pin GPIO_PIN_5
 #define IMU_INT2_GPIO_Port GPIOB
+#define IMU_INT2_EXTI_IRQn EXTI9_5_IRQn
 #define IMU_SCL_Pin GPIO_PIN_6
 #define IMU_SCL_GPIO_Port GPIOB
 #define IMU_SDA_Pin GPIO_PIN_7
