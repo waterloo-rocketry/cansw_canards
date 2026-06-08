@@ -1,5 +1,5 @@
-#include "drivers/MS5611/MS5611.h"
-#include "drivers/timer/timer.h"
+#include "/workspaces/cansw_canards/src/drivers/MS5611/MS5611.h"
+#include "/workspaces/cansw_canards/src/drivers/timer/timer.h"
 
 /* Conversion time in microseconds - max values from datasheet for safety */
 static const uint32_t CONV_TIME_US[] = {
@@ -51,7 +51,7 @@ static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom 
  */
 static void delay_us(uint32_t us) {
 	/* Round up to nearest ms tick — FreeRTOS resolution is 1ms */
-	vTaskDelay(pdMS_TO_TICKS((us + 999) / 1000));
+	vTaskDelayMs(pdMS_TO_TICKS((us + 999) / 1000));
 }
 
 /**
