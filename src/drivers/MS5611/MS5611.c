@@ -51,7 +51,7 @@ static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom 
  */
 static void delay_us(uint32_t us) {
 	/* Round up to nearest ms tick — FreeRTOS resolution is 1ms */
-	vTaskDelayMs(pdMS_TO_TICKS((us + 999) / 1000));
+	vTaskDelay(pdMS_TO_TICKS((us + 999) / 1000));
 }
 
 /**
