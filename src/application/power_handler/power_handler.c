@@ -33,7 +33,7 @@ static const uint32_t I5V_MAX = 4000;
 #define FAULT_BAT2_VOLT (1 << 1)
 #define FAULT_RKT_VOLT (1 << 2)
 #define FAULT_CHG_VOLT (1 << 3)
-#define FAULT_5V_EXT_CURR (1 << 4)
+#define FAULT_5V_CURR (1 << 4)
 #define FAULT_BAT1_CURR (1 << 5)
 #define FAULT_BAT2_CURR (1 << 6)
 
@@ -178,7 +178,7 @@ w_status_t power_handler_init(void) {
  * 		FAULT_BAT2_VOLT: BAT2 voltage exceeds thresholds
  * 		FAULT_RKT_VOLT: Rocket voltage exceeds thresholds
  * 		FAULT_CHG_VOLT: Charge line exceeds thresholds
- * 		FAULT_5V_EXT_CURR: 5V external overcurrent
+ * 		FAULT_5V_CURR: 5V power rail overcurrent
  * 		FAULT_BAT1_CURR: BAT1 overcurrent
  * 		FAULT_BAT2_CURR: BAT2 overcurrent
  * Returns 0 if no faults are detected.
@@ -208,7 +208,7 @@ uint32_t power_handler_get_status(void) {
 	// external and internal 5V share the same current sense, so if either is overcurrent it will trigger the fault
 	if (adc_get_converted_val(ISENS_5V, &adc_value) == W_SUCCESS) {
 		if (adc_value > I5V_MAX) {
-			status_bitfield |= FAULT_5V_EXT_CURR;
+			status_bitfield |= FAULT_5V_CURR;
 		}
 	}
 
