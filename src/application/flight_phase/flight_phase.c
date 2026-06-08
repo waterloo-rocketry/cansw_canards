@@ -13,9 +13,16 @@
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these
 static const uint32_t ACT_DELAY_MS =
-	11000; // Q - the minimum time after launch before allowing canards to actuate
-static const uint32_t FLIGHT_TIMEOUT_MS =
-	49000; // K - the approximate time between launch and apogee
+	7000; // Q - the minimum time after launch before allowing canards to actuate
+
+// TODO: updated once better times are out
+static const uint32_t RECOVERY_LOG_TIMEOUT_MS =
+	300000; // K - the approximate time between launch and 2+ minute after nominal flight.
+// This is done to make sure we exit high rate logging
+
+// to be matched with main at apogee time
+static const uint32_t SLEEPY_LOG_TIMEOUT_MS =
+	1600000; // K - the approximate time between launch and main at apogee launch to land time
 
 // #define TASK_TIMEOUT_MS 1000
 
@@ -30,10 +37,13 @@ typedef struct {
 
 	// Per-event counters
 	struct {
-		uint32_t estimator_init;
+		uint32_t pad_filter;
+		uint32_t ignitor;
 		uint32_t inj_open;
+		uint32_t launch_accel;
 		uint32_t act_delay_elapsed;
-		uint32_t flight_elapsed;
+		uint32_t recovery_rate;
+		uint32_t sleep_rate;
 		uint32_t reset;
 	} event_counts;
 
@@ -74,20 +84,26 @@ w_status_t flight_phase_init(void) {
 w_status_t flight_phase_send_event(flight_phase_event_t event) {
 	// Update event statistics
 	switch (event) {
-		case EVENT_ESTIMATOR_INIT:
-			flight_phase_status.event_counts.estimator_init++;
+		case EVENT_PAD_FILTER:
+			flight_phase_status.event_counts.pad_filter++;
+			break;
+		case EVENT_IGNITOR:
+			flight_phase_status.event_counts.ignitor++;
 			break;
 		case EVENT_INJ_OPEN:
 			flight_phase_status.event_counts.inj_open++;
 			break;
+		case EVENT_LAUNCH_ACCEL:
+			flight_phase_status.event_counts.launch_accel++;
+			break;
 		case EVENT_ACT_DELAY_ELAPSED:
 			flight_phase_status.event_counts.act_delay_elapsed++;
 			break;
-		case EVENT_FLIGHT_ELAPSED:
-			flight_phase_status.event_counts.flight_elapsed++;
+		case EVENT_RECOVERY_START:
+			flight_phase_status.event_counts.recovery_rate++;
 			break;
-		case EVENT_RESET:
-			flight_phase_status.event_counts.reset++;
+		case EVENT_SLEEP_START:
+			flight_phase_status.event_counts.sleep_rate++;
 			break;
 		default:
 			// Unexpected event type
@@ -104,7 +120,7 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 
 /**
  * Global CAN callback for messages of type MSG_ACTUATOR_CMD
- * Handles OX_INJECTOR_VALVE->OPEN and PROC_ESTIMATOR_INIT->OPEN
+ * Handles OX_INJECTOR_VALVE->OPEN and CANARD_PAD_FILTER->OPEN
  */
 static w_status_t act_cmd_callback(const can_msg_t *msg) {
 	can_actuator_id_t msg_id;
@@ -118,8 +134,9 @@ static w_status_t act_cmd_callback(const can_msg_t *msg) {
 
 	if ((ACTUATOR_OX_INJECTOR_VALVE == msg_id) && (ACT_STATE_ON == msg_state)) {
 		return flight_phase_send_event(EVENT_INJ_OPEN);
+		// TODO: add ignition once added to canlib
 	} else if ((ACTUATOR_CANARD_PAD_FILTER == msg_id) && (ACT_STATE_ON == msg_state)) {
-		return flight_phase_send_event(EVENT_ESTIMATOR_INIT);
+		return flight_phase_send_event(EVENT_PAD_FILTER);
 	}
 	return W_SUCCESS;
 }
@@ -131,13 +148,6 @@ flight_phase_event_t flight_phase_get_next_event(void) {
 		return EVENT_NONE;
 	}
 	return queue_event;
-}
-
-/**
- * Resets the flight phase state machine to initial state
- */
-w_status_t flight_phase_reset(void) {
-	return flight_phase_send_event(EVENT_RESET);
 }
 
 /**
@@ -161,25 +171,35 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 	switch (curr_state) {
 		case STATE_IDLE:
-			if (EVENT_ESTIMATOR_INIT == event) {
-				new_state = STATE_SE_INIT;
-			} else if (EVENT_INJ_OPEN == event) {
-				// allowed to skip pad filter state in case it was forgotten or failed etc.
-				// not ideal but would rather run without pad filter than not fly at all
-				new_state = STATE_BOOST;
-				// flight starts now
-				timer_get_ms(&(p_ctx->launch_timestamp_ms));
+			if (EVENT_PAD_FILTER == event) {
+				new_state = STATE_PAD_FILTER;
 			} else {
 				// Ignore redundant PAD events or other unexpected events
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
 			}
 			break;
 
-		case STATE_SE_INIT:
-			if (EVENT_INJ_OPEN == event) {
+		case STATE_PAD_FILTER:
+			if ((EVENT_LAUNCH_ACCEL == event) || (EVENT_INJ_OPEN == event)) {
 				new_state = STATE_BOOST;
 				// flight starts now
 				timer_get_ms(&(p_ctx->launch_timestamp_ms));
+
+			} else if (EVENT_IGNITOR == event) {
+				new_state = STATE_PAD_NAV;
+
+			} else {
+				// Ignore redundant or unexpected events - this is a known safe state
+				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+			}
+			break;
+
+		case STATE_PAD_NAV:
+			if ((EVENT_LAUNCH_ACCEL == event) || (EVENT_INJ_OPEN == event)) {
+				new_state = STATE_BOOST;
+				// flight starts now
+				timer_get_ms(&(p_ctx->launch_timestamp_ms));
+
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -187,12 +207,16 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 			break;
 
 		case STATE_BOOST:
-			if (EVENT_ACT_DELAY_ELAPSED == event) {
+			if (EVENT_INJ_OPEN == event) {
+				new_state = STATE_BOOST;
+				// restart flight timer constantly till lose signal
+				timer_get_ms(&(p_ctx->launch_timestamp_ms));
+
+			} else if (EVENT_ACT_DELAY_ELAPSED == event) {
 				new_state = STATE_ACT_ALLOWED;
 				// record timestamp of actuation-allowed start (aka we just exited boost phase)
 				timer_get_ms(&(p_ctx->act_allowed_timestamp_ms));
-			} else if (EVENT_FLIGHT_ELAPSED == event) {
-				new_state = STATE_RECOVERY;
+
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -200,8 +224,9 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 			break;
 
 		case STATE_ACT_ALLOWED:
-			if (EVENT_FLIGHT_ELAPSED == event) {
+			if (EVENT_RECOVERY_START == event) {
 				new_state = STATE_RECOVERY;
+
 			} else {
 				// Ignore redundant or unexpected events - already in flight
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
@@ -209,20 +234,23 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 			break;
 
 		case STATE_RECOVERY:
-			if (EVENT_RESET == event) {
-				new_state = STATE_IDLE;
+			if (EVENT_SLEEP_START == event) {
+				new_state = STATE_SLEEPY;
 			} else {
 				// Ignore redundant or unexpected events - already in flight
 				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
 			}
 			break;
+
+		case STATE_SLEEPY:
+			// Ignore redundant or unexpected events - already in flight
+			log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+			break;
+
+		// deprecate time?
 		case STATE_ERROR:
-			if (EVENT_RESET == event) {
-				new_state = STATE_IDLE;
-			} else {
-				// Stay in error state, log repeated invalid event
-				log_text(1, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
-			}
+			// Stay in error state, log repeated invalid event
+			log_text(1, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
 			break;
 		default:
 			log_text(10, "FlightPhase", "Unhandled state %d", curr_state);
@@ -241,21 +269,11 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 uint32_t flight_phase_get_status(void) {
 	uint32_t status_bitfield = 0;
 
-	// Get current state
-	// TODO: refactor this to match new design
-	// fsm_state_t current_state = flight_phase_get_state();
-	uint8_t current_state = 0;
-
-	// Map state enum to descriptive string for logging
-	const char *state_strings[] = {"IDLE", "PADFILTER", "BOOST", "ACTALLOWED", "RECOVERY", "ERROR"};
-
 	// Log initialization status and current state
 	log_text(0,
 			 "flight_phase",
-			 "%s %s (%d) q full: %lu",
+			 "%s q full: %lu",
 			 flight_phase_status.initialized ? "INIT" : "NOT INIT",
-			 (current_state <= STATE_ERROR) ? state_strings[current_state] : "???",
-			 current_state,
 			 flight_phase_status.event_queue_full_count);
 
 	return status_bitfield;
@@ -268,10 +286,47 @@ uint32_t flight_phase_get_status(void) {
  * @param timestamp_ms is the current timestamp
  * @return generated timer event
  */
-static flight_phase_event_t flight_phase_timer_detection(flight_phase_ctx_t *p_ctx,
+static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_t *p_ctx,
 														 const fsm_state_t curr_state,
 														 const uint32_t timestamp_ms) {
-	return EVENT_NONE;
+	if (NULL == p_ctx) {
+		log_text(5, "FlightPhase", "ERROR: Invalid ptrs in timer detection");
+		// just return the current state if invalid
+		return EVENT_NONE;
+	}
+
+	flight_phase_event_t output_state = EVENT_NONE;
+
+	uint32_t launch_elapsed_time_ms = timestamp_ms - p_ctx->launch_timestamp_ms;
+
+	switch (curr_state) {
+		// act delayed state
+		case STATE_BOOST:
+			if (ACT_DELAY_MS <= launch_elapsed_time_ms) {
+				output_state = EVENT_ACT_DELAY_ELAPSED;
+			}
+			break;
+
+		// act recovery state
+		case STATE_ACT_ALLOWED:
+			if (RECOVERY_LOG_TIMEOUT_MS <= launch_elapsed_time_ms) {
+				output_state = EVENT_RECOVERY_START;
+			}
+			break;
+
+		// act sleep state
+		case STATE_RECOVERY:
+			if (SLEEPY_LOG_TIMEOUT_MS <= launch_elapsed_time_ms) {
+				output_state = EVENT_SLEEP_START;
+			}
+			break;
+
+		default:
+			output_state = EVENT_NONE;
+			break;
+	}
+
+	return output_state;
 }
 
 /**

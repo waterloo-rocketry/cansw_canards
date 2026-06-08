@@ -119,6 +119,12 @@ static w_status_t adxrs649_self_test() {
  * @return the status at which the ADXRS649 initalization goes
  */
 w_status_t adxrs649_init() {
+	// don't reinit
+	if (is_initialized) {
+		log_text(0, "ADXRS649", "ERROR: Reinitialization is not allowed.");
+		return W_FAILURE;
+	}
+
 	// reset both gpio pins to low to start
 
 	if (W_SUCCESS != ads1219_init(&g_ads_handle, I2C_BUS_2, ADS1219_ADDR)) {

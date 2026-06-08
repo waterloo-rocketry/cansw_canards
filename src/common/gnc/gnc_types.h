@@ -11,6 +11,7 @@
 
 #include "application/controller/gain_table.h"
 #include "common/math/math.h"
+#include "third_party/rocketlib/include/common.h"
 
 // ---------- SENSOR TYPES ----------
 
@@ -25,16 +26,31 @@ typedef struct {
 	bool is_dead;
 } estimator_imu_measurement_t;
 
+// Units are as follows: m/s^2, rad/s, Pa, gauss.
+typedef struct {
+	float64_t meas;
+	bool is_dead;
+} navigator_1d_meas_t;
+
+typedef struct {
+	vector3d_t meas;
+	bool is_dead;
+} navigator_3d_meas_t;
+
+typedef struct {
+	vector3d_t accel;
+	vector3d_t gyro;
+	bool is_dead;
+} navigator_board_imu_meas_t;
+
 /**
  * @brief LSM6DSV32X (32G IMU), MS5611 (High-alt Barometer), and LSM303AGR (Compass) measurements
  */
 typedef struct {
-	vector3d_t board_accel; // m/s^2
-	vector3d_t board_gyro; // rad/s
-	float64_t board_baro; // Pa
-	vector3d_t board_mag; // gauss
-	bool is_dead;
-} estimator_board_meas_t;
+	navigator_board_imu_meas_t board_imu; // m/s^2 and rad/s
+	navigator_1d_meas_t board_baro; // Pa
+	navigator_3d_meas_t board_mag; // gauss
+} navigator_board_meas_t;
 
 /**
  * @brief MTi-630 (Movella) measurements
@@ -45,22 +61,21 @@ typedef struct {
 	float64_t mti_baro; // Pa
 	vector3d_t mti_mag; // gauss
 	bool is_dead;
-} estimator_mti_meas_t;
+} navigator_mti_meas_t;
 
 /**
  * @brief ADXL380 (AD Breakout Accel) and ADXRS649 (AD high-rate gyro) measurements
  */
 typedef struct {
-	vector3d_t ad_accel; // m/s^2
-	float64_t ad_gyro; // rad/s, 1 axis gyro
-	bool is_dead;
-} estimator_ad_meas_t;
+	navigator_3d_meas_t ad_accel; // m/s^2
+	navigator_1d_meas_t ad_gyro; // rad/s, 1 axis gyro
+} navigator_ad_meas_t;
 
 // measurements from all imus together
 typedef struct {
-	estimator_board_meas_t board_meas;
-	estimator_mti_meas_t mti_meas;
-	estimator_ad_meas_t ad_meas;
+	navigator_board_meas_t board_meas;
+	navigator_mti_meas_t mti_meas;
+	navigator_ad_meas_t ad_meas;
 
 	// TODO: remove old impl below
 	estimator_imu_measurement_t movella; // raw movella data
