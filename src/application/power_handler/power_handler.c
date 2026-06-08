@@ -78,15 +78,15 @@ static power_input_source_t get_active_input(void) {
 	adc_get_converted_val(VSENS_BAT1, &vsens_bat1);
 	adc_get_converted_val(VSENS_BAT2, &vsens_bat2);
 
-	if (vsens_chg >= vsens_rkt && vsens_chg >= vsens_usb && vsens_chg >= vsens_bat1 && vsens_chg >= vsens_bat2) {
+	if (vsens_chg == 0 && vsens_rkt == 0 && vsens_usb == 0 && vsens_bat1 == 0 && vsens_bat2 == 0) {
+		return POWER_INPUT_NONE;
+	} else if (vsens_chg >= vsens_rkt && vsens_chg >= vsens_usb && vsens_chg >= vsens_bat1 && vsens_chg >= vsens_bat2) {
 		return POWER_INPUT_CHG;
 	} else if (vsens_rkt >= vsens_chg && vsens_rkt >= vsens_usb && vsens_rkt >= vsens_bat1 && vsens_rkt >= vsens_bat2) {
 		return POWER_INPUT_RKT;
 	} else {
 		return POWER_INPUT_BAT;
 	}
-
-    return POWER_INPUT_NONE;
 }
 
 /**
@@ -330,6 +330,13 @@ uint32_t power_handler_get_status(void) {
 			if (adc_get_converted_val(ISENS_BAT1, &adc_value) == W_SUCCESS) {
 				if (adc_value > IBAT_MAX) {
 					status_bitfield |= FAULT_BAT1_CURR;
+				}
+			}
+
+			if(adc_get_converted_val(ISENS_BAT2, &adc_value) == W_SUCCESS) {
+				if (adc_value > IBAT_MAX) {
+					status_bitfield |= FAULT_BAT2_CURR;
+					power_handler_status.overcurrent_count++;
 				}
 			}
 
