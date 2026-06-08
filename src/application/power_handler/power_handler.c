@@ -3,14 +3,13 @@
 #include "task.h"
 #include "timers.h"
 
-#include "application/can_handler/can_handler.h"
+// #include "application/can_handler/can_handler.h" 
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
 #include "message_types.h"
 #include "power_handler.h"
 #include "rocketlib/include/common.h"
-#include "drivers/timer/timer.h"
 
 // LiPo Thresholds
 static const float32_t VBAT_MIN = 22.2;
@@ -29,9 +28,6 @@ static const uint32_t VCHG_MAX = 14;
 static const uint32_t I3V3_MAX = 500; 
 static const uint32_t I5V_MAX = 4000; 
 
-// TODO: Get the correct number for task delay.
-#define TASK_DELAY_MS 3000
-
 // Fault bit positions
 #define FAULT_BAT1_VOLT (1 << 0)
 #define FAULT_BAT2_VOLT (1 << 1)
@@ -48,8 +44,8 @@ typedef struct {
 	bool initialized;
 	bool external_5v_enabled;
 	bool low_power_mode;
-	bool fault_bat1;
-	bool fault_bat2;
+	uint32_t lipo_1_fault_count;
+	uint32_t lipo_2_fault_count;
 	uint32_t overcurrent_count;
 } power_handler_status_t;
 
@@ -201,78 +197,72 @@ uint32_t power_handler_get_status(void) {
 
 	if (flt1 == GPIO_LEVEL_LOW) {
 		status_bitfield |= FAULT_BAT1_VOLT;
-		power_handler_status.fault_bat1 = true;
-	}
-	if (flt2 == GPIO_LEVEL_LOW) {
-		status_bitfield |= FAULT_BAT2_VOLT;
-		power_handler_status.fault_bat2 = true;
+		power_handler_status.lipo_1_fault_count++;
 	}
 
-	if (power_handler_status.external_5v_enabled) {
-		if (adc_get_converted_val(ISENS_5V, &adc_value) == W_SUCCESS) {
-			if (adc_value > I5V_MAX) {
-				status_bitfield |= FAULT_5V_EXT_CURR;
-			}
+	if (flt2 == GPIO_LEVEL_LOW) {
+		status_bitfield |= FAULT_BAT2_VOLT;
+		power_handler_status.lipo_2_fault_count++;
+	}
+
+	// external and internal 5V share the same current sense, so if either is overcurrent it will trigger the fault
+	if (adc_get_converted_val(ISENS_5V, &adc_value) == W_SUCCESS) {
+		if (adc_value > I5V_MAX) {
+			status_bitfield |= FAULT_5V_EXT_CURR;
 		}
 	}
 
 	power_input_source_t active_input = get_active_input();
 
-	if (active_input == POWER_INPUT_BAT) {
-		if (adc_get_converted_val(VSENS_BAT1, &adc_value) == W_SUCCESS) {
-			if ((adc_value < VBAT_MIN) || (adc_value > VBAT_MAX)) {
-				status_bitfield |= FAULT_BAT1_VOLT;
-			}
-		}
-
-		if (adc_get_converted_val(VSENS_BAT2, &adc_value) == W_SUCCESS) {
-			if ((adc_value < VBAT_MIN) || (adc_value > VBAT_MAX)) {
-				status_bitfield |= FAULT_BAT2_VOLT;
-			}
-		}
-
-		if (adc_get_converted_val(ISENS_BAT1, &adc_value) == W_SUCCESS) {
-			if (adc_value > IBAT_MAX) {
-				status_bitfield |= FAULT_BAT1_CURR;
-			}
-		}
-
-		if (adc_get_converted_val(ISENS_BAT2, &adc_value) == W_SUCCESS) {
-			if (adc_value > IBAT_MAX) {
-				status_bitfield |= FAULT_BAT2_CURR;
-			}
-		}
-	} else if (active_input == POWER_INPUT_RKT) {
-		if (adc_get_converted_val(VSENS_RKT, &adc_value) == W_SUCCESS) {
-			if ((adc_value < VRKT_MIN) || (adc_value > VRKT_MAX)) {
-				status_bitfield |= FAULT_RKT_VOLT;
-			}
-		}
-	} else if (active_input == POWER_INPUT_CHG) {
-		if (adc_get_converted_val(VSENS_CHG, &adc_value) == W_SUCCESS) {
-			if ((adc_value < VCHG_MIN) || (adc_value > VCHG_MAX)) {
-				status_bitfield |= FAULT_CHG_VOLT;
-			}
-		}
-	} else {
-		log_text(1, "power_handler", "ERROR: Failed to read active power input");
-	}
-
 	// Log active power source
 	switch (active_input) {
-	case POWER_INPUT_CHG:
-		log_text(10, "power_handler", "Active power source: CHG");
-		break;
-	case POWER_INPUT_RKT:
-		log_text(10, "power_handler", "Active power source: RKT");
-		break;
-	case POWER_INPUT_BAT:
-		log_text(10, "power_handler", "Active power source: BAT");
-		break;
+		case POWER_INPUT_CHG:
+			if (adc_get_converted_val(VSENS_CHG, &adc_value) == W_SUCCESS) {
+				if ((adc_value < VCHG_MIN) || (adc_value > VCHG_MAX)) {
+					status_bitfield |= FAULT_CHG_VOLT;
+				}
+			}
+			log_text(10, "power_handler", "Active power source: CHG");
+			break;
+
+		case POWER_INPUT_RKT:
+			if (adc_get_converted_val(VSENS_RKT, &adc_value) == W_SUCCESS) {
+				if ((adc_value < VRKT_MIN) || (adc_value > VRKT_MAX)) {
+					status_bitfield |= FAULT_RKT_VOLT;
+				}
+			}
+			log_text(10, "power_handler", "Active power source: RKT");
+			break;
+
+		case POWER_INPUT_BAT:
+			if (adc_get_converted_val(VSENS_BAT1, &adc_value) == W_SUCCESS) {
+				if ((adc_value < VBAT_MIN) || (adc_value > VBAT_MAX)) {
+					status_bitfield |= FAULT_BAT1_VOLT;
+				}
+			}
+
+			if (adc_get_converted_val(VSENS_BAT2, &adc_value) == W_SUCCESS) {
+				if ((adc_value < VBAT_MIN) || (adc_value > VBAT_MAX)) {
+					status_bitfield |= FAULT_BAT2_VOLT;
+				}
+			}
+
+			if (adc_get_converted_val(ISENS_BAT1, &adc_value) == W_SUCCESS) {
+				if (adc_value > IBAT_MAX) {
+					status_bitfield |= FAULT_BAT1_CURR;
+				}
+			}
+
+			log_text(10, "power_handler", "Active power source: BAT");
+			break;
+
+		default:
+			log_text(10, "power_handler", "Active power source: NONE");
+			break;
 	}
 
 	// uint32_t adc_value = 0;
-	can_msg_t msg = {0};
+	// can_msg_t msg = {0};
 
 	// TODO: write can lib msg builders for power handler and send them to rocketCAN for health monitoring
 	// uint32_t timestamp = 0;
@@ -308,7 +298,6 @@ uint32_t power_handler_get_status(void) {
 		// can_handler_transmit(&msg);
 	}
 
-
 	return status_bitfield;
 }
 
@@ -331,8 +320,9 @@ w_status_t power_handler_set_5V_external(bool enabled) {
 		}
 
 		// Enable 5V external and set CHG_MUX_EN LOW
-		gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_HIGH, 5);
+		// since chg_mux MUST be disabled before enabling 5v, u MUST disable the chg mux en pin first! 
 		gpio_write(GPIO_PIN_CHG_MUX_EN, GPIO_LEVEL_LOW, 5);
+		gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_HIGH, 5);
 	} else {
 		// Disable 5V external and set CHG_MUX_EN HIGH
 		gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_LOW, 5);
@@ -340,6 +330,7 @@ w_status_t power_handler_set_5V_external(bool enabled) {
 	}
 
 	power_handler_status.external_5v_enabled = enabled;
+
 	return W_SUCCESS;
 }
 
