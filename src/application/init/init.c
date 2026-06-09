@@ -103,9 +103,9 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
+	// status |= lsm6dsv32x_init();
+	// status |= adxrs649_init();
 	status |= adxl380_init();
-	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -152,12 +152,12 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
-	task_status &= xTaskCreate(ad_breakout_board_task,
-							   "ad breakout board",
-							   2560, // TODO: set when sure of size
-							   NULL,
-							   ad_breakout_task_priority,
-							   &ad_breakout_task_handle);
+	// task_status &= xTaskCreate(ad_breakout_board_task,
+	// 						   "ad breakout board",
+	// 						   2560, // TODO: set when sure of size
+	// 						   NULL,
+	// 						   ad_breakout_task_priority,
+	// 						   &ad_breakout_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -173,6 +173,8 @@ static void system_init_task(void *arg) {
 	navigator_3d_meas_t accel_data = {0};
 	uint32_t timestamp_ms = 0;
 	w_status_t ad_status;
+	adxl380_raw_accel_data_t raw_accel = {0};
+	vector3d_t acc_data = {0};
 
 
 	while (1) {
@@ -185,7 +187,7 @@ static void system_init_task(void *arg) {
 			i++;
 		}
 
-		ad_status = ad_breakout_board_get_data(&gyro_data, &accel_data, &timestamp_ms);
+		ad_status = adxl380_get_accel_data(&acc_data, &raw_accel);
 		if (ad_status != W_SUCCESS) log_text(10, "SystemInit", "AD BOARD ERROR.");
 
 
