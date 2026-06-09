@@ -20,7 +20,7 @@ static const uint8_t ADXL_SOFT_RESET_DELAY = 1;
 static const float32_t ADXL_16G_SCALE_FACTOR_MICRO_G_LSB = 533.3;
 static const int32_t ADXL_MICRO_G_G = 1000000;
 
-adxl38x_dev_t g_adx380_handle = {0};
+static adxl38x_dev_t g_adx380_handle = {0};
 
 static bool is_initialized = false;
 
