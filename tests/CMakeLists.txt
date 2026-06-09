@@ -430,3 +430,24 @@ add_test_group(test_health_check
 #     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
 #     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
 # )
+
+add_test_group(test_lsm6dsv32x
+    # test file(s)
+    ${UNIT_TESTS_DIR}/lsm6dsv32x_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/lsm6dsv32x/LSM6DSV32X.c
+)
+
+add_test_group(test_ads1219
+    # test file(s)
+    ${UNIT_TESTS_DIR}/ads1219_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADS1219.c
+)
+
+add_test_group(test_adxrs649
+    # test file(s)
+    ${UNIT_TESTS_DIR}/adxrs649_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXRS649.c
+)
