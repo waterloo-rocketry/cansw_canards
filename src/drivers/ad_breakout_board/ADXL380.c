@@ -97,12 +97,6 @@ w_status_t adxl380_init() {
 
 	// FIFO is auto disabled
 
-	/* OP_MODE
-	PDM_MODE: on
-	*/
-	init_setting_status |=
-		adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_OP_MODE, ADXL_PDM_AUDIO_MASK, 0x20);
-
 	/* FILTER: 00011000 -> 0x18
 	DCF_BYPASS: 0
 	EQ: 0
