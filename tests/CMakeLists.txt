@@ -437,3 +437,17 @@ add_test_group(test_lsm6dsv32x
     # src file(s)
     ${PROC_SRC_DIR}/drivers/lsm6dsv32x/LSM6DSV32X.c
 )
+
+add_test_group(test_ads1219
+    # test file(s)
+    ${UNIT_TESTS_DIR}/ads1219_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADS1219.c
+)
+
+add_test_group(test_adxrs649
+    # test file(s)
+    ${UNIT_TESTS_DIR}/adxrs649_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXRS649.c
+)
