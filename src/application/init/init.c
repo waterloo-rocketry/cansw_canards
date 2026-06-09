@@ -31,6 +31,9 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
+// TEST INCLUDE
+#include <inttypes.h>
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -164,13 +167,38 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+	uint8_t i = 0;
+	TickType_t last_wake_time = xTaskGetTickCount();
+	navigator_1d_meas_t gyro_data = {0};
+	navigator_3d_meas_t accel_data = {0};
+	uint32_t timestamp_ms = 0;
+	w_status_t ad_status;
+
+
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(500);
+		if (100 == i) {
+			gpio_toggle(GPIO_PIN_RED_LED, 1);
+			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+			i =0;
+		} else {
+			i++;
+		}
+
+		ad_status = ad_breakout_board_get_data(&gyro_data, &accel_data, &timestamp_ms);
+		if (ad_status != W_SUCCESS) log_text(10, "SystemInit", "AD BOARD ERROR.");
+
+
+		log_text(10, "SystemInit", "AD timestamp %"PRIu32, 
+					timestamp_ms);
+		log_text(10, "SystemInit", "AD ACCEL x %lf, y %lf, z %lf, dead %d", 
+			accel_data.meas.x, accel_data.meas.y, accel_data.meas.z, accel_data.is_dead);
+
+		log_text(10, "SystemInit", "AD GYRO  z %lf, dead %d", 
+			gyro_data.meas, gyro_data.is_dead);
+
+		xTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(2));
+		
 	}
 }
 

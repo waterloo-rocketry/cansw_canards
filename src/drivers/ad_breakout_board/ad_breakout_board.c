@@ -52,8 +52,14 @@ void ad_breakout_board_task(void *argument) {
 	uint32_t raw_gyro = 0;
 	adxl380_raw_accel_data_t raw_accel = {};
 	uint32_t current_time_ms = 0;
+	uint32_t time = 0;
 
 	while (1) {
+		// get timestamp of task
+
+		timer_get_tenth_ms(&time);
+		log_text(0, "AD BREAKOUT TASK", "ENTER TASK %d", time);
+
 		// get current timestamp
 		if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
 			current_time_ms = 0;
@@ -95,6 +101,11 @@ void ad_breakout_board_task(void *argument) {
 		}
 
 		loop_count++;
+
+
+
+		timer_get_tenth_ms(&time);
+		log_text(0, "AD BREAKOUT TASK", "Exit TASK %d", time);
 
 		vTaskDelayUntil(&last_wake_time, period);
 	}
