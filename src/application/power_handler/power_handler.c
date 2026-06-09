@@ -153,13 +153,15 @@ w_status_t power_handler_init(void) {
  * Power status messages include battery voltages and currents, rocket voltage, charge voltage, and
  * 5V rail current. Fault messages include a bitfield of active faults. Called by health checks
  */
-void transmit_status_can_msg(uint32_t status_bitfield) {
+void transmit_status_can_msg(uint32_t status_bitfield) { 
 	can_msg_t status_msg = {0};
 	uint32_t adc_value = 0;
 	can_msg_t msg = {0};
 
 	uint32_t timestamp = 0;
 
+	// TODO: Add a unique sensor id for each lipo 
+	// TODO: make sure the CAN msgs are sent around 2hz freqency (Jason)
 	if (adc_get_converted_val(VSENS_BAT1, &adc_value) == W_SUCCESS) {
 		timer_get_ms(&timestamp);
 		build_analog_sensor_16bit_msg(
