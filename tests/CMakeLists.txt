@@ -430,3 +430,10 @@ add_test_group(test_health_check
 #     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
 #     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
 # )
+
+add_test_group(test_power_handler
+    # test file(s)
+    ${UNIT_TESTS_DIR}/power_handler_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/power_handler/power_handler.c
+)

@@ -29,36 +29,6 @@ static const uint32_t VCHG_MAX = 14;
 static const uint32_t I3V3_MAX = 500;
 static const uint32_t I5V_MAX = 4000;
 
-// Fault bit positions
-#define FAULT_BAT1_VOLT (1 << 0)
-#define FAULT_BAT2_VOLT (1 << 1)
-#define FAULT_RKT_VOLT (1 << 2)
-#define FAULT_CHG_VOLT (1 << 3)
-#define FAULT_5V_CURR (1 << 4)
-#define FAULT_5V_OUTPUT (1 << 5)
-#define FAULT_3V3_CURR (1 << 6)
-#define FAULT_BAT1_CURR (1 << 7)
-#define FAULT_BAT2_CURR (1 << 8)
-
-/**
- * States of the power handler.
- */
-typedef struct {
-	bool initialized;
-	bool external_5v_enabled;
-	bool low_power_mode;
-	uint32_t lipo_1_fault_count;
-	uint32_t lipo_2_fault_count;
-	uint32_t overcurrent_count;
-} power_handler_status_t;
-
-typedef enum {
-	POWER_INPUT_CHG,
-	POWER_INPUT_RKT,
-	POWER_INPUT_BAT,
-	POWER_INPUT_NONE
-} power_input_source_t;
-
 static power_handler_status_t power_handler_status = {0};
 
 /**
@@ -239,12 +209,6 @@ void transmit_status_can_msg(uint32_t status_bitfield) {
 		can_handler_transmit(&msg);
 	}
 
-	if (status_bitfield != 0) {
-		timer_get_ms(&timestamp);
-		log_text(10, "power_handler", "Power fault detected: 0x%lx", status_bitfield);
-		build_general_board_status_msg(PRIO_HIGH, (uint16_t)timestamp, status_bitfield, &msg);
-		can_handler_transmit(&msg);
-	}
 }
 
 /**
@@ -360,6 +324,16 @@ uint32_t power_handler_get_status(void) {
 		default:
 			log_text(10, "power_handler", "Active power source: NONE");
 			break;
+	}
+
+	uint32_t timestamp = 0;
+	can_msg_t msg = {0};
+
+	if (status_bitfield != 0) {
+		timer_get_ms(&timestamp);
+		log_text(10, "power_handler", "Power fault detected: 0x%lx", status_bitfield);
+		build_general_board_status_msg(PRIO_HIGH, (uint16_t)timestamp, status_bitfield, &msg);
+		can_handler_transmit(&msg);
 	}
 
 	transmit_status_can_msg(status_bitfield);

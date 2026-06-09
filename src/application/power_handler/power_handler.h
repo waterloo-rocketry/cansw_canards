@@ -9,6 +9,36 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// Fault bit positions
+#define FAULT_BAT1_VOLT (1 << 0)
+#define FAULT_BAT2_VOLT (1 << 1)
+#define FAULT_RKT_VOLT (1 << 2)
+#define FAULT_CHG_VOLT (1 << 3)
+#define FAULT_5V_CURR (1 << 4)
+#define FAULT_5V_OUTPUT (1 << 5)
+#define FAULT_3V3_CURR (1 << 6)
+#define FAULT_BAT1_CURR (1 << 7)
+#define FAULT_BAT2_CURR (1 << 8)
+
+/**
+ * States of the power handler.
+ */
+typedef struct {
+	bool initialized;
+	bool external_5v_enabled;
+	bool low_power_mode;
+	uint32_t lipo_1_fault_count;
+	uint32_t lipo_2_fault_count;
+	uint32_t overcurrent_count;
+} power_handler_status_t;
+
+typedef enum {
+	POWER_INPUT_CHG,
+	POWER_INPUT_RKT,
+	POWER_INPUT_BAT,
+	POWER_INPUT_NONE
+} power_input_source_t;
+
 /**
  * Initializes power handler.
  * Registers CAN callbacks for 5V external power and low power mode commands.
