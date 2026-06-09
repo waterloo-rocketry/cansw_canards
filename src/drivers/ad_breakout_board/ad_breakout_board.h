@@ -32,9 +32,10 @@ void ad_breakout_board_task(void *argument);
  * @brief to read both the accelerometer and gyro data
  * @param g_gyro_data this is a pointer to converted gyro data
  * @param g_accel_data pointer to state of converted accel data
+ * @param timestamp_ms the the timestamp at which the data was collected
  * @return the status of getting data
  */
-w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *g_gyro_data,
-									  ad_accelerometer_mesurement_t *g_accel_data);
+w_status_t ad_breakout_board_get_data(navigator_1d_meas_t *g_gyro_data,
+									  navigator_3d_meas_t *g_accel_data, uint32_t *timestamp_ms);
 
 #endif

@@ -18,9 +18,9 @@
 #include "application/init/init.h"
 #include "application/logger/log.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
+#include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
-#include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
@@ -149,7 +149,7 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(ad_breakout_board_task,
 							   "ad breakout board",
-							   512, // TODO: set when sure of size
+							   2560, // TODO: set when sure of size
 							   NULL,
 							   ad_breakout_task_priority,
 							   &ad_breakout_task_handle);

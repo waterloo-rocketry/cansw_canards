@@ -13,91 +13,23 @@
 #include "drivers/timer/timer.h"
 #include "rocketlib/include/common.h"
 
+typedef enum {
+	AD_WRITE_BUFFER = 0,
+	AD_READ_BUFFER = 1
+} ad_buffer_t;
+
 // struct to hold task context
 typedef struct {
-	ad_gyro_mesurement_t gyro_dual_buffer[2];
-	ad_accelerometer_mesurement_t accel_dual_buffer[2];
+	navigator_1d_meas_t gyro_dual_buffer[2];
+	navigator_3d_meas_t accel_dual_buffer[2];
+	uint32_t timestamp_ms[2]; // not becasue it's not atomic but each repersent each buffer
 } ad_task_ctx_t;
 
 static const uint8_t AD_BREAKOUT_BOARD_PERIOD_MS = 2;
-static const size_t AD_GYRO_MEASUREMENT_SIZE = sizeof(ad_gyro_mesurement_t);
+static const size_t AD_GYRO_MEASUREMENT_SIZE = sizeof(navigator_1d_meas_t);
 static const size_t AD_GYRO_RAW_MEASUREMENT_SIZE = sizeof(int32_t);
-static const size_t AD_ACCEL_MEASUREMENT_SIZE = sizeof(ad_accelerometer_mesurement_t);
+static const size_t AD_ACCEL_MEASUREMENT_SIZE = sizeof(navigator_3d_meas_t);
 static const size_t AD_ACCEL_RAW_MEASUREMENT_SIZE = sizeof(adxl380_raw_accel_data_t);
-
-/* ADXRS */
-// SD Card Log
-static const uint16_t IDLE_RECOVERY_ADXRS_SD_LOG_PERIOD_MS = 1000;
-static const uint16_t PAD_ADXRS_SD_LOG_PERIOD_MS = 1000 / 20;
-static const uint16_t FLIGHT_ADXRS_SD_LOG_PERIOD_MS = 1000 / 200;
-
-static const uint16_t IDLE_RECOVERY_ADXRS_SD_LOG_RATE =
-	IDLE_RECOVERY_ADXRS_SD_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t PAD_ADXRS_SD_LOG_RATE =
-	PAD_ADXRS_SD_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t FLIGHT_ADXRS_SD_LOG_RATE =
-	FLIGHT_ADXRS_SD_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-
-// Flash Log
-static const uint16_t IDLE_RECOVERY_ADXRS_FLASH_LOG_PERIOD_MS = 1000;
-static const uint16_t PAD_ADXRS_FLASH_LOG_PERIOD_MS = 1000 / 5;
-static const uint16_t FLIGHT_ADXRS_FLASH_LOG_PERIOD_MS = 1000 / 20;
-
-static const uint16_t IDLE_RECOVERY_ADXRS_FLASH_LOG_RATE =
-	IDLE_RECOVERY_ADXRS_FLASH_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t PAD_ADXRS_FLASH_LOG_RATE =
-	PAD_ADXRS_FLASH_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t FLIGHT_ADXRS_FLASH_LOG_RATE =
-	FLIGHT_ADXRS_FLASH_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-
-// CAN (Telemetry)
-static const uint16_t IDLE_ADXRS_CAN_LOG_PERIOD_MS = 1000;
-static const uint16_t PAD_ADXRS_CAN_LOG_PERIOD_MS = 1000 / 10;
-static const uint16_t FLIGHT_ADXRS_CAN_LOG_PERIOD_MS = 1000 / 10;
-
-static const uint16_t IDLE_ADXRS_CAN_LOG_RATE =
-	IDLE_ADXRS_CAN_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t PAD_ADXRS_CAN_LOG_RATE =
-	PAD_ADXRS_CAN_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t FLIGHT_ADXRS_CAN_LOG_RATE =
-	FLIGHT_ADXRS_CAN_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-
-/* ADXL */
-// SD Card Log
-static const uint16_t IDLE_RECOVERY_ADXL_SD_LOG_PERIOD_MS = 1000;
-static const uint16_t PAD_ADXL_SD_LOG_PERIOD_MS = 1000 / 20;
-static const uint16_t FLIGHT_ADXL_SD_LOG_PERIOD_MS = 1000 / 50;
-
-static const uint16_t IDLE_RECOVERY_ADXL_SD_LOG_RATE =
-	IDLE_RECOVERY_ADXL_SD_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t PAD_ADXL_SD_LOG_RATE =
-	PAD_ADXL_SD_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t FLIGHT_ADXL_SD_LOG_RATE =
-	FLIGHT_ADXL_SD_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-
-// Flash Log
-static const uint16_t IDLE_RECOVERY_ADXL_FLASH_LOG_PERIOD_MS = 1000;
-static const uint16_t PAD_ADXL_FLASH_LOG_PERIOD_MS = 1000 / 5;
-static const uint16_t FLIGHT_ADXL_FLASH_LOG_PERIOD_MS = 1000 / 20;
-
-static const uint16_t IDLE_RECOVERY_ADXL_FLASH_LOG_RATE =
-	IDLE_RECOVERY_ADXL_FLASH_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t PAD_ADXL_FLASH_LOG_RATE =
-	PAD_ADXL_FLASH_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t FLIGHT_ADXL_FLASH_LOG_RATE =
-	FLIGHT_ADXL_FLASH_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-
-// CAN (Telemetry)
-static const uint16_t IDLE_ADXL_CAN_LOG_PERIOD_MS = 1000;
-static const uint16_t PAD_ADXL_CAN_LOG_PERIOD_MS = 1000 / 10;
-static const uint16_t FLIGHT_ADXL_CAN_LOG_PERIOD_MS = 1000 / 10;
-
-static const uint16_t IDLE_ADXL_CAN_LOG_RATE =
-	IDLE_ADXL_CAN_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t PAD_ADXL_CAN_LOG_RATE =
-	PAD_ADXL_CAN_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
-static const uint16_t FLIGHT_ADXL_CAN_LOG_RATE =
-	FLIGHT_ADXL_CAN_LOG_PERIOD_MS / AD_BREAKOUT_BOARD_PERIOD_MS;
 
 static ad_task_ctx_t g_task_ctx = {};
 
@@ -127,34 +59,33 @@ void ad_breakout_board_task(void *argument) {
 			current_time_ms = 0;
 		}
 
-		g_task_ctx.gyro_dual_buffer[0].timestamp = current_time_ms;
-		g_task_ctx.accel_dual_buffer[0].timestamp = current_time_ms;
+		g_task_ctx.timestamp_ms[AD_WRITE_BUFFER] = current_time_ms;
 
-		if (W_SUCCESS ==
-			adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[0].z_rate), &raw_gyro)) {
-			g_task_ctx.gyro_dual_buffer[0].is_dead = false;
+		if (W_SUCCESS == adxrs649_get_gyro_data(
+							 &(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas), &raw_gyro)) {
+			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
 		} else {
-			g_task_ctx.gyro_dual_buffer[0].is_dead = true;
+			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
 			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
 		}
 
-		if (W_SUCCESS ==
-			adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[0].accelerometer), &raw_accel)) {
-			g_task_ctx.accel_dual_buffer[0].is_dead = false;
+		if (W_SUCCESS == adxl380_get_accel_data(
+							 &(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas), &raw_accel)) {
+			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
 		} else {
-			g_task_ctx.accel_dual_buffer[0].is_dead = true;
+			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
 			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
 		}
 
 		taskENTER_CRITICAL();
 		// Gyro
-		memcpy(&(g_task_ctx.gyro_dual_buffer[1]),
-			   &(g_task_ctx.gyro_dual_buffer[0]),
+		memcpy(&(g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER]),
+			   &(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER]),
 			   AD_GYRO_MEASUREMENT_SIZE);
 
 		// Accelerometer
-		memcpy(&(g_task_ctx.accel_dual_buffer[1]),
-			   &(g_task_ctx.accel_dual_buffer[0]),
+		memcpy(&(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]),
+			   &(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER]),
 			   AD_ACCEL_MEASUREMENT_SIZE);
 		taskEXIT_CRITICAL();
 
@@ -173,13 +104,17 @@ void ad_breakout_board_task(void *argument) {
  * @brief to read both the accelerometer and gyro data
  * @param g_gyro_data this is a pointer to converted gyro data
  * @param g_accel_data pointer to state of converted accel data
+ * @param timestamp_ms the the timestamp at which the data was collected
  * @return the status of getting data
  */
-w_status_t ad_breakout_board_get_data(ad_gyro_mesurement_t *g_gyro_data,
-									  ad_accelerometer_mesurement_t *g_accel_data) {
+w_status_t ad_breakout_board_get_data(navigator_1d_meas_t *g_gyro_data,
+									  navigator_3d_meas_t *g_accel_data, uint32_t *timestamp_ms) {
 	taskENTER_CRITICAL();
-	memcpy(g_gyro_data, &(g_task_ctx.gyro_dual_buffer[1]), AD_GYRO_MEASUREMENT_SIZE);
-	memcpy(g_accel_data, &(g_task_ctx.accel_dual_buffer[1]), AD_ACCEL_MEASUREMENT_SIZE);
+	memcpy(g_gyro_data, &(g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER]), AD_GYRO_MEASUREMENT_SIZE);
+	memcpy(
+		g_accel_data, &(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]), AD_ACCEL_MEASUREMENT_SIZE);
+
+	*timestamp_ms = g_task_ctx.timestamp_ms[AD_READ_BUFFER];
 	taskEXIT_CRITICAL();
 
 	return W_SUCCESS;
