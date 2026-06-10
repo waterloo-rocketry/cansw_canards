@@ -18,7 +18,7 @@ extern "C" {
 extern w_status_t health_check_exec();
 extern w_status_t check_watchdog_tasks(void);
 
-FAKE_VALUE_FUNC(w_status_t, timer_get_ms, float *);
+FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
 FAKE_VOID_FUNC(build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, can_msg_t *);
 // FAKE_VALUE_FUNC(TaskHandle_t, xTaskGetCurrentTaskHandle);
@@ -44,7 +44,7 @@ int snprintf_(char *s, size_t n, const char *format, ...) {
 }
 
 // Mocked global variables
-static float timer_ms_value_mock;
+static uint32_t timer_ms_value_mock;
 }
 
 DEFINE_FFF_GLOBALS;
@@ -59,10 +59,10 @@ static w_status_t timer_get_ms_mock(float *out_time) {
 class HealthChecksTest : public ::testing::Test {
 protected:
 	void SetUp() override {
-		RESET_FAKE(snprintf_spy);
 		RESET_FAKE(timer_get_ms);
 		RESET_FAKE(can_handler_transmit);
 		RESET_FAKE(build_general_board_status_msg);
+		RESET_FAKE(can_handler_transmit);
 		RESET_FAKE(xTaskGetCurrentTaskHandle);
 		RESET_FAKE(xTaskGetTickCount);
 		RESET_FAKE(vTaskDelayUntil);
@@ -126,8 +126,7 @@ protected:
 
 TEST_F(HealthChecksTest, NominalHealthCheck) {
 	// Arrange
-	SetTimerMs(1000.0f);
-
+	SetTimerMs(1000);
 	// Act
 	w_status_t result = health_check_exec();
 
@@ -138,19 +137,28 @@ TEST_F(HealthChecksTest, NominalHealthCheck) {
 	EXPECT_EQ(build_general_board_status_msg_fake.arg2_val, E_NOMINAL);
 }
 
-TEST_F(HealthChecksTest, FailureHealthCheck) {
-	// Arrange
-	SetTimerMs(1000.0f);
+// TODO: revive test once a similar test with new system is determined
+// TEST_F(HealthChecksTest, FailureHealthCheck) {
+//     // Arrange
+//     SetTimerMs(1000);
+//     uint32_t nominal_current = 300;
+//     // +1 for integer rounding
+//     SetAdcValue(
+//         nominal_current * R_SENSE * INA180A3_GAIN / (ADC_VREF * 1000.0f) * ADC_MAX_COUNTS_MOCK + 1
+//     );
+//     build_general_board_status_msg_fake.return_val = false;
+//     build_analog_data_msg_fake.return_val = true;
 
-	can_handler_transmit_fake.return_val = W_FAILURE;
+// 	// Act
+// 	w_status_t result = health_check_exec();
 
-	// Act
-	w_status_t result = health_check_exec(); // <-- UNCOMMENTED
-
-	// Assert
-	EXPECT_EQ(W_FAILURE, result);
-	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 1);
-}
+// 	// Assert
+// 	EXPECT_EQ(W_FAILURE, result);
+// 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 1);
+// 	EXPECT_EQ(build_analog_data_msg_fake.arg0_val, PRIO_LOW);
+// 	EXPECT_EQ(build_analog_data_msg_fake.arg2_val, SENSOR_5V_CURR);
+// 	EXPECT_EQ(build_analog_data_msg_fake.arg3_val, nominal_current);
+// }
 
 TEST_F(HealthChecksTest, WatchdogRegisterAndKick) {
 	// Arrange

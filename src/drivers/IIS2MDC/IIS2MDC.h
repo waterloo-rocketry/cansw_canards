@@ -18,21 +18,19 @@ typedef struct {
 
 /**
  * @brief Initializes the IIS2MDC magnetometer.
- * @note Performs a soft reset, verifies WHO_AM_I, and applies configs.
+ * @note Performs a soft reset, applies the configuration registers, verifies WHO_AM_I, and
+ * runs the on-chip self-test. Blocks for ~100 ms during the self-test.
  * @return Status of the operation
  */
 w_status_t iis2mdc_init(void);
 
 /**
- * @brief Retrieves magnetic field reading for all three axes.
- * @note Non-blocking: checks STATUS_REG.Zyxda once and returns W_FAILURE immediately if
- *       no new data is available. On success, reads six output registers
- *       and converts raw counts to gauss.
+ * @brief Reads the magnetometer's output registers and converts to gauss
  * @param[out] data Pointer to store the converted magnetic field values in gauss
- * @param[out] raw_data Pointer to store the raw unsigned 16-bit register values
- * @return W_SUCCESS if a new sample was read, W_FAILURE if not (should probably distinguish
- * within failure cases later)
+ * @param[out] raw_data Pointer to store the raw unsigned 16-bit counts
+ * @param[out] timestamp_ms Pointer to store the read timestamp (ms since startup)
+ * @return W_SUCCESS on successful read and conversion of most recent sample
  */
-w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data);
+w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, uint32_t *timestamp_ms);
 
 #endif // IIS2MDC_H

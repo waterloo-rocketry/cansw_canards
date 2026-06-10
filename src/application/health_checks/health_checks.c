@@ -20,7 +20,7 @@
 #include "printf.h"
 #include "task.h"
 
-#define TASK_DELAY_MS 3000
+#define TASK_DELAY_MS 1000
 #define MAX_WATCHDOG_TASKS 10
 
 // struct for watchdog
@@ -127,9 +127,13 @@ uint32_t check_watchdog_tasks(void) {
 			// report watchdog timeout
 			can_msg_t msg = {0};
 			char *task_name = pcTaskGetName(watchdog_tasks[i].task_handle);
-			msg.data[0] = *(uint8_t *)task_name;
-			build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), msg.data, &msg);
-			log_text(10, "health_checks", "task timeout: %d", i);
+			uint8_t data[6] = {0};
+			strncpy((char *)data, task_name, sizeof(data));
+			build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), data, &msg);
+			if (can_handler_transmit(&msg) != W_SUCCESS) {
+				log_text(0, "health", "CAN send failure for watchdog timeout msg");
+			}
+			log_text(0, "health_checks", "task timeout: %d", *task_name);
 			status_bitfield |= 1 << E_WATCHDOG_TIMEOUT_OFFSET;
 		}
 
@@ -139,32 +143,32 @@ uint32_t check_watchdog_tasks(void) {
 	return status_bitfield;
 }
 
+/**
+ * @brief Processes the status a module. If severity is not HEALTH_OK,l send CAN canards firmware
+ * error msg. If severity is HEALTH_FATAL, call fatal error handler
+ *
+ * @return W_SUCCESS if severity is HEALTH_OK. W_FAILURE if not
+ */
 static w_status_t process_module_status(health_status_t status) {
 	if (status.severity != HEALTH_OK) {
 		log_text(0,
 				 "health",
-				 "%s: sev=%d, err=%d",
+				 "module=%d: sev=%d, err=%d",
 				 status.module_id,
 				 status.severity,
 				 status.error_bitfield);
 
+		uint8_t data[6] = {0};
 		can_msg_t msg = {0};
-		msg.data[2] = status.module_id;
-		msg.data[3] = status.error_bitfield;
-		msg.data[4] = status.severity;
-
-		// temporary debug msg
-		build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), msg.data, &msg);
+		// build error msg in the form "module id:error bitfield:severity"
+		snprintf_((char *)data, sizeof(data), "%d:%lu", status.module_id, status.error_bitfield);
+		build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), data, &msg);
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			log_text(0, "health", "CAN send failure for module status msg");
 		}
 
 		if (HEALTH_FATAL == status.severity) {
-			char error_msg[6];
-			// send error msg in the form "module id:error code"
-			snprintf_(
-				error_msg, sizeof(error_msg), "%d:%lu", status.module_id, status.error_bitfield);
-			proc_handle_fatal_error(error_msg);
+			proc_handle_fatal_error((char *)data);
 		}
 		return W_FAILURE;
 	}
@@ -189,18 +193,21 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 /**
  * @brief Checks the status of all known modules by directly calling their get_status functions
  *
- * Simply calls each module's status function to trigger status reporting
+ * @return bitfield of all canard application modules' w_status_t
+ * Calls each module's status function to trigger status reporting
  */
 
 static uint32_t check_modules_status(void) {
 	uint32_t status_bitfield = 0;
+	w_status_t status = W_SUCCESS;
 
 	for (int i = 0; i < MODULE_COUNT; i++) {
-		status_bitfield |= process_module_status(module_get_status_fns[i]());
+		status |= process_module_status(module_get_status_fns[i]());
 	}
 
-	if (status_bitfield != 0) {
-		status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
+	if (status != W_SUCCESS) {
+		// this bitfield error offset should later by replaced with E_CANARD_MODULE_FAILURE_OFFSET);
+		status_bitfield |= (1 << E_WATCHDOG_TIMEOUT_OFFSET);
 	}
 
 	return status_bitfield;
@@ -267,7 +274,7 @@ w_status_t health_check_exec() {
 	can_msg_t msg = {0};
 
 	if (0 == status_bitfield) {
-		build_general_board_status_msg(PRIO_LOW, xTaskGetTickCount(), status_bitfield, &msg);
+		build_general_board_status_msg(PRIO_LOW, xTaskGetTickCount(), 0, &msg);
 	} else {
 		build_general_board_status_msg(PRIO_HIGH, xTaskGetTickCount(), status_bitfield, &msg);
 	}

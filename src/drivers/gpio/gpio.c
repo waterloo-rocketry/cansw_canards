@@ -49,6 +49,14 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 							.pin = EN_EXT_5V_Pin,
 							.access_mutex = NULL},
 	[GPIO_PIN_PWR_EN] = {.port = PWR_EN_GPIO_Port, .pin = PWR_EN_Pin, .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST1] = {.port = ADXRS_ST1_GPIO_Port,
+							   .pin = ADXRS_ST1_Pin,
+							   .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST2] = {.port = ADXRS_ST2_GPIO_Port,
+							   .pin = ADXRS_ST2_Pin,
+							   .access_mutex = NULL},
+	[GPIO_PIN_ADS1219_INT] = {.port = ADC_INT_GPIO_Port, .pin = ADC_INT_Pin, .access_mutex = NULL},
+
 };
 
 // Public ---------------------------------------------------------------------
