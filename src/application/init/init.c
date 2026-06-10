@@ -80,7 +80,7 @@ static void system_init_task(void *arg) {
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
-	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
+	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS); 
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
@@ -103,8 +103,8 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	// status |= lsm6dsv32x_init();
-	// status |= adxrs649_init();
+	status |= lsm6dsv32x_init();
+	status |= adxrs649_init();
 	status |= adxl380_init();
 	// status |= ekf_init();
 
@@ -152,12 +152,12 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
-	// task_status &= xTaskCreate(ad_breakout_board_task,
-	// 						   "ad breakout board",
-	// 						   2560, // TODO: set when sure of size
-	// 						   NULL,
-	// 						   ad_breakout_task_priority,
-	// 						   &ad_breakout_task_handle);
+	task_status &= xTaskCreate(ad_breakout_board_task,
+							   "ad breakout board",
+							   2560, // TODO: set when sure of size
+							   NULL,
+							   ad_breakout_task_priority,
+							   &ad_breakout_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -179,15 +179,13 @@ static void system_init_task(void *arg) {
 
 	while (1) {
 		if (100 == i) {
-			gpio_toggle(GPIO_PIN_RED_LED, 1);
 			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 			i =0;
 		} else {
 			i++;
 		}
 
-		ad_status = adxl380_get_accel_data(&acc_data, &raw_accel);
+		ad_status = ad_breakout_board_get_data(&gyro_data, &accel_data, &timestamp_ms);
 		if (ad_status != W_SUCCESS) log_text(10, "SystemInit", "AD BOARD ERROR.");
 
 

@@ -67,13 +67,13 @@ void ad_breakout_board_task(void *argument) {
 
 		g_task_ctx.timestamp_ms[AD_WRITE_BUFFER] = current_time_ms;
 
-		// if (W_SUCCESS == adxrs649_get_gyro_data(
-		// 					 &(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas), &raw_gyro)) {
-		// 	g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
-		// } else {
-		// 	g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
-		// 	log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
-		// }
+		if (W_SUCCESS == adxrs649_get_gyro_data(
+							 &(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas), &raw_gyro)) {
+			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
+		} else {
+			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
+			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
+		}
 
 		if (W_SUCCESS == adxl380_get_accel_data(
 							 &(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas), &raw_accel)) {
