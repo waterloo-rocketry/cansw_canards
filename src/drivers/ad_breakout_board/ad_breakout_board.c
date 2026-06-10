@@ -93,6 +93,9 @@ void ad_breakout_board_task(void *argument) {
 		memcpy(&(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]),
 			   &(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER]),
 			   AD_ACCEL_MEASUREMENT_SIZE);
+
+		// timestamp
+		g_task_ctx.timestamp_ms[AD_READ_BUFFER] = g_task_ctx.timestamp_ms[AD_WRITE_BUFFER];
 		taskEXIT_CRITICAL();
 
 		// LOG/TELEMETRY
