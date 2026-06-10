@@ -20,7 +20,7 @@ static const uint8_t ADXL_SOFT_RESET_DELAY = 1;
 static const float32_t ADXL_16G_SCALE_FACTOR_MICRO_G_LSB = 533.3;
 static const int32_t ADXL_MICRO_G_G = 1000000;
 
-adxl38x_dev_t g_adx380_handle = {0};
+static adxl38x_dev_t g_adx380_handle = {0};
 
 static bool is_initialized = false;
 
@@ -96,12 +96,6 @@ w_status_t adxl380_init() {
 	init_setting_status |= adxl38x_set_range(&g_adx380_handle, ADXL380_RANGE_16G);
 
 	// FIFO is auto disabled
-
-	/* OP_MODE
-	PDM_MODE: on
-	*/
-	init_setting_status |=
-		adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_OP_MODE, ADXL_PDM_AUDIO_MASK, 0x20);
 
 	/* FILTER: 00011000 -> 0x18
 	DCF_BYPASS: 0
