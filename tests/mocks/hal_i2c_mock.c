@@ -18,6 +18,14 @@ DEFINE_FAKE_VALUE_FUNC(
     uint8_t *, uint16_t
 );
 DEFINE_FAKE_VALUE_FUNC(
+    HAL_StatusTypeDef, HAL_I2C_Mem_Write_DMA, I2C_HandleTypeDef *, uint16_t, uint16_t, uint16_t,
+    uint8_t *, uint16_t
+);
+DEFINE_FAKE_VALUE_FUNC(
+    HAL_StatusTypeDef, HAL_I2C_Master_Transmit_DMA, I2C_HandleTypeDef *, uint16_t,
+    uint8_t *, uint16_t
+);
+DEFINE_FAKE_VALUE_FUNC(
     HAL_StatusTypeDef, HAL_I2C_RegisterCallback, I2C_HandleTypeDef *, HAL_I2C_CallbackIDTypeDef,
     pI2C_CallbackTypeDef
 );

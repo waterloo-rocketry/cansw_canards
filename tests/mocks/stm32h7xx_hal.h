@@ -31,5 +31,7 @@ typedef enum {
 // Declare (but do not define) mock here. Actual definition is in stm32h7xx_hal.c to avoid
 // multiple-definitions errors
 DECLARE_FAKE_VOID_FUNC(HAL_Init);
+DECLARE_FAKE_VOID_FUNC(SCB_InvalidateDCache_by_Addr, void *, int32_t);
+DECLARE_FAKE_VOID_FUNC(SCB_CleanDCache_by_Addr, void *, int32_t);
 
 #endif // MOCK_STM32H7XX_HAL_H
