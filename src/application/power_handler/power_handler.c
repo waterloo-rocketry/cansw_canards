@@ -161,7 +161,8 @@ void transmit_status_can_msg(uint32_t status_bitfield) {
 	uint32_t timestamp = 0;
 
 	// TODO: Add a unique sensor id for each lipo 
-	// TODO: make sure the CAN msgs are sent around 2hz freqency (Jason)
+	// TODO: make sure the CAN msgs are sent around 2hz freqency (out of scope?)
+	// currently sending those msgs at 1hz as health check calls get status at 1hz
 	if (adc_get_converted_val(VSENS_BAT1, &adc_value) == W_SUCCESS) {
 		timer_get_ms(&timestamp);
 		build_analog_sensor_16bit_msg(
