@@ -9,12 +9,13 @@
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
+#include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
 
 static const uint8_t ADXL_ADDRS = 0x1D;
-static const uint8_t ADXL_PDM_AUDIO_MASK = 0x20;
 static const uint8_t ADXL_FILTER_MASK = 0x18; // 0001100
+static const uint8_t ADXL_INT0_MASK = 0x01; // 00000001
 
 static const uint8_t ADXL_SOFT_RESET_DELAY = 1;
 static const float32_t ADXL_16G_SCALE_FACTOR_MICRO_G_LSB = 533.3;
@@ -108,6 +109,10 @@ w_status_t adxl380_init() {
 	init_setting_status |=
 		adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_FILTER, ADXL_FILTER_MASK, 0x18);
 
+	/* Set up INT0 for drdy */
+	init_setting_status |=
+		adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_INT0_MAP0, ADXL_INT0_MASK, 0x01);
+
 	/* DIGITAL ENABLE REGISTER
 	MODE_CHANNEL_EN : x, y, z on
 	*/
@@ -165,17 +170,55 @@ w_status_t adxl380_is_data_ready(bool *p_drdy) {
 }
 
 /**
+ * @brief gets the state of new data for the gyro
+ * @param p_drdy a return pointer for if adxl380 is data ready
+ * @return the status of getting data from gyro
+ */
+w_status_t adxl380_is_data_ready(bool *p_drdy) {
+	if (!is_initialized) {
+		log_text(0, "ADXL380", "ERROR: Failed initialized.");
+		return W_FAILURE;
+	}
+	if (NULL == p_drdy) {
+		log_text(0, "ADXL380", "ERROR: Invalid return ptr.");
+		return W_INVALID_PARAM;
+	}
+
+	gpio_level_t drdy; // NOT-DRDY
+
+	if (W_SUCCESS == gpio_read(GPIO_PIN_ADXL380_INT0, &drdy, 0)) {
+		// data ready is on the positive-edge
+		*p_drdy = (GPIO_LEVEL_HIGH == drdy) ? true : false;
+
+	} else {
+		uint8_t reg_drdy = 0;
+		// use I2C to get value
+		if (adxl38x_read_device_data(&g_adx380_handle, ADXL38X_STATUS3, 1, &reg_drdy) !=
+			W_SUCCESS) {
+			return W_IO_ERROR;
+		}
+
+		*p_drdy = (1 == reg_drdy) ? true : false; // to make this clear
+	}
+
+	return W_SUCCESS;
+}
+
+/**
  * @brief this gets the acceleration data (raw and processed) from the ADXL380
- * @param data pointer to the vector form of the acceleration
+ * @param p_data pointer to the vector form of the acceleration
  * @param p_raw_data pointer to all of the raw data for each access
  * @return the status of the function call
  */
-w_status_t adxl380_get_accel_data(vector3d_t *data, adxl380_raw_accel_data_t *p_raw_data) {
-	return W_SUCCESS;
+w_status_t adxl380_get_accel_data(vector3d_t *p_data, adxl380_raw_accel_data_t *p_raw_data) {
 	// make sure have initialized
 	if (!is_initialized) {
 		log_text(0, "ADXL380", "ERROR: Not initialized.");
 		return W_FAILURE;
+	}
+	if ((NULL == p_data) || (NULL == p_raw_data)) {
+		log_text(0, "ADXL380", "ERROR: Invalid return ptr.");
+		return W_INVALID_PARAM;
 	}
 
 	if (W_SUCCESS != adxl380_get_raw_accel(p_raw_data)) {
@@ -183,11 +226,11 @@ w_status_t adxl380_get_accel_data(vector3d_t *data, adxl380_raw_accel_data_t *p_
 		return W_FAILURE;
 	}
 
-	data->x =
+	p_data->x =
 		((float64_t)((int16_t)p_raw_data->x)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
-	data->y =
+	p_data->y =
 		((float64_t)((int16_t)p_raw_data->y)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
-	data->z =
+	p_data->z =
 		((float64_t)((int16_t)p_raw_data->z)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 
 	return W_SUCCESS;
