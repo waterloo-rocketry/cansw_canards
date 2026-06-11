@@ -185,6 +185,8 @@ w_status_t ms5611_init(void) {
 		return W_FAILURE;
 	}
 
+	vTaskDelay(5);
+
 	if (W_SUCCESS != ms5611_prom_read()) {
 		log_text(1, "ms5611", "ERROR: initialization failed during PROM read .");
 		return W_FAILURE;
