@@ -77,7 +77,8 @@ typedef struct {
 	ms5611_address_t addr;
 
 	/* Selected OSR for pressure and temperature conversions */
-	ms5611_osr_t osr;
+	ms5611_osr_t osr_pressure;
+	ms5611_osr_t osr_temperature;
 
 	/* Set true once init succeeds */
 	bool initialized;
@@ -92,38 +93,7 @@ typedef struct {
 } ms5611_handle_t;
 
 w_status_t ms5611_init(void);
-void ms5611_deinit(void); // for testing purposes, not intended for regular use
-w_status_t
-ms5611_get_raw_pressure(ms5611_raw_result_t *result); // blocking read of pressure and temperature
-													  // with compensation, for testing and fallback
-
-/* Async (non-blocking) APIs for MS5611 measurements */
-w_status_t ms5611_start_async_read(void);
-bool ms5611_is_ready(void);
-w_status_t ms5611_get_async_result(ms5611_raw_result_t *result);
-SemaphoreHandle_t ms5611_get_completion_sem(void);
-
-// example async usage pattern:
-// void barometer_task(void *pvParameters) {
-//     ms5611_raw_result_t result;
-//     SemaphoreHandle_t completion_sem = ms5611_get_completion_sem();
-
-//     while (1) {
-//         /* Start measurement (returns immediately, <1ms) */
-//         if (ms5611_start_async_read() == W_SUCCESS) {
-//             /* suspend this task until measurement completes */
-//             /* Other tasks continue running during this time */
-//             if (xSemaphoreTake(completion_sem, pdMS_TO_TICKS(100)) == pdTRUE) {
-//                 /* Get result (microsecond latency) */
-//                 if (ms5611_get_async_result(&result) == W_SUCCESS) {
-//                     log_text(0, "baro", "Temp: %d centiC, Press: %d centiMb",
-//                              result.temperature_centideg,
-//                              result.pressure_centimbar);
-//                 }
-//             }
-//         }
-//         vTaskDelay(pdMS_TO_TICKS(1000));  /* Take reading every second */
-//     }
-// }
+void ms5611_deinit(void);
+w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms);
 
 #endif // MS5611_H

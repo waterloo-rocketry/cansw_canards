@@ -27,7 +27,9 @@ static estimator_module_ctx_t g_estimator_context = {0};
 
 // make sure controller_output_t is initalized to 0 and valid to read to match original design
 static controller_ctx_t g_controller_context = {0};
-static flight_phase_ctx_t g_flight_phase_context = {0};
+// setting the launch and act_allowed time to MAX to make sure of no inadvertent actuation
+static flight_phase_ctx_t g_flight_phase_context = {.launch_timestamp_ms = UINT32_MAX,
+													.act_allowed_timestamp_ms = UINT32_MAX};
 
 w_status_t fsm_init() {
 	// init estimator context
@@ -71,8 +73,12 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			break;
 
 			// both Pad filter and boost will only run estimator step
-		case STATE_SE_INIT:
+		case STATE_PAD_FILTER:
 			// TODO: how to tell estimator it needs to pad filter
+			/* fall through */
+		case STATE_PAD_NAV:
+			// TODO: enter into flight filter
+			/* fall through */
 		case STATE_BOOST:
 			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
 			break;
@@ -91,6 +97,8 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			break;
 
 			// etc for more cases...
+		case STATE_SLEEPY:
+			break;
 
 		default:
 			// TODO: how to deal with the other cases
