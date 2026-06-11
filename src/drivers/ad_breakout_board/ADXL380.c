@@ -94,7 +94,7 @@ w_status_t adxl380_init() {
 	init_setting_status |= adxl38x_soft_reset(&g_adx380_handle);
 	vTaskDelay(pdMS_TO_TICKS(ADXL_SOFT_RESET_DELAY));
 
-	init_setting_status |= adxl38x_set_op_mode(&g_adx380_handle, ADXL38X_MODE_HP);
+	init_setting_status |= adxl38x_set_op_mode(&g_adx380_handle, ADXL38X_MODE_ULP);
 	init_setting_status |= adxl38x_set_range(&g_adx380_handle, ADXL380_RANGE_16G);
 
 	// FIFO is auto disabled
@@ -106,8 +106,8 @@ w_status_t adxl380_init() {
 	HPF_PATH: 1
 	HPF: 000
 	*/
-	init_setting_status |=
-		adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_FILTER, ADXL_FILTER_MASK, 0x18);
+	// init_setting_status |=
+	// 	adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_FILTER, ADXL_FILTER_MASK, 0x18);
 
 	/* Set up INT0 for drdy */
 	init_setting_status |= adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_INT0_MAP0, ADXL_INT0_MASK, 0x01);
@@ -120,9 +120,6 @@ w_status_t adxl380_init() {
 		ADXL38X_DIG_EN,
 		ADXL38X_MASK_CHEN_DIG_EN,
 		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, (uint8_t)ADXL38X_CH_EN_XYZ));
-
-	/* Set up INT0 for drdy */
-	init_setting_status |= adxl38x_register_update_bits(&g_adx380_handle, ADXL38X_INT0_MAP0, ADXL_INT0_MASK, 0x01);
 
 	if (W_SUCCESS != init_setting_status) {
 		log_text(0, "ADXL380", "ERROR: Failed to set up the correct initial register bit.");
@@ -162,9 +159,9 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
 }
 
 /**
- * @brief gets the state of new data for the gyro
+ * @brief gets the state of new data for the accel
  * @param p_drdy a return pointer for if adxl380 is data ready
- * @return the status of getting data from gyro
+ * @return the status of getting data from accel
  */
 w_status_t adxl380_is_data_ready(bool *p_drdy) {
 	if (!is_initialized) {
@@ -182,7 +179,8 @@ w_status_t adxl380_is_data_ready(bool *p_drdy) {
 		// data ready is on the positive-edge
 		*p_drdy = (GPIO_LEVEL_HIGH == drdy) ? true : false;
 
-	} else {
+	} 
+	//else {
 		uint8_t reg_drdy = 0;
 		// use I2C to get value
 		if (adxl38x_read_device_data(&g_adx380_handle, ADXL38X_STATUS3, 1, &reg_drdy) !=
@@ -191,7 +189,7 @@ w_status_t adxl380_is_data_ready(bool *p_drdy) {
 		}
 
 		*p_drdy = (1 == reg_drdy) ? true : false; // to make this clear
-	}
+	//}
 
 	return W_SUCCESS;
 }

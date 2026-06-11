@@ -173,6 +173,8 @@ static void system_init_task(void *arg) {
 	}
 	uint16_t i = 0;
 
+	bool drdy = true;
+
 	TickType_t last_wake_time = xTaskGetTickCount();
 	while (1) {
 		if (i == 100) {
@@ -184,12 +186,27 @@ static void system_init_task(void *arg) {
 			i++;
 		}
 		
+		status = adxl380_is_data_ready(&drdy);
+		
+		if (W_SUCCESS != status) {
+			log_text(10, "SystemInit", "ADXL380 ERROR1");
+		}
 
+		log_text(10, "SystemInit", "ADXL380 drdy1: %d", drdy);
+		
 		status = adxl380_get_accel_data(&data, &raw_data);
 		
 		if (W_SUCCESS != status) {
-			log_text(10, "SystemInit", "ADXL380 ERROR");
+			log_text(10, "SystemInit", "ADXL380 ERROR2");
 		}
+		
+		status = adxl380_is_data_ready(&drdy);
+		
+		if (W_SUCCESS != status) {
+			log_text(10, "SystemInit", "ADXL380 ERROR3");
+		}
+
+		log_text(10, "SystemInit", "ADXL380 drdy2: %d", drdy);
 			
 		log_text(10, "SystemInit", "ADXL380 DATA: corrected: x %lf y %lf z %lf raw: x %d y %d z %d", data.x, data.y, data.z, raw_data.x, raw_data.y, raw_data.z);
 		xTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(1));
