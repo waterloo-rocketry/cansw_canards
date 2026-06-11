@@ -9,7 +9,7 @@
  * @return the status of the function call
  */
 w_status_t adxl380_init() {
-	return W_FAILURE;
+	return W_SUCCESS;
 }
 
 /**
@@ -18,7 +18,16 @@ w_status_t adxl380_init() {
  * @return the status of the function call
  */
 w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
-	return W_FAILURE;
+	return W_SUCCESS;
+}
+
+/**
+ * @brief gets the state of new data for the accel
+ * @param p_drdy a return pointer for if adxl380 is data ready
+ * @return the status of getting data from accel
+ */
+w_status_t adxl380_is_data_ready(bool *p_drdy) {
+	return W_SUCCESS;
 }
 
 /**
@@ -28,5 +37,5 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
  * @return the status of the function call
  */
 w_status_t adxl380_get_accel_data(vector3d_t *data, adxl380_raw_accel_data_t *p_raw_data) {
-	return W_FAILURE;
+	return W_SUCCESS;
 }

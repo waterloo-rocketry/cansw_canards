@@ -65,18 +65,13 @@ void ad_breakout_board_task(void *argument) {
 			current_time_ms = 0;
 		}
 
-		// only update accel since we know this will be a new data from the sensor, since no drdy
-		// check
-		g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_ACCEL_INDEX] = current_time_ms;
-
-		// assume gyro failure
+		// assume gyro not updated
 		bool update_gyro_data = false;
 
-		if (W_SUCCESS == adxrs649_is_data_ready(&update_gyro_data)) {
+		if (adxrs649_is_data_ready(&update_gyro_data) == W_SUCCESS) {
 			if (update_gyro_data) {
-				if (W_SUCCESS ==
-					adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas),
-										   &raw_gyro)) {
+				if (adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas),
+										   &raw_gyro) == W_SUCCESS) {
 					g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
 				} else {
 					g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
@@ -94,12 +89,28 @@ void ad_breakout_board_task(void *argument) {
 			g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_GYRO_INDEX] = current_time_ms;
 		}
 
-		if (W_SUCCESS == adxl380_get_accel_data(
-							 &(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas), &raw_accel)) {
-			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
+		// assume gyro not updated
+		bool update_accel_data = false;
+
+		if (adxl380_is_data_ready(&update_accel_data) == W_SUCCESS) {
+			if (update_accel_data) {
+				if (adxl380_get_accel_data(
+									&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas), &raw_accel) == W_SUCCESS) {
+					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
+				} else {
+					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
+					log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read accel.");
+				}
+			}
 		} else {
+			update_accel_data = true;
 			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
-			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
+			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read accel drdy.");
+		}
+
+		// if new gyro data update the timestamp
+		if (update_accel_data) {
+			g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_ACCEL_INDEX] = current_time_ms;
 		}
 
 		taskENTER_CRITICAL();
@@ -108,17 +119,16 @@ void ad_breakout_board_task(void *argument) {
 			memcpy(&(g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER]),
 				   &(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER]),
 				   AD_GYRO_MEASUREMENT_SIZE);
+			g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_GYRO_INDEX] = g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_GYRO_INDEX];
 		}
 
 		// Accelerometer
-		memcpy(&(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]),
-			   &(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER]),
-			   AD_ACCEL_MEASUREMENT_SIZE);
-
-		// timestamp
-		memcpy(g_task_ctx.timestamp_ms[AD_READ_BUFFER],
-			   g_task_ctx.timestamp_ms[AD_WRITE_BUFFER],
-			   sizeof(uint32_t[2]));
+		if (update_accel_data) {
+			memcpy(&(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]),
+				&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER]),
+				AD_ACCEL_MEASUREMENT_SIZE);
+			g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_ACCEL_INDEX] = g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_ACCEL_INDEX];
+		}
 		taskEXIT_CRITICAL();
 
 		// LOG/TELEMETRY
