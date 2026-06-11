@@ -153,7 +153,7 @@ static void system_init_task(void *arg) {
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
 	task_status &= xTaskCreate(ad_breakout_board_task,
-							   "ad breakout board",
+							   "ad board task",
 							   2560, // TODO: set when sure of size
 							   NULL,
 							   ad_breakout_task_priority,
