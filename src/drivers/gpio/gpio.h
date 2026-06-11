@@ -33,6 +33,7 @@ typedef enum {
 	GPIO_PIN_ADXRS649_ST1,
 	GPIO_PIN_ADXRS649_ST2,
 	GPIO_PIN_ADS1219_INT,
+	GPIO_PIN_ADXL380_INT0,
 	GPIO_PIN_COUNT // Enum max value
 } gpio_pin_t;
 
