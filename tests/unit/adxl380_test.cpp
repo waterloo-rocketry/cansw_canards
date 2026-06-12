@@ -27,6 +27,8 @@ FAKE_VALUE_FUNC(w_status_t, adxl38x_read_device_data, adxl38x_dev_t *, uint8_t, 
 FAKE_VALUE_FUNC(uint8_t, adxl38x_field_prep_u8, uint8_t, uint8_t);
 
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
+
+FAKE_VALUE_FUNC(w_status_t, gpio_read, gpio_pin_t, gpio_level_t*, uint32_t);
 }
 
 typedef struct {
@@ -59,6 +61,21 @@ w_status_t adxl38x_set_raw_read_device_data(adxl38x_dev_t *dev, uint8_t base_add
     return W_SUCCESS;
 }
 
+
+uint8_t raw_single_data = 100;
+w_status_t adxl38x_set_raw_single_read_device_data(adxl38x_dev_t *dev, uint8_t base_address, uint16_t size, uint8_t *read_data){
+
+    *read_data = raw_single_data;
+    return W_SUCCESS;
+}
+
+
+gpio_level_t global_gpio_value = GPIO_LEVEL_HIGH;
+w_status_t gpio_set_read(gpio_pin_t pin, gpio_level_t *level, uint32_t timeout) {
+    *level = global_gpio_value;
+    return W_SUCCESS;
+}
+
 class ADXL380 : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -73,6 +90,7 @@ protected:
         RESET_FAKE(adxl38x_field_prep_u8);
 
         RESET_FAKE(log_text);
+        RESET_FAKE(gpio_read);
         FFF_RESET_HISTORY(); 
 
         // preset the self-test to pass
@@ -402,4 +420,51 @@ TEST_F(ADXL380, getConvAccelSuccessEdgeCase){
     EXPECT_FLOAT_EQ(32767 * 533.3 / 1000000, data.x);
     EXPECT_FLOAT_EQ(-32767 * 533.3 / 1000000, data.y);
     EXPECT_FLOAT_EQ(0 * 533.3 / 1000000, data.z);
+};
+
+
+TEST_F(ADXL380, getDrdyFailCauseGPIOAndReadFail){
+    adxl380_init();
+
+    // set up function returns
+    gpio_read_fake.return_val = W_FAILURE;
+    adxl38x_read_device_data_fake.return_val = W_FAILURE;
+
+    bool drdy = false;
+
+    w_status_t status= adxl380_is_data_ready(&drdy);
+    EXPECT_EQ(W_IO_ERROR, status);
+};
+
+
+TEST_F(ADXL380, getDrdySuccessNotReadyGPIOFailAndReadSuccess){
+    adxl380_init();
+
+    // set up function returns
+    gpio_read_fake.return_val = W_FAILURE;
+    raw_single_data = 0;
+    adxl38x_read_device_data_fake.custom_fake = adxl38x_set_raw_single_read_device_data;
+
+    bool drdy = true;
+
+    w_status_t status= adxl380_is_data_ready(&drdy);
+    EXPECT_EQ(W_SUCCESS, status);
+    EXPECT_EQ(false, drdy);
+};
+
+
+TEST_F(ADXL380, getDrdySuccessReadyGPIO){
+    adxl380_init();
+
+    // set up function returns
+    global_gpio_value = GPIO_LEVEL_HIGH;
+    gpio_read_fake.custom_fake = gpio_set_read;
+    raw_single_data = 0;
+    adxl38x_read_device_data_fake.custom_fake = adxl38x_set_raw_single_read_device_data;
+
+    bool drdy = false;
+
+    w_status_t status= adxl380_is_data_ready(&drdy);
+    EXPECT_EQ(W_SUCCESS, status);
+    EXPECT_EQ(true, drdy);
 };
