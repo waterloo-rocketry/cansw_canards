@@ -80,7 +80,7 @@ static void system_init_task(void *arg) {
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
-	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS); 
+	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
@@ -171,34 +171,37 @@ static void system_init_task(void *arg) {
 	TickType_t last_wake_time = xTaskGetTickCount();
 	navigator_1d_meas_t gyro_data = {0};
 	navigator_3d_meas_t accel_data = {0};
-	uint32_t timestamp_ms = 0;
+	uint32_t gyro_timestamp_ms = 0;
+	uint32_t accel_timestamp_ms = 0;
 	w_status_t ad_status;
 	adxl380_raw_accel_data_t raw_accel = {0};
 	vector3d_t acc_data = {0};
 
-
 	while (1) {
 		if (100 == i) {
 			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-			i =0;
+			i = 0;
 		} else {
 			i++;
 		}
 
-		ad_status = ad_breakout_board_get_data(&gyro_data, &accel_data, &timestamp_ms);
-		if (ad_status != W_SUCCESS) log_text(10, "SystemInit", "AD BOARD ERROR.");
+		ad_status = ad_breakout_board_get_data(&gyro_data, &accel_data, &gyro_timestamp_ms, &accel_timestamp_ms);
+		if (ad_status != W_SUCCESS) {
+			log_text(10, "SystemInit", "AD BOARD ERROR.");
+		}
 
+		log_text(10, "SystemInit", "AD timestamp gyro: %" PRIu32" accel: %" PRIu32, gyro_timestamp_ms, accel_timestamp_ms);
+		log_text(10,
+				 "SystemInit",
+				 "AD ACCEL x %lf, y %lf, z %lf, dead %d",
+				 accel_data.meas.x,
+				 accel_data.meas.y,
+				 accel_data.meas.z,
+				 accel_data.is_dead);
 
-		log_text(10, "SystemInit", "AD timestamp %"PRIu32, 
-					timestamp_ms);
-		log_text(10, "SystemInit", "AD ACCEL x %lf, y %lf, z %lf, dead %d", 
-			accel_data.meas.x, accel_data.meas.y, accel_data.meas.z, accel_data.is_dead);
-
-		log_text(10, "SystemInit", "AD GYRO  z %lf, dead %d", 
-			gyro_data.meas, gyro_data.is_dead);
+		log_text(10, "SystemInit", "AD GYRO  z %lf, dead %d", gyro_data.meas, gyro_data.is_dead);
 
 		xTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(2));
-		
 	}
 }
 

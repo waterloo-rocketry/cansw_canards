@@ -1,15 +1,9 @@
 #ifndef ADXL380_H
 #define ADXL380_H
 
-#include <stdbool.h> 
-#include <stdint.h>
-
-#include "common/math/math.h"
-#include "rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct {
 #include "common/math/math.h"
 #include "rocketlib/include/common.h"
 
@@ -24,7 +18,7 @@ typedef struct {
  * @return the status of the function call
  */
 w_status_t adxl380_init();
- 
+
 /**
  * @brief this gets the raw acceleration data from the ADXL380
  * @param p_raw_data pointer to all of the raw data for each access

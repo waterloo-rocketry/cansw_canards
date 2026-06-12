@@ -100,8 +100,8 @@ void ad_breakout_board_task(void *argument) {
 
 		if (adxl380_is_data_ready(&update_accel_data) == W_SUCCESS) {
 			if (update_accel_data) {
-				if (adxl380_get_accel_data(
-									&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas), &raw_accel) == W_SUCCESS) {
+				if (adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
+										   &raw_accel) == W_SUCCESS) {
 					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
 				} else {
 					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
@@ -125,15 +125,17 @@ void ad_breakout_board_task(void *argument) {
 			memcpy(&(g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER]),
 				   &(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER]),
 				   AD_GYRO_MEASUREMENT_SIZE);
-			g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_GYRO_INDEX] = g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_GYRO_INDEX];
+			g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_GYRO_INDEX] =
+				g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_GYRO_INDEX];
 		}
 
 		// Accelerometer
 		if (update_accel_data) {
 			memcpy(&(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]),
-				&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER]),
-				AD_ACCEL_MEASUREMENT_SIZE);
-			g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_ACCEL_INDEX] = g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_ACCEL_INDEX];
+				   &(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER]),
+				   AD_ACCEL_MEASUREMENT_SIZE);
+			g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_ACCEL_INDEX] =
+				g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_ACCEL_INDEX];
 		}
 		taskEXIT_CRITICAL();
 
@@ -143,8 +145,6 @@ void ad_breakout_board_task(void *argument) {
 		}
 
 		loop_count++;
-
-
 
 		timer_get_tenth_ms(&time);
 		log_text(0, "AD BREAKOUT TASK", "Exit TASK %d", time);
