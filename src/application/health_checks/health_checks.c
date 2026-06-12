@@ -129,6 +129,7 @@ uint32_t check_watchdog_tasks(void) {
 			char *task_name = pcTaskGetName(watchdog_tasks[i].task_handle);
 			uint8_t data[6] = {0};
 			strncpy((char *)data, task_name, sizeof(data));
+			data[sizeof(data) - 1] = '\0'; // ensure null termination
 			build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), data, &msg);
 			if (can_handler_transmit(&msg) != W_SUCCESS) {
 				log_text(0, "health", "CAN send failure for watchdog timeout msg");
