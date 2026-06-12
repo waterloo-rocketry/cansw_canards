@@ -24,7 +24,6 @@
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"

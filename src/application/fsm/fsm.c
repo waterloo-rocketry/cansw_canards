@@ -127,36 +127,55 @@ void fsm_task(void *args) {
 		// get inputs needed for state machine:
 		// - imu data
 		// - etc (probably more later)
-		
 
 		timer_get_tenth_ms(&time);
 		log_text(0, "FSM", "ENTER IMU %d", time);
 
 		imu_handler_get_fresh_meas(&sensor_data);
 
-
-
 		timer_get_tenth_ms(&time);
 		log_text(0, "FSM", "EXIT IMU %d", time);
 
 		log_text(10, "FSM", "BOARD");
-		log_text(10, "FSM", "LSM6 DATA: Accel: x %lf y %lf z %lf Gyro: x %lf y %lf z %lf Is Dead: %d", 
-			sensor_data.board_meas.board_imu.accel.x, sensor_data.board_meas.board_imu.accel.y, sensor_data.board_meas.board_imu.accel.z,
-			sensor_data.board_meas.board_imu.gyro.x, sensor_data.board_meas.board_imu.gyro.y, sensor_data.board_meas.board_imu.gyro.z, 
-			sensor_data.board_meas.board_imu.is_dead);
-		log_text(10, "FSM", "IIS2 DATA: x %lf y %lf z %lf Is Dead %d", 
-			sensor_data.board_meas.board_mag.meas.x, sensor_data.board_meas.board_mag.meas.y, sensor_data.board_meas.board_mag.meas.z,
-			sensor_data.board_meas.board_mag.is_dead);
-
+		log_text(10,
+				 "FSM",
+				 "LSM6 DATA: Accel: x %lf y %lf z %lf Gyro: x %lf y %lf z %lf Is Dead: %d",
+				 sensor_data.board_meas.board_imu.accel.x,
+				 sensor_data.board_meas.board_imu.accel.y,
+				 sensor_data.board_meas.board_imu.accel.z,
+				 sensor_data.board_meas.board_imu.gyro.x,
+				 sensor_data.board_meas.board_imu.gyro.y,
+				 sensor_data.board_meas.board_imu.gyro.z,
+				 sensor_data.board_meas.board_imu.is_dead);
+		log_text(10,
+				 "FSM",
+				 "IIS2 DATA: x %lf y %lf z %lf Is Dead %d",
+				 sensor_data.board_meas.board_mag.meas.x,
+				 sensor_data.board_meas.board_mag.meas.y,
+				 sensor_data.board_meas.board_mag.meas.z,
+				 sensor_data.board_meas.board_mag.is_dead);
 
 		log_text(10, "FSM", "Movella");
-		log_text(10, "FSM", "Movella: Accel: x %lf y %lf z %lf Gyro: x %lf y %lf z %lf", 
-			sensor_data.mti_meas.mti_accel.x, sensor_data.mti_meas.mti_accel.y, sensor_data.mti_meas.mti_accel.z,
-			sensor_data.mti_meas.mti_gyro.x, sensor_data.mti_meas.mti_gyro.y, sensor_data.mti_meas.mti_gyro.z);
-		log_text(10, "FSM", "Movella Mag DATA: x %lf y %lf z %lf", 
-			sensor_data.mti_meas.mti_mag.x, sensor_data.mti_meas.mti_mag.y, sensor_data.mti_meas.mti_mag.z);
-		log_text(10, "FSM", "Movella Baro: %lf Is Dead: %d", 
-			sensor_data.mti_meas.mti_baro, sensor_data.mti_meas.is_dead);
+		log_text(10,
+				 "FSM",
+				 "Movella: Accel: x %lf y %lf z %lf Gyro: x %lf y %lf z %lf",
+				 sensor_data.mti_meas.mti_accel.x,
+				 sensor_data.mti_meas.mti_accel.y,
+				 sensor_data.mti_meas.mti_accel.z,
+				 sensor_data.mti_meas.mti_gyro.x,
+				 sensor_data.mti_meas.mti_gyro.y,
+				 sensor_data.mti_meas.mti_gyro.z);
+		log_text(10,
+				 "FSM",
+				 "Movella Mag DATA: x %lf y %lf z %lf",
+				 sensor_data.mti_meas.mti_mag.x,
+				 sensor_data.mti_meas.mti_mag.y,
+				 sensor_data.mti_meas.mti_mag.z);
+		log_text(10,
+				 "FSM",
+				 "Movella Baro: %lf Is Dead: %d",
+				 sensor_data.mti_meas.mti_baro,
+				 sensor_data.mti_meas.is_dead);
 
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_data);
