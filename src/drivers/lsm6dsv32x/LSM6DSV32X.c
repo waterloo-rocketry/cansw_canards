@@ -105,6 +105,8 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 	memcpy(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER],
 		   lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER],
 		   CTX_BUFFER_SIZE);
+	lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER] =
+		lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER];
 }
 
 /**

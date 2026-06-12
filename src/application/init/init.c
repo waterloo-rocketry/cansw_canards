@@ -17,6 +17,7 @@
 #include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
@@ -95,6 +96,7 @@ static void system_init_task(void *arg) {
 	status |= controller_init();
 	status |= fsm_init();
 	status |= lsm6dsv32x_init();
+	status |= iis2mdc_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail

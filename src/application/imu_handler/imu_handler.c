@@ -110,10 +110,16 @@ static w_status_t read_board_meas(navigator_board_meas_t *board_data, raw_board_
 												  &(raw_data->raw_board_accel),
 												  &(raw_data->raw_board_gyro))) {
 		// check if we meet freshness requirement
-		if ((curr_timestamp_ms > (raw_data->raw_board_accel.timestamp_ms)) &&
+		if ((curr_timestamp_ms >= (raw_data->raw_board_accel.timestamp_ms)) &&
 			((curr_timestamp_ms - (raw_data->raw_board_accel.timestamp_ms)) <
 			 IMU_SAMPLING_PERIOD_MS)) { // designed to make sure no overflow
 			board_data->board_imu.is_dead = false;
+		} else {
+			log_text(1,
+					 "IMUHandler",
+					 "WARN: Board IMU Not Fresh curr: %d, sen: %d.",
+					 curr_timestamp_ms,
+					 raw_data->raw_board_accel.timestamp_ms);
 		}
 	} else {
 		log_text(1, "IMUHandler", "WARN: Board IMU read failed.");
@@ -125,9 +131,15 @@ static w_status_t read_board_meas(navigator_board_meas_t *board_data, raw_board_
 									  &(raw_data->board_mag),
 									  &mag_timestamp_ms)) {
 		// check if we meet freshness requirement
-		if ((curr_timestamp_ms > mag_timestamp_ms) &&
+		if ((curr_timestamp_ms >= mag_timestamp_ms) &&
 			((curr_timestamp_ms - mag_timestamp_ms) < MAG_FRESHNESS_TIMEOUT_MS)) {
 			board_data->board_mag.is_dead = false;
+		} else {
+			log_text(1,
+					 "IMUHandler",
+					 "WARN: Board Mag Not Fresh curr: %d, sen: %d.",
+					 curr_timestamp_ms,
+					 mag_timestamp_ms);
 		}
 	} else {
 		log_text(1, "IMUHandler", "WARN: Board Mag read failed.");
@@ -256,8 +268,11 @@ w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *imu_output) {
 
 	// TODO: log system-level failures
 	// If both IMUs fail, consider it a system-level failure
-	if (W_FAILURE == movella_status) {
+	if (W_SUCCESS != movella_status) {
 		log_text(1, "IMUHandler", "WARN: Movella IMU read failed.");
+	}
+	if (W_SUCCESS != board_status) {
+		log_text(1, "IMUHandler", "WARN: Board Sensors read failed.");
 	}
 
 	// TODO: add logging for board meas
@@ -285,7 +300,7 @@ uint32_t imu_handler_get_status(void) {
 	// Log IMU statistics
 	log_text(0,
 			 "imu_handler",
-			 "Polulu Success %lu, Failure %lu Movella - Success %lu, Failure %lu",
+			 "Board Sensor Success %lu, Failure %lu Movella - Success %lu, Failure %lu",
 			 imu_handler_state.board_stats.success_count,
 			 imu_handler_state.board_stats.failure_count,
 			 imu_handler_state.movella_stats.success_count,
