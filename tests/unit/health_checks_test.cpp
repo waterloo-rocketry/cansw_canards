@@ -16,11 +16,13 @@ extern "C" {
 
 // all the functions that are being tested
 extern w_status_t health_check_exec();
-extern w_status_t check_watchdog_tasks(void);
+extern uint32_t check_watchdog_tasks(void);
+extern void proc_handle_fatal_error(const char *errorMsg);
 
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
 FAKE_VOID_FUNC(build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, can_msg_t *);
+
 // FAKE_VALUE_FUNC(TaskHandle_t, xTaskGetCurrentTaskHandle);
 FAKE_VOID_FUNC(log_text, uint32_t, const char *, const char *, void *);
 
@@ -51,7 +53,7 @@ DEFINE_FFF_GLOBALS;
 
 // Mocked functions for helping with unit testing
 // check if having extra static functions is good or not for unit testing
-static w_status_t timer_get_ms_mock(float *out_time) {
+static w_status_t timer_get_ms_mock(uint32_t *out_time) {
 	*out_time = timer_ms_value_mock;
 	return W_SUCCESS;
 }
@@ -118,11 +120,13 @@ protected:
 	void TearDown() override {}
 
 	// Helper functions to set up the test environment
-	void SetTimerMs(float time_ms) {
+	void SetTimerMs(uint32_t time_ms) {
 		timer_ms_value_mock = time_ms;
 		timer_get_ms_fake.custom_fake = timer_get_ms_mock;
 	}
 };
+
+
 
 TEST_F(HealthChecksTest, NominalHealthCheck) {
 	// Arrange
@@ -137,7 +141,6 @@ TEST_F(HealthChecksTest, NominalHealthCheck) {
 	EXPECT_EQ(build_general_board_status_msg_fake.arg2_val, E_NOMINAL);
 }
 
-// TODO: revive test once a similar test with new system is determined
 // TEST_F(HealthChecksTest, FailureHealthCheck) {
 //     // Arrange
 //     SetTimerMs(1000);
@@ -177,10 +180,10 @@ TEST_F(HealthChecksTest, WatchdogRegisterAndKick) {
 
 	// Advance time but still within timeout becuase timout was earlier set to 100ms
 	SetTimerMs(1050.0f);
-	w_status_t result = check_watchdog_tasks();
+	uint32_t status_bitfield = check_watchdog_tasks();
 
 	// Assert
-	EXPECT_EQ(W_SUCCESS, result);
+	EXPECT_EQ(0, status_bitfield);
 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 0);
 }
 
@@ -221,10 +224,10 @@ TEST_F(HealthChecksTest, WatchdogMaxTasksLimit) {
 	}
 	SetTimerMs(1050.0f);
 
-	w_status_t result = check_watchdog_tasks();
+	uint32_t status_bitfield = check_watchdog_tasks();
 
 	// Assert
-	EXPECT_EQ(W_SUCCESS, result); // check watchdog still goes through
+	EXPECT_EQ(0, status_bitfield); // check watchdog still goes through
 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 0);
 }
 
