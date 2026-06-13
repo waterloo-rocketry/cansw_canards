@@ -5,6 +5,11 @@
 #include "stm32h7xx_hal.h"
 #include <stdint.h>
 
+// Added function declaration for use in ak45_driver_test.cpp
+extern "C" {
+void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs);
+}
+
 // From stm32h7xx_hal_fdcan.h
 #define FDCAN_EXTENDED_ID ((uint32_t)0x40000000U)
 #define FDCAN_DATA_FRAME ((uint32_t)0x00000000U)
