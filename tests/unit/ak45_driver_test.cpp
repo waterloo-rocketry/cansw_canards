@@ -181,7 +181,7 @@ TEST_F(AK45DriverTest, InitFailsIfDoubleInit) {
 TEST_F(AK45DriverTest, InitSucceeds) {
 	// Arrange
 	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
-	ak45_set_tx_error(67);
+	ak45_set_tx_errors(67);
 	EXPECT_EQ(ak45_get_tx_errors(), 67);
 
 	// Act
