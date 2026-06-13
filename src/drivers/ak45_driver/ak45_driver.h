@@ -71,4 +71,16 @@ w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb);
  */
 uint32_t ak45_get_tx_errors(void);
 
+/**
+ * @brief Reset all driver state since many static variables. Intended for unit testing only.
+ */
+void ak45_driver_reset(void);
+
+/**
+ * @brief Set the error count since it is satic. Intended for unit testing only.
+ *
+ * @param[in] count Number of errors
+ */
+void ak45_set_tx_errors(uint32_t count);
+
 #endif // AK45_DRIVER_H
