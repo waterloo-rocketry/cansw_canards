@@ -390,6 +390,7 @@ void log_task(void *argument) {
 	(void)argument;
 
 	log_buffer_t *buffer_to_print = NULL;
+	uint32_t time = 0;
 	for (;;) {
 		if (xQueueReceive(full_buffers_queue, &buffer_to_print, 5000) == pdPASS) {
 			// Retrieve number of completed log messages in the received buffer
@@ -414,10 +415,16 @@ void log_task(void *argument) {
 			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
 				gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
 
+				timer_get_tenth_ms(&time);
+				log_text(0, "logger", "start %d", time);
+
 				if (sd_card_file_write(
 						filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
 					W_SUCCESS) {
 					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+
+					timer_get_tenth_ms(&time);
+					log_text(0, "logger", "end %d", time);
 					break; // Successfully wrote the buffer
 				} else {
 					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
@@ -433,6 +440,7 @@ void log_task(void *argument) {
 
 			// Reinitialize buffer for reuse
 			log_reset_buffer(buffer_to_print);
+			log_text(0, "logger", "reset %d", time);
 		} else {
 			logger_health.no_full_buf_moments++;
 		}
