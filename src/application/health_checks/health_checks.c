@@ -20,13 +20,7 @@
 #include "task.h"
 
 #define TASK_DELAY_MS 3000
-#define ADC_VREF 3.3f
-#define R_SENSE 0.033f
-#define INA180A3_GAIN 100.0f
-#define MAX_CURRENT_mA 400
 #define MAX_WATCHDOG_TASKS 10
-#define CONV_ADC_COUNTS_TO_CURRENT_mA                                                              \
-	((ADC_VREF * 1000.0f) / (ADC_MAX_COUNTS * INA180A3_GAIN * R_SENSE))
 
 // struct for watchdog
 typedef struct {
@@ -39,50 +33,6 @@ typedef struct {
 // watchdog initiailsations
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
 static uint32_t num_watchdog_tasks = 0;
-
-w_status_t get_adc_current(uint32_t *adc_current_mA) {
-	w_status_t status = W_SUCCESS;
-	uint32_t adc_value;
-
-	status |= adc_get_raw_volts(PROCESSOR_BOARD_VOLTAGE, &adc_value, TASK_DELAY_MS);
-	if (status != W_SUCCESS) {
-		return status;
-	}
-
-	*adc_current_mA = (uint32_t)(adc_value * CONV_ADC_COUNTS_TO_CURRENT_mA);
-
-	return W_SUCCESS;
-}
-
-uint32_t check_current(void) {
-	w_status_t current_status = W_SUCCESS;
-	w_status_t can_tx_status = W_SUCCESS;
-	uint32_t adc_current_mA;
-
-	if (get_adc_current(&adc_current_mA) == W_SUCCESS) {
-		uint32_t ms = 0;
-		timer_get_ms(&ms);
-		can_msg_t msg = {0};
-
-		// No scaling for 5V current
-		build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)ms, SENSOR_5V_CURR, adc_current_mA, &msg);
-
-		// Send this to can handler module's tx
-		can_tx_status |= can_handler_transmit(&msg);
-		if (can_tx_status != W_SUCCESS) {
-			log_text(10, "health_checks", "health checks msg tx failed");
-		}
-
-		// send CAN err msg and log text if over current
-		if (adc_current_mA > MAX_CURRENT_mA) {
-			current_status |= 1 << E_5V_OVER_CURRENT_OFFSET;
-			log_text(10, "health_checks", "5V overcurrent: %d mA", adc_current_mA);
-		} else {
-		}
-	}
-
-	return (current_status != W_SUCCESS) ? current_status : can_tx_status;
-}
 
 w_status_t health_check_init(void) {
 	num_watchdog_tasks = 0;
@@ -216,7 +166,6 @@ static uint32_t check_modules_status(void) {
 w_status_t health_check_exec() {
 	uint32_t status_bitfield = 0;
 
-	status_bitfield |= check_current();
 	status_bitfield |= check_watchdog_tasks();
 	status_bitfield |= check_modules_status();
 
