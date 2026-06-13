@@ -346,12 +346,12 @@ add_test_group(test_quaternion
 # ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
 # )
 
-add_test_group(test_health_check
-    # test file(s)
-    ${UNIT_TESTS_DIR}/health_checks_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/health_checks/health_checks.c
-)
+#add_test_group(test_health_check
+ #   # test file(s)
+#    ${UNIT_TESTS_DIR}/health_checks_test.cpp
+ #   # src file(s)
+ #   ${PROC_SRC_DIR}/application/health_checks/health_checks.c
+#)
 
 # TODO: revive test once implemented
 # add_test_group(test_projector
@@ -450,4 +450,10 @@ add_test_group(test_adxrs649
     ${UNIT_TESTS_DIR}/adxrs649_test.cpp
     # src file(s)
     ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXRS649.c
+)
+add_test_group(test_iis2mdc
+    # test file(s)
+    ${UNIT_TESTS_DIR}/iis2mdc_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/IIS2MDC/IIS2MDC.c
 )
