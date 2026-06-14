@@ -196,6 +196,10 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 		return W_FAILURE;
 	}
 
+	if (LSM6DSV32X_BUS_FREE != lsm6dsv32x_ctx.bus_status) {
+		return W_FAILURE;
+	}
+
 	w_status_t status = W_SUCCESS;
 
 	// set the bus to occupied meanining that data is
@@ -220,17 +224,6 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	}
 
 	return status;
-}
-
-// TODO: make below function into a separate module, interrupts or gpio or dma
-/**
- * @brief interrupt handler for the int1 pin
- */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if ((IMU_INT1_Pin == GPIO_Pin) && (LSM6DSV32X_BUS_FREE == lsm6dsv32x_ctx.bus_status) &&
-		lsm6dsv32x_ctx.switched_callback) {
-		lsm6dsv32x_int1_isr_handler();
-	}
 }
 
 /**

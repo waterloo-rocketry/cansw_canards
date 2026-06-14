@@ -23,6 +23,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
@@ -83,6 +84,7 @@ static void system_init_task(void *arg) {
 	// INIT REQUIRED MODULES
 	status |= gpio_init();
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
+	status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
@@ -96,6 +98,7 @@ static void system_init_task(void *arg) {
 	status |= controller_init();
 	status |= fsm_init();
 	status |= lsm6dsv32x_init();
+	status |= iis2mdc_init();
 	status |= adxrs649_init();
 	// status |= ekf_init();
 

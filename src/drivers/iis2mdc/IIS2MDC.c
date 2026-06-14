@@ -4,13 +4,19 @@
 #include "task.h"
 
 #include "application/logger/log.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
 
 // I2C bus and slave address
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
 static const uint8_t IIS2MDC_I2C_ADDR = 0x1E;
+
+// HAL takes the 8-bit left shifted address for HAL_I2C_Mem_Read_DMA calls.
+static const uint16_t IIS2MDC_HAL_ADDR = (uint16_t)(IIS2MDC_I2C_ADDR << 1);
+
+// external definition of hi2c for i2c bus 4;
+extern I2C_HandleTypeDef hi2c4;
 
 // Register addresses
 // TODO: Calibration needs to be done in a magnetic field to get offset values written into the
@@ -51,14 +57,42 @@ static const uint32_t IIS2MDC_SELF_TEST_POLLING_PERIOD_MS = 1;
 /* Init configuration:
  CFG_REG_A = 0x8C  COMP_TEMP_EN=1, LP=0(high-res), ODR=11 (100 Hz), MD=00 (continuous)
  CFG_REG_B = 0x02  OFF_CANC=1 (continuous offset cancellation)
- CFG_REG_C = 0x10  BDU=1 (not sure if this is still needed with the current design scope?)
+ CFG_REG_C = 0x11  Block data updates to keep data coherent, DRDY_ON_PIN routes data ready to
+ interrupt pin
  */
 static const uint32_t IIS2MDC_INIT_CFG_A = 0x8C;
 static const uint32_t IIS2MDC_INIT_CFG_B = 0x02;
-static const uint32_t IIS2MDC_INIT_CFG_C = 0x10;
+static const uint32_t IIS2MDC_INIT_CFG_C = 0x11;
 
 // conversion factor from raw register values to gauss
 static const float64_t IIS2MDC_SENSITIVITY_GAUSS_PER_LSB = 0.0015;
+
+// Buffer the DMA writes into, the completion handler function converts and puts data into the
+// cache.
+static uint8_t iis2mdc_dma_buf[6];
+
+// Guards against starting a new DMA read while one is still in progress, cleared on DMA completion
+static volatile bool iis2mdc_dma_busy = false;
+
+// cache for newest data sample, updated by the DMA completion handler
+typedef struct {
+	vector3d_t data; // converted field, gauss
+	iis2mdc_raw_data_t raw; // raw register counts
+	uint32_t timestamp_ms; // when this sample was published
+	bool valid; // true once at least one sample has been cached
+} iis2mdc_cache_t;
+
+static iis2mdc_cache_t iis2mdc_cache = {0};
+
+/* Module state. CHECKING is set while the sanity check runs, UNINIT is set before init or if init
+fails, READY is set when data is ready to be read and cached. */
+typedef enum {
+	IIS2MDC_STATE_UNINIT = 0, // before init, or init failed
+	IIS2MDC_STATE_CHECKING, // sanity check in progress
+	IIS2MDC_STATE_READY // normal operation
+} iis2mdc_state_t;
+
+static volatile iis2mdc_state_t iis2mdc_state = IIS2MDC_STATE_UNINIT;
 
 /**
  * @brief Helper function to read one or more consecutive bytes over I2C
@@ -228,30 +262,77 @@ static w_status_t iis2mdc_self_test(void) {
 
 /**
  * @brief Performs a sanity check by verifying device identity and running a self test
+ * @note Blocks DMA reads during this time by setting state to CHECKING
  * @return W_SUCCESS if the device passes self test and identity verification
  */
 static w_status_t iis2mdc_sanity_check(void) {
 	uint8_t id;
+	iis2mdc_state_t prev_state = iis2mdc_state;
+	w_status_t status = W_SUCCESS;
+	iis2mdc_state = IIS2MDC_STATE_CHECKING;
 
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
 		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
-		return W_FAILURE;
-	}
-	if (IIS2MDC_WHO_AM_I_VAL != id) {
+		status = W_FAILURE;
+	} else if (IIS2MDC_WHO_AM_I_VAL != id) {
 		log_text(1,
 				 "iis2mdc",
 				 "ERROR: WHO_AM_I mismatch: expected %u, got %u",
 				 IIS2MDC_WHO_AM_I_VAL,
 				 id);
-		return W_FAILURE;
-	}
-
-	if (W_SUCCESS != iis2mdc_self_test()) {
+		status = W_FAILURE;
+	} else if (W_SUCCESS != iis2mdc_self_test()) {
 		log_text(1, "iis2mdc", "ERROR: self-test failed");
-		return W_FAILURE;
+		status = W_FAILURE;
 	}
 
+	iis2mdc_state = prev_state;
+	return status;
+}
+
+w_status_t iis2mdc_handle_drdy_irq(void) {
+	// stand down while sanity checking or uninitialized
+	if (IIS2MDC_STATE_READY != iis2mdc_state) {
+		return W_FAILURE;
+	}
+	// stand down if last DMA is still in progress
+	if (iis2mdc_dma_busy) {
+		return W_FAILURE;
+	}
+	iis2mdc_dma_busy = true;
+
+	if (HAL_OK != HAL_I2C_Mem_Read_DMA(&hi2c4,
+									   IIS2MDC_HAL_ADDR,
+									   IIS2MDC_REG_OUTX_L | IIS2MDC_SUB_AUTO_INC,
+									   I2C_MEMADD_SIZE_8BIT,
+									   iis2mdc_dma_buf,
+									   sizeof(iis2mdc_dma_buf))) {
+		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
+	}
 	return W_SUCCESS;
+}
+
+/**
+ * @brief I2C DMA completion, converts raw bytes and sends to the cache.
+ * @note Registered on hi2c4 via HAL_I2C_RegisterCallback in iis2mdc_init. All byte-combining,
+ *		 sign interpretation, and scaling to gauss happen here so that iis2mdc_get_data does not
+ * block.
+ */
+static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
+	if (hi2c != &hi2c4) {
+		return;
+	}
+
+	uint32_t timestamp_ms = 0;
+	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
+		return;
+	}
+
+	iis2mdc_convert_sample(iis2mdc_dma_buf, &iis2mdc_cache.raw, &iis2mdc_cache.data);
+	iis2mdc_cache.timestamp_ms = timestamp_ms;
+	iis2mdc_cache.valid = true;
+
+	iis2mdc_dma_busy = false;
 }
 
 w_status_t iis2mdc_init(void) {
@@ -279,6 +360,17 @@ w_status_t iis2mdc_init(void) {
 		return W_FAILURE;
 	}
 
+	// load all settings and end use of i2c driver before switching to DMA
+	vTaskDelay(1);
+
+	// register completion callback on the mag's I2C handle.
+	if (HAL_OK !=
+		HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) {
+		log_text(1, "iis2mdc", "ERROR: failed to register DMA complete callback");
+		return W_FAILURE;
+	}
+
+	iis2mdc_state = IIS2MDC_STATE_READY;
 	return W_SUCCESS;
 }
 
@@ -291,23 +383,21 @@ w_status_t iis2mdc_init(void) {
 // of returning timeout or failure.
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 							uint32_t *timestamp_ms) {
-	uint8_t buf[6] = {0};
-
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {
 		log_text(1, "iis2mdc", "ERROR: NULL pointer cannot be used as input to get_data function");
 		return W_FAILURE;
 	}
 
-	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_OUTX_L, buf, 6)) {
-		log_text(1, "iis2mdc", "ERROR: failed to read output registers");
-		return W_FAILURE;
+	bool ready = (IIS2MDC_STATE_READY == iis2mdc_state) && iis2mdc_cache.valid;
+	if (!ready) {
+		return W_IO_ERROR;
 	}
 
-	iis2mdc_convert_sample(buf, raw_data, data);
+	taskENTER_CRITICAL();
+	*data = iis2mdc_cache.data;
+	*raw_data = iis2mdc_cache.raw;
+	*timestamp_ms = iis2mdc_cache.timestamp_ms;
+	taskEXIT_CRITICAL();
 
-	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
-		log_text(1, "iis2mdc", "ERROR: failed to get timestamp");
-		return W_FAILURE;
-	}
 	return W_SUCCESS;
 }
