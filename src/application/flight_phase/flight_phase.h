@@ -7,6 +7,7 @@
 #include "queue.h"
 
 #include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
 #include "common/gnc/gnc_types.h"
 #include "rocketlib/include/common.h"
 
@@ -61,7 +62,7 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
  * @details Logs initialization status, state machine state, event statistics,
  * and error conditions for the flight phase state machine
  */
-uint32_t flight_phase_get_status(void);
+health_status_t flight_phase_get_status(void);
 
 /**
  * @brief generate syncronous flight phase evnets

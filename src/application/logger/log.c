@@ -439,12 +439,13 @@ void log_task(void *argument) {
 	}
 }
 
-uint32_t logger_get_status(void) {
-	uint32_t status_bitfield = 0;
+health_status_t logger_get_status(void) {
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
 
 	if (!logger_health.is_init) {
-		log_text(0, "logger", "not init");
-		return 1 << E_FS_ERROR_OFFSET;
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_LOGGER_NOT_INIT;
 	}
 
 	log_text(10,
@@ -468,5 +469,5 @@ uint32_t logger_get_status(void) {
 			 logger_health.buffer_flush_fails,
 			 logger_health.unsafe_buffer_flushes);
 
-	return status_bitfield;
+	return status;
 }
