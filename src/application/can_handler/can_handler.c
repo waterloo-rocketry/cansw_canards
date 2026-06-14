@@ -66,7 +66,7 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 	return status;
 }
 
-static void can_handle_rx_message(const can_msg_t *message) {
+void can_handle_rx_message(const can_msg_t *message) {
 	// software filter: only queue messages with registered callbacks
 	can_msg_type_t msg_type = get_message_type(message);
 	// drop any message types without a registered handler
@@ -179,58 +179,7 @@ void can_handler_task_tx(void *argument) {
 	}
 }
 
-// --- Fatal Error Handler Implementation ---
-
-// Note: All IDs (Board Type, Message Type, Instance ID)
-//       are used directly from canlib/message_types.h
-
-void proc_handle_fatal_error(const char *errorMsg) {
-	static bool can_initialized = false;
-	// safe state - loop here forever and send CAN err msg repeatedly
-	while (1) {
-		can_initialized = can_initialized || stm32h7_can_init(&hfdcan3, can_handle_rx_message);
-		__disable_irq();
-
-		// let CAN still work
-		HAL_NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
-
-		can_msg_t msg;
-		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
-
-		// Copy error message to the data buffer
-		if (errorMsg != NULL) {
-			strncpy((char *)data, errorMsg, sizeof(data));
-			// Ensure null termination
-			data[sizeof(data) - 1] = '\0';
-		}
-
-		// Use canlib's helper function to build the debug message
-		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
-		// state)
-		build_debug_raw_msg(PRIO_MEDIUM, 0, data, &msg);
-		if (can_initialized) {
-			stm32h7_can_send(&msg);
-		}
-
-		// scream a few times then attempt to reset.
-		// delay for ~1sec without using systick-based delays (no hal_delay)
-		volatile int dummy;
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 50000000; j++) {
-				dummy++;
-			}
-		}
-
-		dummy++;
-
-		// resetting is always a safe state even in midflight, as flightphase starts IDLE
-		NVIC_SystemReset();
-	}
-}
-
-// --- End Fatal Error Handler ---
-
-uint32_t can_handler_get_status(void) {
+health_status_t can_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log all error statistics
@@ -247,5 +196,8 @@ uint32_t can_handler_get_status(void) {
 			 can_error_stats.rx_timeouts,
 			 can_error_stats.tx_timeouts);
 
-	return status_bitfield;
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_CAN_HANDLER, .error_bitfield = 0};
+
+	return status;
 }
