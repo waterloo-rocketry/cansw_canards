@@ -12,6 +12,8 @@
 #include "semphr.h"
 
 #include "drivers/gpio/gpio.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 
 // Private --------------------------------------------------------------------
 
@@ -177,4 +179,15 @@ uint32_t gpio_get_status(void) {
 			 gpio_status.access_fails);
 
 	return status_bitfield;
+}
+
+/**
+ * @brief HAL interrupt callback for GPIO pins.
+ */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (IMU_INT1_Pin == GPIO_Pin) {
+		lsm6dsv32x_int1_isr_handler();
+	} else if (INT_MAG_Pin == GPIO_Pin) {
+		iis2mdc_handle_drdy_irq();
+	}
 }

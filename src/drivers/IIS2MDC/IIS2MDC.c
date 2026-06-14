@@ -360,6 +360,9 @@ w_status_t iis2mdc_init(void) {
 		return W_FAILURE;
 	}
 
+	// load all settings and end use of i2c driver before switching to DMA
+	vTaskDelay(1);
+
 	// register completion callback on the mag's I2C handle.
 	if (HAL_OK !=
 		HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) {
