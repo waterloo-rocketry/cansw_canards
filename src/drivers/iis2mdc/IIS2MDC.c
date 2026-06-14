@@ -4,8 +4,8 @@
 #include "task.h"
 
 #include "application/logger/log.h"
-#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
 
 // I2C bus and slave address
