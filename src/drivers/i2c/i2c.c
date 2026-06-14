@@ -318,6 +318,60 @@ w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *dat
 	return handle->transfer_status; // Return the status set by callback
 }
 
+/**
+ * @brief turn off i2c module for this specific bus
+ * @param[in] bus Bus to turn off
+ * @retval status of function call
+ */
+w_status_t i2c_deinit_module(i2c_bus_t bus) {
+	// Validate input parameters
+	if (bus >= I2C_BUS_COUNT) {
+		return W_INVALID_PARAM;
+	}
+
+	// Get bus handle and check initialization
+	i2c_bus_handle_t *handle = &i2c_buses[bus];
+	if (!handle->initialized) {
+		return W_FAILURE;
+	}
+
+	// Acquire bus mutex with timeout
+	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
+		i2c_error_stats[bus].timeouts++;
+		log_text(10, "i2c", "ERROR: unable to obtain mutex");
+		return W_IO_TIMEOUT;
+	}
+
+	HAL_StatusTypeDef unregister_status = HAL_OK;
+	// Unregister all callbacks
+	unregister_status |=
+		HAL_I2C_UnRegisterCallback(handle->hal_handle, HAL_I2C_MEM_TX_COMPLETE_CB_ID);
+	unregister_status |=
+		HAL_I2C_UnRegisterCallback(handle->hal_handle, HAL_I2C_MEM_RX_COMPLETE_CB_ID);
+	// Register HAL callbacks for Master TX complete events
+	unregister_status |=
+		HAL_I2C_UnRegisterCallback(handle->hal_handle, HAL_I2C_MASTER_TX_COMPLETE_CB_ID);
+	// Register separate error callback to handle errors using HAL_I2C_GetError
+	unregister_status |= HAL_I2C_UnRegisterCallback(handle->hal_handle, HAL_I2C_ERROR_CB_ID);
+
+	if (HAL_OK != unregister_status) {
+		log_text(10, "i2c", "ERROR: callbacks not unregistered");
+	}
+
+	handle->initialized = false;
+
+	// delete all semaphores
+	xSemaphoreGive(handle->mutex);
+
+	// delete semaphore and mutex
+	vSemaphoreDelete(handle->mutex);
+	vSemaphoreDelete(handle->transfer_sem);
+	handle->mutex = NULL;
+	handle->transfer_sem = NULL;
+
+	return W_SUCCESS;
+}
+
 // Test-only reset function: Always compiled, but intended only for testing.
 void i2c_reset_all(void) {
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {
