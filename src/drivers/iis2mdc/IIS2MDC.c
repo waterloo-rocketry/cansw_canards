@@ -4,7 +4,7 @@
 #include "task.h"
 
 #include "application/logger/log.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/timer/timer.h"
 
