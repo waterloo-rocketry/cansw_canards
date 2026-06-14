@@ -214,7 +214,7 @@ w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t
 
 	// Start non-blocking read operation
 	HAL_StatusTypeDef hal_status =
-		HAL_I2C_Mem_Read_IT(handle->hal_handle, hal_addr, reg, I2C_MEMADD_SIZE_8BIT, data, len);
+		HAL_I2C_Mem_Read_DMA(handle->hal_handle, hal_addr, reg, I2C_MEMADD_SIZE_8BIT, data, len);
 
 	// Handle HAL-level errors
 	if (hal_status != HAL_OK) {
@@ -225,6 +225,7 @@ w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t
 
 	// Wait for transfer completion and release mutex
 	wait_transfer_complete(handle, bus);
+	SCB_InvalidateDCache_by_Addr((uint32_t *)((uint32_t)data & ~0x1F), (len + 0x1F) & ~0x1F);
 	xSemaphoreGive(handle->mutex);
 	return handle->transfer_status; // Return the status set by callback
 }
@@ -257,8 +258,11 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 	xSemaphoreGive(handle->transfer_sem); // Give semaphore to ensure it's in a known state
 	xSemaphoreTake(handle->transfer_sem, 0); // Clear any pending signal
 
+	// Ensures DMA reads the correct data by flushing data to RAM
+	SCB_CleanDCache_by_Addr((uint32_t *)((uint32_t)data & ~0x1F), (len + 0x1F) & ~0x1F);
+
 	// Start non-blocking write operation
-	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Write_IT(
+	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Write_DMA(
 		handle->hal_handle, hal_addr, reg, I2C_MEMADD_SIZE_8BIT, (uint8_t *)data, len);
 
 	// Handle HAL-level errors
@@ -301,9 +305,12 @@ w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *dat
 	xSemaphoreGive(handle->transfer_sem); // Give semaphore to ensure it's in a known state
 	xSemaphoreTake(handle->transfer_sem, 0); // Clear any pending signal
 
+	// Ensures DMA reads the correct data by flushing data to RAM
+	SCB_CleanDCache_by_Addr((uint32_t *)((uint32_t)data & ~0x1F), (len + 0x1F) & ~0x1F);
+
 	// Start non-blocking write operation
 	HAL_StatusTypeDef hal_status =
-		HAL_I2C_Master_Transmit_IT(handle->hal_handle, hal_addr, (uint8_t *)data, len);
+		HAL_I2C_Master_Transmit_DMA(handle->hal_handle, hal_addr, (uint8_t *)data, len);
 
 	// Handle HAL-level errors
 	if (hal_status != HAL_OK) {

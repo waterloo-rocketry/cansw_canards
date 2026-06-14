@@ -35,11 +35,11 @@ protected:
         RESET_FAKE(vSemaphoreDelete);
 
         // Reset all HAL I2C mocks
-        RESET_FAKE(HAL_I2C_Mem_Read_IT);
-        RESET_FAKE(HAL_I2C_Mem_Write_IT);
+        RESET_FAKE(HAL_I2C_Mem_Read_DMA);
+        RESET_FAKE(HAL_I2C_Mem_Write_DMA);
         RESET_FAKE(HAL_I2C_RegisterCallback);
         RESET_FAKE(HAL_I2C_Master_Abort_IT);
-        RESET_FAKE(HAL_I2C_Master_Transmit_IT);
+        RESET_FAKE(HAL_I2C_Master_Transmit_DMA);
 
         // Reset FFF history
         FFF_RESET_HISTORY();
@@ -82,7 +82,7 @@ TEST_F(I2CTest, AddressShiftingOnRead) {
     ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
 
     // Set up for successful read
-    HAL_I2C_Mem_Read_IT_fake.return_val = HAL_OK;
+    HAL_I2C_Mem_Read_DMA_fake.return_val = HAL_OK;
     xSemaphoreTake_fake.return_val = pdTRUE;
 
     uint8_t data[4];
@@ -90,8 +90,8 @@ TEST_F(I2CTest, AddressShiftingOnRead) {
     w_status_t status = i2c_read_reg(I2C_BUS_2, device_addr, 0x10, data, sizeof(data));
 
     // Check that HAL was called with shifted address
-    ASSERT_GT(HAL_I2C_Mem_Read_IT_fake.call_count, 0);
-    uint16_t shifted_addr = (uint16_t)HAL_I2C_Mem_Read_IT_fake.arg1_val;
+    ASSERT_GT(HAL_I2C_Mem_Read_DMA_fake.call_count, 0);
+    uint16_t shifted_addr = (uint16_t)HAL_I2C_Mem_Read_DMA_fake.arg1_val;
     EXPECT_EQ(shifted_addr, (device_addr << 1) & 0xFE);
 }
 
@@ -103,7 +103,7 @@ TEST_F(I2CTest, AddressShiftingOnWrite) {
     ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
 
     // Set up for successful write
-    HAL_I2C_Mem_Write_IT_fake.return_val = HAL_OK;
+    HAL_I2C_Mem_Write_DMA_fake.return_val = HAL_OK;
     xSemaphoreTake_fake.return_val = pdTRUE;
 
     uint8_t data[4] = {0};
@@ -111,8 +111,8 @@ TEST_F(I2CTest, AddressShiftingOnWrite) {
     w_status_t status = i2c_write_reg(I2C_BUS_2, device_addr, 0x10, data, sizeof(data));
 
     // Check that HAL was called with shifted address
-    ASSERT_GT(HAL_I2C_Mem_Write_IT_fake.call_count, 0);
-    uint16_t shifted_addr = (uint16_t)HAL_I2C_Mem_Write_IT_fake.arg1_val;
+    ASSERT_GT(HAL_I2C_Mem_Write_DMA_fake.call_count, 0);
+    uint16_t shifted_addr = (uint16_t)HAL_I2C_Mem_Write_DMA_fake.arg1_val;
     EXPECT_EQ(shifted_addr, (device_addr << 1) & 0xFE);
 }
 
@@ -124,7 +124,7 @@ TEST_F(I2CTest, ReadSuccess) {
     ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
 
     // Set up the fake for a successful I2C read.
-    HAL_I2C_Mem_Read_IT_fake.return_val = HAL_OK;
+    HAL_I2C_Mem_Read_DMA_fake.return_val = HAL_OK;
 
     uint8_t data[4];
     w_status_t status = i2c_read_reg(I2C_BUS_2, 0x50, 0x10, data, sizeof(data));
@@ -134,7 +134,7 @@ TEST_F(I2CTest, ReadSuccess) {
     i2c_transfer_complete_callback(&hi2c2);
 
     EXPECT_EQ(status, W_SUCCESS);
-    EXPECT_EQ(HAL_I2C_Mem_Read_IT_fake.call_count, 1);
+    EXPECT_EQ(HAL_I2C_Mem_Read_DMA_fake.call_count, 1);
 }
 
 /**
@@ -205,7 +205,7 @@ TEST_F(I2CTest, WriteSuccess) {
 
     // Set up the fake to return HAL_OK for write.
     xSemaphoreTake_fake.return_val = pdTRUE;
-    HAL_I2C_Mem_Write_IT_fake.return_val = HAL_OK;
+    HAL_I2C_Mem_Write_DMA_fake.return_val = HAL_OK;
 
     uint8_t data[4] = {0xAA};
     w_status_t status = i2c_write_reg(I2C_BUS_2, 0x50, 0x10, data, sizeof(data));
@@ -215,7 +215,7 @@ TEST_F(I2CTest, WriteSuccess) {
     i2c_transfer_complete_callback(&hi2c2);
 
     EXPECT_EQ(status, W_SUCCESS);
-    EXPECT_EQ(HAL_I2C_Mem_Write_IT_fake.call_count, 1);
+    EXPECT_EQ(HAL_I2C_Mem_Write_DMA_fake.call_count, 1);
 }
 
 /**
@@ -273,7 +273,7 @@ TEST_F(I2CTest, AddressShiftingOnWriteData) {
     ASSERT_EQ(i2c_init(I2C_BUS_2, &hi2c2, 100), W_SUCCESS);
 
     // Set up for successful write
-    HAL_I2C_Master_Transmit_IT_fake.return_val = HAL_OK;
+    HAL_I2C_Master_Transmit_DMA_fake.return_val = HAL_OK;
     xSemaphoreTake_fake.return_val = pdTRUE;
 
     uint8_t data[4] = {0};
@@ -281,8 +281,8 @@ TEST_F(I2CTest, AddressShiftingOnWriteData) {
     w_status_t status = i2c_write_data(I2C_BUS_2, device_addr, data, sizeof(data));
 
     // Check that HAL was called with shifted address
-    ASSERT_GT(HAL_I2C_Master_Transmit_IT_fake.call_count, 0);
-    uint16_t shifted_addr = (uint16_t)HAL_I2C_Master_Transmit_IT_fake.arg1_val;
+    ASSERT_GT(HAL_I2C_Master_Transmit_DMA_fake.call_count, 0);
+    uint16_t shifted_addr = (uint16_t)HAL_I2C_Master_Transmit_DMA_fake.arg1_val;
     EXPECT_EQ(shifted_addr, (device_addr << 1) & 0xFE);
 }
 
@@ -353,7 +353,7 @@ TEST_F(I2CTest, WriteDataSuccess) {
 
     // Set up the fake to return HAL_OK for write.
     xSemaphoreTake_fake.return_val = pdTRUE;
-    HAL_I2C_Master_Transmit_IT_fake.return_val = HAL_OK;
+    HAL_I2C_Master_Transmit_DMA_fake.return_val = HAL_OK;
 
     uint8_t data[4] = {0xAA};
     w_status_t status = i2c_write_data(I2C_BUS_2, 0x50, data, sizeof(data));
@@ -363,7 +363,7 @@ TEST_F(I2CTest, WriteDataSuccess) {
     i2c_transfer_complete_callback(&hi2c2);
 
     EXPECT_EQ(status, W_SUCCESS);
-    EXPECT_EQ(HAL_I2C_Master_Transmit_IT_fake.call_count, 1);
+    EXPECT_EQ(HAL_I2C_Master_Transmit_DMA_fake.call_count, 1);
 }
 
 /**failed HAL_I2C_Master_Transmit_IT call
