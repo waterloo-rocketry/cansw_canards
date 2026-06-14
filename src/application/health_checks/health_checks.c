@@ -163,7 +163,12 @@ static w_status_t process_module_status(health_status_t status) {
 		can_msg_t msg = {0};
 		// build error msg in the form "module id:error bitfield:severity"
 		snprintf_((char *)data, sizeof(data), "%d:%lu", status.module_id, status.error_bitfield);
-		build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), data, &msg);
+		build_canard_firmware_error_msg(PRIO_HIGH,
+										xTaskGetTickCount(),
+										status.module_id,
+										status.error_bitfield,
+										status.severity,
+										&msg);
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			log_text(0, "health", "CAN send failure for module status msg");
 		}
