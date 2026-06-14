@@ -38,7 +38,7 @@
 static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
 static const float MOTOR_TEST_ANGLE_DEG = 20.0f;
-static const float MOTOR_TEST_WINDOW_MS = 2000.0f; //how longwe test for
+static const float MOTOR_TEST_WINDOW_MS = 2000.0f; // how longwe test for
 static const float MOTOR_TEST_POLL_MS = 2.0f;
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -166,7 +166,8 @@ static void system_init_task(void *arg) {
 			for (uint32_t elapsed_ms = 0; elapsed_ms < MOTOR_TEST_WINDOW_MS;
 				 elapsed_ms += MOTOR_TEST_POLL_MS) {
 				ak45_feedback_t fb = {0};
-				if ((ak45_get_latest_feedback(&fb) == W_SUCCESS) && (fb.timestamp_ms != last_fb_ts)) {
+				if ((ak45_get_latest_feedback(&fb) == W_SUCCESS) &&
+					(fb.timestamp_ms != last_fb_ts)) {
 					last_fb_ts = fb.timestamp_ms;
 					uint32_t now_ms = 0;
 					(void)timer_get_ms(&now_ms);
