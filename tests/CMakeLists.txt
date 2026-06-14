@@ -452,3 +452,10 @@ add_test_group(test_adxrs649
     # src file(s)
     ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXRS649.c
 )
+
+add_test_group(test_rate_limiter
+    # test file(s)
+    ${UNIT_TESTS_DIR}/rate_limiter_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/common/rate_limiter/rate_limiter.c
+)
