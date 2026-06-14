@@ -37,6 +37,9 @@
 
 static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
+static const float MOTOR_TEST_ANGLE_DEG = 20.0f;
+static const float MOTOR_TEST_WINDOW_MS = 2000.0f; //how longwe test for
+static const float MOTOR_TEST_POLL_MS = 2.0f;
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
 TaskHandle_t fsm_task_handle = NULL;
@@ -151,7 +154,34 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+	const float32_t motor_test_targets[2] = {MOTOR_TEST_ANGLE_DEG, 0.0f};
 	while (1) {
+		// step response test: step to angle, record, step back to 0, record
+		for (uint32_t s = 0; s < 2; s++) {
+			uint32_t t0_ms = 0;
+			(void)timer_get_ms(&t0_ms);
+			(void)ak45_send_position_cmd(motor_test_targets[s]);
+
+			uint32_t last_fb_ts = 0;
+			for (uint32_t elapsed_ms = 0; elapsed_ms < MOTOR_TEST_WINDOW_MS;
+				 elapsed_ms += MOTOR_TEST_POLL_MS) {
+				ak45_feedback_t fb = {0};
+				if ((ak45_get_latest_feedback(&fb) == W_SUCCESS) && (fb.timestamp_ms != last_fb_ts)) {
+					last_fb_ts = fb.timestamp_ms;
+					uint32_t now_ms = 0;
+					(void)timer_get_ms(&now_ms);
+					log_text(0,
+							 "mtest",
+							 "%lu,%.1f,%.2f,%.2f",
+							 (unsigned long)(now_ms - t0_ms),
+							 motor_test_targets[s],
+							 fb.position_deg,
+							 fb.speed_erpm);
+				}
+				vTaskDelay(MOTOR_TEST_POLL_MS);
+			}
+		}
+
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
 		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
