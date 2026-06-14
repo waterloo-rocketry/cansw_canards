@@ -281,7 +281,7 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 	return new_state;
 }
 
-uint32_t flight_phase_get_status(void) {
+health_status_t flight_phase_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log initialization status and current state
@@ -291,7 +291,10 @@ uint32_t flight_phase_get_status(void) {
 			 flight_phase_status.initialized ? "INIT" : "NOT INIT",
 			 flight_phase_status.event_queue_full_count);
 
-	return status_bitfield;
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_FLIGHT_PHASE, .error_bitfield = 0};
+
+	return status;
 }
 
 /**

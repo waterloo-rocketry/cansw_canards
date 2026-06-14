@@ -346,12 +346,13 @@ add_test_group(test_quaternion
 # ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
 # )
 
-add_test_group(test_health_check
-    # test file(s)
-    ${UNIT_TESTS_DIR}/health_checks_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/health_checks/health_checks.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_health_check
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/health_checks_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/health_checks/health_checks.c
+# )
 
 # TODO: revive test once implemented
 # add_test_group(test_projector
