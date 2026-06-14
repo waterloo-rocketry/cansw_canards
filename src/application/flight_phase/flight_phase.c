@@ -351,9 +351,8 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
  * @param accel       Pointer to the IMU's acceleration vector
  * @param consec_count       Pointer to this IMU's consecutive detection counter
  */
-static void update_num_consec_detection(bool is_dead,
-									const vector3d_t *accel,
-									uint32_t *consec_count) {
+static void update_num_consec_detection(bool is_dead, const vector3d_t *accel,
+										uint32_t *consec_count) {
 	if (is_dead) {
 		return;
 	}
@@ -377,48 +376,47 @@ static void update_num_consec_detection(bool is_dead,
 static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
 														  const fsm_state_t curr_state,
 														  const all_sensors_data_t *p_sensor_data) {
-	
 	if ((STATE_PAD_FILTER != curr_state) && (STATE_PAD_NAV != curr_state)) {
-        num_consec_detection_board = 0;
-        num_consec_detection_mti   = 0;
-        num_consec_detection_ad    = 0;
-        return EVENT_NONE;
-    }																													
+		num_consec_detection_board = 0;
+		num_consec_detection_mti = 0;
+		num_consec_detection_ad = 0;
+		return EVENT_NONE;
+	}
 	bool board_imu_dead = p_sensor_data->board_meas.board_imu.is_dead;
-	bool mti_imu_dead   = p_sensor_data->mti_meas.is_dead;
-	bool ad_imu_dead    = p_sensor_data->ad_meas.ad_accel.is_dead;
+	bool mti_imu_dead = p_sensor_data->mti_meas.is_dead;
+	bool ad_imu_dead = p_sensor_data->ad_meas.ad_accel.is_dead;
 
 	uint32_t num_dead_imus = 0;
 	if (board_imu_dead) {
-		log_text(5, "FlightPhaseSensorDetection", "WARNING: BOARD IMU is dead"); 
+		log_text(5, "FlightPhaseSensorDetection", "WARNING: BOARD IMU is dead");
 		num_consec_detection_board = 0;
-		num_dead_imus++; 
+		num_dead_imus++;
 	}
 	if (mti_imu_dead) {
-		log_text(5, "FlightPhaseSensorDetection", "WARNING: MTI IMU is dead"); 
+		log_text(5, "FlightPhaseSensorDetection", "WARNING: MTI IMU is dead");
 		num_consec_detection_mti = 0;
-		num_dead_imus++; 
+		num_dead_imus++;
 	}
 	if (ad_imu_dead) {
-		log_text(5, "FlightPhaseSensorDetection", "WARNING: AD IMU is dead"); 
+		log_text(5, "FlightPhaseSensorDetection", "WARNING: AD IMU is dead");
 		num_consec_detection_ad = 0;
-		num_dead_imus++; 
+		num_dead_imus++;
 	}
 
 	if (num_dead_imus > NUM_MAX_DEAD_IMUS) {
-		log_text(1, "FlightPhaseSensorDetection", "ERROR: %lu IMUs dead, cannot detect launch", num_dead_imus);
+		log_text(1,
+				 "FlightPhaseSensorDetection",
+				 "ERROR: %lu IMUs dead, cannot detect launch",
+				 num_dead_imus);
 		return EVENT_NONE;
 	}
 
-	update_num_consec_detection(board_imu_dead,
-							&p_sensor_data->board_meas.board_imu.accel,
-							&num_consec_detection_board);
-	update_num_consec_detection(mti_imu_dead,
-							&p_sensor_data->mti_meas.mti_accel,
-							&num_consec_detection_mti);
-	update_num_consec_detection(ad_imu_dead,
-							&p_sensor_data->ad_meas.ad_accel.meas,
-							&num_consec_detection_ad);
+	update_num_consec_detection(
+		board_imu_dead, &p_sensor_data->board_meas.board_imu.accel, &num_consec_detection_board);
+	update_num_consec_detection(
+		mti_imu_dead, &p_sensor_data->mti_meas.mti_accel, &num_consec_detection_mti);
+	update_num_consec_detection(
+		ad_imu_dead, &p_sensor_data->ad_meas.ad_accel.meas, &num_consec_detection_ad);
 
 	uint32_t num_imus_detecting_launch = 0;
 
@@ -434,12 +432,12 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 
 	if (NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL <= num_imus_detecting_launch) {
 		num_consec_detection_board = 0;
-        num_consec_detection_mti   = 0;
-        num_consec_detection_ad    = 0;
+		num_consec_detection_mti = 0;
+		num_consec_detection_ad = 0;
 		log_text(5, "FlightPhaseSensorDetection", "%d Event Trigger", EVENT_LAUNCH_ACCEL);
 		return EVENT_LAUNCH_ACCEL;
 	}
-	
+
 	return EVENT_NONE;
 }
 
