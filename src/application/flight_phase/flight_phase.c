@@ -8,10 +8,15 @@
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "canlib.h"
+#include "common/math/math-algebra3d.h"
 #include "drivers/timer/timer.h"
 
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these
+
+static const float32_t ACCEL_THRESHOLD_LAUNCH_M_S2 =
+	20; // minimum acceleration in m/s^2 for a launch to be detected
+
 static const uint32_t ACT_DELAY_MS =
 	7000; // Q - the minimum time after launch before allowing canards to actuate
 
@@ -23,6 +28,16 @@ static const uint32_t RECOVERY_LOG_TIMEOUT_MS =
 // to be matched with main at apogee time
 static const uint32_t SLEEPY_LOG_TIMEOUT_MS =
 	1600000; // K - the approximate time between launch and main at apogee launch to land time
+
+uint32_t num_consec_detection_board = 0;
+uint32_t num_consec_detection_mti = 0;
+uint32_t num_consec_detection_ad = 0;
+
+static const uint32_t NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL = 2;
+static const uint32_t NUM_MAX_DEAD_IMUS = 1;
+static const uint32_t NUM_CONSEC_THRESHOLD_BOARD = 5;
+static const uint32_t NUM_CONSEC_THRESHOLD_MTI = 5;
+static const uint32_t NUM_CONSEC_THRESHOLD_AD = 5;
 
 // #define TASK_TIMEOUT_MS 1000
 
@@ -333,6 +348,28 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
 }
 
 /**
+ * @brief Increments number of consecutive detections if the IMU is alive and
+ *        its acceleration magnitude meets the launch threshold, resets otherwise.
+ * @param is_dead       Whether this IMU is currently marked dead
+ * @param accel       Pointer to the IMU's acceleration vector
+ * @param consec_count       Pointer to this IMU's consecutive detection counter
+ */
+static void update_num_consec_detection(bool is_dead, const vector3d_t *accel,
+										uint32_t *consec_count) {
+	if (is_dead) {
+		return;
+	}
+
+	double accel_magnitude = math_vector3d_norm(&accel);
+
+	if (ACCEL_THRESHOLD_LAUNCH_M_S2 <= accel_magnitude) {
+		(*consec_count)++;
+	} else {
+		*consec_count = 0;
+	}
+}
+
+/**
  * @brief performs any sensor based state transition detection
  * @param p_context pointer to the global flight phase global context
  * @param curr_state current fsm state
@@ -342,6 +379,68 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
 static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
 														  const fsm_state_t curr_state,
 														  const all_sensors_data_t *p_sensor_data) {
+	if ((STATE_PAD_FILTER != curr_state) && (STATE_PAD_NAV != curr_state)) {
+		num_consec_detection_board = 0;
+		num_consec_detection_mti = 0;
+		num_consec_detection_ad = 0;
+		return EVENT_NONE;
+	}
+	bool board_imu_dead = p_sensor_data->board_meas.board_imu.is_dead;
+	bool mti_imu_dead = p_sensor_data->mti_meas.is_dead;
+	bool ad_imu_dead = p_sensor_data->ad_meas.ad_accel.is_dead;
+
+	uint32_t num_dead_imus = 0;
+	if (board_imu_dead) {
+		log_text(5, "FlightPhaseSensorDetection", "WARNING: BOARD IMU is dead");
+		num_consec_detection_board = 0;
+		num_dead_imus++;
+	}
+	if (mti_imu_dead) {
+		log_text(5, "FlightPhaseSensorDetection", "WARNING: MTI IMU is dead");
+		num_consec_detection_mti = 0;
+		num_dead_imus++;
+	}
+	if (ad_imu_dead) {
+		log_text(5, "FlightPhaseSensorDetection", "WARNING: AD IMU is dead");
+		num_consec_detection_ad = 0;
+		num_dead_imus++;
+	}
+
+	if (num_dead_imus > NUM_MAX_DEAD_IMUS) {
+		log_text(1,
+				 "FlightPhaseSensorDetection",
+				 "ERROR: %lu IMUs dead, cannot detect launch",
+				 num_dead_imus);
+		return EVENT_NONE;
+	}
+
+	update_num_consec_detection(
+		board_imu_dead, &p_sensor_data->board_meas.board_imu.accel, &num_consec_detection_board);
+	update_num_consec_detection(
+		mti_imu_dead, &p_sensor_data->mti_meas.mti_accel, &num_consec_detection_mti);
+	update_num_consec_detection(
+		ad_imu_dead, &p_sensor_data->ad_meas.ad_accel.meas, &num_consec_detection_ad);
+
+	uint32_t num_imus_detecting_launch = 0;
+
+	if (NUM_CONSEC_THRESHOLD_BOARD <= num_consec_detection_board) {
+		num_imus_detecting_launch++;
+	}
+	if (NUM_CONSEC_THRESHOLD_MTI <= num_consec_detection_mti) {
+		num_imus_detecting_launch++;
+	}
+	if (NUM_CONSEC_THRESHOLD_AD <= num_consec_detection_ad) {
+		num_imus_detecting_launch++;
+	}
+
+	if (NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL <= num_imus_detecting_launch) {
+		num_consec_detection_board = 0;
+		num_consec_detection_mti = 0;
+		num_consec_detection_ad = 0;
+		log_text(5, "FlightPhaseSensorDetection", "%d Event Trigger", EVENT_LAUNCH_ACCEL);
+		return EVENT_LAUNCH_ACCEL;
+	}
+
 	return EVENT_NONE;
 }
 
