@@ -1,6 +1,65 @@
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/timer/timer.h"
 
+/* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
+typedef enum {
+	MS5611_ADDRESS_CSB_LOW = 0x77,
+	MS5611_ADDRESS_CSB_HIGH = 0x76
+} ms5611_address_t;
+
+// reset command
+#define MS5611_CMD_RESET 0x1E
+
+// pressure conversion commands (D1)
+#define MS5611_CMD_CONVERT_D1_OSR256 0x40
+#define MS5611_CMD_CONVERT_D1_OSR512 0x42
+#define MS5611_CMD_CONVERT_D1_OSR1024 0x44
+#define MS5611_CMD_CONVERT_D1_OSR2048 0x46
+#define MS5611_CMD_CONVERT_D1_OSR4096 0x48
+
+// temperature conversion commands (D2)
+#define MS5611_CMD_CONVERT_D2_OSR256 0x50
+#define MS5611_CMD_CONVERT_D2_OSR512 0x52
+#define MS5611_CMD_CONVERT_D2_OSR1024 0x54
+#define MS5611_CMD_CONVERT_D2_OSR2048 0x56
+#define MS5611_CMD_CONVERT_D2_OSR4096 0x58
+
+// ADC read command
+#define MS5611_CMD_ADC_READ 0x00
+#define MS5611_CMD_PROM_READ_BASE 0xA0 /* OR with (addr << 1) for addr 0..7 */
+
+// calibration coefficient indices in PROM readout
+#define MS5611_COEFF_SENS 1
+#define MS5611_COEFF_OFF 2
+#define MS5611_COEFF_TCS 3
+#define MS5611_COEFF_TCO 4
+#define MS5611_COEFF_TREF 5
+#define MS5611_COEFF_TEMPSENS 6
+
+// osr index in command arrays
+typedef enum {
+	MS5611_OSR_256 = 0,
+	MS5611_OSR_512 = 1,
+	MS5611_OSR_1024 = 2,
+	MS5611_OSR_2048 = 3,
+	MS5611_OSR_4096 = 4
+} ms5611_osr_t;
+
+typedef struct {
+	/* Calibration coefficients read from PROM */
+	uint16_t prom_coef[8]; /* C[1]..C[6] used; C[0] = factory reserved empty space */
+
+	i2c_bus_t bus;
+	ms5611_address_t addr;
+
+	/* Selected OSR for pressure and temperature conversions */
+	ms5611_osr_t osr_pressure;
+	ms5611_osr_t osr_temperature;
+
+	/* Set true once init succeeds */
+	bool initialized;
+} ms5611_handle_t;
+
 /* Conversion time in microseconds - max values from datasheet for safety */
 static const uint32_t CONV_TIME_US[] = {
 	600, /* OSR 256  — datasheet max 0.60ms */
@@ -141,7 +200,7 @@ static w_status_t ms5611_prom_read(void) {
 
 	// copy into a local var first to avoid modifying the handle with corrupt data on read failure
 	for (i = 0; i < 8; i++) {
-		status |= baro_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
+		status = baro_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
 		if (status != W_SUCCESS) {
 			log_text(1, "ms5611", "ERROR: failed to read PROM coefficient C%u", i);
 			return W_FAILURE;
@@ -185,7 +244,7 @@ w_status_t ms5611_init(void) {
 		return W_FAILURE;
 	}
 
-	vTaskDelay(5);
+	vTaskDelay(pdMS_TO_TICKS(3)); // 3ms wait time from AN520 datasheet
 
 	if (W_SUCCESS != ms5611_prom_read()) {
 		log_text(1, "ms5611", "ERROR: initialization failed during PROM read .");
