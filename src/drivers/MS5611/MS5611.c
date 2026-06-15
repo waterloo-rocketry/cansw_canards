@@ -1,9 +1,64 @@
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/timer/timer.h"
 
-#include "FreeRTOS.h"
-#include "semphr.h"
-#include "timers.h"
+/* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
+typedef enum {
+	MS5611_ADDRESS_CSB_LOW = 0x77,
+	MS5611_ADDRESS_CSB_HIGH = 0x76
+} ms5611_address_t;
+
+// reset command
+#define MS5611_CMD_RESET 0x1E
+
+// pressure conversion commands (D1)
+#define MS5611_CMD_CONVERT_D1_OSR256 0x40
+#define MS5611_CMD_CONVERT_D1_OSR512 0x42
+#define MS5611_CMD_CONVERT_D1_OSR1024 0x44
+#define MS5611_CMD_CONVERT_D1_OSR2048 0x46
+#define MS5611_CMD_CONVERT_D1_OSR4096 0x48
+
+// temperature conversion commands (D2)
+#define MS5611_CMD_CONVERT_D2_OSR256 0x50
+#define MS5611_CMD_CONVERT_D2_OSR512 0x52
+#define MS5611_CMD_CONVERT_D2_OSR1024 0x54
+#define MS5611_CMD_CONVERT_D2_OSR2048 0x56
+#define MS5611_CMD_CONVERT_D2_OSR4096 0x58
+
+// ADC read command
+#define MS5611_CMD_ADC_READ 0x00
+#define MS5611_CMD_PROM_READ_BASE 0xA0 /* OR with (addr << 1) for addr 0..7 */
+
+// calibration coefficient indices in PROM readout
+#define MS5611_COEFF_SENS 1
+#define MS5611_COEFF_OFF 2
+#define MS5611_COEFF_TCS 3
+#define MS5611_COEFF_TCO 4
+#define MS5611_COEFF_TREF 5
+#define MS5611_COEFF_TEMPSENS 6
+
+// osr index in command arrays
+typedef enum {
+	MS5611_OSR_256 = 0,
+	MS5611_OSR_512 = 1,
+	MS5611_OSR_1024 = 2,
+	MS5611_OSR_2048 = 3,
+	MS5611_OSR_4096 = 4
+} ms5611_osr_t;
+
+typedef struct {
+	/* Calibration coefficients read from PROM */
+	uint16_t prom_coef[8]; /* C[1]..C[6] used; C[0] = factory reserved empty space */
+
+	i2c_bus_t bus;
+	ms5611_address_t addr;
+
+	/* Selected OSR for pressure and temperature conversions */
+	ms5611_osr_t osr_pressure;
+	ms5611_osr_t osr_temperature;
+
+	/* Set true once init succeeds */
+	bool initialized;
+} ms5611_handle_t;
 
 /* Conversion time in microseconds - max values from datasheet for safety */
 static const uint32_t CONV_TIME_US[] = {
@@ -89,52 +144,52 @@ static w_status_t baro_read_adc(uint32_t *out) {
 	return W_SUCCESS;
 }
 
-// /**
-//  * @brief Perfroms the CRC check on the PROM coefficients readout.
-//  * @param n_prom Array of 8 uint16_t values read from the PROM (prom_coef[0]..prom_coef[7])
-//  * @param crc The CRC value read from the PROM (lower 4 bits of prom_coef[7])
-//  * @return W_SUCCESS if CRC check passes, W_FAILURE if CRC check fails
-//  * @note This function is from github repository:
-//  * https://github.com/libdriver/ms5611/blob/main/src/driver_ms5611.h#L37
-//  */
-// static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
-// 	uint8_t cnt;
-// 	uint8_t n_bit;
-// 	uint16_t n_rem;
-// 	uint16_t crc_read;
+/**
+ * @brief Perfroms the CRC check on the PROM coefficients readout.
+ * @param n_prom Array of 8 uint16_t values read from the PROM (prom_coef[0]..prom_coef[7])
+ * @param crc The CRC value read from the PROM (lower 4 bits of prom_coef[7])
+ * @return W_SUCCESS if CRC check passes, W_FAILURE if CRC check fails
+ * @note This function is from github repository:
+ * https://github.com/libdriver/ms5611/blob/main/src/driver_ms5611.h#L37
+ */
+static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
+	uint8_t cnt;
+	uint8_t n_bit;
+	uint16_t n_rem;
+	uint16_t crc_read;
 
-// 	n_rem = 0x00; /* init 0 */
-// 	crc_read = n_prom[7]; /* get crc */
-// 	n_prom[7] = (0xFF00U & (n_prom[7])); /* init prom */
+	n_rem = 0x00; /* init 0 */
+	crc_read = n_prom[7]; /* get crc */
+	n_prom[7] = (0xFF00U & (n_prom[7])); /* init prom */
 
-// 	for (cnt = 0; cnt < 16; cnt++) /* loop all */
-// 	{
-// 		if (cnt & 0x1) /* check LSB */
-// 		{
-// 			n_rem ^= (uint16_t)((n_prom[cnt >> 1]) & 0x00FF); /* run part1 */
-// 		} else {
-// 			n_rem ^= (uint16_t)(n_prom[cnt >> 1] >> 8); /* run part1 */
-// 		}
-// 		for (n_bit = 8; n_bit > 0; n_bit--) /* loop all */
-// 		{
-// 			if ((n_rem & 0x8000U) != 0) /* check bit */
-// 			{
-// 				n_rem = (n_rem << 1) ^ 0x3000; /* run part2 */
-// 			} else {
-// 				n_rem = (n_rem << 1); /* run part2 */
-// 			}
-// 		}
-// 	}
-// 	n_rem = (0x000F & (n_rem >> 12)); /* get rem */
-// 	n_prom[7] = (0xFF00U & crc_read); /* set crc read */
+	for (cnt = 0; cnt < 16; cnt++) /* loop all */
+	{
+		if (cnt & 0x1) /* check LSB */
+		{
+			n_rem ^= (uint16_t)((n_prom[cnt >> 1]) & 0x00FF); /* run part1 */
+		} else {
+			n_rem ^= (uint16_t)(n_prom[cnt >> 1] >> 8); /* run part1 */
+		}
+		for (n_bit = 8; n_bit > 0; n_bit--) /* loop all */
+		{
+			if ((n_rem & 0x8000U) != 0) /* check bit */
+			{
+				n_rem = (n_rem << 1) ^ 0x3000; /* run part2 */
+			} else {
+				n_rem = (n_rem << 1); /* run part2 */
+			}
+		}
+	}
+	n_rem = (0x000F & (n_rem >> 12)); /* get rem */
+	n_prom[7] = (0xFF00U & crc_read); /* set crc read */
 
-// 	if (n_rem != crc) {
-// 		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
-// 		return W_FAILURE;
-// 	}
+	if (n_rem != crc) {
+		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
+		return W_FAILURE;
+	}
 
-// 	return W_SUCCESS;
-// }
+	return W_SUCCESS;
+}
 
 /**
  * @brief Reads calibration coefficients from the PROM, performs CRC check, and stores them in the
@@ -147,7 +202,7 @@ static w_status_t ms5611_prom_read(void) {
 
 	// copy into a local var first to avoid modifying the handle with corrupt data on read failure
 	for (i = 0; i < 8; i++) {
-		status |= baro_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
+		status = baro_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
 		if (status != W_SUCCESS) {
 			log_text(1, "ms5611", "ERROR: failed to read PROM coefficient C%u", i);
 			return W_FAILURE;
@@ -155,7 +210,7 @@ static w_status_t ms5611_prom_read(void) {
 		prom_coef[i] = ((uint16_t)prom_buf[0] << 8) | prom_buf[1];
 	}
 
-	// status |= a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0F));
+	status |= a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0F));
 
 	if (W_SUCCESS == status) {
 		for (i = 0; i < 8; i++) {
@@ -191,7 +246,7 @@ w_status_t ms5611_init(void) {
 		return W_FAILURE;
 	}
 
-	vTaskDelay(5);
+	vTaskDelay(pdMS_TO_TICKS(3)); // 3ms wait time from AN520 datasheet
 
 	if (W_SUCCESS != ms5611_prom_read()) {
 		log_text(1, "ms5611", "ERROR: initialization failed during PROM read .");
@@ -262,11 +317,6 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	int64_t off, sens; /* prom coefficients for first order */
 	int64_t T2, off2, sens2; /* second-order compensation terms */
 
-	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
-		log_text(1, "ms5611", "ERROR: failed to get timestamp");
-		return W_FAILURE;
-	}
-
 	if (NULL == result) {
 		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
 		return W_INVALID_PARAM;
@@ -288,6 +338,11 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	if (W_FAILURE == baro_read_adc(&d2)) {
 		log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
 		return W_IO_ERROR;
+	}
+	
+	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
+		log_text(1, "ms5611", "ERROR: failed to get timestamp");
+		return W_FAILURE;
 	}
 
 	/* D1: pressure conversion */
@@ -345,11 +400,11 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	result->pressure_centimbar = (int32_t)p;
 
 	*timestamp_ms +=
-		((CONV_TIME_US[handle.osr_pressure] / 1000) +
-		 (CONV_TIME_US[handle.osr_temperature] / 1000)); // account for conversion time in timestamp
+		(CONV_TIME_US[handle.osr_pressure] / 2000);
 
 	return W_SUCCESS;
 }
+
 
 /**
  * @brief Starts an asynchronous read of pressure and temperature data from the MS5611 sensor.
