@@ -11,36 +11,43 @@
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 
+// conversion factors
+static const float64_t M_S2_PER_G = 9.81;
+
 // TODO: double check values with Tristan
-// Period of IMU sampling in milliseconds
-// slightly slower than 200 hz to always receive encoder which can be >5ms
-static const int IMU_SAMPLING_PERIOD_MS = 6;
 
 // Timeout values for freshness check (in milliseconds)
-static const int GYRO_FRESHNESS_TIMEOUT_MS = 5;
-static const int MAG_FRESHNESS_TIMEOUT_MS = 10;
-static const int ACCEL_FRESHNESS_TIMEOUT_MS = 5;
-static const int BARO_FRESHNESS_TIMEOUT_MS = 25;
-static const int ERROR_THRESHOLD = 10;
+static const int32_t ST_IMU_FRESHNESS_TIMEOUT_MS = 2;
+static const int32_t AD_GYRO_FRESHNESS_TIMEOUT_MS = 2;
+static const int32_t MAG_FRESHNESS_TIMEOUT_MS = 5;
+static const int32_t AD_ACCEL_FRESHNESS_TIMEOUT_MS = 5;
+static const int32_t BARO_FRESHNESS_TIMEOUT_MS = 5;
+static const int32_t ERROR_THRESHOLD = 10;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
-static const int IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
-static const int IMU_HANDLER_CAN_TX_RATE = (IMU_HANDLER_CAN_TX_PERIOD_MS / IMU_SAMPLING_PERIOD_MS);
+static const uint32_t IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
+static const uint32_t IMU_HANDLER_CAN_TX_RATE =
+	(IMU_HANDLER_CAN_TX_PERIOD_MS / ST_IMU_FRESHNESS_TIMEOUT_MS);
 
 // TODO: add calibration matrix for this year
-static const matrix3d_t g_mti_upd_mat = {
+static const matrix3d_t g_mti_correction_matrix = {
 	.array = {{0, 0, 1.000000000}, {1.0000000, 0, 0}, {0, 1.0000000000, 0}}};
-static const matrix3d_t g_board_imu_upd_mat = {
+static const matrix3d_t g_board_imu_correction_matrix = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
-static const matrix3d_t g_board_mag_upd_mat = {
+static const matrix3d_t g_board_mag_correction_matrix = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
-static const matrix3d_t g_ad_accel_upd_mat = {
+static const matrix3d_t g_ad_accel_correction_matrix = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
-static const matrix3d_t g_ad_gyro_upd_mat = {
+static const matrix3d_t g_ad_gyro_correction_matrix = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
 
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
+
+typedef struct {
+	uint32_t success_count;
+	uint32_t failure_count;
+} sensor_health_state_t;
 
 // Module state tracking
 typedef struct {
@@ -49,10 +56,9 @@ typedef struct {
 	uint32_t error_count;
 
 	// Per-IMU stats
-	struct {
-		uint32_t success_count;
-		uint32_t failure_count;
-	} board_stats, ad_stats, movella_stats;
+	sensor_health_state_t board_stats;
+	sensor_health_state_t ad_stats;
+	sensor_health_state_t movella_stats;
 } imu_handler_state_t;
 
 static imu_handler_state_t imu_handler_state = {0};
@@ -105,21 +111,17 @@ static w_status_t read_board_meas(navigator_board_meas_t *board_data, raw_board_
 	w_status_t status = W_SUCCESS;
 
 	// Read accelerometer and gyro data
-	if (W_SUCCESS == lsm6dsv32x_get_gyro_acc_data(&(board_data->board_imu.accel),
-												  &(board_data->board_imu.gyro),
-												  &(raw_data->raw_board_accel),
-												  &(raw_data->raw_board_gyro))) {
+	if (lsm6dsv32x_get_gyro_acc_data(&(board_data->board_imu.accel),
+									 &(board_data->board_imu.gyro),
+									 &(raw_data->raw_board_accel),
+									 &(raw_data->raw_board_gyro)) == W_SUCCESS) {
 		// check if we meet freshness requirement
 		if ((curr_timestamp_ms >= (raw_data->raw_board_accel.timestamp_ms)) &&
 			((curr_timestamp_ms - (raw_data->raw_board_accel.timestamp_ms)) <
-			 IMU_SAMPLING_PERIOD_MS)) { // designed to make sure no overflow
+			 ST_IMU_FRESHNESS_TIMEOUT_MS)) { // designed to make sure no overflow
 			board_data->board_imu.is_dead = false;
 		} else {
-			log_text(1,
-					 "IMUHandler",
-					 "WARN: Board IMU Not Fresh curr: %d, sen: %d.",
-					 curr_timestamp_ms,
-					 raw_data->raw_board_accel.timestamp_ms);
+			board_data->board_imu.is_dead = true;
 		}
 	} else {
 		log_text(1, "IMUHandler", "WARN: Board IMU read failed.");
@@ -127,19 +129,15 @@ static w_status_t read_board_meas(navigator_board_meas_t *board_data, raw_board_
 
 	// get mag.
 	uint32_t mag_timestamp_ms = 0;
-	if (W_SUCCESS == iis2mdc_get_data(&(board_data->board_mag.meas),
-									  &(raw_data->board_mag),
-									  &mag_timestamp_ms)) {
+	if (iis2mdc_get_data(&(board_data->board_mag.meas),
+						 &(raw_data->board_mag),
+						 &mag_timestamp_ms) == W_SUCCESS) {
 		// check if we meet freshness requirement
 		if ((curr_timestamp_ms >= mag_timestamp_ms) &&
 			((curr_timestamp_ms - mag_timestamp_ms) < MAG_FRESHNESS_TIMEOUT_MS)) {
 			board_data->board_mag.is_dead = false;
 		} else {
-			log_text(1,
-					 "IMUHandler",
-					 "WARN: Board Mag Not Fresh curr: %d, sen: %d.",
-					 curr_timestamp_ms,
-					 mag_timestamp_ms);
+			board_data->board_mag.is_dead = true;
 		}
 	} else {
 		log_text(1, "IMUHandler", "WARN: Board Mag read failed.");
@@ -155,20 +153,20 @@ static w_status_t read_board_meas(navigator_board_meas_t *board_data, raw_board_
 		board_data->board_imu.gyro.z = board_data->board_imu.gyro.z * RAD_PER_DEG;
 
 		// convert accel from g to m/s^2
-		board_data->board_imu.accel.x = board_data->board_imu.accel.x * 9.81;
-		board_data->board_imu.accel.y = board_data->board_imu.accel.y * 9.81;
-		board_data->board_imu.accel.z = board_data->board_imu.accel.z * 9.81;
+		board_data->board_imu.accel.x = board_data->board_imu.accel.x * M_S2_PER_G;
+		board_data->board_imu.accel.y = board_data->board_imu.accel.y * M_S2_PER_G;
+		board_data->board_imu.accel.z = board_data->board_imu.accel.z * M_S2_PER_G;
 
 		// mag data is already provided in Gauss
 
 		// Apply orientation correction
 		board_data->board_imu.accel =
-			math_vector3d_rotate(&g_board_imu_upd_mat, &(board_data->board_imu.accel));
+			math_vector3d_rotate(&g_board_imu_correction_matrix, &(board_data->board_imu.accel));
 		board_data->board_imu.gyro =
-			math_vector3d_rotate(&g_board_imu_upd_mat, &(board_data->board_imu.gyro));
+			math_vector3d_rotate(&g_board_imu_correction_matrix, &(board_data->board_imu.gyro));
 
 		board_data->board_mag.meas =
-			math_vector3d_rotate(&g_board_mag_upd_mat, &(board_data->board_mag.meas));
+			math_vector3d_rotate(&g_board_mag_correction_matrix, &(board_data->board_mag.meas));
 
 		// TODO: baro
 		imu_handler_state.board_stats.success_count++;
@@ -195,9 +193,9 @@ static w_status_t read_movella_imu(navigator_mti_meas_t *imu_data) {
 	if (W_SUCCESS == status) {
 		// Copy data from Movella
 		// Apply orientation correction
-		imu_data->mti_accel = math_vector3d_rotate(&g_mti_upd_mat, &movella_data.acc);
-		imu_data->mti_gyro = math_vector3d_rotate(&g_mti_upd_mat, &movella_data.gyr);
-		imu_data->mti_mag = math_vector3d_rotate(&g_mti_upd_mat, &movella_data.mag);
+		imu_data->mti_accel = math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.acc);
+		imu_data->mti_gyro = math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.gyr);
+		imu_data->mti_mag = math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.mag);
 
 		imu_data->mti_baro = movella_data.pres;
 		imu_data->is_dead = movella_data.is_dead;
@@ -259,8 +257,7 @@ w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *imu_output) {
 		current_time_ms = 0;
 	}
 
-	// Read from all IMUs and sensors, *
-	// TODO: include orientation correction
+	// Read from all IMUs and sensors
 	w_status_t board_status =
 		read_board_meas(&(imu_output->board_meas), &raw_board_meas, current_time_ms);
 	w_status_t movella_status = read_movella_imu(&(imu_output->mti_meas));
