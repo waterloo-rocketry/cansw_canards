@@ -462,7 +462,5 @@ add_test_group(test_adxrs649
 add_test_group(test_ak45_driver
     # test file(s)
     ${UNIT_TESTS_DIR}/ak45_driver_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/drivers/ak45_driver/ak45_driver.c
-
+    ${UNIT_TESTS_DIR}/ak45_driver_test_helpers.c # source file included here
 )
