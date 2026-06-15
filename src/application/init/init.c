@@ -17,6 +17,7 @@
 #include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/adc/adc.h"
@@ -90,7 +91,7 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
-	// status |= adc_init(&hadc1);
+	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
 	// status |= health_check_init();
 	status |= movella_init();
@@ -99,6 +100,7 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
+	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
 	status |= adxrs649_init();
 	// status |= ekf_init();

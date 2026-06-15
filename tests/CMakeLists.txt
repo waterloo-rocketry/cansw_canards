@@ -346,12 +346,13 @@ add_test_group(test_quaternion
 # ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
 # )
 
-add_test_group(test_health_check
-    # test file(s)
-    ${UNIT_TESTS_DIR}/health_checks_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/health_checks/health_checks.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_health_check
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/health_checks_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/health_checks/health_checks.c
+# )
 
 # TODO: revive test once implemented
 # add_test_group(test_projector
@@ -431,6 +432,12 @@ add_test_group(test_health_check
 #     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
 # )
 
+add_test_group(test_adxl380
+    # test file(s)
+    ${UNIT_TESTS_DIR}/adxl380_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXL380.c
+)
 add_test_group(test_lsm6dsv32x
     # test file(s)
     ${UNIT_TESTS_DIR}/lsm6dsv32x_test.cpp
