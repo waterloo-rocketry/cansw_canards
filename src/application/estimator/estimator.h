@@ -4,6 +4,7 @@
 
 #include "application/estimator/estimator_types.h"
 #include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
 #include "common/gnc/gnc_types.h"
 #include "common/math/math.h"
 
@@ -71,7 +72,7 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state);
  *
  * @return CAN board specific err bitfield
  */
-uint32_t estimator_get_status(void);
+health_status_t estimator_get_status(void);
 
 /**
  * @brief 1 step of estimator

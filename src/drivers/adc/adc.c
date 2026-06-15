@@ -137,7 +137,7 @@ w_status_t adc_get_converted_val(adc_channel_t channel, float *output) {
 	return W_SUCCESS;
 }
 
-uint32_t adc_get_status(void) {
+health_status_t adc_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log error statistics
@@ -150,6 +150,8 @@ uint32_t adc_get_status(void) {
 			 adc_error_stats.invalid_channels,
 			 adc_error_stats.overflow_errors);
 
-	return status_bitfield;
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_ADC, .error_bitfield = 0};
+
+	return status;
 }
 
