@@ -3,6 +3,7 @@
 
 extern "C" {
 #include "FreeRTOS.h"
+#include "ak45_driver_test_helpers.h"
 #include "application/logger/log.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "hal_fdcan_mock.h"
@@ -19,7 +20,7 @@ FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 class AK45DriverTest : public ::testing::Test {
 protected:
 	void SetUp() override {
-		ak45_driver_reset();
+		ak45_test_reset();
 
 		RESET_FAKE(HAL_FDCAN_Start);
 		RESET_FAKE(HAL_FDCAN_Stop);

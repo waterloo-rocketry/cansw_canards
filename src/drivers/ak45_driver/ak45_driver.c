@@ -297,17 +297,3 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 		ak45_fdcan_rx_callback(hfdcan, RxFifo1ITs);
 	}
 }
-
-/* for unit testing use */
-void ak45_driver_reset(void) {
-	g_ak45_hfdcan = NULL;
-	g_feedback_queue = NULL;
-	g_tx_errors = 0;
-	is_init = false;
-	received_can_msg = false;
-}
-
-/* for unit testing use */
-void ak45_set_tx_errors(uint32_t count) {
-	g_tx_errors = count;
-}
