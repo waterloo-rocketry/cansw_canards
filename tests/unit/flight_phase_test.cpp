@@ -29,6 +29,7 @@ FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_
 
 // w_status_t get_cmd_actuator_state(const can_msg_t *msg, can_actuator_state_t *cmd_actuator_state);
 FAKE_VALUE_FUNC(w_status_t, get_cmd_actuator_state, const can_msg_t *, can_actuator_state_t *)
+FAKE_VALUE_FUNC(double, math_vector3d_norm, const vector3d_t *);
 
 BaseType_t
 xQueuePeek_state_pad(QueueHandle_t xQueue, void *const pvBuffer, TickType_t xTicksToWait) {
@@ -59,6 +60,7 @@ protected:
         RESET_FAKE(get_actuator_id);
         RESET_FAKE(get_cmd_actuator_state);
         RESET_FAKE(timer_get_ms);
+        RESET_FAKE(math_vector3d_norm);
         FFF_RESET_HISTORY();
         queue_send_event = EVENT_NONE;
     }
@@ -725,4 +727,189 @@ TEST_F(FlightPhaseTest, GenSyncFail) {
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, UINT32_MAX);
     EXPECT_EQ(ctx.num_consec_detections, 0);
+}
+
+TEST_F(FlightPhaseTest, AllThreeImusTriggerLaunchDetection) {
+    // Arrange
+    flight_phase_ctx_t ctx = {0};
+    all_sensors_data_t sensor_data = {0};
+    flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
+
+    sensor_data.board_meas.board_imu.is_dead = false;
+    sensor_data.mti_meas.is_dead             = false;
+    sensor_data.ad_meas.ad_accel.is_dead     = false;
+
+    double norms[15] = {
+        25.0, 25.0, 50.0, 
+        25.0, 35.0, 45.0, 
+        25.0, 25.0, 35.0, 
+        25.0, 35.0, 25.0, 
+        25.0, 25.0, 35.0, 
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 15);
+
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    for (int i = 0; i < 4; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+
+    queue_send_event = EVENT_NONE;
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    EXPECT_EQ(queue_send_event, EVENT_LAUNCH_ACCEL);
+    EXPECT_EQ(math_vector3d_norm_fake.call_count, 15);
+}
+
+TEST_F(FlightPhaseTest, TwoImusTriggerLaunchDetection) {
+    // Arrange
+    flight_phase_ctx_t ctx = {0};
+    all_sensors_data_t sensor_data = {0};
+    flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
+
+    sensor_data.board_meas.board_imu.is_dead = false;
+    sensor_data.mti_meas.is_dead             = false;
+    sensor_data.ad_meas.ad_accel.is_dead     = false;
+
+    double norms[15] = {
+        25.0, 25.0, 15.0, 
+        25.0, 35.0, 15.0, 
+        25.0, 25.0, 15.0, 
+        25.0, 35.0, 15.0, 
+        25.0, 25.0, 15.0, 
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 15);
+
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    for (int i = 0; i < 4; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+    queue_send_event = EVENT_NONE;
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    EXPECT_EQ(queue_send_event, EVENT_LAUNCH_ACCEL);
+}
+
+TEST_F(FlightPhaseTest, ImusBelowThresholdDoesNotTriggerLaunchDetection) {
+    // Arrange
+    flight_phase_ctx_t ctx = {0};
+    all_sensors_data_t sensor_data = {0};
+    flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
+
+    sensor_data.board_meas.board_imu.is_dead = false;
+    sensor_data.mti_meas.is_dead             = false;
+    sensor_data.ad_meas.ad_accel.is_dead     = false;
+
+    double norms[15] = {
+        25.0, 25.0, 25.0, 
+        25.0, 25.0, 25.0, 
+        25.0, 25.0, 25.0, 
+        25.0, 25.0, 25.0, 
+        25.0, 5.0, 5.0, 
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 15);
+
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    for (int i = 0; i < 5; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE) << "Must not trigger before 5th reading, cycle " << i + 1;
+    }
+}
+
+TEST_F(FlightPhaseTest, OnlyOneImuAboveThresholdDoesNotTriggerLaunchDetection) {
+    // Arrange
+    all_sensors_data_t sensor_data = {0};
+    sensor_data.board_meas.board_imu.is_dead = false;
+    sensor_data.mti_meas.is_dead             = false;
+    sensor_data.ad_meas.ad_accel.is_dead     = false;
+
+    double norms[30] = {
+        25.0, 5.0, 5.0,
+        25.0, 5.0, 5.0,
+        25.0, 5.0, 5.0,
+        25.0, 5.0, 5.0,
+        25.0, 5.0, 5.0,
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 30);
+
+    flight_phase_ctx_t ctx = {0};
+
+    for (int i = 0; i < 5; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+}
+
+TEST_F(FlightPhaseTest, BoardImuDeadTriggersLaunchDetection) {
+    // Arrange
+    all_sensors_data_t sensor_data = {0};
+    sensor_data.board_meas.board_imu.is_dead = true;
+    sensor_data.mti_meas.is_dead             = false;
+    sensor_data.ad_meas.ad_accel.is_dead     = false;
+
+    double norms[10] = {
+        25.0, 25.0, 
+        25.0, 25.0, 
+        25.0, 25.0, 
+        25.0, 25.0, 
+        25.0, 25.0, 
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 10);
+
+    flight_phase_ctx_t ctx = {0};
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    // Act + Assert
+    for (int i = 0; i < 4; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+
+    queue_send_event = EVENT_NONE;
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    EXPECT_EQ(queue_send_event, EVENT_LAUNCH_ACCEL);
+}
+
+TEST_F(FlightPhaseTest, TwoImusDeadDoesNotTriggerLaunchDetection) {
+    all_sensors_data_t sensor_data = {0};
+    sensor_data.board_meas.board_imu.is_dead = true;
+    sensor_data.mti_meas.is_dead             = true;
+    sensor_data.ad_meas.ad_accel.is_dead     = false;
+
+    flight_phase_ctx_t ctx = {0};
+
+    queue_send_event = EVENT_NONE;
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    // Act + Assert
+    for (int i = 0; i < 5; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    
+    EXPECT_EQ(queue_send_event, EVENT_NONE);
+    EXPECT_EQ(math_vector3d_norm_fake.call_count, 0);
+}
+
+TEST_F(FlightPhaseTest, ThreeImusDeadDoesNotTriggerLaunchAccel) {
+    all_sensors_data_t sensor_data = {0};
+    sensor_data.board_meas.board_imu.is_dead = true;
+    sensor_data.mti_meas.is_dead             = true;
+    sensor_data.ad_meas.ad_accel.is_dead     = true;
+
+    flight_phase_ctx_t ctx = {0};
+
+    queue_send_event = EVENT_NONE;
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    EXPECT_EQ(queue_send_event, EVENT_NONE);
+    EXPECT_EQ(math_vector3d_norm_fake.call_count, 0);
 }

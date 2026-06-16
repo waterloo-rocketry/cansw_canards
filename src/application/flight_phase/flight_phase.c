@@ -360,7 +360,7 @@ static void update_num_consec_detection(bool is_dead, const vector3d_t *accel,
 		return;
 	}
 
-	double accel_magnitude = math_vector3d_norm(&accel);
+	double accel_magnitude = math_vector3d_norm(accel);
 
 	if (ACCEL_THRESHOLD_LAUNCH_M_S2 <= accel_magnitude) {
 		(*consec_count)++;
@@ -380,9 +380,6 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 														  const fsm_state_t curr_state,
 														  const all_sensors_data_t *p_sensor_data) {
 	if ((STATE_PAD_FILTER != curr_state) && (STATE_PAD_NAV != curr_state)) {
-		num_consec_detection_board = 0;
-		num_consec_detection_mti = 0;
-		num_consec_detection_ad = 0;
 		return EVENT_NONE;
 	}
 	bool board_imu_dead = p_sensor_data->board_meas.board_imu.is_dead;
