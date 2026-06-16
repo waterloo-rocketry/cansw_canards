@@ -17,6 +17,24 @@ FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char 
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 }
 
+// There is a while loop in ak45_driver initialization which waits for messages to be received.
+// Calling this function set the variable it check to true and avoids the actualy time wait.
+void vTaskDelay_custom_bypass_while(const TickType_t ticks) {
+	HAL_FDCAN_RxFifo1Callback(&hfdcan1, 0);
+}
+
+// Causes the timer to fail to test a specific error case in ak_45 driver initialization
+void vTaskDelay_custom_fail_timer(const TickType_t ticks) {
+	timer_get_ms_fake.return_val = W_FAILURE;
+}
+
+// timer_get_ms is called to update the current time, the following function replaces it to merely
+// increment the time, and since the time-out time is set to 0 in testing, it autofails.
+w_status_t timer_get_ms_custom_exceed_time(uint32_t *time) {
+	(*time)++;
+	return W_SUCCESS;
+}
+
 class AK45DriverTest : public ::testing::Test {
 protected:
 	void SetUp() override {
@@ -49,20 +67,6 @@ protected:
 
 	void TearDown() override {}
 };
-
-// custom fakes - declared before fixture so tests can reference them
-void vTaskDelay_custom_bypass_while(const TickType_t ticks) {
-	HAL_FDCAN_RxFifo1Callback(&hfdcan1, 0);
-}
-
-void vTaskDelay_custom_fail_timer(const TickType_t ticks) {
-	timer_get_ms_fake.return_val = W_FAILURE;
-}
-
-w_status_t timer_get_ms_custom_exceed_time(uint32_t *time) {
-	(*time)++;
-	return W_SUCCESS;
-}
 
 TEST_F(AK45DriverTest, InitInvalidParams) {
 	// Arrange + Act
@@ -103,6 +107,7 @@ TEST_F(AK45DriverTest, InitFailsIfFdcanStartFails) {
 
 	// Assert
 	EXPECT_EQ(status, W_FAILURE);
+	// This failure calls HAL_FD_CAN_Stop
 	EXPECT_EQ(HAL_FDCAN_Stop_fake.call_count, 1);
 }
 
@@ -115,6 +120,7 @@ TEST_F(AK45DriverTest, InitFailsIfActivateNotificationFails) {
 
 	// Assert
 	EXPECT_EQ(status, W_FAILURE);
+	// This failure calls HAL_FD_CAN_Stop
 	EXPECT_EQ(HAL_FDCAN_Stop_fake.call_count, 1);
 }
 
@@ -127,6 +133,7 @@ TEST_F(AK45DriverTest, InitFailsIfTimerGetMsFails) {
 
 	// Assert
 	EXPECT_EQ(status, W_FAILURE);
+	// This failure calls HAL_FD_CAN_Stop
 	EXPECT_EQ(HAL_FDCAN_Stop_fake.call_count, 1);
 }
 
@@ -139,6 +146,7 @@ TEST_F(AK45DriverTest, InitFailsIfTimerGetMsFailsInsideWhileLoop) {
 
 	// Assert
 	EXPECT_EQ(status, W_FAILURE);
+	// This failure calls HAL_FD_CAN_Stop
 	EXPECT_EQ(HAL_FDCAN_Stop_fake.call_count, 1);
 }
 
@@ -151,6 +159,7 @@ TEST_F(AK45DriverTest, InitFailsIfWhileLoopTimesOutWithNoCanMsg) {
 
 	// Assert
 	EXPECT_EQ(status, W_FAILURE);
+	// This failure calls HAL_FD_CAN_Stop
 	EXPECT_EQ(HAL_FDCAN_Stop_fake.call_count, 1);
 }
 
@@ -164,6 +173,7 @@ TEST_F(AK45DriverTest, InitFailsIfCANTransmitFails) {
 
 	// Assert
 	EXPECT_EQ(status, W_FAILURE);
+	// This failure increments the number of errors by 1
 	EXPECT_EQ(ak45_get_tx_errors(), 1);
 }
 
@@ -172,6 +182,7 @@ TEST_F(AK45DriverTest, InitFailsIfDoubleInit) {
 	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
 
 	// Act
+	// Attempt to initialize twice; fails on the second attempts.
 	ak45_driver_init(&hfdcan1, 0);
 	w_status_t status = ak45_driver_init(&hfdcan1, 0);
 
@@ -182,6 +193,7 @@ TEST_F(AK45DriverTest, InitFailsIfDoubleInit) {
 TEST_F(AK45DriverTest, InitSucceeds) {
 	// Arrange
 	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
+	// Set errors to verify that initialization resets to 0.
 	ak45_set_tx_errors(67);
 	EXPECT_EQ(ak45_get_tx_errors(), 67);
 
@@ -203,6 +215,7 @@ TEST_F(AK45DriverTest, SendPositionCmdFailsIfNotInit) {
 
 TEST_F(AK45DriverTest, SendPositionCmdSucceeds) {
 	// Arrange
+	// Success requires initialization. Custom fake required for successful intialization.
 	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
 	ak45_driver_init(&hfdcan1, 0);
 
@@ -223,6 +236,7 @@ TEST_F(AK45DriverTest, SendDisableCmdFailsIfNotInit) {
 
 TEST_F(AK45DriverTest, SendDisableCmdSucceeds) {
 	// Arrange
+	// Success requires initialization. Custom fake required for successful intialization.
 	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
 	ak45_driver_init(&hfdcan1, 0);
 
@@ -252,10 +266,12 @@ TEST_F(AK45DriverTest, GetLatestFeedbackFailsIfNotInit) {
 
 TEST_F(AK45DriverTest, GetLatestFeedbackFailsIfQueuePeekFails) {
 	// Arrange
-	ak45_feedback_t fb;
+	// Success requires initialization. Custom fake required for successful intialization.
 	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
-	xQueuePeek_fake.return_val = pdFAIL;
 	ak45_driver_init(&hfdcan1, 0);
+
+	xQueuePeek_fake.return_val = pdFAIL;
+	ak45_feedback_t fb;
 
 	// Act
 	w_status_t status = ak45_get_latest_feedback(&fb);
@@ -266,10 +282,12 @@ TEST_F(AK45DriverTest, GetLatestFeedbackFailsIfQueuePeekFails) {
 
 TEST_F(AK45DriverTest, GetLatestFeedbackSucceeds) {
 	// Arrange
-	ak45_feedback_t fb;
+	// Success requires initialization. Custom fake required for successful intialization.
 	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
-	xQueuePeek_fake.return_val = pdPASS;
 	ak45_driver_init(&hfdcan1, 0);
+
+	ak45_feedback_t fb;
+	xQueuePeek_fake.return_val = pdPASS;
 
 	// Act
 	w_status_t status = ak45_get_latest_feedback(&fb);

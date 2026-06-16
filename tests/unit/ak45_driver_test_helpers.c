@@ -1,5 +1,5 @@
 #include "ak45_driver_test_helpers.h"
-#include "drivers/ak45_driver/ak45_driver.c"
+#include "drivers/ak45_driver/ak45_driver.c" // Extension of the src file.
 #include <stdint.h>
 
 void ak45_test_reset(void) {
