@@ -94,6 +94,10 @@ static const int16_t second_comp_extreme_temp_threshold_centi_degrees =
 	-1500; /* temperature (in centidegrees) below which additional extreme cold compensation is
 			  applied */
 
+static uint32_t conv_us_to_ms (uint32_t time_us){
+	return time_us / 1000;
+}
+
 // modify this struct to toggle barometer settings
 static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom read
 								 .bus = I2C_BUS_5,
@@ -200,7 +204,7 @@ static w_status_t ms5611_prom_read(void) {
 
 	// copy into a local var first to avoid modifying the handle with corrupt data on read failure
 	for (i = 0; i < 8; i++) {
-		status = baro_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
+		status = baro_read(MS5611_CMD_PROM_READ_BASE + (i * 2), prom_buf, 2);
 		if (status != W_SUCCESS) {
 			log_text(1, "ms5611", "ERROR: failed to read PROM coefficient C%u", i);
 			return W_FAILURE;
@@ -365,7 +369,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	result->pressure_centimbar = (int32_t)p;
 
 	*timestamp_ms +=
-		(CONV_TIME_US[handle.osr_pressure] / 2000);
+		(conv_us_to_ms(CONV_TIME_US[handle.osr_pressure]) / 2);
 
 	return W_SUCCESS;
 }
