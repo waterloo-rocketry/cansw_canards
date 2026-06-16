@@ -94,7 +94,7 @@ static const int16_t second_comp_extreme_temp_threshold_centi_degrees =
 	-1500; /* temperature (in centidegrees) below which additional extreme cold compensation is
 			  applied */
 
-static uint32_t conv_us_to_ms (uint32_t time_us){
+static uint32_t conv_us_to_ms(uint32_t time_us) {
 	return time_us / 1000;
 }
 
@@ -282,7 +282,8 @@ void ms5611_deinit(void) {
  */
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
 	uint32_t d1, d2; /* d1 is raw pressure reading, d2 is raw temperature reading */
-	int32_t dt, temp, p; /* dt is temperature difference, temp is compensated temperature, p is pressure */
+	int32_t dt, temp,
+		p; /* dt is temperature difference, temp is compensated temperature, p is pressure */
 	int64_t off, sens; /* prom coefficients for first order */
 	int64_t T2, off2, sens2; /* second-order compensation terms */
 
@@ -308,7 +309,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 		log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
 		return W_IO_ERROR;
 	}
-	
+
 	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
 		log_text(1, "ms5611", "ERROR: failed to get timestamp");
 		return W_FAILURE;
@@ -331,8 +332,8 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	dt = (int32_t)d2 - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) << 8);
 	temp = second_comp_temp_threshold_centi_degrees +
 		   (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
-	off = (((int64_t)handle.prom_coef[MS5611_COEFF_OFF])  << 16) +
-       ((((int64_t)handle.prom_coef[MS5611_COEFF_TCO] )* dt) >> 7);
+	off = (((int64_t)handle.prom_coef[MS5611_COEFF_OFF]) << 16) +
+		  ((((int64_t)handle.prom_coef[MS5611_COEFF_TCO]) * dt) >> 7);
 	sens = (((int64_t)handle.prom_coef[MS5611_COEFF_SENS]) << 15) +
 		   ((((int64_t)handle.prom_coef[MS5611_COEFF_TCS]) * dt) >> 8);
 
@@ -344,17 +345,17 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	if (temp < second_comp_temp_threshold_centi_degrees) {
 		T2 = ((int64_t)dt * dt) >> 31;
 		off2 = (5 * ((int64_t)(temp - second_comp_temp_threshold_centi_degrees) *
-							 (temp - second_comp_temp_threshold_centi_degrees))) >>
+					 (temp - second_comp_temp_threshold_centi_degrees))) >>
 			   1;
 		sens2 = (5 * ((int64_t)(temp - second_comp_temp_threshold_centi_degrees) *
-							  (temp - second_comp_temp_threshold_centi_degrees))) >>
+					  (temp - second_comp_temp_threshold_centi_degrees))) >>
 				2;
 
 		if (temp < second_comp_extreme_temp_threshold_centi_degrees) {
 			off2 += 7 * ((int64_t)(temp - second_comp_extreme_temp_threshold_centi_degrees) *
-					(temp - second_comp_extreme_temp_threshold_centi_degrees));
+						 (temp - second_comp_extreme_temp_threshold_centi_degrees));
 			sens2 += (11 * ((int64_t)(temp - second_comp_extreme_temp_threshold_centi_degrees) *
-									 (temp - second_comp_extreme_temp_threshold_centi_degrees))) >>
+							(temp - second_comp_extreme_temp_threshold_centi_degrees))) >>
 					 1;
 		}
 
@@ -368,8 +369,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	result->temperature_centideg = temp;
 	result->pressure_centimbar = (int32_t)p;
 
-	*timestamp_ms +=
-		(conv_us_to_ms(CONV_TIME_US[handle.osr_pressure]) / 2);
+	*timestamp_ms += (conv_us_to_ms(CONV_TIME_US[handle.osr_pressure]) / 2);
 
 	return W_SUCCESS;
 }
