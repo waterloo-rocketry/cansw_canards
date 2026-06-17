@@ -355,7 +355,7 @@ w_status_t i2c_deinit_module(i2c_bus_t bus) {
 	unregister_status |= HAL_I2C_UnRegisterCallback(handle->hal_handle, HAL_I2C_ERROR_CB_ID);
 
 	if (HAL_OK != unregister_status) {
-		log_text(10, "i2c", "ERROR: callbacks not unregistered");
+		log_text(10, "i2c", "ERROR: some callbacks not unregistered");
 	}
 
 	handle->initialized = false;
