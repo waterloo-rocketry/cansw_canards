@@ -1,6 +1,14 @@
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/timer/timer.h"
 
+#include "FreeRTOS.h"
+#include "semphr.h"
+#include "task.h"
+
+/* Period between successive samples taken by ms5611_task. The blocking conversion reads themselves
+ * take a few ms; this is the idle gap added on top. */
+#define MS5611_TASK_PERIOD_MS 10
+
 /* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
 typedef enum {
 	MS5611_ADDRESS_CSB_LOW = 0x77,
@@ -97,6 +105,13 @@ static const int16_t second_comp_extreme_temp_threshold_centi_degrees =
 static uint32_t conv_us_to_ms(uint32_t time_us) {
 	return time_us / 1000;
 }
+
+/* Cache of the latest sample, written by ms5611_task and read by ms5611_get_raw_pressure.
+ * Protected by s_data_mutex. */
+static SemaphoreHandle_t s_data_mutex = NULL;
+static ms5611_raw_result_t s_latest_result = {0};
+static uint32_t s_latest_timestamp_ms = 0;
+static w_status_t s_latest_status = W_FAILURE; /* status of the most recent read attempt */
 
 // modify this struct to toggle barometer settings
 static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom read
@@ -244,6 +259,14 @@ static w_status_t ms5611_prom_read(void) {
 w_status_t ms5611_init(void) {
 	handle.initialized = false;
 
+	if (NULL == s_data_mutex) {
+		s_data_mutex = xSemaphoreCreateMutex();
+		if (NULL == s_data_mutex) {
+			log_text(1, "ms5611", "ERROR: failed to create data mutex");
+			return W_FAILURE;
+		}
+	}
+
 	if (W_SUCCESS != baro_write_cmd(MS5611_CMD_RESET)) {
 		log_text(1, "ms5611", "ERROR: initialization failed during command reset.");
 		return W_FAILURE;
@@ -271,6 +294,9 @@ void ms5611_deinit(void) {
 	for (size_t i = 0; i < 8; ++i) {
 		handle.prom_coef[i] = 0;
 	}
+
+	s_latest_status = W_FAILURE;
+	s_latest_timestamp_ms = 0;
 }
 
 /**
@@ -280,8 +306,10 @@ void ms5611_deinit(void) {
  * @note this function also applies the compensation algorithm, but does not convert units
  * @note see MS5611 datasheet page 7 - 8 for details on the calculation
  * (temperature in centidegrees prom_coef, pressure in centimbar)
+ * @note This performs blocking I2C transactions and conversion delays. It is called only from
+ * ms5611_task; external callers use the non-blocking ms5611_get_raw_pressure instead.
  */
-w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
+static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
 	/* d1 is raw pressure reading, d2 is raw temperature reading */
 	uint32_t d1;
 	uint32_t d2; 
@@ -382,4 +410,57 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	*timestamp_ms += (conv_us_to_ms(CONV_TIME_US[handle.osr_pressure]) / 2);
 
 	return W_SUCCESS;
+}
+
+/**
+ * @brief Non-blocking getter. Returns the most recent sample cached by ms5611_task without
+ * performing any I2C or conversion delay.
+ */
+w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
+	if (NULL == result || NULL == timestamp_ms) {
+		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_raw_pressure");
+		return W_INVALID_PARAM;
+	}
+
+	if (!handle.initialized || NULL == s_data_mutex) {
+		return W_FAILURE;
+	}
+
+	w_status_t status = W_FAILURE;
+
+	if (pdTRUE == xSemaphoreTake(s_data_mutex, 0)) {
+		status = s_latest_status;
+		if (W_SUCCESS == status) {
+			*result = s_latest_result;
+			*timestamp_ms = s_latest_timestamp_ms;
+		}
+		xSemaphoreGive(s_data_mutex);
+	}
+
+	return status;
+}
+
+/**
+ * @brief FreeRTOS task that periodically performs the blocking read and caches the latest result.
+ */
+void ms5611_task(void *argument) {
+	(void)argument;
+
+	ms5611_raw_result_t result;
+	uint32_t timestamp_ms;
+
+	while (1) {
+		w_status_t status = ms5611_read_raw_pressure(&result, &timestamp_ms);
+
+		if (pdTRUE == xSemaphoreTake(s_data_mutex, portMAX_DELAY)) {
+			s_latest_status = status;
+			if (W_SUCCESS == status) {
+				s_latest_result = result;
+				s_latest_timestamp_ms = timestamp_ms;
+			}
+			xSemaphoreGive(s_data_mutex);
+		}
+
+		vTaskDelay(pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
+	}
 }

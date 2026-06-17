@@ -24,6 +24,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/MS5611/MS5611.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
@@ -45,6 +46,7 @@ TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
+TaskHandle_t ms5611_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
@@ -55,6 +57,7 @@ const uint32_t can_handler_rx_priority = 45;
 // in general, prioritize consumers (estimator) over producers (imus) to avoid congestion
 const uint32_t can_handler_tx_priority = 40;
 const uint32_t movella_task_priority = 20;
+const uint32_t ms5611_task_priority = 18;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
@@ -91,6 +94,7 @@ static void system_init_task(void *arg) {
 	status |= estimator_init();
 	// status |= health_check_init();
 	status |= movella_init();
+	status |= ms5611_init();
 	status |= flight_phase_init();
 	status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
@@ -142,6 +146,9 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(
 		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+
+	task_status &= xTaskCreate(
+		ms5611_task, "ms5611", 512, NULL, ms5611_task_priority, &ms5611_task_handle);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
