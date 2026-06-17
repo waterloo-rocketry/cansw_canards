@@ -1,12 +1,7 @@
 // Add these includes for hardware handles
+#include "application/init/init.h"
 #include "FreeRTOS.h"
 #include "adc.h" // For hadc1
-#include "fdcan.h" // For hfdcan1 and hfdcan3
-#include "i2c.h" // For hi2c2, hi2c4
-#include "stm32h7xx_hal.h"
-#include "task.h"
-#include "usart.h"
-
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/estimator/ekf.h"
@@ -15,7 +10,6 @@
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
-#include "application/init/init.h"
 #include "application/logger/log.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
@@ -28,6 +22,14 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#include "fdcan.h" // For hfdcan1 and hfdcan3
+#include "i2c.h" // For hi2c2, hi2c4
+#include "stm32h7xx_hal.h"
+#include "task.h"
+#include "third_party/printf/printf.h"
+#include "usart.h"
+
+#include <stdint.h>
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -58,6 +60,8 @@ const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
+char testbuf[65536] = {0};
+
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -72,7 +76,7 @@ static void system_init_task(void *arg) {
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
-	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
+	// non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
@@ -82,21 +86,21 @@ static void system_init_task(void *arg) {
 
 	// INIT REQUIRED MODULES
 	status |= gpio_init();
-	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
-	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
-	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
-	status |= uart_init(UART_MOVELLA, &huart3, 100);
-	status |= adc_init(&hadc1, &hadc2, &hadc3);
-	status |= estimator_init();
+	// status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
+	// status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
+	// status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
+	// status |= uart_init(UART_MOVELLA, &huart3, 100);
+	// status |= adc_init(&hadc1, &hadc2, &hadc3);
+	// status |= estimator_init();
 	// status |= health_check_init();
-	status |= movella_init();
-	status |= flight_phase_init();
-	status |= imu_handler_init();
-	status |= can_handler_init(&hfdcan3);
-	status |= controller_init();
-	status |= fsm_init();
-	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
+	// status |= movella_init();
+	// status |= flight_phase_init();
+	// status |= imu_handler_init();
+	// status |= can_handler_init(&hfdcan3);
+	// status |= controller_init();
+	// status |= fsm_init();
+	// status |= lsm6dsv32x_init();
+	// status |= adxrs649_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -104,18 +108,18 @@ static void system_init_task(void *arg) {
 		// Log critical initialization failure - specific modules should have logged details
 		log_text(10, "init", "crit init fail (status: 0x%lx).", status);
 		// critical err
-		proc_handle_fatal_error("sysinit");
+		// proc_handle_fatal_error("sysinit");
 	}
 
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	task_status &= xTaskCreate(fsm_task,
-							   "fsm",
-							   8192, // TODO: set the correct size
-							   NULL,
-							   fsm_task_priority,
-							   &fsm_task_handle);
+	// task_status &= xTaskCreate(fsm_task,
+	//     "fsm",
+	//     8192, // TODO: set the correct size
+	//     NULL,
+	//     fsm_task_priority,
+	//     &fsm_task_handle);
 
 	// task_status &= xTaskCreate(health_check_task,
 	//     "health",
@@ -124,40 +128,75 @@ static void system_init_task(void *arg) {
 	//     health_checks_task_priority,
 	//     &health_checks_task_handle);
 
-	task_status &= xTaskCreate(can_handler_task_rx,
-							   "can handler rx",
-							   256,
-							   NULL,
-							   can_handler_rx_priority,
-							   &can_handler_handle_rx);
+	// task_status &= xTaskCreate(can_handler_task_rx,
+	//     "can handler rx",
+	//     256,
+	//     NULL,
+	//     can_handler_rx_priority,
+	//     &can_handler_handle_rx);
 
-	task_status &= xTaskCreate(can_handler_task_tx,
-							   "can handler tx",
-							   256,
-							   NULL,
-							   can_handler_tx_priority,
-							   &can_handler_handle_tx);
+	// task_status &= xTaskCreate(can_handler_task_tx,
+	//     "can handler tx",
+	//     256,
+	//     NULL,
+	//     can_handler_tx_priority,
+	//     &can_handler_handle_tx);
 
-	task_status &= xTaskCreate(
-		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+	// task_status &= xTaskCreate(
+	//     movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
-	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
+	// task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority,
+	// &log_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
 		log_text(10, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
-		proc_handle_fatal_error("tasks");
+		// proc_handle_fatal_error("tasks");
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
+	// ----------------
+	static uint32_t last_tick = 0;
+	uint32_t write_count = 0;
+
+	memset(testbuf, 'A', sizeof(testbuf));
+
+	w_status_t ret = sd_card_file_create("testuwu.txt");
+
+	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
+	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0);
+
 	// its blinky now
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(500);
+		uint32_t diff = HAL_GetTick() - last_tick;
+
+		snprintf_((char *)testbuf,
+				  sizeof(testbuf),
+				  "\r\n%lu, %lums\n\r",
+				  (unsigned long)write_count++,
+				  (unsigned long)diff);
+
+		last_tick = HAL_GetTick();
+
+		// note gpios are active low
+		// EXPECTED BEHAVIOUR: blue is high most of the time then blinks low while writing to sd
+		// card. red led turns high if sd card fails, low if it succeeds. green always blinkying at
+		// 5 ms.
+
+		uint32_t ret2;
+		gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+		if (sd_card_file_write("testuwu.txt", &testbuf[0], 65536, true, &ret2) != W_SUCCESS) {
+			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
+		} else {
+			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
+		}
+		gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
+
+		// gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		vTaskDelay(5);
+
+		// ---------------
 	}
 }
 

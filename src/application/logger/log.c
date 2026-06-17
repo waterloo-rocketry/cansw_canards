@@ -396,6 +396,7 @@ void log_task(void *argument) {
 			uint32_t msgs_done = 0;
 			uint32_t max_msgs = TEXT_MSGS_PER_BUFFER;
 			char *filename = text_log_filename;
+			(void)filename;
 			if (!buffer_to_print->is_text) {
 				max_msgs = DATA_MSGS_PER_BUFFER;
 				filename = data_log_filename;
@@ -412,23 +413,23 @@ void log_task(void *argument) {
 			// try several times to buffer to SD card
 			uint32_t size = 0;
 			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
-				gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
+				// gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
 
-				if (sd_card_file_write(
-						filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
-					W_SUCCESS) {
-					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
-					break; // Successfully wrote the buffer
-				} else {
-					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
-				}
-				if ((LOG_WRITE_TRY_COUNT - 1) == i) {
-					logger_health.buffer_flush_fails++;
-					break; // Failed to write after all attempts
-				} else {
-					// wait some time before retrying, shld allow wear leveling to finish ideally..
-					vTaskDelay(pdMS_TO_TICKS(20));
-				}
+				// if (sd_card_file_write(
+				// 		filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
+				// 	W_SUCCESS) {
+				// 	// gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+				// 	break; // Successfully wrote the buffer
+				// } else {
+				// 	// gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+				// }
+				// if ((LOG_WRITE_TRY_COUNT - 1) == i) {
+				// 	logger_health.buffer_flush_fails++;
+				// 	break; // Failed to write after all attempts
+				// } else {
+				// 	// wait some time before retrying, shld allow wear leveling to finish ideally..
+				// 	vTaskDelay(pdMS_TO_TICKS(20));
+				// }
 			}
 
 			// Reinitialize buffer for reuse
