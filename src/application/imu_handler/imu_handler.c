@@ -7,6 +7,7 @@
 #include "canlib.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
+#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
@@ -291,8 +292,8 @@ w_status_t imu_handler_init(void) {
 }
 
 w_status_t imu_handler_get_fresh_meas(imu_handler_ctx_t *ctx, all_sensors_data_t *imu_output) {
-	if (NULL == imu_output) {
-		log_text(10, "IMUHandler", "ERROR: get fresh meas invalid output ptr.");
+	if ((NULL == imu_output) || (NULL == ctx)) {
+		log_text(10, "IMUHandler", "ERROR: invalid ptrs.");
 		return W_INVALID_PARAM;
 	}
 
