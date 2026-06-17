@@ -16,19 +16,17 @@
 static const float64_t M_S2_PER_G = 9.81;
 
 // TODO: double check values with Tristan
-
 // Timeout values for freshness check (in milliseconds)
 static const int32_t ST_IMU_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t AD_GYRO_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t MAG_FRESHNESS_TIMEOUT_MS = 5;
 static const int32_t AD_ACCEL_FRESHNESS_TIMEOUT_MS = 5;
 static const int32_t BARO_FRESHNESS_TIMEOUT_MS = 5;
-static const int32_t ERROR_THRESHOLD = 10;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
-static const uint32_t IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
-static const uint32_t IMU_HANDLER_CAN_TX_RATE =
-	(IMU_HANDLER_CAN_TX_PERIOD_MS / ST_IMU_FRESHNESS_TIMEOUT_MS);
+// static const uint32_t IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
+// static const uint32_t IMU_HANDLER_CAN_TX_RATE =
+// 	(IMU_HANDLER_CAN_TX_PERIOD_MS / ST_IMU_FRESHNESS_TIMEOUT_MS);
 
 // TODO: add calibration matrix for this year
 static const matrix3d_t g_mti_correction_matrix = {
@@ -118,7 +116,7 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 									 &(raw_data->raw_board_gyro),
 									 &is_dead) == W_SUCCESS) {
 		// check if dead
-		if (is_dead) {
+		if (!is_dead) {
 			if ((raw_data->raw_board_accel.timestamp_ms) >
 				(ctx->last_board_imu_timestamp_ms)) { // designed to make sure no overflow
 				board_data->board_imu.is_new = true;
@@ -144,7 +142,7 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 			&(board_data->board_mag.meas), &(raw_data->board_mag), &mag_timestamp_ms, &is_dead) ==
 		W_SUCCESS) {
 		// check if dead
-		if (is_dead) {
+		if (!is_dead) {
 			if (mag_timestamp_ms > (ctx->last_mag_timestamp_ms)) {
 				board_data->board_mag.is_new = true;
 			} else {
@@ -209,7 +207,7 @@ static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t 
 	movella_data_t movella_data = {0}; // Initialize to zero
 	w_status_t status = movella_get_data(&movella_data, 1);
 
-	if ((W_SUCCESS == status) || (movella_data.is_dead)) {
+	if (W_SUCCESS == status) {
 		// Copy data from Movella
 		// Apply orientation correction
 		imu_data->mti_accel.meas =
@@ -220,28 +218,40 @@ static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t 
 		imu_data->mti_baro.meas = movella_data.pres;
 
 		// check freshness
-		if ((movella_data.acc_timestamp_ms) > (ctx->last_mti_acc_timestamp_ms)) {
-			imu_data->mti_accel.is_new = true;
-		} else {
+		if (!(movella_data.is_dead)) {
+			if ((movella_data.acc_timestamp_ms) > (ctx->last_mti_acc_timestamp_ms)) {
+				imu_data->mti_accel.is_new = true;
+			} else {
+				imu_data->mti_accel.is_new = false;
+			}
+
+			if ((movella_data.gyr_timestamp_ms) > (ctx->last_mti_gyr_timestamp_ms)) {
+				imu_data->mti_gyro.is_new = true;
+			} else {
+				imu_data->mti_gyro.is_new = false;
+			}
+
+			if ((movella_data.mag_timestamp_ms) > (ctx->last_mti_mag_timestamp_ms)) {
+				imu_data->mti_mag.is_new = true;
+			} else {
+				imu_data->mti_mag.is_new = false;
+			}
+
+			if ((movella_data.pres_timestamp_ms) > (ctx->last_mti_pres_timestamp_ms)) {
+				imu_data->mti_baro.is_new = true;
+			} else {
+				imu_data->mti_baro.is_new = false;
+			}
+
+		} else { // dead :(
+			log_text(1, "IMUHandler", "WARN: Movella communication failed.");
+
+			// Set is_new flag to indicate IMU failure
 			imu_data->mti_accel.is_new = false;
-		}
-
-		if ((movella_data.gyr_timestamp_ms) > (ctx->last_mti_gyr_timestamp_ms)) {
-			imu_data->mti_gyro.is_new = true;
-		} else {
 			imu_data->mti_gyro.is_new = false;
-		}
-
-		if ((movella_data.mag_timestamp_ms) > (ctx->last_mti_mag_timestamp_ms)) {
-			imu_data->mti_mag.is_new = true;
-		} else {
 			imu_data->mti_mag.is_new = false;
-		}
-
-		if ((movella_data.pres_timestamp_ms) > (ctx->last_mti_pres_timestamp_ms)) {
-			imu_data->mti_baro.is_new = true;
-		} else {
 			imu_data->mti_baro.is_new = false;
+
 		}
 
 		// update timestamps
@@ -252,17 +262,14 @@ static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t 
 
 		imu_handler_state.movella_stats.success_count++;
 	} else {
-		if (W_SUCCESS != status) {
-			log_text(1, "IMUHandler", "WARN: Movella get data read failed.");
-		} else {
-			log_text(1, "IMUHandler", "WARN: Movella communication failed.");
-		}
+		log_text(1, "IMUHandler", "WARN: Movella get data read failed.");
 
 		// Set is_new flag to indicate IMU failure
 		imu_data->mti_accel.is_new = false;
 		imu_data->mti_gyro.is_new = false;
 		imu_data->mti_mag.is_new = false;
 		imu_data->mti_baro.is_new = false;
+
 		imu_handler_state.movella_stats.failure_count++;
 	}
 
@@ -330,10 +337,10 @@ w_status_t imu_handler_get_fresh_meas(imu_handler_ctx_t *ctx, all_sensors_data_t
 
 	// log system-level failures
 	if (W_SUCCESS != movella_status) {
-		log_text(1, "IMUHandler", "WARN: Movella IMU read failed.");
+		log_text(1, "IMUHandler", "WARN: Read and Processing of Movella IMU failed.");
 	}
 	if (W_SUCCESS != board_status) {
-		log_text(1, "IMUHandler", "WARN: Board Sensors read failed.");
+		log_text(1, "IMUHandler", "WARN: Read and Processing of Board Sensors failed.");
 	}
 
 	// TODO: add logging for board meas
