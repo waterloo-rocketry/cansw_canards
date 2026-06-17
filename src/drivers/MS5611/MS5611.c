@@ -198,7 +198,8 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
  * handle struct.
  */
 static w_status_t ms5611_prom_read(void) {
-	uint8_t i, prom_buf[2];
+	uint8_t i;
+	uint8_t prom_buf[2];
 	uint16_t prom_coef[8];
 	w_status_t status = W_SUCCESS;
 
@@ -281,11 +282,20 @@ void ms5611_deinit(void) {
  * (temperature in centidegrees prom_coef, pressure in centimbar)
  */
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
-	uint32_t d1, d2; /* d1 is raw pressure reading, d2 is raw temperature reading */
-	int32_t dt, temp,
-		p; /* dt is temperature difference, temp is compensated temperature, p is pressure */
-	int64_t off, sens; /* prom coefficients for first order */
-	int64_t T2, off2, sens2; /* second-order compensation terms */
+	/* d1 is raw pressure reading, d2 is raw temperature reading */
+	uint32_t d1;
+	uint32_t d2; 
+	/* dt is temperature difference, temp is compensated temperature, p is pressure */
+	int32_t dt;
+	uint32_t temp;
+	uint32_t p; 
+	/* prom coefficients for first order */
+	int64_t off;
+	int64_t sens; 
+	/* second-order compensation terms */
+	int64_t T2;
+	int64_t off2;
+	int64_t sens2; 
 
 	if (NULL == result) {
 		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
