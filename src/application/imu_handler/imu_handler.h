@@ -25,6 +25,22 @@ typedef struct { // all of these should be just directly register values
 	iis2mdc_raw_data_t board_mag;
 } raw_board_meas_t;
 
+typedef struct {
+	// board
+	uint32_t last_board_imu_timestamp_ms;
+	uint32_t last_baro_timestamp_ms;
+	uint32_t last_mag_timestamp_ms;
+
+	uint32_t last_ad_accel_timestamp_ms;
+	uint32_t last_ad_gyro_timestamp_ms;
+
+	uint32_t last_mti_acc_timestamp_ms;
+	uint32_t last_mti_gyr_timestamp_ms;
+	uint32_t last_mti_mag_timestamp_ms;
+	uint32_t last_mti_pres_timestamp_ms;
+
+} imu_handler_ctx_t;
+
 /**
  * @brief Initialize the IMU handler module
  * Must be called before scheduler starts
@@ -40,7 +56,7 @@ w_status_t imu_handler_init(void);
  * @param output pointer to update with the latest data
  * @return Status of the execution
  */
-w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *output);
+w_status_t imu_handler_get_fresh_meas(imu_handler_ctx_t *ctx, all_sensors_data_t *output);
 
 /**
  * @brief Reports the current status of the IMU handler module

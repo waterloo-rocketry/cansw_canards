@@ -29,18 +29,18 @@ typedef struct {
 // Units are as follows: m/s^2, rad/s, Pa, gauss.
 typedef struct {
 	float64_t meas;
-	bool is_dead;
+	bool is_new;
 } navigator_1d_meas_t;
 
 typedef struct {
 	vector3d_t meas;
-	bool is_dead;
+	bool is_new;
 } navigator_3d_meas_t;
 
 typedef struct {
 	vector3d_t accel;
 	vector3d_t gyro;
-	bool is_dead;
+	bool is_new;
 } navigator_board_imu_meas_t;
 
 /**
@@ -56,11 +56,10 @@ typedef struct {
  * @brief MTi-630 (Movella) measurements
  */
 typedef struct {
-	vector3d_t mti_accel; // m/s^2
-	vector3d_t mti_gyro; // rad/s
-	float64_t mti_baro; // Pa
-	vector3d_t mti_mag; // gauss
-	bool is_dead;
+	navigator_3d_meas_t mti_accel; // m/s^2
+	navigator_3d_meas_t mti_gyro; // rad/s
+	navigator_1d_meas_t mti_baro; // Pa
+	navigator_3d_meas_t mti_mag; // gauss
 } navigator_mti_meas_t;
 
 /**

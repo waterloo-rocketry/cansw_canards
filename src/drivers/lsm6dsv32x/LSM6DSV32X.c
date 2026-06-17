@@ -35,6 +35,7 @@ typedef struct {
 	uint32_t timestamp_ms[2];
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
+	bool is_dead;
 
 } lsm6dsv32x_ctx_t;
 
@@ -199,6 +200,7 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	}
 
 	w_status_t status = W_SUCCESS;
+	lsm6dsv32x_ctx.is_dead = false;
 
 	// set the bus to occupied meanining that data is
 	// actively being streamed via DMA into the Buffer from the IMU
@@ -219,6 +221,7 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	if (hal_status != HAL_OK) {
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
 		status |= W_FAILURE;
+		lsm6dsv32x_ctx.is_dead = true;
 	}
 
 	return status;
@@ -241,11 +244,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * @param[out] gyro_data   Processed gyroscope data (deg/s)
  * @param[out] raw_acc     Raw accelerometer data
  * @param[out] raw_gyro    Raw gyroscope data
+ * @param[out] is_dead Pointer to the state of the sensor
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
 										lsm6dsv32x_raw_imu_data_t *raw_acc,
-										lsm6dsv32x_raw_imu_data_t *raw_gyro) {
+										lsm6dsv32x_raw_imu_data_t *raw_gyro, bool *is_dead) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
@@ -255,6 +259,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		// enter a critical section while copying the data
 		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER], CTX_BUFFER_SIZE);
 		raw_acc->timestamp_ms = lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER];
+		*is_dead = lsm6dsv32x_ctx.is_dead;
 
 		taskEXIT_CRITICAL();
 

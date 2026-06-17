@@ -29,8 +29,10 @@ w_status_t iis2mdc_init(void);
  * @param[out] data Pointer to store the converted magnetic field values in gauss
  * @param[out] raw_data Pointer to store the raw unsigned 16-bit counts
  * @param[out] timestamp_ms Pointer to store the read timestamp (ms since startup)
+ * @param[out] is_dead Pointer to the state of the sensor
  * @return W_SUCCESS on successful read and conversion of most recent sample
  */
-w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, uint32_t *timestamp_ms);
+w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, uint32_t *timestamp_ms,
+							bool *is_dead);
 
 #endif // IIS2MDC_H
