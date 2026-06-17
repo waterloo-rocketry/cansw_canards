@@ -4,6 +4,7 @@
 #include "common/gnc/gnc_types.h"
 #include "drivers/altimu-10/altimu-10.h"
 
+#include "application/health_checks/health_checks.h"
 #include "rocketlib/include/common.h"
 
 /**
@@ -39,6 +40,6 @@ w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *output);
  * @details Logs initialization status, sampling statistics, and error conditions
  * for both IMUs being managed by the handler
  */
-uint32_t imu_handler_get_status(void);
+health_status_t imu_handler_get_status(void);
 
 #endif // IMU_HANDLER_H

@@ -48,7 +48,7 @@ typedef enum {
 typedef enum {
 	MS5611_CONV_IDLE = 0,
 	MS5611_CONV_TEMP,
-	MS5611_CONV_PRESSURE,
+	MS5611_CONV_PRESSURE
 } ms5611_conv_state_t;
 
 typedef struct {
@@ -79,9 +79,11 @@ typedef struct {
 
 /* Conversion time in microseconds - max values from datasheet for safety */
 static const uint32_t CONV_TIME_US[] = {
-	600, /* OSR 256  — datasheet max 0.60ms */  // this one is picked for tempreture
+	600,
+	/* OSR 256  — datasheet max 0.60ms */ // this one is picked for tempreture
 	1170, /* OSR 512  — datasheet max 1.17ms */
-	2280, /* OSR 1024 — datasheet max 2.28ms */ // this one is picked for pressure
+	2280,
+	/* OSR 1024 — datasheet max 2.28ms */ // this one is picked for pressure
 	4540, /* OSR 2048 — datasheet max 4.54ms */
 	9040, /* OSR 4096 — datasheet max 9.04ms */
 };
@@ -109,6 +111,10 @@ static const int16_t second_comp_temp_threshold_centi_degrees =
 static const int16_t second_comp_extreme_temp_threshold_centi_degrees =
 	-1500; /* temperature (in centidegrees) below which additional extreme cold compensation is
 			  applied */
+
+static uint32_t conv_us_to_ms(uint32_t time_us) {
+	return time_us / 1000;
+}
 
 // modify this struct to toggle barometer settings
 static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom read
@@ -202,13 +208,14 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
  * handle struct.
  */
 static w_status_t ms5611_prom_read(void) {
-	uint8_t i, prom_buf[2];
+	uint8_t i;
+	uint8_t prom_buf[2];
 	uint16_t prom_coef[8];
 	w_status_t status = W_SUCCESS;
 
 	// copy into a local var first to avoid modifying the handle with corrupt data on read failure
 	for (i = 0; i < 8; i++) {
-		status = baro_read(MS5611_CMD_PROM_READ_BASE + i * 2, prom_buf, 2);
+		status = baro_read(MS5611_CMD_PROM_READ_BASE + (i * 2), prom_buf, 2);
 		if (status != W_SUCCESS) {
 			log_text(1, "ms5611", "ERROR: failed to read PROM coefficient C%u", i);
 			return W_FAILURE;
@@ -243,8 +250,7 @@ static w_status_t ms5611_prom_read(void) {
 /* Applies first and second-order compensation to d1 using the stored d2_raw, and writes the result
  * into the cache. Also sets conv_state back to IDLE. */
 static void apply_compensation(uint32_t d1) {
-	int32_t dt =
-		(int32_t)handle.d2_raw - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) << 8);
+	int32_t dt = (int32_t)handle.d2_raw - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) << 8);
 	int32_t temp = second_comp_temp_threshold_centi_degrees +
 				   (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
 	int64_t off = (((int64_t)handle.prom_coef[MS5611_COEFF_OFF]) << 16) +
@@ -266,10 +272,9 @@ static void apply_compensation(uint32_t d1) {
 		if (temp < second_comp_extreme_temp_threshold_centi_degrees) {
 			off2 += 7 * ((int64_t)(temp - second_comp_extreme_temp_threshold_centi_degrees) *
 						 (temp - second_comp_extreme_temp_threshold_centi_degrees));
-			sens2 +=
-				(11 * ((int64_t)(temp - second_comp_extreme_temp_threshold_centi_degrees) *
-					   (temp - second_comp_extreme_temp_threshold_centi_degrees))) >>
-				1;
+			sens2 += (11 * ((int64_t)(temp - second_comp_extreme_temp_threshold_centi_degrees) *
+							(temp - second_comp_extreme_temp_threshold_centi_degrees))) >>
+					 1;
 		}
 
 		temp -= (int32_t)T2;
@@ -286,7 +291,8 @@ static void apply_compensation(uint32_t d1) {
 }
 
 /**
- * @brief Initialized the sensor by resetting it, reading calibration coeff from PROM, and cache baro data so the getter always returns valid data
+ * @brief Initialized the sensor by resetting it, reading calibration coeff from PROM, and cache
+ * baro data so the getter always returns valid data
  * @note blocks for 7 ms
  */
 w_status_t ms5611_init(void) {
@@ -309,7 +315,8 @@ w_status_t ms5611_init(void) {
 	handle.d2_raw = 0;
 	handle.has_valid_result = false;
 
-	/* Prime the result cache with one blocking measurement so the getter always returns valid data */
+	/* Prime the result cache with one blocking measurement so the getter always returns valid data
+	 */
 	if (W_SUCCESS != baro_write_cmd(D2_CMD[handle.osr_temperature])) {
 		log_text(1, "ms5611", "ERROR: initialization failed during temperature conversion");
 		return W_FAILURE;
@@ -342,7 +349,7 @@ w_status_t ms5611_init(void) {
 		return W_FAILURE;
 	}
 
-	handle.cached_timestamp_ms += CONV_TIME_US[handle.osr_pressure] / 2000;
+	handle.cached_timestamp_ms += conv_us_to_ms(CONV_TIME_US[handle.osr_pressure]) / 2;
 	apply_compensation(d1_prime);
 
 	handle.initialized = true;
@@ -376,6 +383,21 @@ void ms5611_deinit(void) {
  * (temperature in centidegrees, pressure in centimbar)
  */
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
+	/* d1 is raw pressure reading, d2 is raw temperature reading */
+	uint32_t d1;
+	uint32_t d2;
+	/* dt is temperature difference, temp is compensated temperature, p is pressure */
+	int32_t dt;
+	uint32_t temp;
+	uint32_t p;
+	/* prom coefficients for first order */
+	int64_t off;
+	int64_t sens;
+	/* second-order compensation terms */
+	int64_t T2;
+	int64_t off2;
+	int64_t sens2;
+
 	if (NULL == result || NULL == timestamp_ms) {
 		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
 		return W_INVALID_PARAM;
@@ -387,7 +409,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	}
 
 	switch (handle.conv_state) {
-		case MS5611_CONV_IDLE:{ // get temperature cmd sent
+		case MS5611_CONV_IDLE: { // get temperature cmd sent
 			if (W_SUCCESS != baro_write_cmd(D2_CMD[handle.osr_temperature])) {
 				log_text(1, "ms5611", "ERROR: failed to write temperature conversion command");
 				return W_IO_ERROR;
@@ -399,7 +421,8 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 			break;
 		}
 
-		case MS5611_CONV_TEMP: { // temp adc conv - need at least 1ms after the first call. Get pressure cmd sent and time stamp acquired 
+		case MS5611_CONV_TEMP: { // temp adc conv - need at least 1ms after the first call. Get
+								 // pressure cmd sent and time stamp acquired
 			TickType_t required =
 				pdMS_TO_TICKS((CONV_TIME_US[handle.osr_temperature] + 999) / 1000); // 1ms
 
@@ -433,7 +456,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 			break;
 		}
 
-		case MS5611_CONV_PRESSURE: { // pressure adc conv - at least 3ms after the second call. 
+		case MS5611_CONV_PRESSURE: { // pressure adc conv - at least 3ms after the second call.
 			TickType_t required =
 				pdMS_TO_TICKS((CONV_TIME_US[handle.osr_pressure] + 999) / 1000); // 3 ms
 
@@ -449,17 +472,18 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 				return W_IO_ERROR;
 			}
 
-			apply_compensation(d1); // new pressure and temp is re-assigned here 
-			
+			apply_compensation(d1); // new pressure and temp is re-assigned here
+
 			handle.cached_timestamp_ms = handle.temp_cached_timestamp_ms;
 			handle.conv_state = MS5611_CONV_IDLE;
-			
+
 			break;
 		}
 
-		default:
+		default: {
 			handle.conv_state = MS5611_CONV_IDLE;
 			break;
+		}
 	}
 
 	*result = handle.cached_result;

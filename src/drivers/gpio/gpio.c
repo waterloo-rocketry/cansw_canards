@@ -49,6 +49,17 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 							.pin = EN_EXT_5V_Pin,
 							.access_mutex = NULL},
 	[GPIO_PIN_PWR_EN] = {.port = PWR_EN_GPIO_Port, .pin = PWR_EN_Pin, .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST1] = {.port = ADXRS_ST1_GPIO_Port,
+							   .pin = ADXRS_ST1_Pin,
+							   .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST2] = {.port = ADXRS_ST2_GPIO_Port,
+							   .pin = ADXRS_ST2_Pin,
+							   .access_mutex = NULL},
+	[GPIO_PIN_ADS1219_INT] = {.port = ADC_INT_GPIO_Port, .pin = ADC_INT_Pin, .access_mutex = NULL},
+	[GPIO_PIN_ADXL380_INT0] = {.port = ADXL_INT_GPIO_Port,
+							   .pin = ADXL_INT_Pin,
+							   .access_mutex = NULL},
+
 };
 
 // Public ---------------------------------------------------------------------
@@ -157,7 +168,7 @@ w_status_t gpio_toggle(gpio_pin_t pin, uint32_t timeout) {
  * Reports the current status of the GPIO module
  * @return Status code indicating success or failure
  */
-uint32_t gpio_get_status(void) {
+health_status_t gpio_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log operation statistics
@@ -168,5 +179,7 @@ uint32_t gpio_get_status(void) {
 			 gpio_status.accesses,
 			 gpio_status.access_fails);
 
-	return status_bitfield;
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_GPIO, .error_bitfield = 0};
+
+	return status;
 }

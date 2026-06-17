@@ -17,7 +17,8 @@
 #include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
-#include "drivers/MS5611/MS5611.h"
+#include "drivers/ad_breakout_board/ADXL380.h"
+#include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
@@ -60,37 +61,6 @@ const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
-static void ms5611_frequency_test(void) {
-	w_status_t status = ms5611_init();
-	if (status != W_SUCCESS) {
-		log_text(10, "ms5611_test", "Failed to initialize MS5611");
-		return;
-	}
-
-	ms5611_raw_result_t result = {0};
-	uint32_t read_count = 0;
-	TickType_t xLastWakeTime = xTaskGetTickCount();
-	const TickType_t period_ticks = pdMS_TO_TICKS(5); // 5ms for 200Hz
-
-	while (1) {
-		uint32_t timestamp_ms;
-		if (ms5611_get_raw_pressure(&result, &timestamp_ms) == W_SUCCESS) {
-			read_count++;
-			log_text(1,
-					 "ms5611_test",
-					 "Read %lu: P=%ld mbar, T=%ld C, Timestamp: %lu ms",
-					 read_count,
-					 result.pressure_centimbar / 100,
-					 result.temperature_centideg / 100,
-					 timestamp_ms);
-		} else {
-			log_text(1, "ms5611_test", "Read failed");
-		}
-
-		vTaskDelayUntil(&xLastWakeTime, period_ticks);
-	}
-}
-
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -119,7 +89,8 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
-	// status |= adc_init(&hadc1);	status |= estimator_init();
+	status |= adc_init(&hadc1, &hadc2, &hadc3);
+	status |= estimator_init();
 	// status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
@@ -127,7 +98,9 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
+	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
+	status |= adxrs649_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -181,48 +154,14 @@ static void system_init_task(void *arg) {
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
-	ms5611_frequency_test();
-
 	// its blinky now
 	while (1) {
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(100);
+		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(100);
+		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(100);
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
-		log_text(1, "ms5611_test", "random stuffrandom stuffrandom stuffrandom stuffrandom stuffrandom stuff");
+		vTaskDelay(500);
 	}
 }
 
