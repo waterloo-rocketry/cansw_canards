@@ -11,6 +11,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
@@ -93,14 +94,15 @@ static void system_init_task(void *arg) {
 	// status |= adc_init(&hadc1, &hadc2, &hadc3);
 	// status |= estimator_init();
 	// status |= health_check_init();
-	// status |= movella_init();
-	// status |= flight_phase_init();
-	// status |= imu_handler_init();
-	// status |= can_handler_init(&hfdcan3);
-	// status |= controller_init();
-	// status |= fsm_init();
-	// status |= lsm6dsv32x_init();
-	// status |= adxrs649_init();
+	status |= movella_init();
+	status |= flight_phase_init();
+	status |= imu_handler_init();
+	status |= can_handler_init(&hfdcan3);
+	status |= controller_init();
+	status |= fsm_init();
+	status |= adxl380_init();
+	status |= lsm6dsv32x_init();
+	status |= adxrs649_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
