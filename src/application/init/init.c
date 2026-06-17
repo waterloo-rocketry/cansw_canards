@@ -156,48 +156,61 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// ----------------
-	static uint32_t last_tick = 0;
-	uint32_t write_count = 0;
+    gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+    gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
+    gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0);
 
-	memset(testbuf, 'A', sizeof(testbuf));
+    // note gpios are active low
+    // EXPECTED BEHAVIOUR: blue is high most of the time then blinks low while writing to sd
+    // card. red led turns high if sd card fails, low if it succeeds
 
-	w_status_t ret = sd_card_file_create("testuwu.txt");
+uint32_t write_count = 0;
 
-	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
-	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
-	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0);
+memset(testbuf, 'A', sizeof(testbuf));
+testbuf[sizeof(testbuf) - 3] = '\r';
+testbuf[sizeof(testbuf) - 2] = '\n';
+testbuf[sizeof(testbuf) - 1] = '\0';
 
-	// its blinky now
-	while (1) {
-		uint32_t diff = HAL_GetTick() - last_tick;
+w_status_t ret = sd_card_file_create("testuwu.txt");
 
-		snprintf_((char *)testbuf,
-				  sizeof(testbuf),
-				  "\r\n%lu, %lums\n\r",
-				  (unsigned long)write_count++,
-				  (unsigned long)diff);
+while (1) {
+    
+    uint32_t ret2;
+    
+    gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+    
+    uint32_t start_tick = HAL_GetTick();
 
-		last_tick = HAL_GetTick();
+    w_status_t write_status =
+        sd_card_file_write("testuwu.txt",
+                           &testbuf[0],
+                           65536,
+                           true,
+                           &ret2);
 
-		// note gpios are active low
-		// EXPECTED BEHAVIOUR: blue is high most of the time then blinks low while writing to sd
-		// card. red led turns high if sd card fails, low if it succeeds. green always blinkying at
-		// 5 ms.
+    uint32_t end_tick = HAL_GetTick();
+    uint32_t write_duration_ms = end_tick - start_tick;
 
-		uint32_t ret2;
-		gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
-		if (sd_card_file_write("testuwu.txt", &testbuf[0], 65536, true, &ret2) != W_SUCCESS) {
-			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
-		} else {
-			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
-		}
-		gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
+    if (write_status != W_SUCCESS) {
+        gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
+    } else {
+        gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
+    }
 
-		// gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(5);
+    gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
 
-		// ---------------
-	}
+    snprintf_((char *)testbuf,
+              sizeof(testbuf),
+              "\r\ncnt:%lu now:%lums write:%lums\r\n",
+              (unsigned long)write_count++,
+              (unsigned long)end_tick,
+              (unsigned long)write_duration_ms);
+
+    vTaskDelay(5);
+}
+
+
+//--------
 }
 
 w_status_t init_tasks(void) {
