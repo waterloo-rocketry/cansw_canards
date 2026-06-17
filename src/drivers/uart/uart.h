@@ -8,6 +8,7 @@
 #define UART_H
 
 #include "FreeRTOS.h"
+#include "application/health_checks/health_checks.h"
 #include "queue.h"
 #include "rocketlib/include/common.h"
 #include "semphr.h"
@@ -91,6 +92,6 @@ w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
  * @details Logs the initialization status, operation statistics and error counters for all UART
  * channels in the system
  */
-uint32_t uart_get_status(void);
+health_status_t uart_get_status(void);
 
 #endif // UART_H

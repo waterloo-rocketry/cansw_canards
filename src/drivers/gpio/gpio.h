@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
+
 #include "rocketlib/include/common.h"
 
 /**
@@ -33,6 +35,7 @@ typedef enum {
 	GPIO_PIN_ADXRS649_ST1,
 	GPIO_PIN_ADXRS649_ST2,
 	GPIO_PIN_ADS1219_INT,
+	GPIO_PIN_ADXL380_INT0,
 	GPIO_PIN_COUNT // Enum max value
 } gpio_pin_t;
 
@@ -62,6 +65,6 @@ w_status_t gpio_toggle(gpio_pin_t pin, uint32_t timeout);
  * Reports the current status of the GPIO module
  * @return CAN board status bitfield
  */
-uint32_t gpio_get_status(void);
+health_status_t gpio_get_status(void);
 
 #endif // GPIO_H

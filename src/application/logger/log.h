@@ -4,6 +4,7 @@
 #include "rocketlib/include/common.h"
 #include <stdint.h>
 // Include headers for structs used in log_data_container_t
+#include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
 #include "common/gnc/gnc_types.h"
 
@@ -265,6 +266,6 @@ void log_task(void *argument);
  *
  * @return CAN board status bitfield
  */
-uint32_t logger_get_status(void);
+health_status_t logger_get_status(void);
 
 #endif

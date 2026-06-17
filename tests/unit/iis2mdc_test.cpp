@@ -54,9 +54,30 @@ static w_status_t i2c_read_reg_custom(i2c_bus_t bus, uint8_t dev_addr, uint8_t r
     } else if (reg == 0x67) { 
         *data = 0x08; 
     } else if (reg == (0x68 | 0x80)) { 
-        int16_t val = self_test_enabled ? 200 : 100; 
+        int16_t val = self_test_enabled ? (300/1.5) : (150/1.5); 
+        // field value per axis. Increases field strength during self test, then calculates delta between self test and normal value.
+        // if the delta falls within 15-500mG, the test passes
         
-        
+        data[0] = val & 0xFF;        
+        data[1] = (val >> 8) & 0xFF; 
+        data[2] = val & 0xFF;        
+        data[3] = (val >> 8) & 0xFF; 
+        data[4] = val & 0xFF;        
+        data[5] = (val >> 8) & 0xFF; 
+    }
+    return W_SUCCESS;
+}
+
+static w_status_t i2c_read_reg_self_test_fail_custom(i2c_bus_t bus, uint8_t dev_addr, uint8_t reg, uint8_t *data, uint8_t len) {
+    (void)bus;
+    (void)dev_addr;
+    (void)len;
+    if (reg == 0x4F) { 
+        *data = 0x40;
+    } else if (reg == 0x67) { 
+        *data = 0x08; 
+    } else if (reg == (0x68 | 0x80)) { 
+        int16_t val = 150/1.5; // sets same value for self test and normal, making the delta 0 and fails test
         data[0] = val & 0xFF;        
         data[1] = (val >> 8) & 0xFF; 
         data[2] = val & 0xFF;        
@@ -100,21 +121,7 @@ TEST_F(IIS2MDCTest, InitFail_WrongWhoAmI) {
 }
 
 TEST_F(IIS2MDCTest, InitFail_SelfTestDeltaTooSmall) {
-    // return same field value for self test to fail
-    i2c_read_reg_fake.custom_fake = [](i2c_bus_t bus, uint8_t dev_addr, uint8_t reg, uint8_t *data, uint8_t len) -> w_status_t {
-        (void)bus;
-        (void)dev_addr;
-        (void)len;
-        if (reg == 0x4F) *data = 0x40;
-        else if (reg == 0x67) *data = 0x08;
-        else if (reg == (0x68 | 0x80)) {
-            int16_t val = 100; 
-            data[0] = val & 0xFF; data[1] = (val >> 8) & 0xFF;
-            data[2] = val & 0xFF; data[3] = (val >> 8) & 0xFF;
-            data[4] = val & 0xFF; data[5] = (val >> 8) & 0xFF;
-        }
-        return W_SUCCESS;
-    };
+    i2c_read_reg_fake.custom_fake = i2c_read_reg_self_test_fail_custom;
     
     w_status_t status = iis2mdc_init();
     EXPECT_EQ(status, W_FAILURE);
