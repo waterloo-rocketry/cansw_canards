@@ -1,6 +1,8 @@
 #include <math.h>
+#include <string.h>
 
 #include "FreeRTOS.h"
+#include "i2c.h" // for hi2c4
 #include "task.h"
 
 #include "application/logger/log.h"
@@ -14,9 +16,6 @@ static const uint8_t IIS2MDC_I2C_ADDR = 0x1E;
 
 // HAL takes the 8-bit left shifted address for HAL_I2C_Mem_Read_DMA calls.
 static const uint16_t IIS2MDC_HAL_ADDR = (uint16_t)(IIS2MDC_I2C_ADDR << 1);
-
-// external definition of hi2c for i2c bus 4;
-extern I2C_HandleTypeDef hi2c4;
 
 // Register addresses
 // TODO: Calibration needs to be done in a magnetic field to get offset values written into the
@@ -74,10 +73,10 @@ static uint8_t iis2mdc_dma_buf[6];
 // Guards against starting a new DMA read while one is still in progress, cleared on DMA completion
 static volatile bool iis2mdc_dma_busy = false;
 
-// cache for newest data sample, updated by the DMA completion handler
+// cache for newest data sample, updated by the DMA completion handler.
+// Stores raw bytes only, conversion happens in iis2mdc_get_data
 typedef struct {
-	vector3d_t data; // converted field, gauss
-	iis2mdc_raw_data_t raw; // raw register counts
+	uint8_t raw_buf[6]; // raw bytes copied from the DMA buffer
 	uint32_t timestamp_ms; // when this sample was published
 	bool valid; // true once at least one sample has been cached
 } iis2mdc_cache_t;
@@ -313,10 +312,9 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
 }
 
 /**
- * @brief I2C DMA completion, converts raw bytes and sends to the cache.
- * @note Registered on hi2c4 via HAL_I2C_RegisterCallback in iis2mdc_init. All byte-combining,
- *		 sign interpretation, and scaling to gauss happen here so that iis2mdc_get_data does not
- * block.
+ * @brief I2C DMA completion, copies raw bytes and timestamp into the cache.
+ * @note Registered on hi2c4 via HAL_I2C_RegisterCallback in iis2mdc_init. Byte-combining,
+ *		 sign interpretation, and scaling to gauss are deferred to iis2mdc_get_data
  */
 static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 	if (hi2c != &hi2c4) {
@@ -328,7 +326,7 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 		return;
 	}
 
-	iis2mdc_convert_sample(iis2mdc_dma_buf, &iis2mdc_cache.raw, &iis2mdc_cache.data);
+	memcpy(iis2mdc_cache.raw_buf, iis2mdc_dma_buf, sizeof(iis2mdc_cache.raw_buf));
 	iis2mdc_cache.timestamp_ms = timestamp_ms;
 	iis2mdc_cache.valid = true;
 
@@ -374,13 +372,6 @@ w_status_t iis2mdc_init(void) {
 	return W_SUCCESS;
 }
 
-// with BDU enabled (CFG_REG_C) data corruption per-axis is avoided but it is still possible for
-// cross-axis data corruption. In the future async implementation using the interrupt pin, this
-// should not be a problem.
-
-// In the current design scope using synchronous polling reads, since the polling rate is 200hz and
-// the maximum ODR of the mag is 100hz, stale data is returned if no new data is available instead
-// of returning timeout or failure.
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 							uint32_t *timestamp_ms) {
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {
@@ -393,11 +384,13 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 		return W_IO_ERROR;
 	}
 
+	uint8_t local_buf[6];
 	taskENTER_CRITICAL();
-	*data = iis2mdc_cache.data;
-	*raw_data = iis2mdc_cache.raw;
+	memcpy(local_buf, iis2mdc_cache.raw_buf, sizeof(local_buf));
 	*timestamp_ms = iis2mdc_cache.timestamp_ms;
 	taskEXIT_CRITICAL();
+
+	iis2mdc_convert_sample(local_buf, raw_data, data);
 
 	return W_SUCCESS;
 }
