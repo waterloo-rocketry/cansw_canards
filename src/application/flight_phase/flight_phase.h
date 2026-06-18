@@ -28,7 +28,7 @@ typedef enum {
 typedef struct {
 	uint32_t launch_timestamp_ms;
 	uint32_t act_allowed_timestamp_ms;
-	uint8_t num_consec_detections;
+	uint8_t num_consec_detection;
 } flight_phase_ctx_t;
 
 /**
