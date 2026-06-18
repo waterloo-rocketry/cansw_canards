@@ -26,15 +26,14 @@ typedef enum {
 
 // struct to hold task context
 typedef struct {
-	navigator_1d_meas_t gyro_dual_buffer[2];
-	navigator_3d_meas_t accel_dual_buffer[2];
-	uint32_t timestamp_ms[2][2]; // not becasue it's not atomic but each repersent each buffer
+	sensor_1d_meas_t gyro_dual_buffer[2];
+	sensor_3d_meas_t accel_dual_buffer[2];
 } ad_task_ctx_t;
 
 static const uint8_t AD_BREAKOUT_BOARD_PERIOD_MS = 2;
-static const size_t AD_GYRO_MEASUREMENT_SIZE = sizeof(navigator_1d_meas_t);
+static const size_t AD_GYRO_MEASUREMENT_SIZE = sizeof(sensor_1d_meas_t);
 static const size_t AD_GYRO_RAW_MEASUREMENT_SIZE = sizeof(int32_t);
-static const size_t AD_ACCEL_MEASUREMENT_SIZE = sizeof(navigator_3d_meas_t);
+static const size_t AD_ACCEL_MEASUREMENT_SIZE = sizeof(sensor_3d_meas_t);
 static const size_t AD_ACCEL_RAW_MEASUREMENT_SIZE = sizeof(adxl380_raw_accel_data_t);
 
 static ad_task_ctx_t g_task_ctx = {};
@@ -86,7 +85,7 @@ void ad_breakout_board_task(void *argument) {
 
 		// if new gyro data update the timestamp
 		if (update_gyro_data) {
-			g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_GYRO_INDEX] = current_time_ms;
+			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].timestamp_ms = current_time_ms;
 		}
 
 		// assume gyro not updated
@@ -110,7 +109,7 @@ void ad_breakout_board_task(void *argument) {
 
 		// if new gyro data update the timestamp
 		if (update_accel_data) {
-			g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_ACCEL_INDEX] = current_time_ms;
+			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].timestamp_ms = current_time_ms;
 		}
 
 		taskENTER_CRITICAL();
@@ -119,8 +118,6 @@ void ad_breakout_board_task(void *argument) {
 			memcpy(&(g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER]),
 				   &(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER]),
 				   AD_GYRO_MEASUREMENT_SIZE);
-			g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_GYRO_INDEX] =
-				g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_GYRO_INDEX];
 		}
 
 		// Accelerometer
@@ -128,8 +125,6 @@ void ad_breakout_board_task(void *argument) {
 			memcpy(&(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]),
 				   &(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER]),
 				   AD_ACCEL_MEASUREMENT_SIZE);
-			g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_ACCEL_INDEX] =
-				g_task_ctx.timestamp_ms[AD_WRITE_BUFFER][AD_ACCEL_INDEX];
 		}
 		taskEXIT_CRITICAL();
 
@@ -148,16 +143,11 @@ void ad_breakout_board_task(void *argument) {
  * @brief to read both the accelerometer and gyro data
  * @param p_gyro_data this is a pointer to converted gyro data
  * @param p_accel_data pointer to state of converted accel data
- * @param p_gyro_timestamp_ms the the timestamp at which the data was collected for gyro
- * @param p_accel_timestamp_ms the the timestamp at which the data was collected for accel
  * @return the status of getting data
  */
-w_status_t ad_breakout_board_get_data(navigator_1d_meas_t *p_gyro_data,
-									  navigator_3d_meas_t *p_accel_data,
-									  uint32_t *p_gyro_timestamp_ms,
-									  uint32_t *p_accel_timestamp_ms) {
-	if ((NULL == p_gyro_data) || (NULL == p_accel_data) || (NULL == p_gyro_timestamp_ms) ||
-		(NULL == p_accel_timestamp_ms)) {
+w_status_t ad_breakout_board_get_data(sensor_1d_meas_t *p_gyro_data,
+									  sensor_3d_meas_t *p_accel_data) {
+	if ((NULL == p_gyro_data) || (NULL == p_accel_data)) {
 		log_text(0, "AD BREAKBOARD TASK", "ERROR: Invalid return ptrs.");
 		return W_INVALID_PARAM;
 	}
@@ -165,9 +155,6 @@ w_status_t ad_breakout_board_get_data(navigator_1d_meas_t *p_gyro_data,
 	memcpy(p_gyro_data, &(g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER]), AD_GYRO_MEASUREMENT_SIZE);
 	memcpy(
 		p_accel_data, &(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]), AD_ACCEL_MEASUREMENT_SIZE);
-
-	*p_gyro_timestamp_ms = g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_GYRO_INDEX];
-	*p_accel_timestamp_ms = g_task_ctx.timestamp_ms[AD_READ_BUFFER][AD_ACCEL_INDEX];
 	taskEXIT_CRITICAL();
 
 	return W_SUCCESS;
