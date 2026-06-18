@@ -18,10 +18,13 @@ static const float64_t M_S2_PER_G = 9.81;
 // TODO: double check values with Tristan
 // Timeout values for freshness check (in milliseconds)
 static const int32_t ST_IMU_FRESHNESS_TIMEOUT_MS = 2;
+static const int32_t AD_ACCEL_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t AD_GYRO_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t MAG_FRESHNESS_TIMEOUT_MS = 5;
-static const int32_t AD_ACCEL_FRESHNESS_TIMEOUT_MS = 5;
 static const int32_t BARO_FRESHNESS_TIMEOUT_MS = 5;
+
+// TODO: consider splitting to each sensor since the data is coming seperately
+static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 5;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 // static const uint32_t IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
@@ -100,13 +103,15 @@ static imu_handler_state_t imu_handler_state = {0};
 
 /**
  * @brief Read data from the board
+ * @param ctx pointer to the ctx storing the previously updated times for the sensors
  * @param board_data Pointer to store the converted data
  * @param raw_data Pointer to store the raw data
- * @param curr_timestamp_ms the current time stamp for freshness calculations
+ * @param curr_timestamp_ms the current time stamp for freshness calculations TODO
  * @return Status of the read operation
  */
 static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t *board_data,
 								  raw_board_meas_t *raw_data, const uint32_t curr_timestamp_ms) {
+	(void)curr_timestamp_ms; // will be used when use the minimum update rate to determine deadness
 	bool is_dead = true;
 
 	// Read accelerometer and gyro data
@@ -199,15 +204,18 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 
 /**
  * @brief Read data from the Movella MTi-630 sensor
+ * @param ctx pointer to the ctx storing the previously updated times for the sensors
  * @param imu_data Pointer to store the IMU data
+ * @param curr_timestamp_ms the current time stamp for freshness calculations TODO
  * @return Status of the read operation
  */
-static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t *imu_data) {
+static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t *imu_data,
+								   const uint32_t curr_timestamp_ms) {
+	(void)curr_timestamp_ms; // will be used when use the minimum update rate to determine deadness
 	// Read all data from Movella in one call
 	movella_data_t movella_data = {0}; // Initialize to zero
-	w_status_t status = movella_get_data(&movella_data, 1);
 
-	if (W_SUCCESS == status) {
+	if (movella_get_data(&movella_data, 1) == W_SUCCESS) {
 		// Copy data from Movella
 		// Apply orientation correction
 		imu_data->mti_accel.meas =
@@ -251,7 +259,6 @@ static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t 
 			imu_data->mti_gyro.is_new = false;
 			imu_data->mti_mag.is_new = false;
 			imu_data->mti_baro.is_new = false;
-
 		}
 
 		// update timestamps
@@ -273,7 +280,12 @@ static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t 
 		imu_handler_state.movella_stats.failure_count++;
 	}
 
-	return status;
+	// if at least one sensor updated then it's successful
+	if ((imu_data->mti_accel.is_new) || (imu_data->mti_gyro.is_new) || (imu_data->mti_mag.is_new) ||
+		(imu_data->mti_baro.is_new)) {
+		return W_SUCCESS;
+	}
+	return W_FAILURE;
 }
 
 /**
@@ -325,14 +337,18 @@ w_status_t imu_handler_get_fresh_meas(imu_handler_ctx_t *ctx, all_sensors_data_t
 	raw_board_meas_t raw_board_meas = {0};
 
 	// Get current timestamp
-	if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
+	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
 		current_time_ms = 0;
+		log_text(1, "IMUHandler", "ERROR: Failed to get current time.");
+
+		return W_FAILURE; // since without a timestamp the system will be unable to correctly judge
+						  // any of the data therefore the results for all sensors are data
 	}
 
 	// Read from all IMUs and sensors
 	w_status_t board_status =
 		read_board_meas(ctx, &(imu_output->board_meas), &raw_board_meas, current_time_ms);
-	w_status_t movella_status = read_movella_imu(ctx, &(imu_output->mti_meas));
+	w_status_t movella_status = read_movella_imu(ctx, &(imu_output->mti_meas), current_time_ms);
 	// TODO: add AD data
 
 	// log system-level failures

@@ -15,17 +15,6 @@
 
 // ---------- SENSOR TYPES ----------
 
-// measurement data from 1 arbitrary imu
-// TODO: remove old impl of `estimator_imu_measurement_t`
-typedef struct {
-	float64_t timestamp_imu_sec;
-	vector3d_t accelerometer; // gravities
-	vector3d_t gyroscope; // rad/sec
-	vector3d_t magnetometer; // mgauss (pololu) or arbitrary units (movella)
-	float32_t barometer; // Pa
-	bool is_dead;
-} estimator_imu_measurement_t;
-
 // Units are as follows: m/s^2, rad/s, Pa, gauss.
 typedef struct {
 	float64_t meas;
@@ -75,10 +64,6 @@ typedef struct {
 	navigator_board_meas_t board_meas;
 	navigator_mti_meas_t mti_meas;
 	navigator_ad_meas_t ad_meas;
-
-	// TODO: remove old impl below
-	estimator_imu_measurement_t movella; // raw movella data
-	estimator_imu_measurement_t pololu; // raw pololu data
 } all_sensors_data_t;
 
 // ---------- NAVIGATOR TYPES ----------

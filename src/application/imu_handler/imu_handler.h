@@ -53,6 +53,7 @@ w_status_t imu_handler_init(void);
  * to avoid delaying the control loop.
  * @note !!! data that exceeds the sensor's freshness requirement is marked as dead !!!
  *
+ * @param ctx pointer to the ctx storing the previously updated times for the sensors
  * @param output pointer to update with the latest data
  * @return Status of the execution
  */
