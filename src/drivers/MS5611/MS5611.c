@@ -88,9 +88,9 @@ static const uint8_t D2_CMD[] = {
 	MS5611_CMD_CONVERT_D2_OSR4096,
 };
 
-static const int16_t second_comp_temp_threshold_centi_degrees =
+static const int32_t second_comp_temp_threshold_centi_degrees =
 	2000; /* temperature (in centidegrees) below which second-order compensation is applied */
-static const int16_t second_comp_extreme_temp_threshold_centi_degrees =
+static const int32_t second_comp_extreme_temp_threshold_centi_degrees =
 	-1500; /* temperature (in centidegrees) below which additional extreme cold compensation is
 			  applied */
 
@@ -284,18 +284,18 @@ void ms5611_deinit(void) {
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
 	/* d1 is raw pressure reading, d2 is raw temperature reading */
 	uint32_t d1;
-	uint32_t d2; 
+	uint32_t d2;
 	/* dt is temperature difference, temp is compensated temperature, p is pressure */
 	int32_t dt;
-	uint32_t temp;
-	uint32_t p; 
+	int32_t temp;
+	uint32_t p;
 	/* prom coefficients for first order */
 	int64_t off;
-	int64_t sens; 
+	int64_t sens;
 	/* second-order compensation terms */
 	int64_t T2;
 	int64_t off2;
-	int64_t sens2; 
+	int64_t sens2;
 
 	if (NULL == result) {
 		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
