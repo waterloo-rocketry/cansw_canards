@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_uart.dir/unit/uart_test.cpp.o CMakeFiles/test_uart.dir/__/src/drivers/uart/uart.c.o -o test_uart  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 

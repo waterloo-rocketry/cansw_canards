@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_ads1219.dir/unit/ads1219_test.cpp.o CMakeFiles/test_ads1219.dir/__/src/drivers/ad_breakout_board/ADS1219.c.o -o test_ads1219  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 

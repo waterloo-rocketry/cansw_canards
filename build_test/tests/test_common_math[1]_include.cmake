@@ -1,0 +1,5 @@
+if(EXISTS "/workspaces/cansw_processor_canards/build_test/tests/test_common_math[1]_tests.cmake")
+  include("/workspaces/cansw_processor_canards/build_test/tests/test_common_math[1]_tests.cmake")
+else()
+  add_test(test_common_math_NOT_BUILT test_common_math_NOT_BUILT)
+endif()

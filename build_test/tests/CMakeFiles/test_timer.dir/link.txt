@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_timer.dir/unit/timer_test.cpp.o CMakeFiles/test_timer.dir/__/src/drivers/timer/timer.c.o -o test_timer  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 

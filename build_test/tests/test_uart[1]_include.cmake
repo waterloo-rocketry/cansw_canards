@@ -1,0 +1,5 @@
+if(EXISTS "/workspaces/cansw_processor_canards/build_test/tests/test_uart[1]_tests.cmake")
+  include("/workspaces/cansw_processor_canards/build_test/tests/test_uart[1]_tests.cmake")
+else()
+  add_test(test_uart_NOT_BUILT test_uart_NOT_BUILT)
+endif()

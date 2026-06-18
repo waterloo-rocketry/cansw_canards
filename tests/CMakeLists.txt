@@ -193,6 +193,7 @@ set(TEST_COMMON_LIBS
     fff           # Fake Function Framework
     mocks         # our mocks
     gtest_main    # GoogleTest
+    gmock_main    # GoogleMock
     CMSISDSP
 )
 

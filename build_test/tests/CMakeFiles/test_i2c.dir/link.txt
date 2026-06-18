@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_i2c.dir/unit/i2c_test.cpp.o CMakeFiles/test_i2c.dir/__/src/drivers/i2c/i2c.c.o -o test_i2c  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 

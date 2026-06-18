@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_lsm6dsv32x.dir/unit/lsm6dsv32x_test.cpp.o CMakeFiles/test_lsm6dsv32x.dir/__/src/drivers/lsm6dsv32x/LSM6DSV32X.c.o -o test_lsm6dsv32x  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 

@@ -1,6 +1,7 @@
 #include "fff.h"
-#include "gtest/gtest.h"
 #include <chrono>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <thread>
 
 extern "C" {
@@ -409,14 +410,14 @@ TEST_F(I2CTest, DeinitSucceeds) {
 	EXPECT_THAT(
 		std::vector<HAL_I2C_CallbackIDTypeDef>(HAL_I2C_UnRegisterCallback_fake.arg1_history,
 											   HAL_I2C_UnRegisterCallback_fake.arg1_history + 4),
-		UnorderedElementsAre(HAL_I2C_MEM_TX_COMPLETE_CB_ID,
-							 HAL_I2C_MEM_RX_COMPLETE_CB_ID,
-							 HAL_I2C_MASTER_TX_COMPLETE_CB_ID,
-							 HAL_I2C_ERROR_CB_ID));
+		testing::UnorderedElementsAre(HAL_I2C_MEM_TX_COMPLETE_CB_ID,
+									  HAL_I2C_MEM_RX_COMPLETE_CB_ID,
+									  HAL_I2C_MASTER_TX_COMPLETE_CB_ID,
+									  HAL_I2C_ERROR_CB_ID));
 
 	// Ensure read/writefunction calls fail
 	uint8_t data[4] = {0xAA};
 	EXPECT_EQ(i2c_read_reg(I2C_BUS_2, 0x50, 0x10, data, sizeof(data)), W_FAILURE);
-	EXPECT_EQ(i2c_write_reg(I2C_BUS_2, 0x50, 0x10, data, sizeof(data), W_FAILURE));
+	EXPECT_EQ(i2c_write_reg(I2C_BUS_2, 0x50, 0x10, data, sizeof(data)), W_FAILURE);
 	EXPECT_EQ(i2c_write_data(I2C_BUS_2, 0x50, data, sizeof(data)), W_FAILURE);
 }

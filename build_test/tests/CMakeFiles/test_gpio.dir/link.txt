@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_gpio.dir/unit/gpio_test.cpp.o CMakeFiles/test_gpio.dir/__/src/drivers/gpio/gpio.c.o -o test_gpio  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 

@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_adxl380.dir/unit/adxl380_test.cpp.o CMakeFiles/test_adxl380.dir/__/src/drivers/ad_breakout_board/ADXL380.c.o -o test_adxl380  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 

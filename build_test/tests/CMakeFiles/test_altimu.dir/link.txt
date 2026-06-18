@@ -1,0 +1,1 @@
+/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_altimu.dir/unit/altimu_test.cpp.o CMakeFiles/test_altimu.dir/__/src/drivers/altimu-10/altimu-10.c.o -o test_altimu  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 
