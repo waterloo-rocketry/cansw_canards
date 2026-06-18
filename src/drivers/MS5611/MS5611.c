@@ -274,7 +274,7 @@ w_status_t ms5611_init(void) {
 
 	if (W_SUCCESS != baro_write_cmd(MS5611_CMD_RESET)) {
 		log_text(1, "ms5611", "ERROR: initialization failed during command reset.");
-		return W_FAILURE;
+		return W_IO_ERROR;
 	}
 
 	vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_TIME_MS)); // 3ms wait time from AN520 datasheet
@@ -434,7 +434,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 		return W_INVALID_PARAM;
 	}
 
-	if (!handle.initialized || NULL == s_data_mutex) {
+	if ((!(handle.initialized))|| (NULL == s_data_mutex)) {
 		return W_FAILURE;
 	}
 
@@ -459,10 +459,11 @@ void ms5611_task(void *argument) {
 	(void)argument;
 
 	ms5611_raw_result_t result;
-	uint32_t timestamp_ms;
+	TickType_t timestamp_ms;
 
 	while (1) {
 		w_status_t status = ms5611_read_raw_pressure(&result, &timestamp_ms);
+		TickType_t xLastWakeTime = xTaskGetTickCount();
 
 		if (pdTRUE == xSemaphoreTake(s_data_mutex, portMAX_DELAY)) {
 			s_latest_status = status;
@@ -473,6 +474,6 @@ void ms5611_task(void *argument) {
 			xSemaphoreGive(s_data_mutex);
 		}
 
-		vTaskDelay(pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
+		vTaskDelayUntil(xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
 	}
 }
