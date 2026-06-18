@@ -453,8 +453,8 @@ TEST_F(MS5611Test, TC05_InitSucceedsWithValidProm) {
     EXPECT_EQ(1u, vTaskDelay_fake.call_count);
 }
 
-/* TC-06 — double init: second successful call must re-initialise cleanly */
-TEST_F(MS5611Test, TC06_DoubleInitSucceeds) {
+/* TC-06 — double init: second fails since already initialized */
+TEST_F(MS5611Test, TC06_DoubleInitCauseFail) {
     i2c_write_data_fake.return_val = W_SUCCESS;
     i2c_read_reg_fake.custom_fake  = fake_prom_valid;
 
@@ -465,7 +465,7 @@ TEST_F(MS5611Test, TC06_DoubleInitSucceeds) {
     i2c_write_data_fake.return_val = W_SUCCESS;
     i2c_read_reg_fake.custom_fake  = fake_prom_valid;
 
-    EXPECT_EQ(W_SUCCESS, ms5611_init());
+    EXPECT_EQ(W_FAILURE, ms5611_init());
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

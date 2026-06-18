@@ -101,6 +101,7 @@ static const int32_t second_comp_temp_threshold_centi_degrees =
 static const int32_t second_comp_extreme_temp_threshold_centi_degrees =
 	-1500; /* temperature (in centidegrees) below which additional extreme cold compensation is
 			  applied */
+static const uint32_t RESET_WAIT_TIME_MS = 3;
 
 static uint32_t conv_us_to_ms(uint32_t time_us) {
 	return time_us / 1000;
@@ -257,7 +258,11 @@ static w_status_t ms5611_prom_read(void) {
  * crc check on the coefficients.
  */
 w_status_t ms5611_init(void) {
-	handle.initialized = false;
+	// make sure can't reinitialize the driver
+	if (handle.initialized) {
+		log_text(1, "ms5611", "ERROR: attempted to reinitialize driver.");
+		return W_FAILURE;
+	}
 
 	if (NULL == s_data_mutex) {
 		s_data_mutex = xSemaphoreCreateMutex();
@@ -272,7 +277,7 @@ w_status_t ms5611_init(void) {
 		return W_FAILURE;
 	}
 
-	vTaskDelay(pdMS_TO_TICKS(3)); // 3ms wait time from AN520 datasheet
+	vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_TIME_MS)); // 3ms wait time from AN520 datasheet
 
 	if (W_SUCCESS != ms5611_prom_read()) {
 		log_text(1, "ms5611", "ERROR: initialization failed during PROM read .");
@@ -290,6 +295,13 @@ w_status_t ms5611_init(void) {
  * false. This is useful for resetting the driver state between tests.
  */
 void ms5611_deinit(void) {
+	if (!(handle.initialized)) {
+		log_text(1,
+				 "ms5611",
+				 "ERROR: attempted to uninitialize the driver before successful initialization");
+		return;
+	}
+
 	handle.initialized = false;
 	for (size_t i = 0; i < 8; ++i) {
 		handle.prom_coef[i] = 0;
@@ -330,7 +342,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_INVALID_PARAM;
 	}
 
-	if (!handle.initialized) {
+	if (!(handle.initialized)) {
 		log_text(1, "ms5611", "ERROR: attempted to read pressure before successful initialization");
 		return W_FAILURE;
 	}
