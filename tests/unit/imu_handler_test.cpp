@@ -31,9 +31,9 @@ extern "C" {
     FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t*);
 
 	FAKE_VALUE_FUNC(w_status_t, lsm6dsv32x_get_gyro_acc_data, vector3d_t*, vector3d_t*, lsm6dsv32x_raw_imu_data_t*,
-										lsm6dsv32x_raw_imu_data_t*, bool*);
+										lsm6dsv32x_raw_imu_data_t*);
 
-	FAKE_VALUE_FUNC(w_status_t, iis2mdc_get_data, vector3d_t*, iis2mdc_raw_data_t*, uint32_t*, bool*);
+	FAKE_VALUE_FUNC(w_status_t, iis2mdc_get_data, vector3d_t*, iis2mdc_raw_data_t*, uint32_t*);
 
     // Fakes for logging
     FAKE_VALUE_FUNC(w_status_t, log_init);
@@ -85,7 +85,6 @@ typedef struct {
 	vector3d_t gyro_data;
 	lsm6dsv32x_raw_imu_data_t raw_acc;
 	lsm6dsv32x_raw_imu_data_t raw_gyro;
-	bool is_dead;
 	w_status_t return_val;
 } lsm6_get_values_t;
 
@@ -93,12 +92,11 @@ static lsm6_get_values_t g_lsm6_get_return_val = {0};
 
 static w_status_t set_lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
 										lsm6dsv32x_raw_imu_data_t *raw_acc,
-										lsm6dsv32x_raw_imu_data_t *raw_gyro, bool *is_dead) {
+										lsm6dsv32x_raw_imu_data_t *raw_gyro) {
 	*acc_data = g_lsm6_get_return_val.acc_data;
 	*gyro_data = g_lsm6_get_return_val.gyro_data;
 	*raw_acc = g_lsm6_get_return_val.raw_acc;
 	*raw_gyro = g_lsm6_get_return_val.raw_gyro;
-	*is_dead = g_lsm6_get_return_val.is_dead;
 	return g_lsm6_get_return_val.return_val;
 }
 
@@ -106,18 +104,15 @@ typedef struct {
 	vector3d_t data;
 	iis2mdc_raw_data_t raw_data;
 	uint32_t timestamp_ms;
-	bool is_dead;
 	w_status_t return_val;
 } iis2_get_values_t;
 
 static iis2_get_values_t g_iis2_get_return_val = {0};
 
-static w_status_t set_iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, uint32_t *timestamp_ms,
-							bool *is_dead) {
+static w_status_t set_iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, uint32_t *timestamp_ms) {
 	*data = g_iis2_get_return_val.data;
 	*raw_data = g_iis2_get_return_val.raw_data;
 	*timestamp_ms = g_iis2_get_return_val.timestamp_ms;
-	*is_dead = g_iis2_get_return_val.is_dead;
 	return g_iis2_get_return_val.return_val;
 }
 
@@ -173,11 +168,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasAllSensorNew) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -244,11 +237,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadLSM6) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = true;
-	g_lsm6_get_return_val.return_val = W_SUCCESS;
+	g_lsm6_get_return_val.return_val = W_IO_ERROR;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -315,11 +306,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewLSM6) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 997;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 997;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -386,11 +375,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetLSM6) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_FAILURE;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -457,12 +444,10 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMag) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = true;
-	g_iis2_get_return_val.return_val = W_SUCCESS;
+	g_iis2_get_return_val.return_val = W_IO_ERROR;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
@@ -528,11 +513,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMag) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 995;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -599,11 +582,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetMag) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_FAILURE;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -670,11 +651,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMTI) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -683,8 +662,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMTI) {
 	g_mti_get_return_val.data.mag_timestamp_ms = 999;
 	g_mti_get_return_val.data.pres_timestamp_ms = 999;
 	g_mti_get_return_val.data.temp_timestamp_ms = 999;
-	g_mti_get_return_val.data.is_dead = true;
-	g_mti_get_return_val.return_val = W_SUCCESS;
+	g_mti_get_return_val.return_val = W_IO_ERROR;
 
 	g_timer_get_return_val.timestamp_ms = 1000;
 	g_timer_get_return_val.return_val = W_SUCCESS;
@@ -741,11 +719,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewAccelMTI) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 997;
@@ -812,11 +788,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewGyroMTI) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -883,11 +857,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaroMTI) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -954,11 +926,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMagMTI) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -1025,11 +995,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewOtherMTI) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
@@ -1096,11 +1064,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasGetFailMTI) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
-	g_lsm6_get_return_val.is_dead = false;
 	g_lsm6_get_return_val.return_val = W_SUCCESS;
 
 	g_iis2_get_return_val.timestamp_ms = 999;
-	g_iis2_get_return_val.is_dead = false;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;

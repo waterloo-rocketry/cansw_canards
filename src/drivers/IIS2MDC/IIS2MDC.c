@@ -289,8 +289,8 @@ w_status_t iis2mdc_init(void) {
 // In the current design scope using synchronous polling reads, since the polling rate is 200hz and
 // the maximum ODR of the mag is 100hz, stale data is returned if no new data is available instead
 // of returning timeout or failure.
-w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, uint32_t *timestamp_ms,
-							bool *is_dead) {
+w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
+							uint32_t *timestamp_ms) {
 	uint8_t buf[6] = {0};
 
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {
@@ -310,6 +310,5 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, uint
 		return W_FAILURE;
 	}
 
-	*is_dead = false;
 	return W_SUCCESS;
 }

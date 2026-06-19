@@ -36,11 +36,10 @@ w_status_t lsm6dsv32x_int1_isr_handler();
  * @param[out] gyro_data   Processed gyroscope data (deg/s)
  * @param[out] raw_acc     Raw accelerometer data
  * @param[out] raw_gyro    Raw gyroscope data
- * @param[out] is_dead Pointer to the state of the sensor
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
 										lsm6dsv32x_raw_imu_data_t *raw_acc,
-										lsm6dsv32x_raw_imu_data_t *raw_gyro, bool *is_dead);
+										lsm6dsv32x_raw_imu_data_t *raw_gyro);
 
 #endif

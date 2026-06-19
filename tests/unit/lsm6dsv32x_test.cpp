@@ -108,9 +108,8 @@ TEST_F(Lsm6dsv32xTest, GetGyroAccDataEvenIfNotFresh) {
     vector3d_t gyro_data;
     lsm6dsv32x_raw_imu_data_t raw_acc;
     lsm6dsv32x_raw_imu_data_t raw_gyro;
-    bool is_dead;
 
-    w_status_t status = lsm6dsv32x_get_gyro_acc_data(&acc_data, &gyro_data, &raw_acc, &raw_gyro, &is_dead);
+    w_status_t status = lsm6dsv32x_get_gyro_acc_data(&acc_data, &gyro_data, &raw_acc, &raw_gyro);
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
@@ -138,9 +137,8 @@ TEST_F(Lsm6dsv32xTest, GetGyroAccDataDataReady) {
     vector3d_t gyro_data;
     lsm6dsv32x_raw_imu_data_t raw_acc;
     lsm6dsv32x_raw_imu_data_t raw_gyro;
-    bool is_dead;
 
-    w_status_t status = lsm6dsv32x_get_gyro_acc_data(&acc_data, &gyro_data, &raw_acc, &raw_gyro, &is_dead);
+    w_status_t status = lsm6dsv32x_get_gyro_acc_data(&acc_data, &gyro_data, &raw_acc, &raw_gyro);
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
