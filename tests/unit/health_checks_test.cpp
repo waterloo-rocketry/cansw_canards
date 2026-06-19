@@ -16,29 +16,34 @@ extern "C" {
 
 // all the functions that are being tested
 extern w_status_t health_check_exec();
-extern w_status_t check_watchdog_tasks(void);
+extern uint32_t check_watchdog_tasks(void);
+extern void proc_handle_fatal_error(const char *errorMsg);
 
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
-FAKE_VOID_FUNC(
-    build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, can_msg_t *
-);
+FAKE_VOID_FUNC(build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, can_msg_t *);
+
 // FAKE_VALUE_FUNC(TaskHandle_t, xTaskGetCurrentTaskHandle);
 FAKE_VOID_FUNC(log_text, uint32_t, const char *, const char *, void *);
 
 // Mock implementations for all the module get_status functions
-FAKE_VALUE_FUNC(uint32_t, i2c_get_status);
-FAKE_VALUE_FUNC(uint32_t, adc_get_status);
-FAKE_VALUE_FUNC(uint32_t, can_handler_get_status);
-FAKE_VALUE_FUNC(uint32_t, estimator_get_status);
-FAKE_VALUE_FUNC(uint32_t, controller_get_status);
-FAKE_VALUE_FUNC(uint32_t, sd_card_get_status);
-FAKE_VALUE_FUNC(uint32_t, timer_get_status);
-FAKE_VALUE_FUNC(uint32_t, logger_get_status);
-FAKE_VALUE_FUNC(uint32_t, gpio_get_status);
-FAKE_VALUE_FUNC(uint32_t, flight_phase_get_status);
-FAKE_VALUE_FUNC(uint32_t, imu_handler_get_status);
-FAKE_VALUE_FUNC(uint32_t, uart_get_status);
+FAKE_VALUE_FUNC(health_status_t, i2c_get_status);
+FAKE_VALUE_FUNC(health_status_t, adc_get_status);
+FAKE_VALUE_FUNC(health_status_t, can_handler_get_status);
+FAKE_VALUE_FUNC(health_status_t, estimator_get_status);
+FAKE_VALUE_FUNC(health_status_t, controller_get_status);
+FAKE_VALUE_FUNC(health_status_t, sd_card_get_status);
+FAKE_VALUE_FUNC(health_status_t, timer_get_status);
+FAKE_VALUE_FUNC(health_status_t, logger_get_status);
+FAKE_VALUE_FUNC(health_status_t, gpio_get_status);
+FAKE_VALUE_FUNC(health_status_t, flight_phase_get_status);
+FAKE_VALUE_FUNC(health_status_t, imu_handler_get_status);
+FAKE_VALUE_FUNC(health_status_t, uart_get_status);
+FAKE_VALUE_FUNC(int, snprintf_spy, char *, size_t, const char *);
+
+int snprintf_(char *s, size_t n, const char *format, ...) {
+	return snprintf_spy(s, n, format);
+}
 
 // Mocked global variables
 static uint32_t timer_ms_value_mock;
@@ -85,18 +90,31 @@ protected:
 		can_handler_transmit_fake.return_val = W_SUCCESS;
 
 		// Set default return values for module status functions
-		i2c_get_status_fake.return_val = W_SUCCESS;
-		adc_get_status_fake.return_val = W_SUCCESS;
-		can_handler_get_status_fake.return_val = W_SUCCESS;
-		estimator_get_status_fake.return_val = W_SUCCESS;
-		controller_get_status_fake.return_val = W_SUCCESS;
-		sd_card_get_status_fake.return_val = W_SUCCESS;
-		timer_get_status_fake.return_val = W_SUCCESS;
-		logger_get_status_fake.return_val = W_SUCCESS;
-		gpio_get_status_fake.return_val = W_SUCCESS;
-		flight_phase_get_status_fake.return_val = W_SUCCESS;
-		imu_handler_get_status_fake.return_val = W_SUCCESS;
-		uart_get_status_fake.return_val = W_SUCCESS;
+		health_status_t i2c_ok = {HEALTH_OK, MODULE_I2C, MODULE_ERR_NONE};
+		health_status_t adc_ok = {HEALTH_OK, MODULE_ADC, MODULE_ERR_NONE};
+		health_status_t can_ok = {HEALTH_OK, MODULE_CAN_HANDLER, MODULE_ERR_NONE};
+		health_status_t est_ok = {HEALTH_OK, MODULE_ESTIMATOR, MODULE_ERR_NONE};
+		health_status_t ctrl_ok = {HEALTH_OK, MODULE_CONTROLLER, MODULE_ERR_NONE};
+		health_status_t sd_ok = {HEALTH_OK, MODULE_SD_CARD, MODULE_ERR_NONE};
+		health_status_t timer_ok = {HEALTH_OK, MODULE_TIMER, MODULE_ERR_NONE};
+		health_status_t logger_ok = {HEALTH_OK, MODULE_LOGGER, MODULE_ERR_NONE};
+		health_status_t gpio_ok = {HEALTH_OK, MODULE_GPIO, MODULE_ERR_NONE};
+		health_status_t fp_ok = {HEALTH_OK, MODULE_FLIGHT_PHASE, MODULE_ERR_NONE};
+		health_status_t imu_ok = {HEALTH_OK, MODULE_IMU_HANDLER, MODULE_ERR_NONE};
+		health_status_t uart_ok = {HEALTH_OK, MODULE_UART, MODULE_ERR_NONE};
+
+		i2c_get_status_fake.return_val = i2c_ok;
+		adc_get_status_fake.return_val = adc_ok;
+		can_handler_get_status_fake.return_val = can_ok;
+		estimator_get_status_fake.return_val = est_ok;
+		controller_get_status_fake.return_val = ctrl_ok;
+		sd_card_get_status_fake.return_val = sd_ok;
+		timer_get_status_fake.return_val = timer_ok;
+		logger_get_status_fake.return_val = logger_ok;
+		gpio_get_status_fake.return_val = gpio_ok;
+		flight_phase_get_status_fake.return_val = fp_ok;
+		imu_handler_get_status_fake.return_val = imu_ok;
+		uart_get_status_fake.return_val = uart_ok;
 	}
 
 	void TearDown() override {}
@@ -107,6 +125,8 @@ protected:
 		timer_get_ms_fake.custom_fake = timer_get_ms_mock;
 	}
 };
+
+
 
 TEST_F(HealthChecksTest, NominalHealthCheck) {
 	// Arrange
@@ -121,7 +141,6 @@ TEST_F(HealthChecksTest, NominalHealthCheck) {
 	EXPECT_EQ(build_general_board_status_msg_fake.arg2_val, E_NOMINAL);
 }
 
-// TODO: revive test once a similar test with new system is determined
 // TEST_F(HealthChecksTest, FailureHealthCheck) {
 //     // Arrange
 //     SetTimerMs(1000);
@@ -148,7 +167,7 @@ TEST_F(HealthChecksTest, WatchdogRegisterAndKick) {
 	// Arrange
 	TaskHandle_t fake_task = (TaskHandle_t)0x12345678; // bs address
 	uint32_t timeout_ticks = pdMS_TO_TICKS(100);
-	SetTimerMs(1000);
+	SetTimerMs(1000.0f);
 	xTaskGetCurrentTaskHandle_fake.return_val = fake_task;
 
 	// Act
@@ -160,11 +179,11 @@ TEST_F(HealthChecksTest, WatchdogRegisterAndKick) {
 	EXPECT_EQ(xTaskGetCurrentTaskHandle_fake.call_count, 1);
 
 	// Advance time but still within timeout becuase timout was earlier set to 100ms
-	SetTimerMs(1050);
-	w_status_t result = check_watchdog_tasks();
+	SetTimerMs(1050.0f);
+	uint32_t status_bitfield = check_watchdog_tasks();
 
 	// Assert
-	EXPECT_EQ(W_SUCCESS, result);
+	EXPECT_EQ(0, status_bitfield);
 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 0);
 }
 
@@ -172,17 +191,17 @@ TEST_F(HealthChecksTest, WatchdogTimeout) {
 	// Arrange
 	TaskHandle_t fake_task = (TaskHandle_t)0x12345678;
 	uint32_t timeout_ticks = pdMS_TO_TICKS(100);
-	SetTimerMs(1000);
+	SetTimerMs(1000.0f);
 	xTaskGetCurrentTaskHandle_fake.return_val = fake_task;
 
 	watchdog_register_task(fake_task, timeout_ticks); // skip kicking to get to the timeout logic
 
 	check_watchdog_tasks();
 
-    can_handler_transmit_fake.return_val = W_SUCCESS;
+	can_handler_transmit_fake.return_val = W_SUCCESS;
 
 	// Advance time beyond timeout
-	SetTimerMs(1200); // 200ms later, should trigger timeout
+	SetTimerMs(1200.0f); // 200ms later, should trigger timeout
 
 	// Act
 	uint32_t result = check_watchdog_tasks();
@@ -197,17 +216,30 @@ TEST_F(HealthChecksTest, WatchdogMaxTasksLimit) {
 	for (uint32_t i = 0; i < 15; i++) {
 		fake_tasks[i] = (TaskHandle_t)(uintptr_t)(0x10000 + i); // filling up with bs addresses
 	}
-	SetTimerMs(1000);
+	SetTimerMs(1000.0f);
 
 	// Act
 	for (int i = 0; i < 15; i++) {
 		watchdog_register_task(fake_tasks[i], 100); // never would take more than 10 anyway
 	}
-	SetTimerMs(1050);
+	SetTimerMs(1050.0f);
 
-	w_status_t result = check_watchdog_tasks();
+	uint32_t status_bitfield = check_watchdog_tasks();
 
 	// Assert
-	EXPECT_EQ(W_SUCCESS, result); // check watchdog still goes through
+	EXPECT_EQ(0, status_bitfield); // check watchdog still goes through
 	EXPECT_EQ(build_general_board_status_msg_fake.call_count, 0);
+}
+
+TEST_F(HealthChecksTest, FatalErrorTriggersSnprintf) {
+	// Arrange: Set a module to FATAL
+	health_status_t fatal_i2c = {HEALTH_FATAL, MODULE_I2C, MODULE_ERR_I2C_NOT_INIT};
+	i2c_get_status_fake.return_val = fatal_i2c;
+
+	// Act
+	health_check_exec();
+
+	// Assert
+	EXPECT_EQ(snprintf_spy_fake.call_count, 1);
+	EXPECT_STREQ(snprintf_spy_fake.arg2_val, "%d:%d");
 }
