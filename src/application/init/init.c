@@ -135,11 +135,11 @@ static void system_init_task(void *arg) {
 							   &can_handler_handle_rx);
 
 	task_status &= xTaskCreate(can_handler_task_tx,
-	    "can handler tx",
-	    256,
-	    NULL,
-	    can_handler_tx_priority,
-	    &can_handler_handle_tx);
+							   "can handler tx",
+							   256,
+							   NULL,
+							   can_handler_tx_priority,
+							   &can_handler_handle_tx);
 
 	task_status &= xTaskCreate(
 		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);

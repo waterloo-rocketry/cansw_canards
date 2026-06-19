@@ -62,8 +62,8 @@ typedef struct {
 #define SCALE_MAP_INIT                                                                             \
 	{                                                                                              \
 		[SCALE_NAV_Q] = {.type = TYPE_INT16, .scale = 10000},                                      \
-		[SCALE_NAV_W] = {.type = TYPE_INT24, .scale = 1000},                                         \
-		[SCALE_NAV_V] = {.type = TYPE_INT24, .scale = 1000},                                         \
+		[SCALE_NAV_W] = {.type = TYPE_INT24, .scale = 1000},                                       \
+		[SCALE_NAV_V] = {.type = TYPE_INT24, .scale = 1000},                                       \
 		[SCALE_NAV_RX] = {.type = TYPE_UINT16, .scale = 1},                                        \
 		[SCALE_NAV_P] = {.type = TYPE_UINT16, .scale = 1},                                         \
                                                                                                    \
