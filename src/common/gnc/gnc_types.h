@@ -29,19 +29,6 @@ typedef struct {
 // Units are as follows: m/s^2, rad/s, Pa, gauss.
 typedef struct {
 	float64_t meas;
-	uint32_t timestamp_ms;
-	bool is_dead;
-} sensor_1d_meas_t;
-
-typedef struct {
-	vector3d_t meas;
-	uint32_t timestamp_ms;
-	bool is_dead;
-} sensor_3d_meas_t;
-
-// Units are as follows: m/s^2, rad/s, Pa, gauss.
-typedef struct {
-	float64_t meas;
 	bool is_dead;
 } navigator_1d_meas_t;
 

@@ -14,12 +14,19 @@
 void ad_breakout_board_task(void *argument);
 
 /**
- * @brief to read both the accelerometer and gyro data
- * @param p_gyro_data this is a pointer to converted gyro data
- * @param p_accel_data pointer to state of converted accel data
+ * @brief to read both the accelerometer data
+ * @param p_accel_data this is a pointer to converted accelerometer data
+ * @param timestamp_ms return pointer for the data timestamp
  * @return the status of getting data
  */
-w_status_t ad_breakout_board_get_data(sensor_1d_meas_t *p_gyro_data,
-									  sensor_3d_meas_t *p_accel_data);
+w_status_t ad_breakout_board_get_accel_data(vector3d_t *p_accel_data, uint32_t *timestamp_ms);
+
+/**
+ * @brief to read both the gyro data
+ * @param p_gyro_data this is a pointer to converted gyro data
+ * @param timestamp_ms return pointer for the data timestamp
+ * @return the status of getting data
+ */
+w_status_t ad_breakout_board_get_gyro_data(float64_t *p_gyro_data, uint32_t *timestamp_ms);
 
 #endif

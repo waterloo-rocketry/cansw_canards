@@ -14,6 +14,19 @@
 #include "drivers/timer/timer.h"
 #include "rocketlib/include/common.h"
 
+// Units are as follows: m/s^2, rad/s, Pa, gauss.
+typedef struct {
+	float64_t meas;
+	uint32_t timestamp_ms;
+	w_status_t latest_status;
+} ad_gyro_meas_t;
+
+typedef struct {
+	vector3d_t meas;
+	uint32_t timestamp_ms;
+	w_status_t latest_status;
+} ad_accel_meas_t;
+
 typedef enum {
 	AD_WRITE_BUFFER = 0,
 	AD_READ_BUFFER = 1
@@ -26,14 +39,14 @@ typedef enum {
 
 // struct to hold task context
 typedef struct {
-	sensor_1d_meas_t gyro_dual_buffer[2];
-	sensor_3d_meas_t accel_dual_buffer[2];
+	ad_gyro_meas_t gyro_dual_buffer[2];
+	ad_accel_meas_t accel_dual_buffer[2];
 } ad_task_ctx_t;
 
 static const uint8_t AD_BREAKOUT_BOARD_PERIOD_MS = 2;
-static const size_t AD_GYRO_MEASUREMENT_SIZE = sizeof(sensor_1d_meas_t);
+static const size_t AD_GYRO_MEASUREMENT_SIZE = sizeof(ad_gyro_meas_t);
 static const size_t AD_GYRO_RAW_MEASUREMENT_SIZE = sizeof(int32_t);
-static const size_t AD_ACCEL_MEASUREMENT_SIZE = sizeof(sensor_3d_meas_t);
+static const size_t AD_ACCEL_MEASUREMENT_SIZE = sizeof(ad_accel_meas_t);
 static const size_t AD_ACCEL_RAW_MEASUREMENT_SIZE = sizeof(adxl380_raw_accel_data_t);
 
 static ad_task_ctx_t g_task_ctx = {};
@@ -67,19 +80,19 @@ void ad_breakout_board_task(void *argument) {
 		// assume gyro not updated
 		bool update_gyro_data = false;
 
-		if (adxrs649_is_data_ready(&update_gyro_data) == W_SUCCESS) {
+		g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status =
+			adxrs649_is_data_ready(&update_gyro_data);
+
+		if ((g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status) == W_SUCCESS) {
 			if (update_gyro_data) {
-				if (adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas),
-										   &raw_gyro) == W_SUCCESS) {
-					g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
-				} else {
-					g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
+				g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = adxrs649_get_gyro_data(
+					&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas), &raw_gyro);
+				if (W_SUCCESS != (g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status)) {
 					log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
 				}
 			}
 		} else {
 			update_gyro_data = true;
-			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
 			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro drdy.");
 		}
 
@@ -91,19 +104,21 @@ void ad_breakout_board_task(void *argument) {
 		// assume gyro not updated
 		bool update_accel_data = false;
 
-		if (adxl380_is_data_ready(&update_accel_data) == W_SUCCESS) {
+		g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status =
+			adxl380_is_data_ready(&update_accel_data);
+
+		if (W_SUCCESS == (g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status)) {
 			if (update_accel_data) {
-				if (adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
-										   &raw_accel) == W_SUCCESS) {
-					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = false;
-				} else {
-					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
+				g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status =
+					adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
+										   &raw_accel);
+
+				if (W_SUCCESS != (g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status)) {
 					log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read accel.");
 				}
 			}
 		} else {
 			update_accel_data = true;
-			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].is_dead = true;
 			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read accel drdy.");
 		}
 
@@ -140,22 +155,45 @@ void ad_breakout_board_task(void *argument) {
 }
 
 /**
- * @brief to read both the accelerometer and gyro data
- * @param p_gyro_data this is a pointer to converted gyro data
- * @param p_accel_data pointer to state of converted accel data
+ * @brief to read both the accelerometer data
+ * @param p_accel_data this is a pointer to converted accelerometer data
+ * @param timestamp_ms return pointer for the data timestamp
  * @return the status of getting data
  */
-w_status_t ad_breakout_board_get_data(sensor_1d_meas_t *p_gyro_data,
-									  sensor_3d_meas_t *p_accel_data) {
-	if ((NULL == p_gyro_data) || (NULL == p_accel_data)) {
+w_status_t ad_breakout_board_get_accel_data(vector3d_t *p_accel_data, uint32_t *timestamp_ms) {
+	if ((NULL == p_accel_data) || (NULL == timestamp_ms)) {
 		log_text(0, "AD BREAKBOARD TASK", "ERROR: Invalid return ptrs.");
 		return W_INVALID_PARAM;
 	}
+
+	w_status_t return_status = W_FAILURE;
 	taskENTER_CRITICAL();
-	memcpy(p_gyro_data, &(g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER]), AD_GYRO_MEASUREMENT_SIZE);
-	memcpy(
-		p_accel_data, &(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]), AD_ACCEL_MEASUREMENT_SIZE);
+	memcpy(p_accel_data, &(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER].meas), sizeof(vector3d_t));
+	*timestamp_ms = g_task_ctx.accel_dual_buffer[AD_READ_BUFFER].timestamp_ms;
+	return_status = g_task_ctx.accel_dual_buffer[AD_READ_BUFFER].latest_status;
 	taskEXIT_CRITICAL();
 
-	return W_SUCCESS;
+	return return_status;
+}
+
+/**
+ * @brief to read both the gyro data
+ * @param p_gyro_data this is a pointer to converted gyro data
+ * @param timestamp_ms return pointer for the data timestamp
+ * @return the status of getting data
+ */
+w_status_t ad_breakout_board_get_gyro_data(float64_t *p_gyro_data, uint32_t *timestamp_ms) {
+	if ((NULL == p_gyro_data) || (NULL == timestamp_ms)) {
+		log_text(0, "AD BREAKBOARD TASK", "ERROR: Invalid return ptrs.");
+		return W_INVALID_PARAM;
+	}
+
+	w_status_t return_status = W_FAILURE;
+	taskENTER_CRITICAL();
+	*p_gyro_data = g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER].meas;
+	*timestamp_ms = g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER].timestamp_ms;
+	return_status = g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER].latest_status;
+	taskEXIT_CRITICAL();
+
+	return return_status;
 }
