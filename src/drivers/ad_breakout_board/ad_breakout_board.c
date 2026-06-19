@@ -79,20 +79,21 @@ void ad_breakout_board_task(void *argument) {
 
 		// assume gyro not updated
 		bool update_gyro_data = false;
+		g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_SUCCESS; // default success
 
-		g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status =
-			adxrs649_is_data_ready(&update_gyro_data);
-
-		if ((g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status) == W_SUCCESS) {
+		if (adxrs649_is_data_ready(&update_gyro_data) == W_SUCCESS) {
+			// if no new data then we just skip getting data
 			if (update_gyro_data) {
-				g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = adxrs649_get_gyro_data(
-					&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas), &raw_gyro);
-				if (W_SUCCESS != (g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status)) {
+				if (adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas),
+										   &raw_gyro) != W_SUCCESS) {
+					g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
 					log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
 				}
 			}
+
 		} else {
 			update_gyro_data = true;
+			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
 			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro drdy.");
 		}
 
@@ -103,22 +104,21 @@ void ad_breakout_board_task(void *argument) {
 
 		// assume gyro not updated
 		bool update_accel_data = false;
+		g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_SUCCESS; // default success
 
-		g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status =
-			adxl380_is_data_ready(&update_accel_data);
-
-		if (W_SUCCESS == (g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status)) {
+		if (adxl380_is_data_ready(&update_accel_data) == W_SUCCESS) {
+			// if no new data then we just skip getting data
 			if (update_accel_data) {
-				g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status =
-					adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
-										   &raw_accel);
-
-				if (W_SUCCESS != (g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status)) {
+				if (adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
+										   &raw_accel) != W_SUCCESS) {
+					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
 					log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read accel.");
 				}
 			}
+
 		} else {
 			update_accel_data = true;
+			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
 			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read accel drdy.");
 		}
 
