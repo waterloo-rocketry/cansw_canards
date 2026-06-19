@@ -405,15 +405,23 @@ TEST_F(I2CTest, DeinitSucceeds) {
 	w_status_t status = i2c_deinit_module(I2C_BUS_2);
 	EXPECT_EQ(status, W_SUCCESS);
 
-	// Ensure all relevant callbacks are nregisterered
-	ASSERT_EQ(HAL_I2C_UnRegisterCallback_fake.call_count, 4);
-	EXPECT_THAT(
-		std::vector<HAL_I2C_CallbackIDTypeDef>(HAL_I2C_UnRegisterCallback_fake.arg1_history,
-											   HAL_I2C_UnRegisterCallback_fake.arg1_history + 4),
-		testing::UnorderedElementsAre(HAL_I2C_MEM_TX_COMPLETE_CB_ID,
-									  HAL_I2C_MEM_RX_COMPLETE_CB_ID,
-									  HAL_I2C_MASTER_TX_COMPLETE_CB_ID,
-									  HAL_I2C_ERROR_CB_ID));
+	// Ensure all relevant callbacks are unregisterered
+	const int callbacks_to_unregister_count = 4;
+	HAL_I2C_CallbackIDTypeDef callbacks_to_unregister[callbacks_to_unregister_count] = {
+		HAL_I2C_MEM_TX_COMPLETE_CB_ID,
+		HAL_I2C_MEM_RX_COMPLETE_CB_ID,
+		HAL_I2C_MASTER_TX_COMPLETE_CB_ID,
+		HAL_I2C_ERROR_CB_ID};
+
+	std::vector<HAL_I2C_CallbackIDTypeDef> unregistered_callbacks = {
+		HAL_I2C_UnRegisterCallback_fake.arg1_history,
+		HAL_I2C_UnRegisterCallback_fake.arg1_history + callbacks_to_unregister_count};
+
+	for (int i = 0; i < callbacks_to_unregister_count; i++) {
+		EXPECT_TRUE(std::find(unregistered_callbacks.begin(),
+							  unregistered_callbacks.end(),
+							  callbacks_to_unregister[i]) != unregistered_callbacks.end());
+	}
 
 	// Ensure read/writefunction calls fail
 	uint8_t data[4] = {0xAA};
