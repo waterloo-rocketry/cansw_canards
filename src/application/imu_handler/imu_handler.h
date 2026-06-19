@@ -3,6 +3,7 @@
 
 #include "common/gnc/gnc_types.h"
 #include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/MS5611/MS5611.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 
@@ -22,8 +23,8 @@ typedef struct __attribute__((packed)) {
 typedef struct { // all of these should be just directly register values
 	lsm6dsv32x_raw_imu_data_t raw_board_accel;
 	lsm6dsv32x_raw_imu_data_t raw_board_gyro;
-	uint32_t raw_board_baro;
-	iis2mdc_raw_data_t board_mag;
+	ms5611_raw_result_t raw_board_baro;
+	iis2mdc_raw_data_t raw_board_mag;
 } raw_board_meas_t;
 
 typedef struct {

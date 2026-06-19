@@ -8,12 +8,15 @@
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
 #include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/MS5611/MS5611.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 
 // conversion factors
 static const float64_t M_S2_PER_G = 9.81;
+static const float64_t MBAR_PER_CENTIMBAR = 100;
+static const float64_t PA_PER_MBAR = 100;
 
 // TODO: double check values with Tristan
 // Timeout values for freshness check (in milliseconds)
@@ -144,8 +147,8 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 	// get mag.
 	uint32_t mag_timestamp_ms = 0;
 
-	sensor_status =
-		iis2mdc_get_data(&(board_data->board_mag.meas), &(raw_data->board_mag), &mag_timestamp_ms);
+	sensor_status = iis2mdc_get_data(
+		&(board_data->board_mag.meas), &(raw_data->raw_board_mag), &mag_timestamp_ms);
 	if (W_SUCCESS == sensor_status) {
 		if (mag_timestamp_ms > (ctx->last_mag_timestamp_ms)) {
 			board_data->board_mag.is_new = true;
@@ -165,18 +168,41 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 
 	// get baro
 	// TODO: once baro implemented
+	uint32_t baro_timestamp_ms = 0;
+
+	sensor_status = ms5611_get_raw_pressure(&(raw_data->raw_board_baro), &baro_timestamp_ms);
+	if (W_SUCCESS == sensor_status) {
+		if (baro_timestamp_ms > (ctx->last_baro_timestamp_ms)) {
+			board_data->board_baro.is_new = true;
+		} else {
+			board_data->board_baro.is_new = false;
+		}
+
+		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
+	} else if (W_IO_ERROR == sensor_status) {
+		log_text(1, "IMUHandler", "WARN: Board Mag failed.");
+		board_data->board_baro.is_new = false;
+		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
+	} else {
+		log_text(1, "IMUHandler", "WARN: Board Mag read failed.");
+		board_data->board_baro.is_new = false;
+	}
 
 	// convert gyro from dps to rad/sec
-	board_data->board_imu.gyro.x = board_data->board_imu.gyro.x * RAD_PER_DEG;
-	board_data->board_imu.gyro.y = board_data->board_imu.gyro.y * RAD_PER_DEG;
-	board_data->board_imu.gyro.z = board_data->board_imu.gyro.z * RAD_PER_DEG;
+	board_data->board_imu.gyro.x = (board_data->board_imu.gyro.x) * RAD_PER_DEG;
+	board_data->board_imu.gyro.y = (board_data->board_imu.gyro.y) * RAD_PER_DEG;
+	board_data->board_imu.gyro.z = (board_data->board_imu.gyro.z) * RAD_PER_DEG;
 
 	// convert accel from g to m/s^2
-	board_data->board_imu.accel.x = board_data->board_imu.accel.x * M_S2_PER_G;
-	board_data->board_imu.accel.y = board_data->board_imu.accel.y * M_S2_PER_G;
-	board_data->board_imu.accel.z = board_data->board_imu.accel.z * M_S2_PER_G;
+	board_data->board_imu.accel.x = (board_data->board_imu.accel.x) * M_S2_PER_G;
+	board_data->board_imu.accel.y = (board_data->board_imu.accel.y) * M_S2_PER_G;
+	board_data->board_imu.accel.z = (board_data->board_imu.accel.z) * M_S2_PER_G;
 
 	// mag data is already provided in Gauss
+
+	// convert baro from mbar to Pascals
+	board_data->board_baro.meas = ((float64_t)(raw_data->raw_board_baro.pressure_centimbar)) *
+								  PA_PER_MBAR * MBAR_PER_CENTIMBAR;
 
 	// Apply orientation correction
 	board_data->board_imu.accel =
@@ -187,10 +213,9 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 	board_data->board_mag.meas =
 		math_vector3d_rotate(&g_board_mag_correction_matrix, &(board_data->board_mag.meas));
 
-	// TODO: baro
-
 	// success is if at least one of the sensors updated
-	if ((board_data->board_mag.is_new) || (board_data->board_imu.is_new)) {
+	if ((board_data->board_mag.is_new) || (board_data->board_imu.is_new) ||
+		(board_data->board_baro.is_new)) {
 		imu_handler_state.board_stats.success_count++;
 	} else {
 		imu_handler_state.board_stats.failure_count++;
