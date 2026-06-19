@@ -9,15 +9,6 @@
 #include <stdint.h>
 
 /**
- * this holds persistent data for 1 instance of a pad_filter (ie, its context)
- */
-typedef struct {
-	y_imu_t filtered_1;
-	y_imu_t filtered_2;
-	bool is_initialized;
-} pad_filter_ctx_t;
-
-/**
  * @brief Initialize the pad filter. must only run once in the whole program
  * @param IMU_1 input to init with
  * @param IMU_2 input to init with

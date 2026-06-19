@@ -1,65 +1,39 @@
-#ifndef STATE_EST_H
-#define STATE_EST_H
+// TODO: remember to rename the file name to navigator.h
+#ifndef NAVIGATOR_H
+#define NAVIGATOR_H
 
-#include "application/controller/controller.h"
 #include "application/estimator/estimator_types.h"
+#include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
+#include "common/gnc/gnc_types.h"
 #include "common/math/math.h"
+
 #include "third_party/rocketlib/include/common.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
-// measurement data from 1 arbitrary imu
-// TODO: remove old impl of `estimator_imu_measurement_t`
-typedef struct {
-	float64_t timestamp_imu_sec;
-	vector3d_t accelerometer; // gravities
-	vector3d_t gyroscope; // rad/sec
-	vector3d_t magnetometer; // mgauss (pololu) or arbitrary units (movella)
-	float32_t barometer; // Pa
-	bool is_dead;
-} estimator_imu_measurement_t;
-
 /**
- * @brief LSM6DSV32X (32G IMU), MS5611 (High-alt Barometer), and LSM303AGR (Compass) measurements
+ * this holds persistent data for 1 instance of a pad_filter (ie, its context)
  */
 typedef struct {
-	vector3d_t board_accel; // m/s^2
-	vector3d_t board_gyro; // rad/s
-	float64_t board_baro; // Pa
-	vector3d_t board_mag; // gauss
-	bool is_dead;
-} estimator_board_meas_t;
+	y_imu_t filtered_1;
+	y_imu_t filtered_2;
+	bool is_initialized;
+} pad_filter_ctx_t;
 
 /**
- * @brief MTi-630 (Movella) measurements
+ * persistent state updated by estimator and fsm
  */
 typedef struct {
-	vector3d_t mti_accel; // m/s^2
-	vector3d_t mti_gyro; // rad/s
-	float64_t mti_baro; // Pa
-	vector3d_t mti_mag; // gauss
-	bool is_dead;
-} estimator_mti_meas_t;
-
-/**
- * @brief ADXL380 (AD Breakout Accel) and ADXRS649 (AD high-rate gyro) measurements
- */
-typedef struct {
-	vector3d_t ad_accel; // m/s^2
-	float64_t ad_gyro; // rad/s, 1 axis gyro
-	bool is_dead;
-} estimator_ad_meas_t;
-
-// measurements from all imus together
-typedef struct {
-	estimator_board_meas_t board_meas;
-	estimator_mti_meas_t mti_meas;
-	estimator_ad_meas_t ad_meas;
-
-	// TODO: remove old impl below
-	estimator_imu_measurement_t movella; // raw movella data
-	estimator_imu_measurement_t pololu; // raw pololu data
-} estimator_all_imus_input_t;
+	x_state_t x;
+	double P_flat[SIZE_STATE * SIZE_STATE];
+	y_imu_t bias_movella;
+	y_imu_t bias_pololu;
+	double t_sec; // previous timestamp
+	// estimator ctx must have exactly 1 pad filter ctx
+	pad_filter_ctx_t pad_filter_ctx;
+} estimator_module_ctx_t; // TODO: rename to simply navigator_ctx_t
 
 /**
  * @brief Structure to track estimator errors and status
@@ -75,16 +49,7 @@ typedef struct {
 } estimator_error_data_t;
 
 /**
- * @brief Used to update the imu inputs for estimator
- *
- * @note Should be called every 5ms or faster for optimal estimator performance
- *
- * @param data Pointer to the struct containing latest measurements from all imus
- */
-w_status_t estimator_update_imu_data(estimator_all_imus_input_t *data);
-
-/**
- * @brief initialize estimator module. call before creating estimator task
+ * @brief initialize estimator module
  */
 w_status_t estimator_init();
 
@@ -107,9 +72,16 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state);
  *
  * @return CAN board specific err bitfield
  */
-uint32_t estimator_get_status(void);
+health_status_t estimator_get_status(void);
 
-void estimator_task(void *argument);
+/**
+ * @brief 1 step of estimator
+ * @param ctx pointer to estimator context
+ * @param p_input pointer to the new navigator input
+ * @param p_output pointer to navigator output to update with new results
+ * update with new actuation info
+ */
+w_status_t estimator_step(estimator_module_ctx_t *ctx, const navigator_input_t *p_input,
+						  navigator_output_t *p_output);
 
 #endif
-

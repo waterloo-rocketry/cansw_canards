@@ -1,28 +1,34 @@
-#include "application/init/init.h"
+// Add these includes for hardware handles
+#include "FreeRTOS.h"
+#include "adc.h" // For hadc1
+#include "fdcan.h" // For hfdcan1 and hfdcan3
+#include "i2c.h" // For hi2c2, hi2c4
+#include "stm32h7xx_hal.h"
+#include "task.h"
+#include "usart.h"
+
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/estimator/ekf.h"
 #include "application/estimator/estimator.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
+#include "application/init/init.h"
 #include "application/logger/log.h"
+#include "drivers/ad_breakout_board/ADXL380.h"
+#include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
+#include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
-#include "stm32h7xx_hal.h"
-// Add these includes for hardware handles
-#include "FreeRTOS.h"
-#include "adc.h" // For hadc1
-#include "fdcan.h" // For hfdcan1
-#include "i2c.h" // For hi2c2, hi2c4
-#include "task.h"
-#include "usart.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -30,28 +36,24 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
+
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
-TaskHandle_t estimator_task_handle = NULL;
+TaskHandle_t fsm_task_handle = NULL;
 TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
-TaskHandle_t controller_task_handle = NULL;
-TaskHandle_t flight_phase_task_handle = NULL;
-TaskHandle_t imu_handler_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
 
 // Task priorities
-// flight phase must have highest priority to preempt everything else
-const uint32_t flight_phase_task_priority = configMAX_PRIORITIES - 1;
+// TODO: set fsm priority
+const uint32_t fsm_task_priority = configMAX_PRIORITIES - 1;
 // prioritize not missing injectorvalveopen msg
 // TODO: could dynamically reduce this priority after flight starts?
 const uint32_t can_handler_rx_priority = 45;
 // in general, prioritize consumers (estimator) over producers (imus) to avoid congestion
 const uint32_t can_handler_tx_priority = 40;
-const uint32_t controller_task_priority = 30;
-const uint32_t estimator_task_priority = 25;
-const uint32_t imu_handler_task_priority = 20;
 const uint32_t movella_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
@@ -71,6 +73,7 @@ static void system_init_task(void *arg) {
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
+	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
@@ -83,17 +86,20 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
-	// status |= uart_init(UART_DEBUG_SERIAL, &huart4, 100);
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
-	// status |= adc_init(&hadc1);
-	// status |= estimator_init();
+	status |= adc_init(&hadc1, &hadc2, &hadc3);
+	status |= estimator_init();
 	// status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
 	status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
-	// status |= controller_init;
-	// status |= ekf_init;
+	status |= controller_init();
+	status |= fsm_init();
+	status |= adxl380_init();
+	status |= lsm6dsv32x_init();
+	status |= adxrs649_init();
+	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -106,12 +112,12 @@ static void system_init_task(void *arg) {
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	task_status &= xTaskCreate(flight_phase_task,
-							   "flight phase",
-							   256,
+	task_status &= xTaskCreate(fsm_task,
+							   "fsm",
+							   8192, // TODO: set the correct size
 							   NULL,
-							   flight_phase_task_priority,
-							   &flight_phase_task_handle);
+							   fsm_task_priority,
+							   &fsm_task_handle);
 
 	// task_status &= xTaskCreate(health_check_task,
 	//     "health",
@@ -119,13 +125,6 @@ static void system_init_task(void *arg) {
 	//     NULL,
 	//     health_checks_task_priority,
 	//     &health_checks_task_handle);
-
-	// task_status &= xTaskCreate(imu_handler_task,
-	//     "imu handler",
-	//     512,
-	//     NULL,
-	//     imu_handler_task_priority,
-	//     &imu_handler_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
@@ -145,17 +144,6 @@ static void system_init_task(void *arg) {
 		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
-
-	// task_status &= xTaskCreate(controller_task,
-	//     "controller",
-	//     512,
-	//     NULL,
-	//     controller_task_priority,
-	//     &controller_task_handle);
-
-	// task_status &= xTaskCreate(
-	//     estimator_task, "estimator", 8192, NULL, estimator_task_priority,
-	//     &estimator_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
