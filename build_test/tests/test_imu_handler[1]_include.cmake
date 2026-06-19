@@ -1,5 +1,0 @@
-if(EXISTS "/workspaces/cansw_processor_canards/build_test/tests/test_imu_handler[1]_tests.cmake")
-  include("/workspaces/cansw_processor_canards/build_test/tests/test_imu_handler[1]_tests.cmake")
-else()
-  add_test(test_imu_handler_NOT_BUILT test_imu_handler_NOT_BUILT)
-endif()

@@ -1,5 +1,0 @@
-if(EXISTS "/workspaces/cansw_processor_canards/build_test/tests/test_adxl380[1]_tests.cmake")
-  include("/workspaces/cansw_processor_canards/build_test/tests/test_adxl380[1]_tests.cmake")
-else()
-  add_test(test_adxl380_NOT_BUILT test_adxl380_NOT_BUILT)
-endif()

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libCMSISDSP.a CMakeFiles/CMSISDSP.dir/__/src/third_party/CMSIS-DSP/Source/BasicMathFunctions/BasicMathFunctions.c.o CMakeFiles/CMSISDSP.dir/__/src/third_party/CMSIS-DSP/Source/InterpolationFunctions/InterpolationFunctions.c.o CMakeFiles/CMSISDSP.dir/__/src/third_party/CMSIS-DSP/Source/MatrixFunctions/MatrixFunctions.c.o CMakeFiles/CMSISDSP.dir/__/src/third_party/CMSIS-DSP/Source/QuaternionMathFunctions/QuaternionMathFunctions.c.o CMakeFiles/CMSISDSP.dir/__/src/third_party/CMSIS-DSP/Source/FastMathFunctions/FastMathFunctions.c.o
-/usr/bin/ranlib libCMSISDSP.a

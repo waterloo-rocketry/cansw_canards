@@ -1,1 +1,0 @@
-/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_ak45_driver.dir/unit/ak45_driver_test.cpp.o CMakeFiles/test_ak45_driver.dir/unit/ak45_driver_test_helpers.c.o -o test_ak45_driver  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 

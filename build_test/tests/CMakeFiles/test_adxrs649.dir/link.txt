@@ -1,1 +1,0 @@
-/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_adxrs649.dir/unit/adxrs649_test.cpp.o CMakeFiles/test_adxrs649.dir/__/src/drivers/ad_breakout_board/ADXRS649.c.o -o test_adxrs649  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 

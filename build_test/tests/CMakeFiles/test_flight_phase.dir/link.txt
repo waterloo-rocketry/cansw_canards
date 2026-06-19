@@ -1,1 +1,0 @@
-/usr/bin/c++  -O0 -Wno-unused-parameter  -Wl,--no-as-needed -Wl,--gc-sections -fuse-ld=gold CMakeFiles/test_flight_phase.dir/unit/flight_phase_test.cpp.o CMakeFiles/test_flight_phase.dir/__/src/application/flight_phase/flight_phase.c.o -o test_flight_phase  libmocks.a ../lib/libgtest_main.a libCMSISDSP.a -lgcov ../lib/libgtest.a 
