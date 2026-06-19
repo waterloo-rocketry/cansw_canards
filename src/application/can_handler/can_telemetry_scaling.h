@@ -62,8 +62,8 @@ typedef struct {
 #define SCALE_MAP_INIT                                                                             \
 	{                                                                                              \
 		[SCALE_NAV_Q] = {.type = TYPE_INT16, .scale = 10000},                                      \
-		[SCALE_NAV_W] = {.type = TYPE_INT16, .scale = 10},                                         \
-		[SCALE_NAV_V] = {.type = TYPE_INT16, .scale = 10},                                         \
+		[SCALE_NAV_W] = {.type = TYPE_INT24, .scale = 1000},                                         \
+		[SCALE_NAV_V] = {.type = TYPE_INT24, .scale = 1000},                                         \
 		[SCALE_NAV_RX] = {.type = TYPE_UINT16, .scale = 1},                                        \
 		[SCALE_NAV_P] = {.type = TYPE_UINT16, .scale = 1},                                         \
                                                                                                    \
@@ -81,14 +81,14 @@ typedef struct {
 		[SCALE_MTI_A] = {.type = TYPE_INT16, .scale = 100},                                        \
 		[SCALE_MTI_W] = {.type = TYPE_INT16, .scale = 100},                                        \
 		[SCALE_MTI_P] = {.type = TYPE_UINT32, .scale = 1},                                         \
-		[SCALE_MTI_M] = {.type = TYPE_INT24, .scale = 1000},                                       \
+		[SCALE_MTI_M] = {.type = TYPE_INT16, .scale = 1000},                                       \
                                                                                                    \
 		[SCALE_MTI_EST_E] = {.type = TYPE_INT16, .scale = 10000},                                  \
 		[SCALE_MTI_EST_W] = {.type = TYPE_INT16, .scale = 10},                                     \
 		[SCALE_MTI_EST_V] = {.type = TYPE_INT16, .scale = 10},                                     \
 		[SCALE_MTI_EST_RX] = {.type = TYPE_UINT16, .scale = 1},                                    \
                                                                                                    \
-		[SCALE_AD_A] = {.type = TYPE_INT24, .scale = 1},                                           \
+		[SCALE_AD_A] = {.type = TYPE_INT16, .scale = 1},                                           \
 		[SCALE_AD_W] = {.type = TYPE_INT24, .scale = 1},                                           \
                                                                                                    \
 		[SCALE_SERVO_D] = {.type = TYPE_INT16, .scale = 1000},                                     \
