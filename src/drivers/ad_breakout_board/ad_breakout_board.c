@@ -130,16 +130,14 @@ void ad_breakout_board_task(void *argument) {
 		taskENTER_CRITICAL();
 		// Gyro
 		if (update_gyro_data) {
-			memcpy(&(g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER]),
-				   &(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER]),
-				   AD_GYRO_MEASUREMENT_SIZE);
+			g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER] =
+				g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER];
 		}
 
 		// Accelerometer
 		if (update_accel_data) {
-			memcpy(&(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER]),
-				   &(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER]),
-				   AD_ACCEL_MEASUREMENT_SIZE);
+			g_task_ctx.accel_dual_buffer[AD_READ_BUFFER] =
+				g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER];
 		}
 		taskEXIT_CRITICAL();
 
@@ -168,7 +166,7 @@ w_status_t ad_breakout_board_get_accel_data(vector3d_t *p_accel_data, uint32_t *
 
 	w_status_t return_status = W_FAILURE;
 	taskENTER_CRITICAL();
-	memcpy(p_accel_data, &(g_task_ctx.accel_dual_buffer[AD_READ_BUFFER].meas), sizeof(vector3d_t));
+	*p_accel_data = g_task_ctx.accel_dual_buffer[AD_READ_BUFFER].meas;
 	*timestamp_ms = g_task_ctx.accel_dual_buffer[AD_READ_BUFFER].timestamp_ms;
 	return_status = g_task_ctx.accel_dual_buffer[AD_READ_BUFFER].latest_status;
 	taskEXIT_CRITICAL();
