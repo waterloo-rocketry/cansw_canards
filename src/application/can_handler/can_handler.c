@@ -5,17 +5,22 @@
 #include <string.h>
 
 #include "FreeRTOS.h"
-#include "canlib.h"
-#include "fdcan.h"
+#include "application/logger/log.h"
+#include "drivers/gpio/gpio.h"
+#include "fdcan.h" // For hfdcan1 for fatal error handler
 #include "queue.h"
-#include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal.h" /* For __disable_irq, __NOP */
+#include "third_party/canlib/message/msg_general.h" /* For build_debug_raw_msg */
+#include "third_party/canlib/message_types.h" /* For MSG_DEBUG_RAW, PRIO_HIGH, etc. */
+#include "third_party/rocketlib/include/mathops.h" /* For clamp functions */
 
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
-#include "third_party/rocketlib/include/mathops.h" /* For clamp functions */
+
+const can_scale_data_t scale_map[SCALE_COUNT] = SCALE_MAP_INIT;
 
 // TODO: calculate better. for now make excessively large and check dropped tx counter
 #define BUS_QUEUE_LENGTH 32
@@ -70,7 +75,7 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 	return status;
 }
 
-void can_handle_rx_message(const can_msg_t *message) {
+static void can_handle_rx_message(const can_msg_t *message) {
 	// software filter: only queue messages with registered callbacks
 	can_msg_type_t msg_type = get_message_type(message);
 	// drop any message types without a registered handler
@@ -84,6 +89,110 @@ void can_handle_rx_message(const can_msg_t *message) {
 	}
 	// request context switch if needed
 	portYIELD_FROM_ISR(higher_priority_task_woken);
+}
+
+static void can_get_signed_limits(can_types_t type, int32_t *min_out, int32_t *max_out) {
+	switch (type) {
+		case TYPE_INT8:
+			*min_out = INT8_MIN;
+			*max_out = INT8_MAX;
+			break;
+		case TYPE_INT16:
+			*min_out = INT16_MIN;
+			*max_out = INT16_MAX;
+			break;
+		case TYPE_INT24:
+			*min_out = INT24_MIN;
+			*max_out = INT24_MAX;
+			break;
+		case TYPE_INT32:
+			*min_out = INT32_MIN;
+			*max_out = INT32_MAX;
+			break;
+		default:
+			*min_out = 0;
+			*max_out = 0;
+			break;
+	}
+}
+
+static void can_get_unsigned_max(can_types_t type, uint32_t *max_out) {
+	switch (type) {
+		case TYPE_UINT8:
+			*max_out = UINT8_MAX;
+			break;
+		case TYPE_UINT16:
+			*max_out = UINT16_MAX;
+			break;
+		case TYPE_UINT24:
+			*max_out = UINT24_MAX;
+			break;
+		case TYPE_UINT32:
+			*max_out = UINT32_MAX;
+			break;
+		default:
+			*max_out = 0;
+			break;
+	}
+}
+
+static bool can_type_is_unsigned(can_types_t type) {
+	return (type == TYPE_UINT8) || (type == TYPE_UINT16) || (type == TYPE_UINT24) ||
+		   (type == TYPE_UINT32);
+}
+
+static w_status_t can_store_unsigned(can_types_t type, uint32_t value, void *out) {
+	if (out == NULL) {
+		return W_INVALID_PARAM;
+	}
+
+	switch (type) {
+		case TYPE_UINT8: {
+			uint8_t encoded = (uint8_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		case TYPE_UINT16: {
+			uint16_t encoded = (uint16_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		case TYPE_UINT24:
+		case TYPE_UINT32: {
+			uint32_t encoded = (uint32_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		default:
+			return W_INVALID_PARAM;
+	}
+}
+
+static w_status_t can_store_signed(can_types_t type, int32_t value, void *out) {
+	if (out == NULL) {
+		return W_INVALID_PARAM;
+	}
+
+	switch (type) {
+		case TYPE_INT8: {
+			int8_t encoded = (int8_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		case TYPE_INT16: {
+			int16_t encoded = (int16_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		case TYPE_INT24:
+		case TYPE_INT32: {
+			int32_t encoded = (int32_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
+		default:
+			return W_INVALID_PARAM;
+	}
 }
 
 w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
@@ -183,6 +292,155 @@ void can_handler_task_tx(void *argument) {
 	}
 }
 
+w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, void *out) {
+	if ((sensor >= SCALE_COUNT) || (out == NULL)) {
+		return W_INVALID_PARAM;
+	}
+
+	can_types_t target_type = scale_map[sensor].type;
+	bool is_unsigned = can_type_is_unsigned(target_type);
+
+	// handle NaN or +/-Inf with reserved sentinel codes near the limits of the target type
+	if (!isfinite(input)) {
+		if (is_unsigned) {
+			uint32_t maxv = 0U;
+			can_get_unsigned_max(target_type, &maxv);
+			uint64_t encoded = 0U;
+
+			if (isinf(input)) {
+				if (signbit(input)) {
+					encoded = (maxv >= 2U) ? (maxv - 1U) : 0U; // -Inf
+				} else {
+					encoded = (maxv >= 2U) ? (maxv - 2U) : maxv; // +Inf
+				}
+			} else {
+				encoded = (maxv >= 3U) ? (maxv - 3U) : 0U; // NaN
+			}
+
+			w_status_t store_status = can_store_unsigned(target_type, encoded, out);
+			return (store_status == W_SUCCESS) ? W_MATH_ERROR : store_status;
+		} else {
+			int32_t minv = 0, maxv = 0;
+			can_get_signed_limits(target_type, &minv, &maxv);
+			int64_t encoded = 0;
+
+			if (isinf(input)) {
+				if (signbit(input)) {
+					encoded = (minv <= INT32_MAX - 2) ? (minv + 2) : minv; // -Inf
+				} else {
+					encoded = (maxv >= 1) ? (maxv - 1) : maxv; // +Inf
+				}
+			} else {
+				encoded = (minv <= INT32_MAX - 3) ? (minv + 3) : minv; // NaN
+			}
+
+			w_status_t store_status = can_store_signed(target_type, encoded, out);
+			return (store_status == W_SUCCESS) ? W_MATH_ERROR : store_status;
+		}
+	}
+
+	float32_t scaled = input * (float32_t)scale_map[sensor].scale;
+
+	// clamp according to target type
+	if (is_unsigned) {
+		uint32_t maxv = 0U;
+		can_get_unsigned_max(target_type, &maxv);
+
+		return can_store_unsigned(
+			target_type, value_clamp_float32(scaled, 0.0f, (float32_t)maxv), out);
+
+	} else {
+		int32_t minv = 0, maxv = 0;
+		can_get_signed_limits(target_type, &minv, &maxv);
+
+		return can_store_signed(
+			target_type, value_clamp_float32(scaled, (float32_t)minv, (float32_t)maxv), out);
+	}
+	return W_SUCCESS;
+}
+
+w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void *out) {
+	if ((sensor >= SCALE_COUNT) || (out == NULL)) {
+		return W_INVALID_PARAM;
+	}
+
+	can_types_t target_type = scale_map[sensor].type;
+	bool is_unsigned = can_type_is_unsigned(target_type);
+
+	int64_t scaled = input * scale_map[sensor].scale;
+
+	// Scale and clamp according to target type
+	if (is_unsigned) {
+		uint32_t maxv = 0U;
+		can_get_unsigned_max(target_type, &maxv);
+
+		return can_store_unsigned(target_type, value_clamp_uint32(scaled, 0U, maxv), out);
+
+	} else {
+		int32_t minv = 0, maxv = 0;
+		can_get_signed_limits(target_type, &minv, &maxv);
+
+		return can_store_signed(target_type, value_clamp_uint32(scaled, minv, maxv), out);
+	}
+	return W_SUCCESS;
+}
+
+// --- Fatal Error Handler Implementation ---
+
+// Note: All IDs (Board Type, Message Type, Instance ID)
+//       are used directly from canlib/message_types.h
+
+void proc_handle_fatal_error(const char *errorMsg) {
+	static bool can_initialized = false;
+	// safe state - loop here forever and send CAN err msg repeatedly
+	while (1) {
+		can_initialized =
+			can_initialized ||
+			stm32h7_can_init(
+				&hfdcan1,
+				can_handle_rx_message); // BEWARE: this is hardcoded to use hfdcan1, remember
+										// to change this when our CAN handle changes
+		__disable_irq();
+
+		// let CAN still work
+		HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
+
+		can_msg_t msg;
+		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
+
+		// Copy error message to the data buffer
+		if (errorMsg != NULL) {
+			strncpy((char *)data, errorMsg, sizeof(data));
+			// Ensure null termination
+			data[sizeof(data) - 1] = '\0';
+		}
+
+		// Use canlib's helper function to build the debug message
+		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
+		// state)
+		build_debug_raw_msg(PRIO_LOW, 0, data, &msg);
+		if (can_initialized) {
+			stm32h7_can_send(&msg);
+		}
+
+		// scream a few times then attempt to reset.
+		// delay for ~1sec without using systick-based delays (no hal_delay)
+		volatile int dummy;
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 50000000; j++) {
+				dummy++;
+			}
+		}
+
+		dummy++;
+
+		// resetting is always a safe state even in midflight, as flightphase starts IDLE
+		NVIC_SystemReset();
+	}
+}
+
+// --- End Fatal Error Handler ---
+
 health_status_t can_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 
@@ -200,8 +458,7 @@ health_status_t can_handler_get_status(void) {
 			 can_error_stats.rx_timeouts,
 			 can_error_stats.tx_timeouts);
 
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_CAN_HANDLER, .error_bitfield = 0};
-
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_CAN_HANDLER, .error_bitfield = status_bitfield};
+	
 	return status;
 }
