@@ -346,10 +346,10 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
  *        its acceleration magnitude meets the launch threshold, resets otherwise.
  * @param is_dead whether this IMU is currently marked dead
  * @param accel pointer to the IMU's acceleration vector
- * @param consec_count pointer to this IMU's number of consecutive launch detections 
+ * @param consec_count pointer to this IMU's number of consecutive launch detections
  */
-static void is_imu_above_threshold (bool is_dead, const vector3d_t *accel,
-										bool *imu_above_threshold) {
+static void process_imu_meas(bool is_dead, const vector3d_t *accel,
+							 uint32_t *num_imus_detecting_launch) {
 	if (is_dead) {
 		return;
 	}
@@ -357,9 +357,7 @@ static void is_imu_above_threshold (bool is_dead, const vector3d_t *accel,
 	double accel_magnitude = math_vector3d_norm(accel);
 
 	if (ACCEL_THRESHOLD_LAUNCH_M_S2 <= (float32_t)accel_magnitude) {
-		(*imu_above_threshold) = true;
-	} else {
-		(*imu_above_threshold) = false;
+		(*num_imus_detecting_launch)++;
 	}
 }
 
@@ -374,6 +372,7 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 														  const fsm_state_t curr_state,
 														  const all_sensors_data_t *p_sensor_data) {
 	if ((STATE_PAD_FILTER != curr_state) && (STATE_PAD_NAV != curr_state)) {
+		p_ctx->num_consec_detection = 0;
 		return EVENT_NONE;
 	}
 	bool board_imu_dead = p_sensor_data->board_meas.board_imu.is_dead;
@@ -402,21 +401,13 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 		return EVENT_NONE;
 	}
 
-
 	uint32_t num_imus_detecting_launch = 0;
 
-	bool board_imu_above_threshold = false;
-	bool mti_imu_above_threshold = false;
-	bool ad_imu_above_threshold = false;
-
-	is_imu_above_threshold(
-		board_imu_dead, &p_sensor_data->board_meas.board_imu.accel, &board_imu_above_threshold);
-	is_imu_above_threshold(
-		mti_imu_dead, &p_sensor_data->mti_meas.mti_accel, &mti_imu_above_threshold);
-	is_imu_above_threshold(
-		ad_imu_dead, &p_sensor_data->ad_meas.ad_accel.meas, &ad_imu_above_threshold);
-
-
+	process_imu_meas(
+		board_imu_dead, &p_sensor_data->board_meas.board_imu.accel, &num_imus_detecting_launch);
+	process_imu_meas(mti_imu_dead, &p_sensor_data->mti_meas.mti_accel, &num_imus_detecting_launch);
+	process_imu_meas(
+		ad_imu_dead, &p_sensor_data->ad_meas.ad_accel.meas, &num_imus_detecting_launch);
 
 	if (NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL <= num_imus_detecting_launch) {
 		p_ctx->num_consec_detection++;

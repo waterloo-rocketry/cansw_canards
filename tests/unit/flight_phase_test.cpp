@@ -448,7 +448,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventIdle) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 0,
         .act_allowed_timestamp_ms = 0,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_IDLE;
@@ -463,7 +463,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventIdle) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 0);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 0);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -475,7 +475,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventPadFilter) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 0,
         .act_allowed_timestamp_ms = 0,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_PAD_FILTER;
@@ -490,7 +490,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventPadFilter) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 0);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 0);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -502,7 +502,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventPadNav) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 0,
         .act_allowed_timestamp_ms = 0,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_PAD_NAV;
@@ -517,7 +517,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventPadNav) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 0);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 0);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -527,7 +527,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventBoost) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = UINT32_MAX,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_BOOST;
@@ -542,7 +542,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventBoost) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, UINT32_MAX);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -552,7 +552,7 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventActDelayBoost) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = UINT32_MAX,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_BOOST;
@@ -569,7 +569,7 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventActDelayBoost) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, UINT32_MAX);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
     EXPECT_EQ(queue_send_event, EVENT_ACT_DELAY_ELAPSED);
@@ -579,7 +579,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventActAllowed) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = 17000,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_ACT_ALLOWED;
@@ -594,7 +594,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventActAllowed) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 17000);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -604,7 +604,7 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventRecoActAllowed) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = 17000,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_ACT_ALLOWED;
@@ -621,7 +621,7 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventRecoActAllowed) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 17000);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
     EXPECT_EQ(queue_send_event, EVENT_RECOVERY_START);
@@ -631,7 +631,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventRecov) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = 17000,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_RECOVERY;
@@ -646,7 +646,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventRecov) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 17000);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -656,7 +656,7 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventSleepyRecov) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = 17000,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_RECOVERY;
@@ -673,7 +673,7 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventSleepyRecov) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 17000);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
     EXPECT_EQ(queue_send_event, EVENT_SLEEP_START);
@@ -683,7 +683,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventSleepy) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 0,
         .act_allowed_timestamp_ms = 0,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_SLEEPY;
@@ -698,7 +698,7 @@ TEST_F(FlightPhaseTest, GenSyncNoEventSleepy) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 0);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 0);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -709,7 +709,7 @@ TEST_F(FlightPhaseTest, GenSyncFail) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = UINT32_MAX,
-        .num_consec_detections = 0
+        .num_consec_detection = 0
     };
 
     fsm_state_t curr_state = STATE_BOOST;
@@ -726,7 +726,7 @@ TEST_F(FlightPhaseTest, GenSyncFail) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, UINT32_MAX);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_detection, 0);
 }
 
 TEST_F(FlightPhaseTest, AllThreeImusTriggerLaunchDetection) {
@@ -838,6 +838,8 @@ TEST_F(FlightPhaseTest, OnlyOneImuAboveThresholdDoesNotTriggerLaunchDetection) {
     SET_RETURN_SEQ(math_vector3d_norm, norms, 30);
 
     flight_phase_ctx_t ctx = {0};
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
 
     for (int i = 0; i < 5; i++) {
         queue_send_event = EVENT_NONE;
