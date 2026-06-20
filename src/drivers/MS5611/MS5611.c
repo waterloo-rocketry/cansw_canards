@@ -353,7 +353,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_IO_ERROR;
 	}
 
-	delay_us(CONV_TIME_US[handle.osr_temperature]); // 600 us
+	delay_us(2); // 600 us
 
 	if (W_FAILURE == baro_read_adc(&d2)) {
 		log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
@@ -474,6 +474,6 @@ void ms5611_task(void *argument) {
 			xSemaphoreGive(s_data_mutex);
 		}
 
-		vTaskDelayUntil(xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
 	}
 }
