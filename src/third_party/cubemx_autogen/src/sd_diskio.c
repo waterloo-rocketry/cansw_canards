@@ -28,6 +28,9 @@
 #include "ff_gen_drv.h"
 #include "sd_diskio.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 #include <string.h>
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,7 +41,7 @@
  * in case of errors in either BSP_SD_ReadCpltCallback() or BSP_SD_WriteCpltCallback()
  * the value by default is as defined in the BSP platform driver otherwise 30 secs
  */
-#define SD_TIMEOUT 30 * 1000
+#define SD_TIMEOUT 500
 
 #define SD_DEFAULT_BLOCK_SIZE 512
 
@@ -219,6 +222,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
       timeout = HAL_GetTick();
       while((ReadStatus == 0) && ((HAL_GetTick() - timeout) < SD_TIMEOUT))
       {
+        vTaskDelay(1); // yield to other tasks while waiting
       }
       /* in case of a timeout return error */
       if (ReadStatus == 0)
@@ -232,6 +236,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
 
         while((HAL_GetTick() - timeout) < SD_TIMEOUT)
         {
+            vTaskDelay(1); // yield to other tasks while waiting
           if (BSP_SD_GetCardState() == SD_TRANSFER_OK)
           {
             res = RES_OK;
@@ -263,6 +268,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
           timeout = HAL_GetTick();
           while((ReadStatus == 0) && ((HAL_GetTick() - timeout) < SD_TIMEOUT))
           {
+            vTaskDelay(1); // yield to other tasks while waiting
           }
           if (ReadStatus == 0)
           {
@@ -350,6 +356,7 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
       timeout = HAL_GetTick();
       while((WriteStatus == 0) && ((HAL_GetTick() - timeout) < SD_TIMEOUT))
       {
+        vTaskDelay(1); // yield to other tasks while waiting
       }
       /* in case of a timeout return error */
       if (WriteStatus == 0)
@@ -396,6 +403,7 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
           timeout = HAL_GetTick();
           while((WriteStatus == 0) && ((HAL_GetTick() - timeout) < SD_TIMEOUT))
           {
+            vTaskDelay(1); // yield to other tasks while waiting
           }
           if (WriteStatus == 0)
           {
