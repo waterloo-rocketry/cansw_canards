@@ -10,7 +10,11 @@
 #include "drivers/timer/timer.h"
 #include "rocketlib/include/common.h"
 
-static const uint8_t FSM_PERIOD_MS = 2;
+
+/* test logging */
+#include "application/logger/log.h"
+
+static const uint8_t FSM_PERIOD_MS = 3;
 
 typedef struct {
 	estimator_module_ctx_t *estimator_context; // global instance of estimator
@@ -114,10 +118,15 @@ void fsm_task(void *args) {
 	(void)args;
 	TickType_t last_wake_time = xTaskGetTickCount();
 
+	uint32_t time = 0;
+
 	while (1) {
 		if (W_SUCCESS != timer_get_ms(&(g_ctx.timestamp_ms))) {
 			// TODO: error handling
 		}
+
+		timer_get_tenth_ms(&time);
+		log_text(10, "FSM", "ENTER TASK %d", time);
 
 		all_sensors_data_t sensor_data = {0};
 
@@ -127,6 +136,37 @@ void fsm_task(void *args) {
 		// - imu data
 		// - etc (probably more later)
 		imu_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
+
+		// log all the sensors
+		log_text(10, "FSM", "LSM6 ACCEL: x %lf, y %lf, z %lf BARO: x %lf, y %lf, z %lf, NEW %d", 
+			sensor_data.board_meas.board_imu.accel.x, sensor_data.board_meas.board_imu.accel.y, sensor_data.board_meas.board_imu.accel.z,
+			sensor_data.board_meas.board_imu.gyro.x, sensor_data.board_meas.board_imu.gyro.y, sensor_data.board_meas.board_imu.gyro.z,
+			sensor_data.board_meas.board_imu.is_new
+		);
+		log_text(10, "FSM", "BOARD MAG: x %lf, y %lf, z %lf, NEW %d", 
+			sensor_data.board_meas.board_mag.meas.x, sensor_data.board_meas.board_mag.meas.y, sensor_data.board_meas.board_mag.meas.z,
+			sensor_data.board_meas.board_mag.is_new
+		);
+		log_text(10, "FSM", "BOARD BARO: %lf, NEW %d", 
+			sensor_data.board_meas.board_baro.meas, sensor_data.board_meas.board_baro.is_new
+		);
+
+		// 
+		log_text(10, "FSM", "MTI ACCEL: x %lf, y %lf, z %lf, NEW %d", 
+			sensor_data.mti_meas.mti_accel.meas.x, sensor_data.mti_meas.mti_accel.meas.y, sensor_data.mti_meas.mti_accel.meas.z,
+			sensor_data.mti_meas.mti_accel.is_new
+		);
+		log_text(10, "FSM", "MTI GYRO: x %lf, y %lf, z %lf, NEW %d", 
+			sensor_data.mti_meas.mti_gyro.meas.x, sensor_data.mti_meas.mti_gyro.meas.y, sensor_data.mti_meas.mti_gyro.meas.z,
+			sensor_data.mti_meas.mti_gyro.is_new
+		);
+		log_text(10, "FSM", "MTI MAG: x %lf, y %lf, z %lf, NEW %d", 
+			sensor_data.mti_meas.mti_mag.meas.x, sensor_data.mti_meas.mti_mag.meas.y, sensor_data.mti_meas.mti_mag.meas.z,
+			sensor_data.mti_meas.mti_mag.is_new
+		);
+		log_text(10, "FSM", "MTI BARO: %lf, NEW %d", 
+			sensor_data.mti_meas.mti_baro.meas, sensor_data.mti_meas.mti_baro.is_new
+		);
 
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_data);
@@ -139,6 +179,9 @@ void fsm_task(void *args) {
 
 		// run actions based on new curr state
 		fsm_exec(&g_ctx, &sensor_data);
+
+		timer_get_tenth_ms(&time);
+		log_text(10, "FSM", "EXIT TASK %d", time);
 
 		// state machine runs at 500 hz
 		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(FSM_PERIOD_MS));
