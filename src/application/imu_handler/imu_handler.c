@@ -132,14 +132,8 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 
 		// update timestamp
 		ctx->last_board_imu_timestamp_ms = (raw_data->raw_board_accel.timestamp_ms);
-	} else if (W_IO_ERROR == sensor_status) {
-		log_text(1, "IMUHandler", "WARN: Board IMU failed.");
-		board_data->board_imu.is_new = false;
-
-		// update timestamp
-		ctx->last_board_imu_timestamp_ms = (raw_data->raw_board_accel.timestamp_ms);
 	} else {
-		log_text(1, "IMUHandler", "WARN: Board IMU read failed.");
+		log_text(1, "IMUHandler", "WARN: Board Acceleration failed. CODE: %d", sensor_status);
 		board_data->board_imu.is_new = false;
 	}
 
@@ -156,12 +150,8 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 		}
 
 		ctx->last_mag_timestamp_ms = mag_timestamp_ms;
-	} else if (W_IO_ERROR == sensor_status) {
-		log_text(1, "IMUHandler", "WARN: Board Mag failed.");
-		board_data->board_mag.is_new = false;
-		ctx->last_mag_timestamp_ms = mag_timestamp_ms;
 	} else {
-		log_text(1, "IMUHandler", "WARN: Board Mag read failed.");
+		log_text(1, "IMUHandler", "WARN: Board Mag failed. CODE: %d", sensor_status);
 		board_data->board_mag.is_new = false;
 	}
 
@@ -178,12 +168,8 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 		}
 
 		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
-	} else if (W_IO_ERROR == sensor_status) {
-		log_text(1, "IMUHandler", "WARN: Board Baro failed.");
-		board_data->board_baro.is_new = false;
-		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
 	} else {
-		log_text(1, "IMUHandler", "WARN: Board Baro read failed.");
+		log_text(1, "IMUHandler", "WARN: Board Baro failed. CODE: %d", sensor_status);
 		board_data->board_baro.is_new = false;
 	}
 
@@ -200,8 +186,8 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 	// mag data is already provided in Gauss
 
 	// convert baro from mbar to Pascals
-	board_data->board_baro.meas = ((float64_t)(raw_data->raw_board_baro.pressure_centimbar)) *
-								  PA_PER_CENTIMBAR;
+	board_data->board_baro.meas =
+		((float64_t)(raw_data->raw_board_baro.pressure_centimbar)) * PA_PER_CENTIMBAR;
 
 	// Apply orientation correction
 	board_data->board_imu.accel =
@@ -282,11 +268,7 @@ static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t 
 
 		imu_handler_state.movella_stats.success_count++;
 	} else {
-		if (W_IO_ERROR == status) { // dead :(
-			log_text(1, "IMUHandler", "WARN: Movella communication failed.");
-		} else {
-			log_text(1, "IMUHandler", "WARN: Movella get data read failed.");
-		}
+		log_text(1, "IMUHandler", "WARN: Movella get data read failed. CODE: %d", status);
 
 		// Set is_new flag to indicate IMU failure
 		imu_data->mti_accel.is_new = false;

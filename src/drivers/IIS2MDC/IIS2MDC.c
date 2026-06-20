@@ -309,6 +309,5 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 		log_text(1, "iis2mdc", "ERROR: failed to get timestamp");
 		return W_FAILURE;
 	}
-
 	return W_SUCCESS;
 }

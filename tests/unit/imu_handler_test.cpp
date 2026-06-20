@@ -23,6 +23,7 @@ extern "C" {
 #include "third_party/rocketlib/include/common.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/MS5611/MS5611.h"
 
 
     // Define all fake functions for IMUs using FFF
@@ -32,6 +33,8 @@ extern "C" {
 
 	FAKE_VALUE_FUNC(w_status_t, lsm6dsv32x_get_gyro_acc_data, vector3d_t*, vector3d_t*, lsm6dsv32x_raw_imu_data_t*,
 										lsm6dsv32x_raw_imu_data_t*);
+
+	FAKE_VALUE_FUNC(w_status_t, ms5611_get_raw_pressure, ms5611_raw_result_t*, uint32_t*);
 
 	FAKE_VALUE_FUNC(w_status_t, iis2mdc_get_data, vector3d_t*, iis2mdc_raw_data_t*, uint32_t*);
 
@@ -128,11 +131,26 @@ static w_status_t set_movella_get_data(movella_data_t *data, uint32_t timeout_ms
 	return g_mti_get_return_val.return_val;
 }
 
+typedef struct {
+	ms5611_raw_result_t data;
+	uint32_t timestamp_ms;
+	w_status_t return_val;
+} ms5611_get_values_t;
+
+static ms5611_get_values_t g_ms5611_get_return_val = {0};
+
+static w_status_t set_ms5611_get_raw_pressure(ms5611_raw_result_t *data, uint32_t *timestamp_ms) {
+	*data = g_ms5611_get_return_val.data;
+	*timestamp_ms = g_ms5611_get_return_val.timestamp_ms;
+	return g_ms5611_get_return_val.return_val;
+}
+
 class ImuHandlerTest : public ::testing::Test {
 protected:
 	void SetUp() override {
 		// Reset all fakes before each test
 		RESET_FAKE(lsm6dsv32x_get_gyro_acc_data);
+		RESET_FAKE(ms5611_get_raw_pressure);
 		RESET_FAKE(iis2mdc_get_data);
 		RESET_FAKE(can_handler_transmit);
 		RESET_FAKE(movella_get_data);
@@ -173,6 +191,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasAllSensorNew) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -187,6 +208,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasAllSensorNew) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -217,6 +239,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasAllSensorNew) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -225,6 +248,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasAllSensorNew) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -242,6 +266,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadLSM6) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -256,6 +283,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadLSM6) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -286,6 +314,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadLSM6) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -294,6 +323,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadLSM6) {
 	// Verify new flags
 	EXPECT_FALSE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -311,6 +341,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewLSM6) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -325,6 +358,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewLSM6) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -355,6 +389,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewLSM6) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -363,6 +398,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewLSM6) {
 	// Verify new flags
 	EXPECT_FALSE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -380,6 +416,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetLSM6) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -394,6 +433,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetLSM6) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -424,6 +464,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetLSM6) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -432,6 +473,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetLSM6) {
 	// Verify new flags
 	EXPECT_FALSE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -449,6 +491,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMag) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_IO_ERROR;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -463,6 +508,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMag) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -493,6 +539,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMag) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -501,6 +548,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMag) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_FALSE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -518,6 +566,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMag) {
 	g_iis2_get_return_val.timestamp_ms = 995;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -532,6 +583,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMag) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -562,6 +614,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMag) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -570,6 +623,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMag) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_FALSE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -587,6 +641,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetMag) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_FAILURE;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -601,6 +658,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetMag) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -631,6 +689,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetMag) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -639,6 +698,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetMag) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_FALSE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -656,6 +716,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMTI) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -669,6 +732,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMTI) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -699,6 +763,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMTI) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -707,6 +772,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMTI) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_FALSE(output.mti_meas.mti_accel.is_new);
 	EXPECT_FALSE(output.mti_meas.mti_gyro.is_new);
@@ -724,6 +790,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewAccelMTI) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 997;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -738,6 +807,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewAccelMTI) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -768,6 +838,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewAccelMTI) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -776,6 +847,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewAccelMTI) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_FALSE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -793,6 +865,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewGyroMTI) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 997;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -807,6 +882,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewGyroMTI) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -837,6 +913,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewGyroMTI) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -845,6 +922,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewGyroMTI) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_FALSE(output.mti_meas.mti_gyro.is_new);
@@ -862,6 +940,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaroMTI) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -876,6 +957,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaroMTI) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -906,6 +988,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaroMTI) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -914,6 +997,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaroMTI) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -931,6 +1015,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMagMTI) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -945,6 +1032,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMagMTI) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -975,6 +1063,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMagMTI) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -983,6 +1072,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMagMTI) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -1000,6 +1090,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewOtherMTI) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 0;
@@ -1014,6 +1107,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewOtherMTI) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -1044,6 +1138,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewOtherMTI) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -1052,6 +1147,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewOtherMTI) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
@@ -1069,6 +1165,9 @@ TEST_F(ImuHandlerTest, GetFreshMeasGetFailMTI) {
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
 
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
 	g_mti_get_return_val.data.euler_timestamp_ms = 999;
@@ -1083,6 +1182,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasGetFailMTI) {
 
 	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
 	movella_get_data_fake.custom_fake = set_movella_get_data;
 
@@ -1113,6 +1213,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasGetFailMTI) {
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
 	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
 
 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
@@ -1121,11 +1222,162 @@ TEST_F(ImuHandlerTest, GetFreshMeasGetFailMTI) {
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_FALSE(output.mti_meas.mti_accel.is_new);
 	EXPECT_FALSE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_FALSE(output.mti_meas.mti_baro.is_new);
 	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
+}
+
+// Test successful run with all IMUs working
+TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaro) {
+	// Mock Sensor Readings
+	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
+	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
+	g_lsm6_get_return_val.return_val = W_SUCCESS;
+
+	g_iis2_get_return_val.timestamp_ms = 999;
+	g_iis2_get_return_val.return_val = W_SUCCESS;
+
+	g_ms5611_get_return_val.timestamp_ms = 980;
+	g_ms5611_get_return_val.return_val = W_SUCCESS;
+
+	g_mti_get_return_val.data.acc_timestamp_ms = 999;
+	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
+	g_mti_get_return_val.data.euler_timestamp_ms = 999;
+	g_mti_get_return_val.data.mag_timestamp_ms = 999;
+	g_mti_get_return_val.data.pres_timestamp_ms = 999;
+	g_mti_get_return_val.data.temp_timestamp_ms = 999;
+	g_mti_get_return_val.data.is_dead = false;
+	g_mti_get_return_val.return_val = W_SUCCESS;
+
+	g_timer_get_return_val.timestamp_ms = 1000;
+	g_timer_get_return_val.return_val = W_SUCCESS;
+
+	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
+	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
+
+	movella_get_data_fake.custom_fake = set_movella_get_data;
+
+	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
+
+    // set up output ptr
+	all_sensors_data_t output = {0};
+	imu_handler_ctx_t ctx = {
+		.last_board_imu_timestamp_ms = 997,
+		.last_baro_timestamp_ms = 980,
+		.last_mag_timestamp_ms = 995,
+
+		.last_ad_accel_timestamp_ms = 997,
+		.last_ad_gyro_timestamp_ms = 997,
+
+		.last_mti_acc_timestamp_ms = 997,
+		.last_mti_gyr_timestamp_ms = 997,
+		.last_mti_mag_timestamp_ms = 997,
+		.last_mti_pres_timestamp_ms = 997
+	};
+
+	// Run the function under test with loop_count = 1
+	w_status_t result = imu_handler_get_fresh_meas(&ctx, &output);
+
+	// Verify function returned success
+	EXPECT_EQ(W_SUCCESS, result);
+
+	// Verify IMU read calls were made
+	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
+	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
+
+	EXPECT_EQ(1, movella_get_data_fake.call_count);
+
+	// TODO: verify data
+
+	// Verify new flags
+	EXPECT_TRUE(output.board_meas.board_imu.is_new);
+	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_baro.is_new);
+
+	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
+	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
+	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
+	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+}
+
+// Test successful run with all IMUs working
+TEST_F(ImuHandlerTest, GetFreshMeasFailBaro) {
+	// Mock Sensor Readings
+	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
+	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
+	g_lsm6_get_return_val.return_val = W_SUCCESS;
+
+	g_iis2_get_return_val.timestamp_ms = 999;
+	g_iis2_get_return_val.return_val = W_SUCCESS;
+
+	g_ms5611_get_return_val.timestamp_ms = 999;
+	g_ms5611_get_return_val.return_val = W_FAILURE;
+
+	g_mti_get_return_val.data.acc_timestamp_ms = 999;
+	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
+	g_mti_get_return_val.data.euler_timestamp_ms = 999;
+	g_mti_get_return_val.data.mag_timestamp_ms = 999;
+	g_mti_get_return_val.data.pres_timestamp_ms = 999;
+	g_mti_get_return_val.data.temp_timestamp_ms = 999;
+	g_mti_get_return_val.data.is_dead = false;
+	g_mti_get_return_val.return_val = W_SUCCESS;
+
+	g_timer_get_return_val.timestamp_ms = 1000;
+	g_timer_get_return_val.return_val = W_SUCCESS;
+
+	lsm6dsv32x_get_gyro_acc_data_fake.custom_fake = set_lsm6dsv32x_get_gyro_acc_data;
+	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
+	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
+
+	movella_get_data_fake.custom_fake = set_movella_get_data;
+
+	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
+
+    // set up output ptr
+	all_sensors_data_t output = {0};
+	imu_handler_ctx_t ctx = {
+		.last_board_imu_timestamp_ms = 997,
+		.last_baro_timestamp_ms = 980,
+		.last_mag_timestamp_ms = 995,
+
+		.last_ad_accel_timestamp_ms = 997,
+		.last_ad_gyro_timestamp_ms = 997,
+
+		.last_mti_acc_timestamp_ms = 997,
+		.last_mti_gyr_timestamp_ms = 997,
+		.last_mti_mag_timestamp_ms = 997,
+		.last_mti_pres_timestamp_ms = 997
+	};
+
+	// Run the function under test with loop_count = 1
+	w_status_t result = imu_handler_get_fresh_meas(&ctx, &output);
+
+	// Verify function returned success
+	EXPECT_EQ(W_SUCCESS, result);
+
+	// Verify IMU read calls were made
+	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
+	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
+	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
+
+	EXPECT_EQ(1, movella_get_data_fake.call_count);
+
+	// TODO: verify data
+
+	// Verify new flags
+	EXPECT_TRUE(output.board_meas.board_imu.is_new);
+	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_baro.is_new);
+
+	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
+	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
+	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
+	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
 }
 
 TEST_F(ImuHandlerTest, GetFreshMeasWithInvalidPtrOutput) {

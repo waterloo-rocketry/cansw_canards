@@ -28,7 +28,7 @@ typedef struct { // all of these should be just directly register values
 } raw_board_meas_t;
 
 typedef struct {
-	// board
+	// the last successful read timestamps
 	uint32_t last_board_imu_timestamp_ms;
 	uint32_t last_baro_timestamp_ms;
 	uint32_t last_mag_timestamp_ms;
