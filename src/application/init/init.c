@@ -17,6 +17,7 @@
 #include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -103,6 +104,7 @@ static void system_init_task(void *arg) {
 	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
 	status |= adxrs649_init();
+	status |= iis2mdc_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
