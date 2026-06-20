@@ -18,6 +18,7 @@ typedef struct {
 	uint32_t timestamp_ms; // curr timestamp
 	fsm_state_t curr_state;
 	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
+	imu_handler_ctx_t *p_imu_context; // global instance of flight phase
 } fsm_ctx_t;
 
 // global
@@ -31,6 +32,7 @@ static controller_ctx_t g_controller_context = {0};
 // setting the launch and act_allowed time to MAX to make sure of no inadvertent actuation
 static flight_phase_ctx_t g_flight_phase_context = {.launch_timestamp_ms = UINT32_MAX,
 													.act_allowed_timestamp_ms = UINT32_MAX};
+static imu_handler_ctx_t g_imu_context = {0};
 
 w_status_t fsm_init() {
 	// init estimator context
@@ -50,6 +52,7 @@ w_status_t fsm_init() {
 	g_ctx.estimator_context = &g_estimator_context;
 	g_ctx.p_controller_context = &g_controller_context;
 	g_ctx.p_flight_phase_context = &g_flight_phase_context;
+	g_ctx.p_imu_context = &g_imu_context;
 
 	// initialize fsm state
 	g_ctx.curr_state = STATE_IDLE;
@@ -123,7 +126,7 @@ void fsm_task(void *args) {
 		// get inputs needed for state machine:
 		// - imu data
 		// - etc (probably more later)
-		imu_handler_get_fresh_meas(&sensor_data);
+		imu_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
 
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_data);
