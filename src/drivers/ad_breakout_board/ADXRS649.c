@@ -183,6 +183,37 @@ w_status_t adxrs649_init() {
 }
 
 /**
+ * @brief gets the state of new data for the gyro
+ * @param p_drdy a return pointer for if adxrs649 is data ready
+ * @return the status of getting data from gyro
+ */
+w_status_t adxrs649_is_data_ready(bool *p_drdy) {
+	if (!is_initialized) {
+		log_text(0, "ADXRS649", "ERROR: Failed initialized.");
+		return W_FAILURE;
+	}
+	if ((NULL == p_drdy)) {
+		log_text(0, "ADXRS649", "ERROR: Invalid return ptr.");
+		return W_INVALID_PARAM;
+	}
+
+	gpio_level_t ndrdy; // NOT-DRDY
+
+	if (W_SUCCESS == gpio_read(GPIO_PIN_ADS1219_INT, &ndrdy, 0)) {
+		// data ready is on the negative-edge
+		*p_drdy = (GPIO_LEVEL_LOW == ndrdy) ? true : false;
+
+	} else {
+		// use I2C to get value
+		if (ads1219_conversion_ready(&g_ads_handle, p_drdy) != W_SUCCESS) {
+			return W_IO_ERROR;
+		}
+	}
+
+	return W_SUCCESS;
+}
+
+/**
  * @brief get the spin rate data from the ADXRS649 Gyro
  * @param p_data is a pointer to where the data will be stored (deg/sec)
  * @param p_raw_data is a pointer to the raw data of the gyro
@@ -195,22 +226,9 @@ w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 		return W_FAILURE;
 	}
 
-	bool is_new_data = false;
-	gpio_level_t ndrdy; // NOT-DRDY
-
-	if (W_SUCCESS == gpio_read(GPIO_PIN_ADS1219_INT, &ndrdy, 0)) {
-		// data ready is on the negative-edge
-		is_new_data = (GPIO_LEVEL_LOW == ndrdy) ? true : false;
-
-	} else {
-		// use I2C to get value
-		if (ads1219_conversion_ready(&g_ads_handle, &is_new_data) != W_SUCCESS) {
-			return W_IO_ERROR;
-		}
-	}
-
-	if (!is_new_data) {
-		return W_FAILURE;
+	if ((NULL == p_data) || (NULL == p_raw_data)) {
+		log_text(0, "ADXRS649", "ERROR: Invalid return ptrs.");
+		return W_INVALID_PARAM;
 	}
 
 	if (ads1219_read_value(&g_ads_handle, p_raw_data) != W_SUCCESS) {
