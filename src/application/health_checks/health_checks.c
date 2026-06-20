@@ -212,8 +212,7 @@ static uint32_t check_modules_status(void) {
 	}
 
 	if (status != W_SUCCESS) {
-		// this bitfield error offset should later by replaced with E_CANARD_MODULE_FAILURE_OFFSET);
-		status_bitfield |= (1 << E_WATCHDOG_TIMEOUT_OFFSET);
+		status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
 	}
 
 	return status_bitfield;

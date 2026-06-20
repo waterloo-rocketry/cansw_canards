@@ -89,7 +89,7 @@ static void system_init_task(void *arg) {
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
-	// status |= health_check_init();
+	status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
 	status |= imu_handler_init();
@@ -119,12 +119,12 @@ static void system_init_task(void *arg) {
 							   fsm_task_priority,
 							   &fsm_task_handle);
 
-	// task_status &= xTaskCreate(health_check_task,
-	//     "health",
-	//     512,
-	//     NULL,
-	//     health_checks_task_priority,
-	//     &health_checks_task_handle);
+	task_status &= xTaskCreate(health_check_task,
+							   "health",
+							   512,
+							   NULL,
+							   health_checks_task_priority,
+							   &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
