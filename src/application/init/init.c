@@ -66,6 +66,78 @@ const uint32_t log_task_priority = 1;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
+
+static void step_test() {
+        // vars for vtaskdelay
+    TickType_t last_tick_count = xTaskGetTickCount();
+            gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 1);
+            gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1);
+            gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
+
+
+       // ------------ MOTOR TEST
+
+        // start time is a few sec after startup
+    uint32_t start_time_ms = 4000;
+
+    // reset motor to 0
+    w_status_t status = ak45_send_position_cmd(0);
+    if (status != W_SUCCESS) {
+        log_text(10, "test", "ak45_send_position_cmd(0) fail: %d", status);
+    }
+
+
+    // command sequence, run at intervals of 1sec
+    float32_t cmd_angles[NUM_CMDS] = {
+        40, 0, 20, 0, 10, 0, 5, 0, 3, 0, 2, 0, 1, 0
+    };
+
+    uint32_t last_cmd_time_ms = start_time_ms;
+    uint32_t cmd_index = 0;
+    
+
+    // expected leds: toggle green per second for each cmd, then blinky red when done
+	while (1) {
+        if (cmd_index >= NUM_CMDS) {
+            // done with test, just blink red
+            gpio_toggle(GPIO_PIN_RED_LED, 1);
+            gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
+            vTaskDelay(500);
+        } else {
+            uint32_t current_time_ms;
+            timer_get_ms(&current_time_ms);
+    
+            // if 1 sec has passed since last cmd, send the next cmd in the sequence
+            if (current_time_ms >= (last_cmd_time_ms + 1000)) {
+                gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+
+                timer_get_ms(&last_cmd_time_ms);
+    
+                status = ak45_send_position_cmd(cmd_angles[cmd_index++]);
+                 // log the result of the command
+                if (status != W_SUCCESS) {
+                    log_text(10, "t", "%fdeg fail: %d", cmd_angles[cmd_index - 1], status);
+                } else {
+                    log_text(10, "t", "%fdeg", cmd_angles[cmd_index - 1]);
+                }
+            }
+        }
+
+        // log encoder feedback
+        ak45_feedback_t fb;
+        status = ak45_get_latest_feedback(&fb);
+        if (status == W_SUCCESS) {
+            log_text(10, "t", "%fdeg, %ferpm, %fA, err %d",
+                fb.position_deg, fb.speed_erpm, fb.current_a, fb.fault_code);
+        } else {
+            log_text(10, "t", "fb fail: %d", status);
+        }
+
+        // 1ms
+        vTaskDelayUntil(&last_tick_count, 1);
+	}
+}
+
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -168,73 +240,10 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 
-    // vars for vtaskdelay
-    TickType_t last_tick_count = xTaskGetTickCount();
-            gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 1);
-            gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1);
-            gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
-
-    // ------------ MOTOR TEST
-
-        // start time is a few sec after startup
-    uint32_t start_time_ms = 4000;
-
-    // reset motor to 0
-    w_status_t status = ak45_send_position_cmd(0);
-    if (status != W_SUCCESS) {
-        log_text(10, "test", "ak45_send_position_cmd(0) fail: %d", status);
-    }
 
 
-    // command sequence, run at intervals of 1sec
-    float32_t cmd_angles[NUM_CMDS] = {
-        40, 0, 20, 0, 10, 0, 5, 0, 3, 0, 2, 0, 1, 0
-    };
-
-    uint32_t last_cmd_time_ms = start_time_ms;
-    uint32_t cmd_index = 0;
     
-
-    // expected leds: toggle green per second for each cmd, then blinky red when done
-	while (1) {
-        if (cmd_index >= NUM_CMDS) {
-            // done with test, just blink red
-            gpio_toggle(GPIO_PIN_RED_LED, 1);
-            gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
-            vTaskDelay(500);
-        } else {
-            uint32_t current_time_ms;
-            timer_get_ms(&current_time_ms);
-    
-            // if 1 sec has passed since last cmd, send the next cmd in the sequence
-            if (current_time_ms >= (last_cmd_time_ms + 1000)) {
-                gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-
-                timer_get_ms(&last_cmd_time_ms);
-    
-                status = ak45_send_position_cmd(cmd_angles[cmd_index++]);
-                 // log the result of the command
-                if (status != W_SUCCESS) {
-                    log_text(10, "t", "%fdeg fail: %d", cmd_angles[cmd_index - 1], status);
-                } else {
-                    log_text(10, "t", "%fdeg", cmd_angles[cmd_index - 1]);
-                }
-            }
-        }
-
-        // log encoder feedback
-        ak45_feedback_t fb;
-        status = ak45_get_latest_feedback(&fb);
-        if (status == W_SUCCESS) {
-            log_text(10, "t", "%fdeg, %ferpm, %fA, err %d",
-                fb.position_deg, fb.speed_erpm, fb.current_a, fb.fault_code);
-        } else {
-            log_text(10, "t", "fb fail: %d", status);
-        }
-
-        // 1ms
-        vTaskDelayUntil(&last_tick_count, 1);
-	}
+    step_test();
 }
 
 w_status_t init_tasks(void) {
