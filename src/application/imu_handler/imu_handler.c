@@ -15,8 +15,7 @@
 
 // conversion factors
 static const float64_t M_S2_PER_G = 9.81;
-static const float64_t MBAR_PER_CENTIMBAR = 100;
-static const float64_t PA_PER_MBAR = 100;
+static const float64_t PA_PER_CENTIMBAR = 1;
 
 // TODO: double check values with Tristan
 // Timeout values for freshness check (in milliseconds)
@@ -180,11 +179,11 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 
 		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
 	} else if (W_IO_ERROR == sensor_status) {
-		log_text(1, "IMUHandler", "WARN: Board Mag failed.");
+		log_text(1, "IMUHandler", "WARN: Board Baro failed.");
 		board_data->board_baro.is_new = false;
 		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
 	} else {
-		log_text(1, "IMUHandler", "WARN: Board Mag read failed.");
+		log_text(1, "IMUHandler", "WARN: Board Baro read failed.");
 		board_data->board_baro.is_new = false;
 	}
 
@@ -202,7 +201,7 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 
 	// convert baro from mbar to Pascals
 	board_data->board_baro.meas = ((float64_t)(raw_data->raw_board_baro.pressure_centimbar)) *
-								  PA_PER_MBAR * MBAR_PER_CENTIMBAR;
+								  PA_PER_CENTIMBAR;
 
 	// Apply orientation correction
 	board_data->board_imu.accel =
