@@ -38,6 +38,21 @@ typedef health_status_t (*get_module_status_t)(void);
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
 static uint32_t num_watchdog_tasks = 0;
 
+static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
+	[MODULE_I2C] = i2c_get_status,
+	[MODULE_ADC] = adc_get_status,
+	[MODULE_CAN_HANDLER] = can_handler_get_status,
+	[MODULE_ESTIMATOR] = estimator_get_status,
+	[MODULE_CONTROLLER] = controller_get_status,
+	[MODULE_SD_CARD] = sd_card_get_status,
+	[MODULE_TIMER] = timer_get_status,
+	[MODULE_GPIO] = gpio_get_status,
+	[MODULE_FLIGHT_PHASE] = flight_phase_get_status,
+	[MODULE_IMU_HANDLER] = imu_handler_get_status,
+	[MODULE_UART] = uart_get_status,
+	[MODULE_LOGGER] = logger_get_status,
+};
+
 w_status_t health_check_init(void) {
 	num_watchdog_tasks = 0;
 	return W_SUCCESS;
@@ -161,7 +176,7 @@ static w_status_t process_module_status(health_status_t status) {
 
 		can_msg_t msg = {0};
 		// build error msg in the form "module id:error bitfield:severity"
-		build_canard_firmware_error_msg(PRIO_HIGH,
+		build_canard_firmware_error_msg(PRIO_MEDIUM,
 										xTaskGetTickCount(),
 										status.module_id,
 										status.error_bitfield,
@@ -181,21 +196,6 @@ static w_status_t process_module_status(health_status_t status) {
 	}
 	return W_SUCCESS;
 }
-
-static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
-	[MODULE_I2C] = i2c_get_status,
-	[MODULE_ADC] = adc_get_status,
-	[MODULE_CAN_HANDLER] = can_handler_get_status,
-	[MODULE_ESTIMATOR] = estimator_get_status,
-	[MODULE_CONTROLLER] = controller_get_status,
-	[MODULE_SD_CARD] = sd_card_get_status,
-	[MODULE_TIMER] = timer_get_status,
-	[MODULE_GPIO] = gpio_get_status,
-	[MODULE_FLIGHT_PHASE] = flight_phase_get_status,
-	[MODULE_IMU_HANDLER] = imu_handler_get_status,
-	[MODULE_UART] = uart_get_status,
-	[MODULE_LOGGER] = logger_get_status,
-};
 
 /**
  * @brief Checks the status of all known modules by directly calling their get_status functions
