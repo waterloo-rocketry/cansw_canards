@@ -93,16 +93,16 @@ static void system_init_task(void *arg) {
 	// status |= uart_init(UART_MOVELLA, &huart3, 100);
 	// status |= adc_init(&hadc1, &hadc2, &hadc3);
 	// status |= estimator_init();
-	// status |= health_check_init();
-	status |= movella_init();
-	status |= flight_phase_init();
-	status |= imu_handler_init();
-	status |= can_handler_init(&hfdcan3);
-	status |= controller_init();
-	status |= fsm_init();
-	status |= adxl380_init();
-	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
+	// // status |= health_check_init();
+	// status |= movella_init();
+	// status |= flight_phase_init();
+	// status |= imu_handler_init();
+	// status |= can_handler_init(&hfdcan3);
+	// status |= controller_init();
+	// status |= fsm_init();
+	// // status |= adxl380_init();
+	// status |= lsm6dsv32x_init();
+	// status |= adxrs649_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -147,8 +147,8 @@ static void system_init_task(void *arg) {
 	// task_status &= xTaskCreate(
 	//     movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
-	// task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority,
-	// &log_task_handle);
+	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority,
+	&log_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -179,36 +179,55 @@ while (1) {
     
     uint32_t ret2;
     
-    gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+    // gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
     
     uint32_t start_tick = HAL_GetTick();
 
-    w_status_t write_status =
-        sd_card_file_write("testuwu.txt",
-                           &testbuf[0],
-                           65536,
-                           true,
-                           &ret2);
+    w_status_t write_status = W_SUCCESS;
+        // sd_card_file_write("testuwu.txt",
+        //                    &testbuf[0],
+        //                    65536,
+        //                    true,
+        //                    &ret2);
 
     uint32_t end_tick = HAL_GetTick();
     uint32_t write_duration_ms = end_tick - start_tick;
 
     if (write_status != W_SUCCESS) {
-        gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
+        // gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
     } else {
-        gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
+        // gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
     }
 
-    gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
+    // gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
 
     snprintf_((char *)testbuf,
               sizeof(testbuf),
-              "\r\ncnt:%lu now:%lums write:%lums\r\n",
+              "%lu%lu%lu",
               (unsigned long)write_count++,
               (unsigned long)end_tick,
               (unsigned long)write_duration_ms);
 
-    vTaskDelay(5);
+    log_text(5, "test", "now %d ms", end_tick);
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+    log_text(1, "filler", "filler");
+
+    vTaskDelay(1);
 }
 
 
