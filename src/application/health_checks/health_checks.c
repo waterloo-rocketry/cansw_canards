@@ -159,10 +159,8 @@ static w_status_t process_module_status(health_status_t status) {
 				 status.severity,
 				 status.error_bitfield);
 
-		uint8_t data[6] = {0};
 		can_msg_t msg = {0};
 		// build error msg in the form "module id:error bitfield:severity"
-		snprintf_((char *)data, sizeof(data), "%d:%lu", status.module_id, status.error_bitfield);
 		build_canard_firmware_error_msg(PRIO_HIGH,
 										xTaskGetTickCount(),
 										status.module_id,
@@ -174,7 +172,10 @@ static w_status_t process_module_status(health_status_t status) {
 		}
 
 		if (HEALTH_FATAL == status.severity) {
-			proc_handle_fatal_error((char *)data);
+			char data[32];
+			// build error msg in the form "module id:error bitfield:severity"
+			snprintf_(data, sizeof(data), "%d:%lu", status.module_id, status.error_bitfield);
+			proc_handle_fatal_error(data);
 		}
 		return W_FAILURE;
 	}
