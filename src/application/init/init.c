@@ -11,8 +11,10 @@
 #include "application/health_checks/health_checks.h"
 #include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
+#include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
@@ -47,6 +49,7 @@ TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
+TaskHandle_t ad_breakout_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
@@ -56,7 +59,9 @@ const uint32_t fsm_task_priority = configMAX_PRIORITIES - 1;
 const uint32_t can_handler_rx_priority = 45;
 // in general, prioritize consumers (estimator) over producers (imus) to avoid congestion
 const uint32_t can_handler_tx_priority = 40;
+// TODO: update when sure (based on old imu handler priority)
 const uint32_t movella_task_priority = 20;
+const uint32_t ad_breakout_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
@@ -149,6 +154,13 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority,
 	&log_task_handle);
+
+	task_status &= xTaskCreate(ad_breakout_board_task,
+							   "ad board task",
+							   2560, // TODO: set when sure of size
+							   NULL,
+							   ad_breakout_task_priority,
+							   &ad_breakout_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
