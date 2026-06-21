@@ -37,7 +37,7 @@ w_status_t estimator_init(void) {
 	encoder_data_queue_rad = xQueueCreate(1, sizeof(float));
 
 	if (NULL == encoder_data_queue_rad) {
-		log_text(1, LOG_LVL_FATAL, "estimator", "initfailq"); // TODO: MAXIM LOG source was "adc" which appears wrong for estimator init
+		log_text(1, LOG_LVL_FATAL, "estimator", "initfailq");
 		return W_FAILURE;
 	}
 
