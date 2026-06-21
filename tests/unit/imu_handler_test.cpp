@@ -41,7 +41,7 @@ extern "C" {
     // Fakes for logging
     FAKE_VALUE_FUNC(w_status_t, log_init);
     FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char*, const char*, ...);
-    FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_level_t, log_data_type_t, const log_data_container_t*);
+    FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t*);
 
 // fake can stuff
 // w_status_t can_handler_transmit(const can_msg_t *msg);
