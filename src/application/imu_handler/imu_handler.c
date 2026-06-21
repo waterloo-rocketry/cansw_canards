@@ -133,7 +133,7 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 		// update timestamp
 		ctx->last_board_imu_timestamp_ms = (raw_data->raw_board_accel.timestamp_ms);
 	} else {
-		log_text(1, "IMUHandler", "WARN: Board Acceleration failed. CODE: %d", sensor_status);
+		log_text(1, LOG_LVL_WARN, "IMUHandler", "WARN: Board Acceleration failed. CODE: %d", sensor_status);
 		board_data->board_imu.is_new = false;
 	}
 
@@ -151,7 +151,7 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 
 		ctx->last_mag_timestamp_ms = mag_timestamp_ms;
 	} else {
-		log_text(1, "IMUHandler", "WARN: Board Mag failed. CODE: %d", sensor_status);
+		log_text(1, LOG_LVL_WARN, "IMUHandler", "WARN: Board Mag failed. CODE: %d", sensor_status);
 		board_data->board_mag.is_new = false;
 	}
 
@@ -169,7 +169,7 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 
 		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
 	} else {
-		log_text(1, "IMUHandler", "WARN: Board Baro failed. CODE: %d", sensor_status);
+		log_text(1, LOG_LVL_WARN, "IMUHandler", "WARN: Board Baro failed. CODE: %d", sensor_status);
 		board_data->board_baro.is_new = false;
 	}
 
@@ -268,7 +268,7 @@ static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t 
 
 		imu_handler_state.movella_stats.success_count++;
 	} else {
-		log_text(1, "IMUHandler", "WARN: Movella get data read failed. CODE: %d", status);
+		log_text(1, LOG_LVL_WARN, "IMUHandler", "WARN: Movella get data read failed. CODE: %d", status);
 
 		// Set is_new flag to indicate IMU failure
 		imu_data->mti_accel.is_new = false;
@@ -300,18 +300,19 @@ w_status_t imu_handler_init(void) {
 
 	if (orientation_calibrated != true) {
 		log_text(1,
+				 LOG_LVL_WARN,
 				 "IMUHandler",
 				 "WARN: IMU orientation correction matrices not calibrated yet, using default "
 				 "orientation.");
 	}
 
-	log_text(10, "IMUHandler", "INFO: IMU Handler Initialized.");
+	log_text(10, LOG_LVL_INFO, "IMUHandler", "INFO: IMU Handler Initialized.");
 	return W_SUCCESS;
 }
 
 w_status_t imu_handler_get_fresh_meas(imu_handler_ctx_t *ctx, all_sensors_data_t *imu_output) {
 	if ((NULL == imu_output) || (NULL == ctx)) {
-		log_text(10, "IMUHandler", "ERROR: invalid ptrs.");
+		log_text(10, LOG_LVL_WARN, "IMUHandler", "invalid ptrs.");
 		return W_INVALID_PARAM;
 	}
 
@@ -338,7 +339,7 @@ w_status_t imu_handler_get_fresh_meas(imu_handler_ctx_t *ctx, all_sensors_data_t
 	// Get current timestamp
 	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
 		current_time_ms = 0;
-		log_text(1, "IMUHandler", "ERROR: Failed to get current time.");
+		log_text(1, LOG_LVL_WARN, "IMUHandler", "Failed to get current time.");
 
 		return W_FAILURE; // since without a timestamp the system will be unable to correctly judge
 						  // any of the data therefore the results for all sensors are data
@@ -352,10 +353,10 @@ w_status_t imu_handler_get_fresh_meas(imu_handler_ctx_t *ctx, all_sensors_data_t
 
 	// log system-level failures
 	if (W_SUCCESS != movella_status) {
-		log_text(1, "IMUHandler", "WARN: Read and Processing of Movella IMU failed.");
+		log_text(1, LOG_LVL_WARN, "IMUHandler", "WARN: Read and Processing of Movella IMU failed.");
 	}
 	if (W_SUCCESS != board_status) {
-		log_text(1, "IMUHandler", "WARN: Read and Processing of Board Sensors failed.");
+		log_text(1, LOG_LVL_WARN, "IMUHandler", "WARN: Read and Processing of Board Sensors failed.");
 	}
 
 	// TODO: add logging for board meas
@@ -374,6 +375,7 @@ health_status_t imu_handler_get_status(void) {
 
 	// Log sampling statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "imu_handler",
 			 "%s Sampling -Total: %lu, Errors: %lu",
 			 imu_handler_state.initialized ? "INIT" : "NOT INIT",
@@ -382,6 +384,7 @@ health_status_t imu_handler_get_status(void) {
 
 	// Log IMU statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "imu_handler",
 			 "Board Sensor Success %lu, Failure %lu Movella - Success %lu, Failure %lu",
 			 imu_handler_state.board_stats.success_count,

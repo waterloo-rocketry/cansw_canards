@@ -187,14 +187,14 @@ static w_status_t iis2mdc_self_test(void) {
 
 	// discard the first sample, then average with self-test disabled
 	if (W_SUCCESS != self_test_collect_average(&avg_off)) {
-		log_text(1, "iis2mdc", "ERROR: self-test baseline read failed");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test baseline read failed");
 		return W_FAILURE;
 	}
 
 	// enable self-test and wait 60ms for field to settle (specified in AN 5080)
 	if (W_SUCCESS !=
 		iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C | IIS2MDC_CFG_C_SELF_TEST)) {
-		log_text(1, "iis2mdc", "ERROR: failed to enable self-test");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to enable self-test");
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_SETTLE_MS));
@@ -203,11 +203,11 @@ static w_status_t iis2mdc_self_test(void) {
 
 	// restore normal config regardless of the read outcome
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
-		log_text(1, "iis2mdc", "ERROR: failed to restore configs after self-test");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to restore configs after self-test");
 		return W_FAILURE;
 	}
 	if (W_SUCCESS != read_status) {
-		log_text(1, "iis2mdc", "ERROR: self-test read failed");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test read failed");
 		return W_FAILURE;
 	}
 
@@ -219,7 +219,7 @@ static w_status_t iis2mdc_self_test(void) {
 	if ((dx < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dx > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
 		(dy < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dy > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
 		(dz < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dz > IIS2MDC_SELF_TEST_MAX_GAUSS)) {
-		log_text(1, "iis2mdc", "ERROR: self-test out of range: x=%f y=%f z=%f", dx, dy, dz);
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test out of range: x=%f y=%f z=%f", dx, dy, dz);
 		return W_FAILURE;
 	}
 
@@ -234,11 +234,12 @@ static w_status_t iis2mdc_sanity_check(void) {
 	uint8_t id;
 
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
-		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to read WHO_AM_I");
 		return W_FAILURE;
 	}
 	if (IIS2MDC_WHO_AM_I_VAL != id) {
 		log_text(1,
+				 LOG_LVL_FATAL,
 				 "iis2mdc",
 				 "ERROR: WHO_AM_I mismatch: expected %u, got %u",
 				 IIS2MDC_WHO_AM_I_VAL,
@@ -247,7 +248,7 @@ static w_status_t iis2mdc_sanity_check(void) {
 	}
 
 	if (W_SUCCESS != iis2mdc_self_test()) {
-		log_text(1, "iis2mdc", "ERROR: self-test failed");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test failed");
 		return W_FAILURE;
 	}
 
@@ -260,7 +261,7 @@ w_status_t iis2mdc_init(void) {
 
 	// soft reset clears config registers
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
-		log_text(1, "iis2mdc", "ERROR: soft reset failed");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "soft reset failed");
 		return W_FAILURE;
 	}
 
@@ -270,12 +271,12 @@ w_status_t iis2mdc_init(void) {
 	if ((W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C))) {
-		log_text(1, "iis2mdc", "ERROR: failed to write configuration registers");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to write configuration registers");
 		return W_FAILURE;
 	}
 
 	if (W_SUCCESS != iis2mdc_sanity_check()) {
-		log_text(1, "iis2mdc", "ERROR: sanity check failed");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "sanity check failed");
 		return W_FAILURE;
 	}
 
@@ -294,19 +295,19 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 	uint8_t buf[6] = {0};
 
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {
-		log_text(1, "iis2mdc", "ERROR: NULL pointer cannot be used as input to get_data function");
+		log_text(1, LOG_LVL_WARN, "iis2mdc", "NULL pointer cannot be used as input to get_data function");
 		return W_FAILURE;
 	}
 
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_OUTX_L, buf, 6)) {
-		log_text(1, "iis2mdc", "ERROR: failed to read output registers");
+		log_text(1, LOG_LVL_WARN, "iis2mdc", "failed to read output registers");
 		return W_FAILURE;
 	}
 
 	iis2mdc_convert_sample(buf, raw_data, data);
 
 	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
-		log_text(1, "iis2mdc", "ERROR: failed to get timestamp");
+		log_text(1, LOG_LVL_WARN, "iis2mdc", "failed to get timestamp");
 		return W_FAILURE;
 	}
 	return W_SUCCESS;

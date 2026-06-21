@@ -81,7 +81,7 @@ static void system_init_task(void *arg) {
 	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
-		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
+		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
 	}
 
 	w_status_t status = W_SUCCESS;
@@ -110,7 +110,7 @@ static void system_init_task(void *arg) {
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
 		// Log critical initialization failure - specific modules should have logged details
-		log_text(10, "init", "crit init fail (status: 0x%lx).", status);
+		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).", status);
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}
@@ -160,10 +160,10 @@ static void system_init_task(void *arg) {
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
-		log_text(10, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
+		log_text(10, LOG_LVL_FATAL, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
 		proc_handle_fatal_error("tasks");
 	}
-	log_text(10, "SystemInit", "All tasks created successfully.");
+	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
 	while (1) {

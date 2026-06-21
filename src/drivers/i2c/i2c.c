@@ -115,7 +115,7 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
 
 	// Validate input parameters
 	if (bus >= I2C_BUS_COUNT || !hal_handle) {
-		log_text(10, "i2c", "initbusfail %d", bus);
+		log_text(10, LOG_LVL_FATAL, "i2c", "initbusfail %d", bus);
 		return W_INVALID_PARAM;
 	}
 
@@ -147,7 +147,7 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
 		if (handle->transfer_sem) {
 			vSemaphoreDelete(handle->transfer_sem);
 		}
-		log_text(10, "i2c", "initmtx %d", bus);
+		log_text(10, LOG_LVL_FATAL, "i2c", "initmtx %d", bus);
 		return W_FAILURE;
 	}
 
@@ -167,7 +167,7 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
 
 	if (HAL_OK != callback_status) {
 		handle->initialized = false;
-		log_text(10, "i2c", "ERROR: callbacks not resitered");
+		log_text(10, LOG_LVL_FATAL, "i2c", "callbacks not resitered");
 
 		// delete semaphore and mutex
 		vSemaphoreDelete(handle->mutex);
@@ -339,7 +339,7 @@ health_status_t i2c_get_status(void) {
 	}
 
 	// Log initialization status
-	log_text(0, "i2c", "all bus init: %s", (I2C_BUS_COUNT == num_bus_init) ? "true" : "false");
+	log_text(0, LOG_LVL_INFO, "i2c", "all bus init: %s", (I2C_BUS_COUNT == num_bus_init) ? "true" : "false");
 
 	// Log per-bus status
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {
@@ -363,6 +363,7 @@ health_status_t i2c_get_status(void) {
 		}
 
 		log_text(0,
+				 LOG_LVL_INFO,
 				 "i2c",
 				 "Bus %s: init=%d, timeouts=%lu, nacks=%lu, bus_errs=%lu",
 				 bus_name,
