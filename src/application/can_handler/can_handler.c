@@ -61,7 +61,7 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 	status |= gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 5);
 
 	if (status != W_SUCCESS) {
-		og_text(1, LOG_LVL_WARN, "CANCallback", "LED OFF callback failed to set GPIO.");
+		log_text(1, LOG_LVL_WARN, "CANCallback", "LED OFF callback failed to set GPIO.");
 	}
 	return status;
 }

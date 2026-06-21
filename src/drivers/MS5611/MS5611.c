@@ -271,7 +271,7 @@ w_status_t ms5611_init(void) {
 	}
 
 	handle.initialized = true;
-	log_text(1, LOG_LVL_INFO, "ms5611", "INFO: initialization successful");
+	log_text(1, LOG_LVL_INFO, "ms5611", "initialization successful");
 
 	return W_SUCCESS;
 }
