@@ -353,8 +353,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	return W_SUCCESS;
 }
 
-w_status_t log_data(uint32_t timeout, log_level_t level, log_data_type_t type,
-					const log_data_container_t *data) {
+w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_container_t *data) {
 	// Get timestamp as close to time of call as possible
 	// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
 	uint32_t timestamp = 0;

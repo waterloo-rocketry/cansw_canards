@@ -57,7 +57,7 @@ w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *inpu
 
 		log_container.controller.cmd_angle = (float)output->commanded_angle;
 		log_container.controller.ref_signal = ref_signal;
-		if (W_SUCCESS != log_data(5, LOG_LVL_INFO, LOG_TYPE_CANARD_CMD, &log_container)) {
+		if (W_SUCCESS != log_data(5, LOG_TYPE_CANARD_CMD, &log_container)) {
 			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "cntl act", "log cmd fail");
 			status |= W_FAILURE;
 		}
