@@ -68,7 +68,8 @@ w_status_t flight_phase_init(void) {
 
 	if ((NULL == event_queue) ||
 		(W_SUCCESS != can_handler_register_callback(MSG_ACTUATOR_CMD, act_cmd_callback))) {
-		log_text(1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
+		log_text(
+			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
 		return W_FAILURE;
 	}
 
@@ -111,7 +112,11 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 	}
 
 	if (xQueueSend(event_queue, &event, 0) != pdPASS) {
-		log_text(0, LOG_LVL_FATAL, "FlightPhase", "Failed to send event %d to queue. Queue full?", event);
+		log_text(0,
+				 LOG_LVL_FATAL,
+				 "FlightPhase",
+				 "Failed to send event %d to queue. Queue full?",
+				 event);
 		flight_phase_status.event_queue_full_count++;
 		return W_FAILURE;
 	}
@@ -175,7 +180,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 				new_state = STATE_PAD_FILTER;
 			} else {
 				// Ignore redundant PAD events or other unexpected events
-				log_text(5, LOG_LVL_WARN, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -190,7 +200,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
-				log_text(5, LOG_LVL_WARN, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -202,7 +217,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
-				log_text(5, LOG_LVL_WARN, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -219,7 +239,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
-				log_text(5, LOG_LVL_WARN, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -229,7 +254,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 			} else {
 				// Ignore redundant or unexpected events - already in flight
-				log_text(5, LOG_LVL_WARN, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -238,13 +268,23 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 				new_state = STATE_SLEEPY;
 			} else {
 				// Ignore redundant or unexpected events - already in flight
-				log_text(5, LOG_LVL_WARN, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
 		case STATE_SLEEPY:
 			// Ignore redundant or unexpected events - already in flight
-			log_text(5, LOG_LVL_WARN, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+			log_text(5,
+					 LOG_LVL_WARN,
+					 "FlightPhase",
+					 "Unexpected event %d in state %d",
+					 event,
+					 curr_state);
 			break;
 
 		// deprecate time?

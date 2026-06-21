@@ -133,7 +133,8 @@ static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t
 		// update timestamp
 		ctx->last_board_imu_timestamp_ms = (raw_data->raw_board_accel.timestamp_ms);
 	} else {
-		log_text(1, LOG_LVL_WARN, "IMUHandler", "Board Acceleration failed. CODE: %d", sensor_status);
+		log_text(
+			1, LOG_LVL_WARN, "IMUHandler", "Board Acceleration failed. CODE: %d", sensor_status);
 		board_data->board_imu.is_new = false;
 	}
 

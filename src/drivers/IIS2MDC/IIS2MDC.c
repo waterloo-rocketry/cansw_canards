@@ -295,7 +295,10 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 	uint8_t buf[6] = {0};
 
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {
-		log_text(1, LOG_LVL_WARN, "iis2mdc", "NULL pointer cannot be used as input to get_data function");
+		log_text(1,
+				 LOG_LVL_WARN,
+				 "iis2mdc",
+				 "NULL pointer cannot be used as input to get_data function");
 		return W_FAILURE;
 	}
 

@@ -339,7 +339,11 @@ health_status_t i2c_get_status(void) {
 	}
 
 	// Log initialization status
-	log_text(0, LOG_LVL_INFO, "i2c", "all bus init: %s", (I2C_BUS_COUNT == num_bus_init) ? "true" : "false");
+	log_text(0,
+			 LOG_LVL_INFO,
+			 "i2c",
+			 "all bus init: %s",
+			 (I2C_BUS_COUNT == num_bus_init) ? "true" : "false");
 
 	// Log per-bus status
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {

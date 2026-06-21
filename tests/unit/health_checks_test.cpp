@@ -24,7 +24,7 @@ FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
 FAKE_VOID_FUNC(build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, can_msg_t *);
 
 // FAKE_VALUE_FUNC(TaskHandle_t, xTaskGetCurrentTaskHandle);
-FAKE_VOID_FUNC(log_text, uint32_t, const char *, const char *, void *);
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...);
 
 // Mock implementations for all the module get_status functions
 FAKE_VALUE_FUNC(health_status_t, i2c_get_status);

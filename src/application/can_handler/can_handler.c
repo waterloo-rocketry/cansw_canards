@@ -135,7 +135,11 @@ void can_handler_task_rx(void *argument) {
 			can_msg_type_t msg_type = get_message_type(&rx_msg);
 			if (callback_map[msg_type] != NULL) {
 				if (callback_map[msg_type](&rx_msg) != W_SUCCESS) {
-					log_text(1, LOG_LVL_WARN, "CANHandlerRX", "Callback failed for msg type %d.", msg_type);
+					log_text(1,
+							 LOG_LVL_WARN,
+							 "CANHandlerRX",
+							 "Callback failed for msg type %d.",
+							 msg_type);
 					can_error_stats.rx_callback_errors++; // Track callback execution errors
 				}
 			}

@@ -239,7 +239,8 @@ w_status_t log_init(void) {
 	return status;
 }
 
-w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format, ...) {
+w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
+					...) {
 	// Get timestamp as close to time of call as possible
 	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log
 	// message anyway. We're trying to log as much as possible and a missing timestamp does not
@@ -292,8 +293,8 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	char *const msg_dest = buffer->data + (msg_num * MAX_TEXT_MSG_LENGTH);
 
 	// Determine the string to display for log severity
-	char * level_string = "";
-	switch(level) {
+	char *level_string = "";
+	switch (level) {
 		case LOG_LVL_FATAL:
 			level_string = "FATAL";
 			break;
@@ -352,7 +353,8 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	return W_SUCCESS;
 }
 
-w_status_t log_data(uint32_t timeout, log_level_t level, log_data_type_t type, const log_data_container_t *data) {
+w_status_t log_data(uint32_t timeout, log_level_t level, log_data_type_t type,
+					const log_data_container_t *data) {
 	// Get timestamp as close to time of call as possible
 	// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
 	uint32_t timestamp = 0;

@@ -84,8 +84,10 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
  */
 static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
 	if ((NULL == data) || (NULL == fb)) {
-		log_text(
-			LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointers or not initialized for Parse Feedback");
+		log_text(LOG_WAIT_MS,
+				 LOG_LVL_WARN,
+				 "ak45",
+				 "Invalid pointers or not initialized for Parse Feedback");
 		return W_FAILURE;
 	}
 

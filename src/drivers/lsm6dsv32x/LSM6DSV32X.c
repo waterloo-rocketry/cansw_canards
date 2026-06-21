@@ -71,7 +71,8 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
  */
 static w_status_t lsm6dsv32x_check_sanity() {
 	if (lsm6dsv32x_ctx.switched_callback) {
-		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
+		log_text(
+			1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
 		return W_FAILURE;
 	}
 
@@ -117,7 +118,8 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
  */
 w_status_t lsm6dsv32x_init() {
 	if (lsm6dsv32x_ctx.switched_callback) {
-		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
+		log_text(
+			1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
 		return W_FAILURE;
 	}
 	lsm6dsv32x_ctx.hi2c = &hi2c1;
@@ -194,8 +196,10 @@ w_status_t lsm6dsv32x_init() {
  */
 w_status_t lsm6dsv32x_int1_isr_handler() {
 	if (!lsm6dsv32x_ctx.switched_callback) {
-		log_text(
-			1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to complete DMA callback before new callback.");
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "LSM6DSV32X",
+				 "Attempting to complete DMA callback before new callback.");
 		return W_FAILURE;
 	}
 

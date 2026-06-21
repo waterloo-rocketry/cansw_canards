@@ -79,7 +79,11 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
 	// Check if the task is already registered
 	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
 		if (watchdog_tasks[i].task_handle == task_handle) {
-			log_text(0, LOG_LVL_WARN, "health_checks", "duplicate task registration:%p", (void *)task_handle);
+			log_text(0,
+					 LOG_LVL_WARN,
+					 "health_checks",
+					 "duplicate task registration:%p",
+					 (void *)task_handle);
 			return W_FAILURE;
 		}
 	}

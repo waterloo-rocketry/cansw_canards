@@ -325,7 +325,10 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	}
 
 	if (!(handle.initialized)) {
-		log_text(1, LOG_LVL_WARN, "ms5611", "attempted to read pressure before successful initialization");
+		log_text(1,
+				 LOG_LVL_WARN,
+				 "ms5611",
+				 "attempted to read pressure before successful initialization");
 		return W_FAILURE;
 	}
 

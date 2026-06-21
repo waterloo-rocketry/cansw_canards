@@ -160,7 +160,10 @@ static void system_init_task(void *arg) {
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
-		log_text(10, LOG_LVL_FATAL, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
+		log_text(10,
+				 LOG_LVL_FATAL,
+				 "SystemInit",
+				 "CRITICAL: Failed to create one or more FreeRTOS tasks.");
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");

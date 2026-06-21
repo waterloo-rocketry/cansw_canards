@@ -146,7 +146,8 @@ w_status_t adxrs649_init() {
 	}
 
 	if (ads1219_start(&g_ads_handle) != W_SUCCESS) {
-		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to start continuous conversion for the ADC.");
+		log_text(
+			0, LOG_LVL_FATAL, "ADXRS649", "Failed to start continuous conversion for the ADC.");
 		return W_FAILURE;
 	}
 
@@ -173,7 +174,8 @@ w_status_t adxrs649_init() {
 	}
 
 	if (ads1219_start(&g_ads_handle) != W_SUCCESS) {
-		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to start continuous conversion for the ADC.");
+		log_text(
+			0, LOG_LVL_FATAL, "ADXRS649", "Failed to start continuous conversion for the ADC.");
 		return W_FAILURE;
 	}
 
