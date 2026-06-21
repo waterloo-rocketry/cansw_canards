@@ -241,7 +241,7 @@ static w_status_t iis2mdc_sanity_check(void) {
 		log_text(1,
 				 LOG_LVL_FATAL,
 				 "iis2mdc",
-				 "ERROR: WHO_AM_I mismatch: expected %u, got %u",
+				 "WHO_AM_I mismatch: expected %u, got %u",
 				 IIS2MDC_WHO_AM_I_VAL,
 				 id);
 		return W_FAILURE;
