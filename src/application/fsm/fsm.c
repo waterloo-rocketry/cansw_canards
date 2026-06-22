@@ -13,6 +13,7 @@
 
 /* test logging */
 #include "application/logger/log.h"
+#include "drivers/ak45_driver/ak45_driver.h"
 
 static const uint8_t FSM_PERIOD_MS = 3;
 
@@ -168,6 +169,20 @@ void fsm_task(void *args) {
 			sensor_data.mti_meas.mti_baro.meas, sensor_data.mti_meas.mti_baro.is_new
 		);
 
+		// 
+		log_text(10, "FSM", "AD ACCEL: x %lf, y %lf, z %lf, NEW %d", 
+			sensor_data.ad_meas.ad_accel.meas.x, sensor_data.ad_meas.ad_accel.meas.y, sensor_data.ad_meas.ad_accel.meas.z,
+			sensor_data.ad_meas.ad_accel.is_new
+		);
+		log_text(10, "FSM", "AD GYRO: %lf, NEW %d", 
+			sensor_data.ad_meas.ad_gyro.meas, sensor_data.ad_meas.ad_gyro.is_new
+		);
+		log_text(10, "FSM", "MOTOR ENCODER: %lf, NEW %d", 
+			sensor_data.motor_encoder_meas.meas, sensor_data.motor_encoder_meas.is_new
+		);
+
+		ak45_send_position_cmd(6.7);
+
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_data);
 
@@ -184,6 +199,6 @@ void fsm_task(void *args) {
 		log_text(10, "FSM", "EXIT TASK %d", time);
 
 		// state machine runs at 500 hz
-		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(FSM_PERIOD_MS));
+		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(10));
 	}
 }
