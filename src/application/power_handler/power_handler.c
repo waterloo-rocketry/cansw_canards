@@ -12,6 +12,36 @@
 #include "power_handler.h"
 #include "rocketlib/include/common.h"
 
+// Fault bit positions
+#define FAULT_BAT1_VOLT (1 << 0)
+#define FAULT_BAT2_VOLT (1 << 1)
+#define FAULT_RKT_VOLT (1 << 2)
+#define FAULT_CHG_VOLT (1 << 3)
+#define FAULT_5V_CURR (1 << 4)
+#define FAULT_5V_OUTPUT (1 << 5)
+#define FAULT_3V3_CURR (1 << 6)
+#define FAULT_BAT1_CURR (1 << 7)
+#define FAULT_BAT2_CURR (1 << 8)
+
+/**
+ * States of the power handler.
+ */
+typedef struct {
+	bool initialized;
+	bool external_5v_enabled;
+	bool low_power_mode;
+	uint32_t lipo_1_fault_count;
+	uint32_t lipo_2_fault_count;
+	uint32_t overcurrent_count;
+} power_handler_status_t;
+
+typedef enum {
+	POWER_INPUT_CHG,
+	POWER_INPUT_RKT,
+	POWER_INPUT_BAT,
+	POWER_INPUT_NONE
+} power_input_source_t;
+
 // LiPo Thresholds
 static const float32_t VBAT_MIN = 22.2;
 static const float32_t VBAT_MAX = 25.4;
@@ -42,19 +72,33 @@ static power_input_source_t get_active_input(void) {
 	uint32_t vsens_bat1 = 0;
 	uint32_t vsens_bat2 = 0;
 
-	adc_get_converted_val(VSENS_CHG, &vsens_chg);
-	adc_get_converted_val(VSENS_RKT, &vsens_rkt);
-	adc_get_converted_val(VSENS_USB, &vsens_usb);
-	adc_get_converted_val(VSENS_BAT1, &vsens_bat1);
-	adc_get_converted_val(VSENS_BAT2, &vsens_bat2);
+	if (W_SUCCESS != adc_get_converted_val(VSENS_CHG, &vsens_chg)){
+		log_text(5, "power handler", "adc communication failed while getting charge voltage.");
+	}
 
-	if (vsens_chg == 0 && vsens_rkt == 0 && vsens_usb == 0 && vsens_bat1 == 0 && vsens_bat2 == 0) {
+	if (W_SUCCESS != adc_get_converted_val(VSENS_RKT, &vsens_rkt)){
+		log_text(5, "power handler", "adc communication failed while getting rocket voltage.");
+	}
+
+	if (W_SUCCESS != adc_get_converted_val(VSENS_USB, &vsens_usb)){
+		log_text(5, "power handler", "adc communication failed while getting usb voltage.");
+	}
+
+	if (W_SUCCESS != adc_get_converted_val(VSENS_BAT1, &vsens_bat1)){
+		log_text(5, "power handler", "adc communication failed while getting battery 1 voltage.");
+	}
+	
+	if (W_SUCCESS != adc_get_converted_val(VSENS_BAT2, &vsens_bat2)){
+		log_text(5, "power handler", "adc communication failed while getting battery 2 voltage.");
+	}
+
+	if ((vsens_chg == 0) && (vsens_rkt == 0) && (vsens_usb == 0) && (vsens_bat1 == 0) && (vsens_bat2 == 0)) {
 		return POWER_INPUT_NONE;
-	} else if (vsens_chg >= vsens_rkt && vsens_chg >= vsens_usb && vsens_chg >= vsens_bat1 &&
-			   vsens_chg >= vsens_bat2) {
+	} else if ((vsens_chg >= vsens_rkt) && (vsens_chg >= vsens_usb) && (vsens_chg >= vsens_bat1) &&
+			   (vsens_chg >= vsens_bat2)) {
 		return POWER_INPUT_CHG;
-	} else if (vsens_rkt >= vsens_chg && vsens_rkt >= vsens_usb && vsens_rkt >= vsens_bat1 &&
-			   vsens_rkt >= vsens_bat2) {
+	} else if ((vsens_rkt >= vsens_chg) && (vsens_rkt >= vsens_usb) && (vsens_rkt >= vsens_bat1) &&
+			   (vsens_rkt >= vsens_bat2)) {
 		return POWER_INPUT_RKT;
 	} else {
 		return POWER_INPUT_BAT;

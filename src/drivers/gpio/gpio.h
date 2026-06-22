@@ -34,7 +34,7 @@ typedef enum {
 	GPIO_PIN_BAT_FLT1,
 	GPIO_PIN_BAT_FLT2,
 	GPIO_PIN_CHG_MUX_EN,
-	GPIO_PIN_COUNT
+	GPIO_PIN_COUNT // Enum max value
 } gpio_pin_t;
 
 /**
