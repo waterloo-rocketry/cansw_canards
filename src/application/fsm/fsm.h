@@ -1,15 +1,19 @@
 #ifndef FSM_H
 #define FSM_H
 
+#include "rocketlib/include/common.h"
+
 /**
  * Enum representing phase of flight (state machine state)
  */
 typedef enum {
 	STATE_IDLE,
-	STATE_SE_INIT,
+	STATE_PAD_FILTER,
+	STATE_PAD_NAV,
 	STATE_BOOST,
 	STATE_ACT_ALLOWED,
 	STATE_RECOVERY,
+	STATE_SLEEPY,
 	STATE_ERROR
 } fsm_state_t;
 

@@ -8,6 +8,7 @@
 #include "application/fsm/fsm.h"
 #include "application/imu_handler/imu_handler.h"
 #include "drivers/timer/timer.h"
+#include "rocketlib/include/common.h"
 
 static const uint8_t FSM_PERIOD_MS = 2;
 
@@ -17,6 +18,7 @@ typedef struct {
 	uint32_t timestamp_ms; // curr timestamp
 	fsm_state_t curr_state;
 	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
+	imu_handler_ctx_t *p_imu_context; // global instance of flight phase
 } fsm_ctx_t;
 
 // global
@@ -27,7 +29,10 @@ static estimator_module_ctx_t g_estimator_context = {0};
 
 // make sure controller_output_t is initalized to 0 and valid to read to match original design
 static controller_ctx_t g_controller_context = {0};
-static flight_phase_ctx_t g_flight_phase_context = {0};
+// setting the launch and act_allowed time to MAX to make sure of no inadvertent actuation
+static flight_phase_ctx_t g_flight_phase_context = {.launch_timestamp_ms = UINT32_MAX,
+													.act_allowed_timestamp_ms = UINT32_MAX};
+static imu_handler_ctx_t g_imu_context = {0};
 
 w_status_t fsm_init() {
 	// init estimator context
@@ -47,6 +52,7 @@ w_status_t fsm_init() {
 	g_ctx.estimator_context = &g_estimator_context;
 	g_ctx.p_controller_context = &g_controller_context;
 	g_ctx.p_flight_phase_context = &g_flight_phase_context;
+	g_ctx.p_imu_context = &g_imu_context;
 
 	// initialize fsm state
 	g_ctx.curr_state = STATE_IDLE;
@@ -71,8 +77,12 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			break;
 
 			// both Pad filter and boost will only run estimator step
-		case STATE_SE_INIT:
+		case STATE_PAD_FILTER:
 			// TODO: how to tell estimator it needs to pad filter
+			/* fall through */
+		case STATE_PAD_NAV:
+			// TODO: enter into flight filter
+			/* fall through */
 		case STATE_BOOST:
 			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
 			break;
@@ -91,6 +101,8 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			break;
 
 			// etc for more cases...
+		case STATE_SLEEPY:
+			break;
 
 		default:
 			// TODO: how to deal with the other cases
@@ -114,7 +126,7 @@ void fsm_task(void *args) {
 		// get inputs needed for state machine:
 		// - imu data
 		// - etc (probably more later)
-		imu_handler_get_fresh_meas(&sensor_data);
+		imu_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
 
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_data);

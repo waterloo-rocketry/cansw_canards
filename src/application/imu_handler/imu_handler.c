@@ -7,35 +7,51 @@
 #include "canlib.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
+#include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/MS5611/MS5611.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 
-// Period of IMU sampling in milliseconds
-// slightly slower than 200 hz to always receive encoder which can be >5ms
-static const int IMU_SAMPLING_PERIOD_MS = 6;
+// conversion factors
+static const float64_t M_S2_PER_G = 9.81;
+static const float64_t PA_PER_CENTIMBAR = 1;
 
+// TODO: double check values with Tristan
 // Timeout values for freshness check (in milliseconds)
-static const int GYRO_FRESHNESS_TIMEOUT_MS = 5;
-static const int MAG_FRESHNESS_TIMEOUT_MS = 10;
-static const int ACCEL_FRESHNESS_TIMEOUT_MS = 5;
-static const int BARO_FRESHNESS_TIMEOUT_MS = 25;
-static const int ERROR_THRESHOLD = 10;
+static const int32_t ST_IMU_FRESHNESS_TIMEOUT_MS = 2;
+static const int32_t AD_ACCEL_FRESHNESS_TIMEOUT_MS = 2;
+static const int32_t AD_GYRO_FRESHNESS_TIMEOUT_MS = 2;
+static const int32_t MAG_FRESHNESS_TIMEOUT_MS = 5;
+static const int32_t BARO_FRESHNESS_TIMEOUT_MS = 5;
+
+// TODO: consider splitting to each sensor since the data is coming seperately
+static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 5;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
-static const int IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
-static const int IMU_HANDLER_CAN_TX_RATE = (IMU_HANDLER_CAN_TX_PERIOD_MS / IMU_SAMPLING_PERIOD_MS);
+// static const uint32_t IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
+// static const uint32_t IMU_HANDLER_CAN_TX_RATE =
+// 	(IMU_HANDLER_CAN_TX_PERIOD_MS / ST_IMU_FRESHNESS_TIMEOUT_MS);
 
-// correct orientation from finn irl, may 4 2025
-// also default uncalibrated orientation until calibration module sets these
-// S1 (movella)
-static const matrix3d_t g_movella_upd_mat = {
+// TODO: add calibration matrix for this year
+static const matrix3d_t g_mti_correction_matrix = {
 	.array = {{0, 0, 1.000000000}, {1.0000000, 0, 0}, {0, 1.0000000000, 0}}};
-// S2 (pololu)
-static const matrix3d_t g_pololu_upd_mat = {
+static const matrix3d_t g_board_imu_correction_matrix = {
+	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+static const matrix3d_t g_board_mag_correction_matrix = {
+	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+static const matrix3d_t g_ad_accel_correction_matrix = {
+	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+static const matrix3d_t g_ad_gyro_correction_matrix = {
 	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
 
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
+
+typedef struct {
+	uint32_t success_count;
+	uint32_t failure_count;
+} sensor_health_state_t;
 
 // Module state tracking
 typedef struct {
@@ -44,10 +60,9 @@ typedef struct {
 	uint32_t error_count;
 
 	// Per-IMU stats
-	struct {
-		uint32_t success_count;
-		uint32_t failure_count;
-	} pololu_stats, movella_stats;
+	sensor_health_state_t board_stats;
+	sensor_health_state_t ad_stats;
+	sensor_health_state_t movella_stats;
 } imu_handler_state_t;
 
 static imu_handler_state_t imu_handler_state = {0};
@@ -89,82 +104,187 @@ static imu_handler_state_t imu_handler_state = {0};
 // }
 
 /**
- * @brief Read data from the pololu AltIMU-10 sensor
- * @param imu_data Pointer to store the converted data
+ * @brief Read data from the board
+ * @param ctx pointer to the ctx storing the previously updated times for the sensors
+ * @param board_data Pointer to store the converted data
  * @param raw_data Pointer to store the raw data
+ * @param curr_timestamp_ms the current time stamp for freshness calculations TODO
  * @return Status of the read operation
  */
-static w_status_t read_pololu_imu(estimator_imu_measurement_t *imu_data,
-								  raw_pololu_data_t *raw_data) {
-	w_status_t status = W_SUCCESS;
+static w_status_t read_board_meas(imu_handler_ctx_t *ctx, navigator_board_meas_t *board_data,
+								  raw_board_meas_t *raw_data, const uint32_t curr_timestamp_ms) {
+	(void)curr_timestamp_ms; // will be used when use the minimum update rate to determine deadness
+	bool is_dead = true;
 
-	// Read accelerometer, gyro, and magnetometer data
-	status |= altimu_get_gyro_acc_data(
-		&imu_data->accelerometer, &imu_data->gyroscope, &raw_data->raw_acc, &raw_data->raw_gyro);
-	status |= altimu_get_mag_data(&imu_data->magnetometer, &raw_data->raw_mag);
+	w_status_t sensor_status = lsm6dsv32x_get_gyro_acc_data(&(board_data->board_imu.accel),
+															&(board_data->board_imu.gyro),
+															&(raw_data->raw_board_accel),
+															&(raw_data->raw_board_gyro));
 
-	// Read barometer data
-	altimu_barometer_data_t baro_data;
-	status |= altimu_get_baro_data(&baro_data, &raw_data->raw_baro);
+	// Read accelerometer and gyro data
+	if (W_SUCCESS == sensor_status) {
+		if ((raw_data->raw_board_accel.timestamp_ms) >
+			(ctx->last_board_imu_timestamp_ms)) { // designed to make sure no overflow
+			board_data->board_imu.is_new = true;
+		} else {
+			board_data->board_imu.is_new = false;
+		}
 
-	if (W_SUCCESS == status) {
-		// convert gyro from dps to rad/sec
-		imu_data->gyroscope.x = imu_data->gyroscope.x * RAD_PER_DEG;
-		imu_data->gyroscope.y = imu_data->gyroscope.y * RAD_PER_DEG;
-		imu_data->gyroscope.z = imu_data->gyroscope.z * RAD_PER_DEG;
-
-		// convert accel from g to m/s^2
-		imu_data->accelerometer.x = imu_data->accelerometer.x * 9.81;
-		imu_data->accelerometer.y = imu_data->accelerometer.y * 9.81;
-		imu_data->accelerometer.z = imu_data->accelerometer.z * 9.81;
-
-		// Apply orientation correction
-		imu_data->accelerometer =
-			math_vector3d_rotate(&g_pololu_upd_mat, &(imu_data->accelerometer));
-		imu_data->gyroscope = math_vector3d_rotate(&g_pololu_upd_mat, &(imu_data->gyroscope));
-		imu_data->magnetometer = math_vector3d_rotate(&g_pololu_upd_mat, &(imu_data->magnetometer));
-
-		imu_data->barometer = baro_data.pressure;
-		imu_data->is_dead = false;
-		imu_handler_state.pololu_stats.success_count++;
+		// update timestamp
+		ctx->last_board_imu_timestamp_ms = (raw_data->raw_board_accel.timestamp_ms);
 	} else {
-		// Set is_dead flag to indicate IMU failure
-		imu_data->is_dead = true;
-		imu_handler_state.pololu_stats.failure_count++;
+		log_text(1, "IMUHandler", "WARN: Board Acceleration failed. CODE: %d", sensor_status);
+		board_data->board_imu.is_new = false;
 	}
 
-	return status;
+	// get mag.
+	uint32_t mag_timestamp_ms = 0;
+
+	sensor_status = iis2mdc_get_data(
+		&(board_data->board_mag.meas), &(raw_data->raw_board_mag), &mag_timestamp_ms);
+	if (W_SUCCESS == sensor_status) {
+		if (mag_timestamp_ms > (ctx->last_mag_timestamp_ms)) {
+			board_data->board_mag.is_new = true;
+		} else {
+			board_data->board_mag.is_new = false;
+		}
+
+		ctx->last_mag_timestamp_ms = mag_timestamp_ms;
+	} else {
+		log_text(1, "IMUHandler", "WARN: Board Mag failed. CODE: %d", sensor_status);
+		board_data->board_mag.is_new = false;
+	}
+
+	// get baro
+	// TODO: once baro implemented
+	uint32_t baro_timestamp_ms = 0;
+
+	sensor_status = ms5611_get_raw_pressure(&(raw_data->raw_board_baro), &baro_timestamp_ms);
+	if (W_SUCCESS == sensor_status) {
+		if (baro_timestamp_ms > (ctx->last_baro_timestamp_ms)) {
+			board_data->board_baro.is_new = true;
+		} else {
+			board_data->board_baro.is_new = false;
+		}
+
+		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
+	} else {
+		log_text(1, "IMUHandler", "WARN: Board Baro failed. CODE: %d", sensor_status);
+		board_data->board_baro.is_new = false;
+	}
+
+	// convert gyro from dps to rad/sec
+	board_data->board_imu.gyro.x = (board_data->board_imu.gyro.x) * RAD_PER_DEG;
+	board_data->board_imu.gyro.y = (board_data->board_imu.gyro.y) * RAD_PER_DEG;
+	board_data->board_imu.gyro.z = (board_data->board_imu.gyro.z) * RAD_PER_DEG;
+
+	// convert accel from g to m/s^2
+	board_data->board_imu.accel.x = (board_data->board_imu.accel.x) * M_S2_PER_G;
+	board_data->board_imu.accel.y = (board_data->board_imu.accel.y) * M_S2_PER_G;
+	board_data->board_imu.accel.z = (board_data->board_imu.accel.z) * M_S2_PER_G;
+
+	// mag data is already provided in Gauss
+
+	// convert baro from mbar to Pascals
+	board_data->board_baro.meas =
+		((float64_t)(raw_data->raw_board_baro.pressure_centimbar)) * PA_PER_CENTIMBAR;
+
+	// Apply orientation correction
+	board_data->board_imu.accel =
+		math_vector3d_rotate(&g_board_imu_correction_matrix, &(board_data->board_imu.accel));
+	board_data->board_imu.gyro =
+		math_vector3d_rotate(&g_board_imu_correction_matrix, &(board_data->board_imu.gyro));
+
+	board_data->board_mag.meas =
+		math_vector3d_rotate(&g_board_mag_correction_matrix, &(board_data->board_mag.meas));
+
+	// success is if at least one of the sensors updated
+	if ((board_data->board_mag.is_new) || (board_data->board_imu.is_new) ||
+		(board_data->board_baro.is_new)) {
+		imu_handler_state.board_stats.success_count++;
+	} else {
+		imu_handler_state.board_stats.failure_count++;
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
 }
 
 /**
  * @brief Read data from the Movella MTi-630 sensor
+ * @param ctx pointer to the ctx storing the previously updated times for the sensors
  * @param imu_data Pointer to store the IMU data
+ * @param curr_timestamp_ms the current time stamp for freshness calculations TODO
  * @return Status of the read operation
  */
-static w_status_t read_movella_imu(estimator_imu_measurement_t *imu_data) {
-	w_status_t status;
-
+static w_status_t read_movella_imu(imu_handler_ctx_t *ctx, navigator_mti_meas_t *imu_data,
+								   const uint32_t curr_timestamp_ms) {
+	(void)curr_timestamp_ms; // will be used when use the minimum update rate to determine deadness
 	// Read all data from Movella in one call
 	movella_data_t movella_data = {0}; // Initialize to zero
-	status = movella_get_data(&movella_data, 1);
+
+	w_status_t status = movella_get_data(&movella_data, 1);
 
 	if (W_SUCCESS == status) {
 		// Copy data from Movella
 		// Apply orientation correction
-		imu_data->accelerometer = math_vector3d_rotate(&g_movella_upd_mat, &movella_data.acc);
-		imu_data->gyroscope = math_vector3d_rotate(&g_movella_upd_mat, &movella_data.gyr);
-		imu_data->magnetometer = math_vector3d_rotate(&g_movella_upd_mat, &movella_data.mag);
+		imu_data->mti_accel.meas =
+			math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.acc);
+		imu_data->mti_gyro.meas = math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.gyr);
+		imu_data->mti_mag.meas = math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.mag);
 
-		imu_data->barometer = movella_data.pres;
-		imu_data->is_dead = movella_data.is_dead;
+		imu_data->mti_baro.meas = movella_data.pres;
+
+		// check freshness
+		if ((movella_data.acc_timestamp_ms) > (ctx->last_mti_acc_timestamp_ms)) {
+			imu_data->mti_accel.is_new = true;
+		} else {
+			imu_data->mti_accel.is_new = false;
+		}
+
+		if ((movella_data.gyr_timestamp_ms) > (ctx->last_mti_gyr_timestamp_ms)) {
+			imu_data->mti_gyro.is_new = true;
+		} else {
+			imu_data->mti_gyro.is_new = false;
+		}
+
+		if ((movella_data.mag_timestamp_ms) > (ctx->last_mti_mag_timestamp_ms)) {
+			imu_data->mti_mag.is_new = true;
+		} else {
+			imu_data->mti_mag.is_new = false;
+		}
+
+		if ((movella_data.pres_timestamp_ms) > (ctx->last_mti_pres_timestamp_ms)) {
+			imu_data->mti_baro.is_new = true;
+		} else {
+			imu_data->mti_baro.is_new = false;
+		}
+
+		// update timestamps
+		ctx->last_mti_acc_timestamp_ms = movella_data.acc_timestamp_ms;
+		ctx->last_mti_gyr_timestamp_ms = movella_data.gyr_timestamp_ms;
+		ctx->last_mti_mag_timestamp_ms = movella_data.mag_timestamp_ms;
+		ctx->last_mti_pres_timestamp_ms = movella_data.pres_timestamp_ms;
+
 		imu_handler_state.movella_stats.success_count++;
 	} else {
-		// Set is_dead flag to indicate IMU failure
-		imu_data->is_dead = true;
+		log_text(1, "IMUHandler", "WARN: Movella get data read failed. CODE: %d", status);
+
+		// Set is_new flag to indicate IMU failure
+		imu_data->mti_accel.is_new = false;
+		imu_data->mti_gyro.is_new = false;
+		imu_data->mti_mag.is_new = false;
+		imu_data->mti_baro.is_new = false;
+
 		imu_handler_state.movella_stats.failure_count++;
 	}
 
-	return status;
+	// if at least one sensor updated then it's successful
+	if ((imu_data->mti_accel.is_new) || (imu_data->mti_gyro.is_new) || (imu_data->mti_mag.is_new) ||
+		(imu_data->mti_baro.is_new)) {
+		return W_SUCCESS;
+	}
+	return W_FAILURE;
 }
 
 /**
@@ -189,102 +309,56 @@ w_status_t imu_handler_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *imu_output) {
-	if (NULL == imu_output) {
-		log_text(10, "IMUHandler", "ERROR: get fresh meas invalid output ptr.");
+w_status_t imu_handler_get_fresh_meas(imu_handler_ctx_t *ctx, all_sensors_data_t *imu_output) {
+	if ((NULL == imu_output) || (NULL == ctx)) {
+		log_text(10, "IMUHandler", "ERROR: invalid ptrs.");
 		return W_INVALID_PARAM;
 	}
 
-	// is this even necessary at all, since this assumes success before any process
-	// replacing original declaration
-	imu_output->movella.is_dead = false;
-	imu_output->pololu.is_dead = false;
+	// assume data are all dead until you read
+	imu_output->ad_meas.ad_accel.is_new = false;
+	imu_output->ad_meas.ad_gyro.is_new = false;
+	imu_output->board_meas.board_baro.is_new = false;
+	imu_output->board_meas.board_mag.is_new = false;
+	imu_output->board_meas.board_imu.is_new = false;
 
-	raw_pololu_data_t raw_pololu_data = {0};
+	// movella
+	imu_output->mti_meas.mti_accel.is_new = false;
+	imu_output->mti_meas.mti_gyro.is_new = false;
+	imu_output->mti_meas.mti_mag.is_new = false;
+	imu_output->mti_meas.mti_baro.is_new = false;
+
+	// m/s^2, rad/s, pascals, mag is in gauss
 	uint32_t current_time_ms;
 	w_status_t status = W_SUCCESS;
 
+	// raw data
+	raw_board_meas_t raw_board_meas = {0};
+
 	// Get current timestamp
-	if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
+	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
 		current_time_ms = 0;
-	}
-	uint32_t now_ms = (uint32_t)current_time_ms;
+		log_text(1, "IMUHandler", "ERROR: Failed to get current time.");
 
-	// TODO: update this with new IMU for correct behaviour
-	// Set timestamps for all IMUs
-	// Note: All IMUs get the same timestamp intentionally for synchronization
-	imu_output->pololu.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
-	imu_output->movella.timestamp_imu_sec = ((float64_t)now_ms) / 1000.0;
-
-	// Read from all IMUs, including orientation correction
-	w_status_t pololu_status = read_pololu_imu(&(imu_output->pololu), &raw_pololu_data);
-	w_status_t movella_status = read_movella_imu(&(imu_output->movella));
-
-	// If both IMUs fail, consider it a system-level failure
-	if ((W_FAILURE == pololu_status) && (W_FAILURE == movella_status)) {
-		log_text(1, "IMUHandler", "ERROR: Both pololu and Movella IMU reads failed.");
-		status = W_FAILURE;
-	} else if (W_FAILURE == pololu_status) {
-		log_text(1, "IMUHandler", "WARN: pololu IMU read failed.");
-	} else if (W_FAILURE == movella_status) {
-		log_text(1, "IMUHandler", "WARN: Movella IMU read failed.");
+		return W_FAILURE; // since without a timestamp the system will be unable to correctly judge
+						  // any of the data therefore the results for all sensors are data
 	}
 
-	// Log movella data as seperate messages
+	// Read from all IMUs and sensors
+	w_status_t board_status =
+		read_board_meas(ctx, &(imu_output->board_meas), &raw_board_meas, current_time_ms);
+	w_status_t movella_status = read_movella_imu(ctx, &(imu_output->mti_meas), current_time_ms);
+	// TODO: add AD data
 
-	log_data_container_t log_payload = {0}; //{.imu_reading = imu_data.movella};
+	// log system-level failures
+	if (W_SUCCESS != movella_status) {
+		log_text(1, "IMUHandler", "WARN: Read and Processing of Movella IMU failed.");
+	}
+	if (W_SUCCESS != board_status) {
+		log_text(1, "IMUHandler", "WARN: Read and Processing of Board Sensors failed.");
+	}
 
-	log_payload.imu_reading_pt1.accelerometer.x = (float)imu_output->movella.accelerometer.x;
-	log_payload.imu_reading_pt1.accelerometer.y = (float)imu_output->movella.accelerometer.y;
-	log_payload.imu_reading_pt1.accelerometer.z = (float)imu_output->movella.accelerometer.z;
-	log_data(1, LOG_TYPE_MOVELLA_READING_PT1, &log_payload);
-
-	log_payload.imu_reading_pt2.gyroscope.x = (float)imu_output->movella.gyroscope.x;
-	log_payload.imu_reading_pt2.gyroscope.y = (float)imu_output->movella.gyroscope.y;
-	log_payload.imu_reading_pt2.gyroscope.z = (float)imu_output->movella.gyroscope.z;
-	log_data(1, LOG_TYPE_MOVELLA_READING_PT2, &log_payload);
-
-	log_payload.imu_reading_pt3.magnetometer.x = (float)imu_output->movella.magnetometer.x;
-	log_payload.imu_reading_pt3.magnetometer.y = (float)imu_output->movella.magnetometer.y;
-	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_output->movella.magnetometer.z;
-
-	log_payload.imu_reading_pt3.barometer = imu_output->movella.barometer;
-	log_payload.imu_reading_pt3.timestamp_imu_ms =
-		(uint32_t)(imu_output->movella.timestamp_imu_sec * 1000);
-	log_payload.imu_reading_pt3.is_dead = imu_output->movella.is_dead;
-	log_data(1, LOG_TYPE_MOVELLA_READING_PT3, &log_payload);
-
-	// Log polulu data as seperate messages
-
-	log_payload.imu_reading_pt1.accelerometer.x = (float)imu_output->pololu.accelerometer.x;
-	log_payload.imu_reading_pt1.accelerometer.y = (float)imu_output->pololu.accelerometer.y;
-	log_payload.imu_reading_pt1.accelerometer.z = (float)imu_output->pololu.accelerometer.z;
-	log_data(1, LOG_TYPE_POLOLU_READING_PT1, &log_payload);
-
-	log_payload.imu_reading_pt2.gyroscope.x = (float)imu_output->pololu.gyroscope.x;
-	log_payload.imu_reading_pt2.gyroscope.y = (float)imu_output->pololu.gyroscope.y;
-	log_payload.imu_reading_pt2.gyroscope.z = (float)imu_output->pololu.gyroscope.z;
-	log_data(1, LOG_TYPE_POLOLU_READING_PT2, &log_payload);
-
-	log_payload.imu_reading_pt3.magnetometer.x = (float)imu_output->pololu.magnetometer.x;
-	log_payload.imu_reading_pt3.magnetometer.y = (float)imu_output->pololu.magnetometer.y;
-	log_payload.imu_reading_pt3.magnetometer.z = (float)imu_output->pololu.magnetometer.z;
-
-	log_payload.imu_reading_pt3.barometer = imu_output->pololu.barometer;
-	log_payload.imu_reading_pt3.timestamp_imu_ms =
-		(uint32_t)(imu_output->pololu.timestamp_imu_sec * 1000);
-	log_payload.imu_reading_pt3.is_dead = imu_output->pololu.is_dead;
-	log_data(1, LOG_TYPE_POLOLU_READING_PT3, &log_payload);
-
-	// Log raw pololu data
-
-	log_payload.raw_pololu_data_pt1.raw_acc = raw_pololu_data.raw_acc;
-	log_payload.raw_pololu_data_pt1.raw_gyro = raw_pololu_data.raw_gyro;
-	log_data(1, LOG_TYPE_POLOLU_RAW_PT1, &log_payload);
-
-	log_payload.raw_pololu_data_pt2.raw_mag = raw_pololu_data.raw_mag;
-	log_payload.raw_pololu_data_pt2.raw_baro = raw_pololu_data.raw_baro;
-	log_data(1, LOG_TYPE_POLOLU_RAW_PT2, &log_payload);
+	// TODO: add logging for board meas
 
 	// update queue with current IMU data for flight phase to read
 	// now this is done by the updated output data
@@ -295,7 +369,7 @@ w_status_t imu_handler_get_fresh_meas(all_sensors_data_t *imu_output) {
 	return status;
 }
 
-uint32_t imu_handler_get_status(void) {
+health_status_t imu_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log sampling statistics
@@ -309,11 +383,14 @@ uint32_t imu_handler_get_status(void) {
 	// Log IMU statistics
 	log_text(0,
 			 "imu_handler",
-			 "Polulu Success %lu, Failure %lu Movella - Success %lu, Failure %lu",
-			 imu_handler_state.pololu_stats.success_count,
-			 imu_handler_state.pololu_stats.failure_count,
+			 "Board Sensor Success %lu, Failure %lu Movella - Success %lu, Failure %lu",
+			 imu_handler_state.board_stats.success_count,
+			 imu_handler_state.board_stats.failure_count,
 			 imu_handler_state.movella_stats.success_count,
 			 imu_handler_state.movella_stats.failure_count);
 
-	return status_bitfield;
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_IMU_HANDLER, .error_bitfield = 0};
+
+	return status;
 }
