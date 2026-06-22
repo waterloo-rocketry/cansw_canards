@@ -133,10 +133,9 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 
 void fsm_task(void *args) {
 	(void)args;
-	TickType_t last_wake_time = xTaskGetTickCount();
 
 	while (1) {
-		// Unblock once we recieve the notification to unblock fsm
+		// Unblock once we receive the notification to unblock fsm
 		ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS));
 
 		if (W_SUCCESS != timer_get_ms(&(g_ctx.timestamp_ms))) {
