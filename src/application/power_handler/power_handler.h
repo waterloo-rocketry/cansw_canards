@@ -1,15 +1,14 @@
 #ifndef POWER_HANDLER_H
 #define POWER_HANDLER_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "rocketlib/include/common.h"
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
-#include "rocketlib/include/common.h"
-#include <stdbool.h>
-#include <stdint.h>
-
-
 
 /**
  * Initializes power handler.
@@ -23,15 +22,5 @@ w_status_t power_handler_init(void);
  * Called by health checks.
  */
 uint32_t power_handler_get_status(void);
-
-/**
- * Toggles 5V external power rail via a GPIO pin.
- */
-w_status_t power_handler_set_5V_external(bool enabled);
-
-/**
- * Toggles low power mode via GPIO pin.
- */
-w_status_t power_handler_set_low_power_mode(bool enabled);
 
 #endif // POWER_HANDLER_H
