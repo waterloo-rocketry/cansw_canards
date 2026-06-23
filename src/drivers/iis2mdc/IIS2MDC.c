@@ -6,8 +6,8 @@
 #include "task.h"
 
 #include "application/logger/log.h"
+#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/i2c/i2c.h"
-#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
 
 // I2C bus and slave address
@@ -48,10 +48,13 @@ static const uint8_t IIS2MDC_CFG_C_SELF_TEST = (1 << 1);
 static const float64_t IIS2MDC_SELF_TEST_MIN_GAUSS = 0.015;
 static const float64_t IIS2MDC_SELF_TEST_MAX_GAUSS = 0.500;
 static const uint32_t IIS2MDC_SELF_TEST_SAMPLES = 50;
-static const uint32_t IIS2MDC_SELF_TEST_POWERUP_MS = 20;
+static const uint32_t IIS2MDC_SELF_TEST_POWERUP_MS = 30;
 static const uint32_t IIS2MDC_SELF_TEST_SETTLE_MS = 60;
 static const uint32_t IIS2MDC_SELF_TEST_TIMEOUT_MS = 20;
 static const uint32_t IIS2MDC_SELF_TEST_POLLING_PERIOD_MS = 1;
+
+// Delay before switching to DMA and ending use of I2C driver
+static const uint32_t IIS2MDC_SETTINGS_LOAD_DELAY_MS = 1;
 
 /* Init configuration:
  CFG_REG_A = 0x8C  COMP_TEMP_EN=1, LP=0(high-res), ODR=11 (100 Hz), MD=00 (continuous)
@@ -83,12 +86,16 @@ typedef struct {
 
 static iis2mdc_cache_t iis2mdc_cache = {0};
 
-/* Module state. CHECKING is set while the sanity check runs, UNINIT is set before init or if init
-fails, READY is set when data is ready to be read and cached. */
+/* Enum for the state of the driver.
+ * UNINIT: before init runs, or after a failed init
+ * CHECKING: sanity check in progress
+ * ASYNC_DMA_ACTIVE: registered the DMA-complete callback on hi2c4,
+ * only the ISR may use hi2c4 at this point, I2C helpers (read/write) not allowed
+ */
 typedef enum {
-	IIS2MDC_STATE_UNINIT = 0, // before init, or init failed
-	IIS2MDC_STATE_CHECKING, // sanity check in progress
-	IIS2MDC_STATE_READY // normal operation
+	IIS2MDC_STATE_UNINIT = 0,
+	IIS2MDC_STATE_CHECKING = 1,
+	IIS2MDC_STATE_ASYNC_DMA_ACTIVE = 2
 } iis2mdc_state_t;
 
 static volatile iis2mdc_state_t iis2mdc_state = IIS2MDC_STATE_UNINIT;
@@ -96,9 +103,13 @@ static volatile iis2mdc_state_t iis2mdc_state = IIS2MDC_STATE_UNINIT;
 /**
  * @brief Helper function to read one or more consecutive bytes over I2C
  * @note IIS2MDC auto-increments the sub-address if MSB is 1, so multi-byte reads only need the
- * start register.
+ * start register. Rejected once the DMA-complete callback is registered.
  */
 static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
+	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
+		log_text(1, "iis2mdc", "ERROR: I2C register read attempted after async pipeline active");
+		return W_FAILURE;
+	}
 	if (len > 1) {
 		reg |= IIS2MDC_SUB_AUTO_INC;
 	}
@@ -107,8 +118,13 @@ static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 
 /**
  * @brief Helper function to write a single byte over I2C
+ * @note Rejected once the DMA-complete callback is registered.
  */
 static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
+	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
+		log_text(1, "iis2mdc", "ERROR: I2C register write attempted after async pipeline active");
+		return W_FAILURE;
+	}
 	return i2c_write_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, &val, 1);
 }
 
@@ -265,8 +281,14 @@ static w_status_t iis2mdc_self_test(void) {
  * @return W_SUCCESS if the device passes self test and identity verification
  */
 static w_status_t iis2mdc_sanity_check(void) {
-	uint8_t id;
-	iis2mdc_state_t prev_state = iis2mdc_state;
+	// Checks to make sure sanity check is not already in progress or that async DMA is not already
+	// active.
+	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
+		log_text(1, "iis2mdc", "ERROR: sanity check called from invalid state %u", iis2mdc_state);
+		return W_FAILURE;
+	}
+
+	uint8_t id = 0;
 	w_status_t status = W_SUCCESS;
 	iis2mdc_state = IIS2MDC_STATE_CHECKING;
 
@@ -285,13 +307,13 @@ static w_status_t iis2mdc_sanity_check(void) {
 		status = W_FAILURE;
 	}
 
-	iis2mdc_state = prev_state;
+	iis2mdc_state = IIS2MDC_STATE_UNINIT;
 	return status;
 }
 
 w_status_t iis2mdc_handle_drdy_irq(void) {
 	// stand down while sanity checking or uninitialized
-	if (IIS2MDC_STATE_READY != iis2mdc_state) {
+	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		return W_FAILURE;
 	}
 	// stand down if last DMA is still in progress
@@ -334,6 +356,12 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 }
 
 w_status_t iis2mdc_init(void) {
+	// reject reinitialization
+	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
+		log_text(1, "iis2mdc", "ERROR: init called from non-UNINIT state %u", iis2mdc_state);
+		return W_FAILURE;
+	}
+
 	// wait for stable output after power-up before any access to registers
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_POWERUP_MS));
 
@@ -359,7 +387,7 @@ w_status_t iis2mdc_init(void) {
 	}
 
 	// load all settings and end use of i2c driver before switching to DMA
-	vTaskDelay(1);
+	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SETTINGS_LOAD_DELAY_MS));
 
 	// register completion callback on the mag's I2C handle.
 	if (HAL_OK !=
@@ -368,7 +396,7 @@ w_status_t iis2mdc_init(void) {
 		return W_FAILURE;
 	}
 
-	iis2mdc_state = IIS2MDC_STATE_READY;
+	iis2mdc_state = IIS2MDC_STATE_ASYNC_DMA_ACTIVE;
 	return W_SUCCESS;
 }
 
@@ -379,7 +407,7 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 		return W_FAILURE;
 	}
 
-	bool ready = (IIS2MDC_STATE_READY == iis2mdc_state) && iis2mdc_cache.valid;
+	bool ready = (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) && iis2mdc_cache.valid;
 	if (!ready) {
 		return W_IO_ERROR;
 	}

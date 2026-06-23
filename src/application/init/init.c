@@ -26,7 +26,6 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
-#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"

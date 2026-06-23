@@ -11,8 +11,8 @@
 #include "application/logger/log.h"
 #include "semphr.h"
 
+#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/gpio/gpio.h"
-#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 
 // Private --------------------------------------------------------------------
