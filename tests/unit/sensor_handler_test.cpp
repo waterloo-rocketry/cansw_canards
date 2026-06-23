@@ -198,6 +198,9 @@ protected:
 		RESET_FAKE(lsm6dsv32x_get_gyro_acc_data);
 		RESET_FAKE(ms5611_get_raw_pressure);
 		RESET_FAKE(iis2mdc_get_data);
+		RESET_FAKE(ak45_get_latest_feedback);
+		RESET_FAKE(ad_breakout_board_get_accel_data);
+		RESET_FAKE(ad_breakout_board_get_gyro_data);
 		RESET_FAKE(can_handler_transmit);
 		RESET_FAKE(movella_get_data);
 
