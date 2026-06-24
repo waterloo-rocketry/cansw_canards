@@ -49,6 +49,16 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 							.pin = EN_EXT_5V_Pin,
 							.access_mutex = NULL},
 	[GPIO_PIN_PWR_EN] = {.port = PWR_EN_GPIO_Port, .pin = PWR_EN_Pin, .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST1] = {.port = ADXRS_ST1_GPIO_Port,
+							   .pin = ADXRS_ST1_Pin,
+							   .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST2] = {.port = ADXRS_ST2_GPIO_Port,
+							   .pin = ADXRS_ST2_Pin,
+							   .access_mutex = NULL},
+	[GPIO_PIN_ADS1219_INT] = {.port = ADC_INT_GPIO_Port, .pin = ADC_INT_Pin, .access_mutex = NULL},
+	[GPIO_PIN_ADXL380_INT0] = {.port = ADXL_INT_GPIO_Port,
+							   .pin = ADXL_INT_Pin,
+							   .access_mutex = NULL},
 	[GPIO_PIN_PG_EXT_5V] = {.port = PG_EXT_5V_GPIO_Port,
 							.pin = PG_EXT_5V_Pin,
 							.access_mutex = NULL},
@@ -56,7 +66,7 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 	[GPIO_PIN_BAT_FLT2] = {.port = BAT_FLT2_GPIO_Port, .pin = BAT_FLT2_Pin, .access_mutex = NULL},
 	[GPIO_PIN_CHG_MUX_EN] = {.port = CHG_MUX_EN_GPIO_Port,
 							 .pin = CHG_MUX_EN_Pin,
-							 .access_mutex = NULL},
+							 .access_mutex = NULL},				   
 };
 
 // Public ---------------------------------------------------------------------
