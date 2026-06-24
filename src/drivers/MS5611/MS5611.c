@@ -5,9 +5,10 @@
 #include "semphr.h"
 #include "task.h"
 
-/* Period between successive samples taken by ms5611_task. The blocking conversion reads themselves
- * take a few ms; this is the idle gap added on top. */
+/* Period between successive pressure samples taken by ms5611_task at 100 hz */
 #define MS5611_TASK_PERIOD_MS 10
+/* Period between successive tempreture samples taken by ms5611_task at 10 hz */
+#define MS5611_TEMP_COV_PERIOD_MS 100
 
 /* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
 typedef enum {
@@ -53,9 +54,15 @@ typedef enum {
 	MS5611_OSR_4096 = 4
 } ms5611_osr_t;
 
+typedef enum {
+	MS5611_CONV_IDLE = 0,
+	MS5611_CONV_TEMP,   // get temp at 10 hz
+	MS5611_CONV_PRESSURE,   // get pressure at 100 hz
+} ms5611_conv_state_t;
+
 typedef struct {
 	/* Calibration coefficients read from PROM */
-	uint16_t prom_coef[8]; /* C[1]..C[6] used; C[0] = factory reserved empty space */
+	uint16_t prom_coef[8]; /* C[1]..C[6] used; C[0] = factory reserved empty space; C[7] crc bit*/
 
 	i2c_bus_t bus;
 	ms5611_address_t addr;
@@ -66,14 +73,18 @@ typedef struct {
 
 	/* Set true once init succeeds */
 	bool initialized;
+
+	/* Async polling state machine */
+	ms5611_conv_state_t conv_state;
+	uint32_t conv_start_tick;
+	uint32_t cached_temperture;
 } ms5611_handle_t;
 
 /* Conversion time in microseconds - max values from datasheet for safety */
 static const uint32_t CONV_TIME_US[] = {
-	600, /* OSR 256  — datasheet max 0.60ms */
+	600, /* OSR 256  — datasheet max 0.60ms */  // this one is picked for temperture
 	1170, /* OSR 512  — datasheet max 1.17ms */
-	2280,
-	/* OSR 1024 — datasheet max 2.28ms */ // this one is picked
+	2280, /* OSR 1024 — datasheet max 2.28ms */ // this one is picked for pressure
 	4540, /* OSR 2048 — datasheet max 4.54ms */
 	9040, /* OSR 4096 — datasheet max 9.04ms */
 };
@@ -122,7 +133,10 @@ static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom 
 															 // CSB is tied to GND, so addr is 0x77
 								 .osr_pressure = MS5611_OSR_1024,
 								 .osr_temperature = MS5611_OSR_256,
-								 .initialized = false};
+								 .initialized = false,
+								.conv_state = MS5611_CONV_IDLE,
+								.conv_start_tick = 0,
+								.cached_temperture = -1};
 
 /**
  * @brief Delays for a specified number of microseconds.
@@ -303,6 +317,7 @@ void ms5611_deinit(void) {
 	}
 
 	handle.initialized = false;
+	handle.conv_state = MS5611_CONV_IDLE;
 	for (size_t i = 0; i < 8; ++i) {
 		handle.prom_coef[i] = 0;
 	}
@@ -315,7 +330,9 @@ void ms5611_deinit(void) {
  * @brief Reads raw pressure and temperature data from the MS5611 sensor, applies compensation, and
  * stores the results in the provided struct.
  * @param result Pointer to store the raw pressure and temperature results
- * @note this function also applies the compensation algorithm, but does not convert units
+ * @note Non-blocking: advances an internal conversion state machine on each call and returns the
+ * last completed measurement from a buffer. The cache is primed in ms5611_init(), so this always
+ * returns valid (potentially stale) data on success. Data is at most ~15 ms old at 200 Hz.
  * @note see MS5611 datasheet page 7 - 8 for details on the calculation
  * (temperature in centidegrees prom_coef, pressure in centimbar)
  * @note This performs blocking I2C transactions and conversion delays. It is called only from
@@ -347,17 +364,20 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_FAILURE;
 	}
 
-	/* D2: temperature conversion */
-	if (W_FAILURE == baro_write_cmd(D2_CMD[handle.osr_temperature])) {
-		log_text(1, "ms5611", "ERROR: failed to write temperature conversion command");
-		return W_IO_ERROR;
-	}
+	if (MS5611_TEMP_COV_PERIOD_MS == handle.conv_state) {
 
-	delay_us(CONV_TIME_US[handle.osr_temperature]); // 600 us
+		/* D2: temperature conversion */
+		if (W_FAILURE == baro_write_cmd(D2_CMD[handle.osr_temperature])) {
+			log_text(1, "ms5611", "ERROR: failed to write temperature conversion command");
+			return W_IO_ERROR;
+		}
 
-	if (W_FAILURE == baro_read_adc(&d2)) {
-		log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
-		return W_IO_ERROR;
+		delay_us(CONV_TIME_US[handle.osr_temperature] + 1000); // 2 ms. Additional 1ms is added here for safety - temp conv time for osr256 does not match the datasheet specifications
+
+		if (W_FAILURE == baro_read_adc(&d2)) {
+			log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
+			return W_IO_ERROR;
+		}
 	}
 
 	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
@@ -371,7 +391,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_IO_ERROR;
 	}
 
-	delay_us(CONV_TIME_US[handle.osr_pressure]); // 2280 us
+	delay_us(CONV_TIME_US[handle.osr_pressure]); // 3 ms
 
 	if (W_FAILURE == baro_read_adc(&d1)) {
 		log_text(1, "ms5611", "ERROR: failed to read pressure ADC");
