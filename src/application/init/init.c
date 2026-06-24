@@ -14,9 +14,9 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
-#include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/sensor_handler/sensor_handler.h"
 #include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
@@ -97,7 +97,7 @@ static void system_init_task(void *arg) {
 	// status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
-	status |= imu_handler_init();
+	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();

@@ -4,8 +4,8 @@
 #include "application/controller/controller.h"
 #include "application/estimator/estimator.h"
 #include "application/flight_phase/flight_phase.h"
-#include "application/imu_handler/imu_handler.h"
 #include "application/logger/log.h"
+#include "application/sensor_handler/sensor_handler.h"
 #include "can.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
@@ -191,7 +191,7 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 	[MODULE_TIMER] = timer_get_status,
 	[MODULE_GPIO] = gpio_get_status,
 	[MODULE_FLIGHT_PHASE] = flight_phase_get_status,
-	[MODULE_IMU_HANDLER] = imu_handler_get_status,
+	[MODULE_IMU_HANDLER] = sensor_handler_get_status,
 	[MODULE_UART] = uart_get_status,
 	[MODULE_LOGGER] = logger_get_status,
 };

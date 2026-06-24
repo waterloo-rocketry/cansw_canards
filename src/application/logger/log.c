@@ -313,7 +313,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	// Write log message header to region
 	chars_written += snprintf_(msg_dest + chars_written,
 							   MAX_TEXT_MSG_LENGTH - chars_written,
-							   "[%" PRIu32 "] %s; %s: ",
+							   "[%" PRIu32 "] %s; %s; ",
 							   timestamp,
 							   level_string,
 							   source);
