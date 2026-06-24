@@ -44,13 +44,20 @@ static const uint32_t IIS2MDC_CFG_A_SOFT_RESET = (1 << 5);
 // Enables self-testing
 static const uint8_t IIS2MDC_CFG_C_SELF_TEST = (1 << 1);
 
+// Output data rate in hz, matching the init config
+static const uint32_t IIS2MDC_ODR_HZ = 100;
+
+// One ODR period, scales with IIS2MDC_ODR_HZ.
+static const uint32_t IIS2MDC_SAMPLE_PERIOD_MS = 1000U / IIS2MDC_ODR_HZ;
+
 // Self-test parameters (AN5080)
 static const float64_t IIS2MDC_SELF_TEST_MIN_GAUSS = 0.015;
 static const float64_t IIS2MDC_SELF_TEST_MAX_GAUSS = 0.500;
 static const uint32_t IIS2MDC_SELF_TEST_SAMPLES = 50;
 static const uint32_t IIS2MDC_POWERUP_MS = 30;
 static const uint32_t IIS2MDC_SELF_TEST_SETTLE_MS = 60;
-static const uint32_t IIS2MDC_SELF_TEST_TIMEOUT_MS = 30;
+// Wait at most 3 sample periods before declaring no fresh data
+static const uint32_t IIS2MDC_SELF_TEST_TIMEOUT_MS = 3U * IIS2MDC_SAMPLE_PERIOD_MS;
 static const uint32_t IIS2MDC_SELF_TEST_POLLING_PERIOD_MS = 1;
 
 // Delay before switching to DMA and ending use of I2C driver
@@ -69,17 +76,15 @@ static const uint32_t IIS2MDC_INIT_CFG_C = 0x11;
 // conversion factor from raw register values to gauss
 static const float64_t IIS2MDC_SENSITIVITY_GAUSS_PER_LSB = 0.0015;
 
-// Buffer the DMA writes into, the completion handler function converts and puts data into the
-// cache.
-static uint8_t iis2mdc_dma_buf[6];
-
-// Guards against starting a new DMA read while one is still in progress, cleared on DMA completion
+// Guards against starting a new DMA read while one is still in progress
+// Also used by iis2mdc_get_data to reject reads while the DMA is mid-burst
 static volatile bool iis2mdc_dma_busy = false;
 
-// cache for newest data sample, updated by the DMA completion handler.
-// Stores raw bytes only, conversion happens in iis2mdc_get_data
+// cache for newest data sample. BDMA writes raw_buf directly during HAL_I2C_Mem_Read_DMA;
+// timestamp_ms and validity check are done by iis2mdc_dma_complete once the burst finishes.
+// Conversions happen in iis2mdc_get_data
 typedef struct {
-	uint8_t raw_buf[6]; // raw bytes copied from the DMA buffer
+	uint8_t raw_buf[6]; // raw bytes written by the BDMA channel
 	uint32_t timestamp_ms; // when this sample was published
 	bool valid; // true once at least one sample has been cached
 } iis2mdc_cache_t;
@@ -145,9 +150,15 @@ static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, 
 
 /**
  * @brief Polls status register until a new sample is ready (ZYXDA), waits 1ms between polls
- * @note Bounded by IIS2MDC_SELF_TEST_TIMEOUT_MS (20ms, 2 sample period at 100hz)
+ * @note Bounded by IIS2MDC_SELF_TEST_TIMEOUT_MS (3x sample period). Rejected when the async DMA
+ * pipeline is active.
  */
 static w_status_t self_test_wait_data_ready(void) {
+	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
+		log_text(1, "iis2mdc", "ERROR: wait_data_ready called after async DMA pipeline active");
+		return W_FAILURE;
+	}
+
 	uint8_t status = 0;
 	uint32_t start_ms = 0;
 
@@ -218,6 +229,9 @@ static w_status_t self_test_collect_average(vector3d_t *avg) {
 		sum_x += sample.x;
 		sum_y += sample.y;
 		sum_z += sample.z;
+
+		// Yield one ODR period so the next iteration sees a fresh sample
+		vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SAMPLE_PERIOD_MS));
 	}
 
 	avg->x = sum_x / ((float64_t)IIS2MDC_SELF_TEST_SAMPLES);
@@ -326,20 +340,24 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
 									   IIS2MDC_HAL_ADDR,
 									   IIS2MDC_REG_OUTX_L | IIS2MDC_SUB_AUTO_INC,
 									   I2C_MEMADD_SIZE_8BIT,
-									   iis2mdc_dma_buf,
-									   sizeof(iis2mdc_dma_buf))) {
+									   iis2mdc_cache.raw_buf,
+									   sizeof(iis2mdc_cache.raw_buf))) {
 		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
 	}
 	return W_SUCCESS;
 }
 
 /**
- * @brief I2C DMA completion, copies raw bytes and timestamp into the cache.
+ * @brief I2C DMA completion. Completes the sample by adding timestamp and verifying validity
  * @note Registered on hi2c4 via HAL_I2C_RegisterCallback in iis2mdc_init. Byte-combining,
- *		 sign interpretation, and scaling to gauss are deferred to iis2mdc_get_data
+ *       sign interpretation, and scaling to gauss are deferred to iis2mdc_get_data.
  */
 static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 	if (hi2c != &hi2c4) {
+		return;
+	}
+	// this function needs DMA to be active
+	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		return;
 	}
 
@@ -348,7 +366,6 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 		return;
 	}
 
-	memcpy(iis2mdc_cache.raw_buf, iis2mdc_dma_buf, sizeof(iis2mdc_cache.raw_buf));
 	iis2mdc_cache.timestamp_ms = timestamp_ms;
 	iis2mdc_cache.valid = true;
 
@@ -407,13 +424,16 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 		return W_FAILURE;
 	}
 
-	bool ready = (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) && iis2mdc_cache.valid;
-	if (!ready) {
+	if ((IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) || !(iis2mdc_cache.valid)) {
 		return W_IO_ERROR;
 	}
 
 	uint8_t local_buf[6];
 	taskENTER_CRITICAL();
+	if (iis2mdc_dma_busy) {
+		taskEXIT_CRITICAL();
+		return W_IO_ERROR;
+	}
 	memcpy(local_buf, iis2mdc_cache.raw_buf, sizeof(local_buf));
 	*timestamp_ms = iis2mdc_cache.timestamp_ms;
 	taskEXIT_CRITICAL();
