@@ -383,7 +383,8 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
 		ctx->last_mti_mag_timestamp_ms = movella_data.mag_timestamp_ms;
 		ctx->last_mti_pres_timestamp_ms = movella_data.pres_timestamp_ms;
 	} else {
-		log_text(1, LOG_LVL_WARN, "SensorHandler", "Movella get data read failed. CODE: %d", status);
+		log_text(
+			1, LOG_LVL_WARN, "SensorHandler", "Movella get data read failed. CODE: %d", status);
 
 		// Set is_new flag to indicate IMU failure
 		imu_data->mti_accel.is_new = false;
@@ -430,7 +431,11 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 
 		// log any error codes
 		if (motor_feedback.fault_code != AK45_FAULT_NONE) {
-			log_text(1, LOG_LVL_WARN, "SensorHandler", "Motor fault code: %d", motor_feedback.fault_code);
+			log_text(1,
+					 LOG_LVL_WARN,
+					 "SensorHandler",
+					 "Motor fault code: %d",
+					 motor_feedback.fault_code);
 		}
 
 		// update timestamp
