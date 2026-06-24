@@ -348,9 +348,9 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
  * @param accel pointer to the IMU's acceleration vector
  * @param consec_count pointer to this IMU's number of consecutive launch detections
  */
-static void process_imu_meas(bool is_dead, const vector3d_t *accel,
+static void process_imu_meas(bool is_new, const vector3d_t *accel,
 							 uint32_t *num_imus_detecting_launch) {
-	if (is_dead) {
+	if (!is_new) {
 		return;
 	}
 
@@ -375,20 +375,20 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 		p_ctx->num_consec_detection = 0;
 		return EVENT_NONE;
 	}
-	bool board_imu_dead = p_sensor_data->board_meas.board_imu.is_dead;
-	bool mti_imu_dead = p_sensor_data->mti_meas.is_dead;
-	bool ad_imu_dead = p_sensor_data->ad_meas.ad_accel.is_dead;
+	bool board_imu_new = p_sensor_data->board_meas.board_imu.is_new;
+	bool mti_imu_new = p_sensor_data->mti_meas.mti_accel.is_new;
+	bool ad_imu_new = p_sensor_data->ad_meas.ad_accel.is_new;
 
 	uint32_t num_dead_imus = 0;
-	if (board_imu_dead) {
+	if (!board_imu_new) {
 		log_text(5, "FlightPhaseSensorDetection", "WARNING: BOARD IMU is dead");
 		num_dead_imus++;
 	}
-	if (mti_imu_dead) {
+	if (!mti_imu_new) {
 		log_text(5, "FlightPhaseSensorDetection", "WARNING: MTI IMU is dead");
 		num_dead_imus++;
 	}
-	if (ad_imu_dead) {
+	if (!ad_imu_new) {
 		log_text(5, "FlightPhaseSensorDetection", "WARNING: AD IMU is dead");
 		num_dead_imus++;
 	}
@@ -404,10 +404,10 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 	uint32_t num_imus_detecting_launch = 0;
 
 	process_imu_meas(
-		board_imu_dead, &p_sensor_data->board_meas.board_imu.accel, &num_imus_detecting_launch);
-	process_imu_meas(mti_imu_dead, &p_sensor_data->mti_meas.mti_accel, &num_imus_detecting_launch);
+		board_imu_new, &p_sensor_data->board_meas.board_imu.accel, &num_imus_detecting_launch);
 	process_imu_meas(
-		ad_imu_dead, &p_sensor_data->ad_meas.ad_accel.meas, &num_imus_detecting_launch);
+		mti_imu_new, &p_sensor_data->mti_meas.mti_accel.meas, &num_imus_detecting_launch);
+	process_imu_meas(ad_imu_new, &p_sensor_data->ad_meas.ad_accel.meas, &num_imus_detecting_launch);
 
 	if (NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL <= num_imus_detecting_launch) {
 		p_ctx->num_consec_detection++;
