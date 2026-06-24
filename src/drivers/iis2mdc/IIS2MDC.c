@@ -6,8 +6,8 @@
 #include "task.h"
 
 #include "application/logger/log.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
 
 // I2C bus and slave address
@@ -48,9 +48,9 @@ static const uint8_t IIS2MDC_CFG_C_SELF_TEST = (1 << 1);
 static const float64_t IIS2MDC_SELF_TEST_MIN_GAUSS = 0.015;
 static const float64_t IIS2MDC_SELF_TEST_MAX_GAUSS = 0.500;
 static const uint32_t IIS2MDC_SELF_TEST_SAMPLES = 50;
-static const uint32_t IIS2MDC_SELF_TEST_POWERUP_MS = 30;
+static const uint32_t IIS2MDC_POWERUP_MS = 30;
 static const uint32_t IIS2MDC_SELF_TEST_SETTLE_MS = 60;
-static const uint32_t IIS2MDC_SELF_TEST_TIMEOUT_MS = 20;
+static const uint32_t IIS2MDC_SELF_TEST_TIMEOUT_MS = 30;
 static const uint32_t IIS2MDC_SELF_TEST_POLLING_PERIOD_MS = 1;
 
 // Delay before switching to DMA and ending use of I2C driver
@@ -363,7 +363,7 @@ w_status_t iis2mdc_init(void) {
 	}
 
 	// wait for stable output after power-up before any access to registers
-	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_POWERUP_MS));
+	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_POWERUP_MS));
 
 	// soft reset clears config registers
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
@@ -372,7 +372,7 @@ w_status_t iis2mdc_init(void) {
 	}
 
 	// wait before writing to registers again after soft reset
-	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_POWERUP_MS));
+	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_POWERUP_MS));
 
 	if ((W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B)) ||

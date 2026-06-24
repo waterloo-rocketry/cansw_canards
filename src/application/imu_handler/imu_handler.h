@@ -2,9 +2,9 @@
 #define IMU_HANDLER_H
 
 #include "common/gnc/gnc_types.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/altimu-10/altimu-10.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 
 #include "application/health_checks/health_checks.h"

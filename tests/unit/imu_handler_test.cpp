@@ -22,7 +22,7 @@ extern "C" {
 #include "task.h"
 #include "third_party/rocketlib/include/common.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/MS5611/MS5611.h"
 
 
