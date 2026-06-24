@@ -31,6 +31,7 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#include "application/power_handler/power_handler.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -101,10 +102,10 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	status |= adxl380_init();
-	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
-	status |= iis2mdc_init();
+	// status |= adxl380_init();
+	// status |= lsm6dsv32x_init();
+	// status |= adxrs649_init();
+	// status |= iis2mdc_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -164,6 +165,20 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
+
+	while(1) {
+		power_handler_init();
+		uint32_t status = power_handler_get_status();
+		log_text(5, "powerhandler", "power handler status %lu", status);
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+
+		vTaskDelay(2);
+	}
 
 	// its blinky now
 	while (1) {

@@ -465,13 +465,17 @@ w_status_t power_handler_init(void) {
 	gpio_status |= gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_HIGH, 5);
 	gpio_status |= gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
 
+	if (W_SUCCESS != gpio_status){
+		log_text(5, "power_handler", "ERROR: Failed with gpio write during init.");
+	}
+
 	// Register callbacks
 	cb_status |= can_handler_register_callback(MSG_ACTUATOR_CMD, power_actuator_callback);
 	cb_status |= can_handler_register_callback(MSG_RESET_CMD, power_reset_callback);
 
 	if (W_SUCCESS != cb_status) {
-		init_status = cb_status;
-		log_text(1, "power_handler", "ERROR: Failed to register CAN callbacks");
+		init_status = cb_status
+		log_text(1, "power_handler", "ERROR: Failed to register CAN callbacks during init.");
 	}
 
 	power_handler_status.initialized = true;
