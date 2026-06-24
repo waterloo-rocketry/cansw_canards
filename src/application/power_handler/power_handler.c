@@ -112,95 +112,6 @@ static power_input_source_t get_active_input(void) {
 	}
 }
 
-/**
- * Handles incoming actuator CAN commands for 5V external and low power mode.
- */
-static w_status_t power_actuator_callback(const can_msg_t *msg) {
-	can_actuator_id_t actuator_id;
-	can_actuator_state_t cmd_state;
-	w_status_t status = W_SUCCESS;
-	static uint32_t timestamp = 0;
-	can_msg_t response_msg = {0};
-
-	if ((W_SUCCESS != get_actuator_id(msg, &actuator_id)) ||
-		(W_SUCCESS != get_cmd_actuator_state(msg, &cmd_state))) {
-		log_text(5, "power_handler", "ERROR: Failed to get actuator id or state.");
-		return W_FAILURE;
-	}
-
-	if (ACTUATOR_CANARD_5V_OUTPUT == actuator_id) {
-		bool enable_5v = (ACT_STATE_ON == cmd_state);
-		status = power_handler_set_5V_external(enable_5v);
-	} else if (ACTUATOR_CANARD_LIPO_ON == actuator_id) {
-		bool lipo_enable = (ACT_STATE_ON == cmd_state);
-		status = power_handler_set_low_power_mode(!lipo_enable);
-
-		if (W_SUCCESS == status) {
-			if (W_SUCCESS != timer_get_ms(&timestamp)){
-				log_text(1, "power_handler", "WARNING: Failed to get timestamp for actuator status can msg.");
-			}
-			build_actuator_status_msg(PRIO_MEDIUM,
-									  (uint16_t)timestamp,
-									  ACTUATOR_CANARD_LIPO_ON,
-									  cmd_state,
-									  lipo_enable ? ACT_STATE_ON : ACT_STATE_OFF,
-									  &response_msg);
-			if(W_SUCCESS != can_handler_transmit(&response_msg)) {
-				log_text(1, "power_handler", "WARNING: Can message failed to transmit for actruator status.");
-			}
-		}
-	}
-
-	return status;
-}
-
-/**
- * Handles RESET_CMD from RocketCAN.
- */
-static w_status_t power_reset_callback(const can_msg_t *msg) {
-	bool need_reset = true;
-
-	if ((W_SUCCESS == check_board_need_reset(msg, &need_reset)) && need_reset) {
-		log_text(0, "power_handler", "INFO: System reset initiated");
-		NVIC_SystemReset();
-	} else {
-		log_text(1, "power_handler", "ERROR: failed to read reset command");
-		return W_FAILURE;
-	}
-
-	return W_SUCCESS;
-}
-
-/**
- * Initializes power handler.
- * Registers CAN callbacks for payload 5V and low power mode commands.
- * Defaults everything to ON.
- */
-w_status_t power_handler_init(void) {
-	w_status_t init_status = W_SUCCESS;
-	w_status_t cb_status = W_SUCCESS;
-	w_status_t gpio_status = W_SUCCESS;
-
-	// Default: CHG_MUX_EN HIGH, external 5V ON, LiPo ON
-	gpio_status |= gpio_write(GPIO_PIN_CHG_MUX_EN, GPIO_LEVEL_HIGH, 5);
-	gpio_status |= gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_HIGH, 5);
-	gpio_status |= gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
-
-	// Register callbacks
-	cb_status |= can_handler_register_callback(MSG_ACTUATOR_CMD, power_actuator_callback);
-	cb_status |= can_handler_register_callback(MSG_RESET_CMD, power_reset_callback);
-
-	if (W_SUCCESS != cb_status) {
-		init_status = cb_status;
-		log_text(1, "power_handler", "ERROR: Failed to register CAN callbacks");
-	}
-
-	power_handler_status.initialized = true;
-	power_handler_status.external_5v_enabled = true;
-	power_handler_status.low_power_mode = false;
-
-	return init_status;
-}
 
 /*
  * Transmits power status CAN messages and power fault CAN messages if faults are detected.
@@ -209,10 +120,10 @@ w_status_t power_handler_init(void) {
  */
 static void transmit_status_can_msg(uint32_t status_bitfield) { 
 	can_msg_t status_msg = {0};
-	static uint32_t adc_value = 0;
+	float adc_value = 0;
 	can_msg_t msg = {0};
 
-	static uint32_t timestamp = 0;
+	uint32_t timestamp = 0;
 	w_status_t can_tx_status = W_SUCCESS;
 
 	if (W_SUCCESS != timer_get_ms(&timestamp)){
@@ -262,7 +173,7 @@ static void transmit_status_can_msg(uint32_t status_bitfield) {
 	}
 
 	if (W_SUCCESS != can_tx_status){
-		log_text(1, "power_handler", "WARNING: Some can messages failed to transmit.")
+		log_text(1, "power_handler", "WARNING: Some can messages failed to transmit.");
 	}
 
 }
@@ -281,7 +192,7 @@ static void transmit_status_can_msg(uint32_t status_bitfield) {
  * Returns 0 if no faults are detected.
  * Called by health checks.
  */
-static uint32_t power_handler_get_status(void) {
+uint32_t power_handler_get_status(void) {
 	static uint32_t status_bitfield = 0;
 	w_status_t gpio_read_status = W_SUCCESS;
 	float adc_value = 0;
@@ -291,9 +202,9 @@ static uint32_t power_handler_get_status(void) {
 	gpio_level_t flt2 = GPIO_LEVEL_HIGH;
 	gpio_level_t pg_ext_5v = GPIO_LEVEL_HIGH;
 
-	gpio_read_status |= (GPIO_PIN_BAT_FLT1, &flt1, 5);
-	gpio_read_status |= (GPIO_PIN_BAT_FLT2, &flt2, 5);
-	gpio_read_status |= (GPIO_PIN_PG_EXT_5V,
+	gpio_read_status |= gpio_read(GPIO_PIN_BAT_FLT1, &flt1, 5);
+	gpio_read_status |= gpio_read(GPIO_PIN_BAT_FLT2, &flt2, 5);
+	gpio_read_status |= gpio_read(GPIO_PIN_PG_EXT_5V,
 			  &pg_ext_5v,
 			  5);
 
@@ -407,7 +318,7 @@ static uint32_t power_handler_get_status(void) {
  * Toggles 5V external power rail via a GPIO pin.
  * Prevents enabling when CHG is active or low power mode is enabled.
  */
-w_status_t power_handler_set_5V_external(bool enabled) {
+static w_status_t power_handler_set_5V_external(bool enabled) {
 	w_status_t gpio_status = W_SUCCESS;
 
 	if (enabled) {
@@ -448,7 +359,7 @@ w_status_t power_handler_set_5V_external(bool enabled) {
  * Toggles low power mode via GPIO pin.
  * Disables external 5V and turns off LiPo when enabling.
  */
-w_status_t power_handler_set_low_power_mode(bool enabled) {
+static w_status_t power_handler_set_low_power_mode(bool enabled) {
 	w_status_t gpio_status = W_SUCCESS;
 
 	if (enabled) {
@@ -478,4 +389,94 @@ w_status_t power_handler_set_low_power_mode(bool enabled) {
 
 	power_handler_status.low_power_mode = enabled;
 	return W_SUCCESS;
+}
+
+/**
+ * Handles incoming actuator CAN commands for 5V external and low power mode.
+ */
+static w_status_t power_actuator_callback(const can_msg_t *msg) {
+	can_actuator_id_t actuator_id;
+	can_actuator_state_t cmd_state;
+	w_status_t status = W_SUCCESS;
+	static uint32_t timestamp = 0;
+	can_msg_t response_msg = {0};
+
+	if ((W_SUCCESS != get_actuator_id(msg, &actuator_id)) ||
+		(W_SUCCESS != get_cmd_actuator_state(msg, &cmd_state))) {
+		log_text(5, "power_handler", "ERROR: Failed to get actuator id or state.");
+		return W_FAILURE;
+	}
+
+	if (ACTUATOR_CANARD_5V_OUTPUT == actuator_id) {
+		bool enable_5v = (ACT_STATE_ON == cmd_state);
+		status = power_handler_set_5V_external(enable_5v);
+	} else if (ACTUATOR_CANARD_LIPO_ON == actuator_id) {
+		bool lipo_enable = (ACT_STATE_ON == cmd_state);
+		status = power_handler_set_low_power_mode(!lipo_enable);
+
+		if (W_SUCCESS == status) {
+			if (W_SUCCESS != timer_get_ms(&timestamp)){
+				log_text(1, "power_handler", "WARNING: Failed to get timestamp for actuator status can msg.");
+			}
+			build_actuator_status_msg(PRIO_MEDIUM,
+									  (uint16_t)timestamp,
+									  ACTUATOR_CANARD_LIPO_ON,
+									  cmd_state,
+									  lipo_enable ? ACT_STATE_ON : ACT_STATE_OFF,
+									  &response_msg);
+			if(W_SUCCESS != can_handler_transmit(&response_msg)) {
+				log_text(1, "power_handler", "WARNING: Can message failed to transmit for actruator status.");
+			}
+		}
+	}
+
+	return status;
+}
+
+/**
+ * Handles RESET_CMD from RocketCAN.
+ */
+static w_status_t power_reset_callback(const can_msg_t *msg) {
+	bool need_reset = true;
+
+	if ((W_SUCCESS == check_board_need_reset(msg, &need_reset)) && need_reset) {
+		log_text(0, "power_handler", "INFO: System reset initiated");
+		NVIC_SystemReset();
+	} else {
+		log_text(1, "power_handler", "ERROR: failed to read reset command");
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}
+
+/**
+ * Initializes power handler.
+ * Registers CAN callbacks for payload 5V and low power mode commands.
+ * Defaults everything to ON.
+ */
+w_status_t power_handler_init(void) {
+	w_status_t init_status = W_SUCCESS;
+	w_status_t cb_status = W_SUCCESS;
+	w_status_t gpio_status = W_SUCCESS;
+
+	// Default: CHG_MUX_EN HIGH, external 5V ON, LiPo ON
+	gpio_status |= gpio_write(GPIO_PIN_CHG_MUX_EN, GPIO_LEVEL_HIGH, 5);
+	gpio_status |= gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_HIGH, 5);
+	gpio_status |= gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
+
+	// Register callbacks
+	cb_status |= can_handler_register_callback(MSG_ACTUATOR_CMD, power_actuator_callback);
+	cb_status |= can_handler_register_callback(MSG_RESET_CMD, power_reset_callback);
+
+	if (W_SUCCESS != cb_status) {
+		init_status = cb_status;
+		log_text(1, "power_handler", "ERROR: Failed to register CAN callbacks");
+	}
+
+	power_handler_status.initialized = true;
+	power_handler_status.external_5v_enabled = true;
+	power_handler_status.low_power_mode = false;
+
+	return init_status;
 }
