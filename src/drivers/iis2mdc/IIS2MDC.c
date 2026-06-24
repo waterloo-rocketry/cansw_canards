@@ -291,7 +291,7 @@ static w_status_t iis2mdc_self_test(void) {
 
 /**
  * @brief Performs a sanity check by verifying device identity and running a self test
- * @note Blocks DMA reads during this time by setting state to CHECKING
+ * @note Marks state CHECKING so init re entries are rejected
  * @return W_SUCCESS if the device passes self test and identity verification
  */
 static w_status_t iis2mdc_sanity_check(void) {
@@ -326,7 +326,7 @@ static w_status_t iis2mdc_sanity_check(void) {
 }
 
 w_status_t iis2mdc_handle_drdy_irq(void) {
-	// stand down while sanity checking or uninitialized
+	// stand down unless ASYNC_DMA_ACTIVE
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		return W_FAILURE;
 	}

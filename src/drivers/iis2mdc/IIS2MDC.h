@@ -20,14 +20,15 @@ typedef struct {
  * @brief Runs in interrupt context on the IIS2MDC DRDY pin.
  * @note starts a non-blocking DMA read of the six output registers, the DMA-completion callback
  *       converts and publishes the result. Disabled while the module isn't in ready state
- *  	 (uninnitialized or under a sanity check).
+ *  	 (uninitialized or under a sanity check).
  */
 w_status_t iis2mdc_handle_drdy_irq(void);
 
 /**
  * @brief Initializes the IIS2MDC magnetometer.
  * @note Performs a soft reset, applies the configuration registers, verifies WHO_AM_I, and
- * runs the on-chip self-test. Blocks for ~100 ms during the self-test.
+ * runs the on-chip self-test. Blocks for 60 ms settle + 50 samples times IIS2MDC_SAMPLE_PERIOD_MS
+ * during the self-test.
  * @return Status of the operation
  */
 w_status_t iis2mdc_init(void);
