@@ -218,7 +218,6 @@ w_status_t log_init(void) {
 	} else {
 		// LOGRUN.BIN missing
 		run_count = 1;
-		log_text(10, "logger", "Warn: LOGRUN.BIN was missing.");
 		status = sd_card_file_create(LOG_RUN_COUNT_FILENAME);
 		if (W_SUCCESS != status) {
 			return W_IO_ERROR;
