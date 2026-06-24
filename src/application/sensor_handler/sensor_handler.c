@@ -122,7 +122,7 @@ static sensor_handler_state_t sensor_handler_state = {0};
  */
 static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_meas_t *board_data,
 								  raw_board_meas_t *raw_data, const uint32_t curr_timestamp_ms) {
-	(void)curr_timestamp_ms; // will be used when use the minimum update rate to determine deadness
+	(void)curr_timestamp_ms;
 	bool is_dead = true;
 
 	w_status_t sensor_status = lsm6dsv32x_get_gyro_acc_data(&(board_data->board_imu.accel),
@@ -132,8 +132,7 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 
 	// Read accelerometer and gyro data
 	if (W_SUCCESS == sensor_status) {
-		if ((raw_data->raw_board_accel.timestamp_ms) >
-			(ctx->last_board_imu_timestamp_ms)) { // designed to make sure no overflow
+		if ((raw_data->raw_board_accel.timestamp_ms) > (ctx->last_board_imu_timestamp_ms)) {
 			board_data->board_imu.is_new = true;
 
 			sensor_handler_state.board_imu_stats.success_count++;
@@ -243,7 +242,7 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
  */
 static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *ad_data,
 							   const uint32_t curr_timestamp_ms) {
-	(void)curr_timestamp_ms; // will be used when use the minimum update rate to determine deadness
+	(void)curr_timestamp_ms;
 	bool is_dead = true;
 
 	// get accel
@@ -253,8 +252,7 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 
 	// Read accelerometer and gyro data
 	if (W_SUCCESS == accel_status) {
-		if ((accel_timestamp_ms) >
-			(ctx->last_ad_accel_timestamp_ms)) { // designed to make sure no overflow
+		if ((accel_timestamp_ms) > (ctx->last_ad_accel_timestamp_ms)) {
 			ad_data->ad_accel.is_new = true;
 
 			sensor_handler_state.ad_accel_stats.success_count++;
@@ -326,7 +324,7 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
  */
 static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas_t *imu_data,
 								   const uint32_t curr_timestamp_ms) {
-	(void)curr_timestamp_ms; // will be used when use the minimum update rate to determine deadness
+	(void)curr_timestamp_ms;
 	// Read all data from Movella in one call
 	movella_data_t movella_data = {0}; // Initialize to zero
 
@@ -420,8 +418,7 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 	w_status_t status = ak45_get_latest_feedback(&motor_feedback);
 
 	if (W_SUCCESS == status) {
-		if ((motor_feedback.timestamp_ms) >
-			(ctx->last_motor_encoder_timestamp_ms)) { // designed to make sure no overflow
+		if ((motor_feedback.timestamp_ms) > (ctx->last_motor_encoder_timestamp_ms)) {
 			encoder_data->is_new = true;
 
 			sensor_handler_state.motor_encoder_stats.success_count++;
@@ -431,14 +428,15 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 			sensor_handler_state.motor_encoder_stats.failure_count++;
 		}
 
+		// log any error codes
+		if (motor_feedback.fault_code != AK45_FAULT_NONE) {
+			log_text(1, "SensorHandler", "WARN: Motor fault code: %d", motor_feedback.fault_code);
+		}
+
 		// update timestamp
 		ctx->last_motor_encoder_timestamp_ms = (motor_feedback.timestamp_ms);
 	} else {
-		log_text(1,
-				 "SensorHandler",
-				 "WARN: Motor Feedback failed. STATUS: %d FAULT CODE &d",
-				 status,
-				 motor_feedback.fault_code);
+		log_text(1, "SensorHandler", "WARN: Motor Feedback failed. STATUS: %d", status);
 		encoder_data->is_new = false;
 		sensor_handler_state.motor_encoder_stats.failure_count++;
 	}
