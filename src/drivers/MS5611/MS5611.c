@@ -465,10 +465,12 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 
 	if (pdTRUE == xSemaphoreTake(s_data_mutex, 0)) {
 		status = s_latest_status;
-		if (W_SUCCESS == status) {
-			*result = s_latest_result;
-			*timestamp_ms = s_latest_timestamp_ms;
-		}
+		if (W_SUCCESS != status) {
+			log_text(1, "ms5611", "ERROR: Something failed while getting pressure conv. Status: %d", status);
+		} 
+
+		*result = s_latest_result;
+		*timestamp_ms = s_latest_timestamp_ms;
 		xSemaphoreGive(s_data_mutex);
 	}
 
@@ -483,13 +485,13 @@ void ms5611_task(void *argument) {
 
 	ms5611_raw_result_t result;
 	TickType_t timestamp_ms;
-	size_t count = 0;
+	uint8_t count = 0;
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 
 	while (1) {
 		w_status_t status = ms5611_read_raw_pressure(&result, &timestamp_ms);
 
-		if (pdTRUE == xSemaphoreTake(s_data_mutex, portMAX_DELAY)) {
+		if (pdTRUE == xSemaphoreTake(s_data_mutex, pdMS_TO_TICKS(3))) {
 			s_latest_status = status;
 			if (W_SUCCESS == status) {
 				s_latest_result = result;
@@ -507,6 +509,6 @@ void ms5611_task(void *argument) {
 			handle.conv_state = MS5611_CONV_PRESSURE_ONLY;
 		}
 
-		vTaskDelayUntil(xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
 	}
 }

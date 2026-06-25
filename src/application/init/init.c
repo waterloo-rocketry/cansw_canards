@@ -93,16 +93,16 @@ static void system_init_task(void *arg) {
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
 	// status |= health_check_init();
-	status |= movella_init();
+	// status |= movella_init();
 	status |= ms5611_init();
 	status |= flight_phase_init();
 	status |= imu_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	status |= adxl380_init();
+	// status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
+	// status |= adxrs649_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -158,6 +158,42 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
+
+
+		/* Log the barometer sample timestamp at 200 Hz (5 ms period). */
+	TickType_t lastWakeTime = 0;
+	ms5611_raw_result_t result;
+	uint32_t timestamp_ms = 0;
+
+	gpio_toggle(GPIO_PIN_GREEN_LED, 0);
+	gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+
+	for (;;) {
+		w_status_t status =  ms5611_get_raw_pressure(&result, &timestamp_ms);
+
+		if (W_SUCCESS == status) {
+			log_text(5, "ms5611", "ts = %lu, temp = %lu, p = %lu", (unsigned long)timestamp_ms, (unsigned long)result.temperature_centideg, (unsigned long)result.pressure_centimbar);
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+
+		} else {
+			log_text(5, "ms5611", "can't get fresh data, status code: %d", status);
+		}
+
+		gpio_toggle(GPIO_PIN_RED_LED, 1);
+
+		vTaskDelay(pdMS_TO_TICKS(10));
+	}
 
 	// its blinky now
 	while (1) {
