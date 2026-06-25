@@ -1,4 +1,12 @@
+#include "FreeRTOS.h"
+#include "task.h"
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "application/logger/log.h"
 #include "drivers/MS5611/MS5611.h"
+#include "drivers/gpio/gpio.h"
+#include "drivers/i2c/i2c.h"
 #include "drivers/timer/timer.h"
 
 #include "FreeRTOS.h"

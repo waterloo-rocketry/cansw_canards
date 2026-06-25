@@ -14,12 +14,14 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
-#include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
 #include "drivers/MS5611/MS5611.h"
+#include "application/sensor_handler/sensor_handler.h"
+#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
+#include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
@@ -47,6 +49,7 @@ TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
 TaskHandle_t ms5611_task_handle = NULL;
+TaskHandle_t ad_breakout_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
@@ -56,8 +59,10 @@ const uint32_t fsm_task_priority = configMAX_PRIORITIES - 1;
 const uint32_t can_handler_rx_priority = 45;
 // in general, prioritize consumers (estimator) over producers (imus) to avoid congestion
 const uint32_t can_handler_tx_priority = 40;
+// TODO: update when sure (based on old imu handler priority)
 const uint32_t movella_task_priority = 20;
 const uint32_t ms5611_task_priority = 18;
+const uint32_t ad_breakout_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
@@ -92,17 +97,17 @@ static void system_init_task(void *arg) {
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
-	// status |= health_check_init();
-	// status |= movella_init();
-	status |= ms5611_init();
+	status |= health_check_init();
+	status |= movella_init();
 	status |= flight_phase_init();
-	status |= imu_handler_init();
+	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
-	status |= fsm_init();
+	// status |= fsm_init();
 	// status |= adxl380_init();
 	status |= lsm6dsv32x_init();
 	// status |= adxrs649_init();
+	status |= iis2mdc_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -116,19 +121,19 @@ static void system_init_task(void *arg) {
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	task_status &= xTaskCreate(fsm_task,
-							   "fsm",
-							   8192, // TODO: set the correct size
-							   NULL,
-							   fsm_task_priority,
-							   &fsm_task_handle);
+	// task_status &= xTaskCreate(fsm_task,
+	// 						   "fsm",
+	// 						   8192, // TODO: set the correct size
+	// 						   NULL,
+	// 						   fsm_task_priority,
+	// 						   &fsm_task_handle);
 
-	// task_status &= xTaskCreate(health_check_task,
-	//     "health",
-	//     512,
-	//     NULL,
-	//     health_checks_task_priority,
-	//     &health_checks_task_handle);
+	task_status &= xTaskCreate(health_check_task,
+							   "health",
+							   512,
+							   NULL,
+							   health_checks_task_priority,
+							   &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
@@ -151,6 +156,13 @@ static void system_init_task(void *arg) {
 		xTaskCreate(ms5611_task, "ms5611", 512, NULL, ms5611_task_priority, &ms5611_task_handle);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
+
+	// task_status &= xTaskCreate(ad_breakout_board_task,
+	// 						   "ad board task",
+	// 						   2560, // TODO: set when sure of size
+	// 						   NULL,
+	// 						   ad_breakout_task_priority,
+	// 						   &ad_breakout_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure

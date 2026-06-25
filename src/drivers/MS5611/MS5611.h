@@ -1,12 +1,8 @@
 #ifndef MS5611_H
 #define MS5611_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
-#include "application/logger/log.h"
-#include "drivers/gpio/gpio.h"
-#include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
 
 typedef struct {
