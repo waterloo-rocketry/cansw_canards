@@ -79,27 +79,27 @@ static power_input_source_t get_active_input(void) {
 		log_text(1, "power handler", "adc communication failed while getting charge voltage. Status: %d", status);
 	}
 
-	status = adc_get_converted_val(vsens_rkt, &vsens_rkt);
+	status = adc_get_converted_val(VSENS_RKT, &vsens_rkt);
 	if (W_SUCCESS != status){
 		log_text(1, "power handler", "adc communication failed while getting rocket voltage.Status: %d", status);
 	}
 
-	status = adc_get_converted_val(vsens_usb, &vsens_usb);
+	status = adc_get_converted_val(VSENS_USB, &vsens_usb);
 	if (W_SUCCESS != status){
 		log_text(1, "power handler", "adc communication failed while getting usb voltage.Status: %d", status);
 	}
 
-	status = adc_get_converted_val(vsens_bat1, &vsens_bat1);
+	status = adc_get_converted_val(VSENS_BAT1, &vsens_bat1);
 	if (W_SUCCESS != status){
 		log_text(1, "power handler", "adc communication failed while getting battery 1 voltage.Status: %d", status);
 	}
 
-	status = adc_get_converted_val(vsens_bat2, &vsens_bat2);
+	status = adc_get_converted_val(VSENS_BAT2, &vsens_bat2);
 	if (W_SUCCESS != status){
 		log_text(1, "power handler", "adc communication failed while getting battery 2 voltage.Status: %d", status);
 	}
 
-	if ((vsens_chg == 0) && (vsens_rkt == 0) && (vsens_usb == 0) && (vsens_bat1 == 0) && (vsens_bat2 == 0)) {
+	if (((int)vsens_chg == 0) && ((int)vsens_rkt == 0) && ((int)vsens_bat1 == 0) && ((int)vsens_bat2 == 0)) {
 		return POWER_INPUT_NONE;
 	} else if ((vsens_chg >= vsens_rkt) && (vsens_chg >= vsens_usb) && (vsens_chg >= vsens_bat1) &&
 			   (vsens_chg >= vsens_bat2)) {
@@ -130,43 +130,43 @@ static void transmit_status_can_msg(uint32_t status_bitfield) {
 		log_text(1, "power_handler", "WARNING: Failed to get timestamp for power status can msg.");
 	}
 
-	if (adc_get_converted_val(VSENS_BAT1, &adc_value)) {
+	if (W_SUCCESS == adc_get_converted_val(VSENS_BAT1, &adc_value)) {
 		build_analog_sensor_16bit_msg(
 			PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_VOLT, adc_value, &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
-	if (adc_get_converted_val(VSENS_BAT2, &adc_value)) {
+	if (W_SUCCESS == adc_get_converted_val(VSENS_BAT2, &adc_value)) {
 		build_analog_sensor_16bit_msg(
 			PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_VOLT, adc_value, &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
-	if (adc_get_converted_val(ISENS_BAT1, &adc_value)) {
+	if (W_SUCCESS == adc_get_converted_val(ISENS_BAT1, &adc_value)) {
 		build_analog_sensor_16bit_msg(
 			PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_CURR, adc_value, &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
-	if (adc_get_converted_val(ISENS_BAT2, &adc_value)) {
+	if (W_SUCCESS == adc_get_converted_val(ISENS_BAT2, &adc_value)) {
 		build_analog_sensor_16bit_msg(
 			PRIO_LOW, (uint16_t)timestamp, SENSOR_BATT_CURR, adc_value, &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
-	if (adc_get_converted_val(ISENS_5V, &adc_value)) {
+	if (W_SUCCESS == adc_get_converted_val(ISENS_5V, &adc_value)) {
 		build_analog_sensor_16bit_msg(
 			PRIO_LOW, (uint16_t)timestamp, SENSOR_5V_CURR, adc_value, &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
-	if (adc_get_converted_val(VSENS_RKT, &adc_value)) {
+	if (W_SUCCESS == adc_get_converted_val(VSENS_RKT, &adc_value)) {
 		build_analog_sensor_16bit_msg(
 			PRIO_LOW, (uint16_t)timestamp, SENSOR_12V_VOLT, adc_value, &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
-	if (adc_get_converted_val(VSENS_CHG, &adc_value)) {
+	if (W_SUCCESS == adc_get_converted_val(VSENS_CHG, &adc_value)) {
 		build_analog_sensor_16bit_msg(
 			PRIO_LOW, (uint16_t)timestamp, SENSOR_CHARGE_VOLT, adc_value, &msg);
 		can_tx_status |= can_handler_transmit(&msg);
@@ -181,7 +181,7 @@ static void transmit_status_can_msg(uint32_t status_bitfield) {
 /**
  * Returns static uint32_t bitfield of active faults.
  * Fault conditions:
- * 		FAULT_BAT1_VOLT: BAT1 voltage exceeds thresholds
+ * 		FAULT_BAT1_VOLT: BAT1 voltage exceeds thresholds  (does not fault when the lipo is not plugged in)
  * 		FAULT_BAT2_VOLT: BAT2 voltage exceeds thresholds
  * 		FAULT_RKT_VOLT: Rocket voltage exceeds thresholds
  * 		FAULT_CHG_VOLT: Charge line exceeds thresholds
@@ -474,9 +474,10 @@ w_status_t power_handler_init(void) {
 	cb_status |= can_handler_register_callback(MSG_RESET_CMD, power_reset_callback);
 
 	if (W_SUCCESS != cb_status) {
-		init_status = cb_status
 		log_text(1, "power_handler", "ERROR: Failed to register CAN callbacks during init.");
 	}
+
+	init_status = (cb_status & gpio_status);
 
 	power_handler_status.initialized = true;
 	power_handler_status.external_5v_enabled = true;

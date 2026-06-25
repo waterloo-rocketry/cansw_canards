@@ -165,11 +165,21 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
+	
+	power_handler_init();
+
+	gpio_toggle(GPIO_PIN_GREEN_LED, 0);
+	gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 
 	while(1) {
-		power_handler_init();
 		uint32_t status = power_handler_get_status();
-		log_text(5, "powerhandler", "power handler status %lu", status);
+
+		log_text(5, "powerhandler", "power handler status %d", status);
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
+		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
 		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
 		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
 		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
@@ -177,7 +187,9 @@ static void system_init_task(void *arg) {
 		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
 		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
 
-		vTaskDelay(2);
+		gpio_toggle(GPIO_PIN_RED_LED, 1);
+
+		vTaskDelay(pdMS_TO_TICKS(20));
 	}
 
 	// its blinky now
