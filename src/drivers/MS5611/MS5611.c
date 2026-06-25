@@ -10,6 +10,8 @@
 /* Period between successive tempreture samples taken by ms5611_task at 10 hz */
 #define MS5611_TEMP_COV_PERIOD_MS 100
 
+static const uint8_t MS5611_TEMP_CONV_STATE_SWITCH_COUNT = MS5611_TEMP_COV_PERIOD_MS / MS5611_TASK_PERIOD_MS;
+
 /* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
 typedef enum {
 	MS5611_ADDRESS_CSB_LOW = 0x77,
@@ -55,9 +57,8 @@ typedef enum {
 } ms5611_osr_t;
 
 typedef enum {
-	MS5611_CONV_IDLE = 0,
-	MS5611_CONV_TEMP,   // get temp at 10 hz
-	MS5611_CONV_PRESSURE,   // get pressure at 100 hz
+	MS5611_CONV_TEMP_PRESSURE,   // req: get temp at 10 hz
+	MS5611_CONV_PRESSURE_ONLY,   // req: get pressure at 100 hz
 } ms5611_conv_state_t;
 
 typedef struct {
@@ -134,9 +135,9 @@ static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom 
 								 .osr_pressure = MS5611_OSR_1024,
 								 .osr_temperature = MS5611_OSR_256,
 								 .initialized = false,
-								.conv_state = MS5611_CONV_IDLE,
+								.conv_state = MS5611_CONV_TEMP_PRESSURE,
 								.conv_start_tick = 0,
-								.cached_temperture = -1};
+								.cached_temperture = 0};
 
 /**
  * @brief Delays for a specified number of microseconds.
@@ -294,7 +295,7 @@ w_status_t ms5611_init(void) {
 	vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_TIME_MS)); // 3ms wait time from AN520 datasheet
 
 	if (W_SUCCESS != ms5611_prom_read()) {
-		log_text(1, "ms5611", "ERROR: initialization failed during PROM read .");
+		log_text(1, "ms5611", "ERROR: initialization failed during PROM read.");
 		return W_FAILURE;
 	}
 
@@ -317,7 +318,7 @@ void ms5611_deinit(void) {
 	}
 
 	handle.initialized = false;
-	handle.conv_state = MS5611_CONV_IDLE;
+	handle.conv_state = MS5611_CONV_TEMP_PRESSURE;
 	for (size_t i = 0; i < 8; ++i) {
 		handle.prom_coef[i] = 0;
 	}
@@ -364,7 +365,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_FAILURE;
 	}
 
-	if (MS5611_TEMP_COV_PERIOD_MS == handle.conv_state) {
+	if (MS5611_CONV_TEMP_PRESSURE == handle.conv_state) {
 
 		/* D2: temperature conversion */
 		if (W_FAILURE == baro_write_cmd(D2_CMD[handle.osr_temperature])) {
@@ -378,6 +379,8 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 			log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
 			return W_IO_ERROR;
 		}
+
+		handle.cached_temperture = d2;
 	}
 
 	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
@@ -399,7 +402,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	}
 
 	/* First-order compensation */
-	dt = (int32_t)d2 - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) << 8);
+	dt = (int32_t)handle.cached_temperture - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) << 8);
 	temp = second_comp_temp_threshold_centi_degrees +
 		   (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
 	off = (((int64_t)handle.prom_coef[MS5611_COEFF_OFF]) << 16) +
@@ -480,10 +483,11 @@ void ms5611_task(void *argument) {
 
 	ms5611_raw_result_t result;
 	TickType_t timestamp_ms;
+	size_t count = 0;
+	TickType_t xLastWakeTime = xTaskGetTickCount();
 
 	while (1) {
 		w_status_t status = ms5611_read_raw_pressure(&result, &timestamp_ms);
-		TickType_t xLastWakeTime = xTaskGetTickCount();
 
 		if (pdTRUE == xSemaphoreTake(s_data_mutex, portMAX_DELAY)) {
 			s_latest_status = status;
@@ -492,6 +496,15 @@ void ms5611_task(void *argument) {
 				s_latest_timestamp_ms = timestamp_ms;
 			}
 			xSemaphoreGive(s_data_mutex);
+		}
+
+		// state switching logic
+		if (MS5611_TEMP_CONV_STATE_SWITCH_COUNT == count){
+			count = 0;
+			handle.conv_state = MS5611_CONV_TEMP_PRESSURE;
+		} else {
+			count++;
+			handle.conv_state = MS5611_CONV_PRESSURE_ONLY;
 		}
 
 		vTaskDelayUntil(xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
