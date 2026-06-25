@@ -1,6 +1,9 @@
 #ifndef CONTROLLER_H_
 #define CONTROLLER_H_
 
+#include "FreeRTOS.h"
+#include "application/health_checks/health_checks.h"
+#include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -71,6 +74,6 @@ void controller_task(void *argument);
  *
  * @return CAN board specific err bitfield
  */
-uint32_t controller_get_status(void);
+health_status_t controller_get_status(void);
 
 #endif // CONTROLLER_H_

@@ -4,8 +4,8 @@
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
-#include "application/imu_handler/imu_handler.h"
 #include "application/navigator/navigator.h"
+#include "application/sensor_handler/sensor_handler.h"
 #include "drivers/timer/timer.h"
 
 // TODO: remove after motor_handler implemented
@@ -14,6 +14,7 @@
 #include "drivers/ak45_driver/ak45_driver.h"
 static const float64_t DEG_TO_RAD = (M_PI / 180.0);
 /****************************************************************/
+#include "rocketlib/include/common.h"
 
 static const uint8_t FSM_PERIOD_MS = 2;
 static const uint32_t MS_TO_TENTH_MS = 10;
@@ -25,6 +26,7 @@ typedef struct {
 	uint32_t timestamp_tenth_ms; // curr timestamp
 	fsm_state_t curr_state;
 	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
+	sensor_handler_ctx_t *p_imu_context; // global instance of flight phase
 	GNC_codegenStackData *codegen_stack_data;
 } fsm_ctx_t;
 
@@ -39,6 +41,7 @@ static controller_ctx_t g_controller_context = {0};
 // setting the launch and act_allowed time to MAX to make sure of no inadvertent actuation
 static flight_phase_ctx_t g_flight_phase_context = {.launch_timestamp_ms = UINT32_MAX,
 													.act_allowed_timestamp_ms = UINT32_MAX};
+static sensor_handler_ctx_t g_imu_context = {0};
 
 w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
 	// init estimator context
@@ -62,6 +65,7 @@ w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
 	g_ctx.estimator_context = &g_estimator_context;
 	g_ctx.p_controller_context = &g_controller_context;
 	g_ctx.p_flight_phase_context = &g_flight_phase_context;
+	g_ctx.p_imu_context = &g_imu_context;
 
 	// initialize fsm state
 	g_ctx.curr_state = STATE_IDLE;
@@ -166,7 +170,7 @@ void fsm_task(void *args) {
 		// get inputs needed for state machine:
 		// - imu data
 		// - etc (probably more later)
-		imu_handler_get_fresh_meas(&sensor_data);
+		sensor_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
 
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_data);

@@ -216,7 +216,12 @@ w_status_t log_init(void) {
 		memcpy(&run_count, run_count_buf, sizeof(run_count));
 		run_count++;
 	} else {
-		return W_IO_ERROR;
+		// LOGRUN.BIN missing
+		run_count = 1;
+		status = sd_card_file_create(LOG_RUN_COUNT_FILENAME);
+		if (W_SUCCESS != status) {
+			return W_IO_ERROR;
+		}
 	}
 
 	// Write new run count to file
@@ -439,12 +444,13 @@ void log_task(void *argument) {
 	}
 }
 
-uint32_t logger_get_status(void) {
-	uint32_t status_bitfield = 0;
+health_status_t logger_get_status(void) {
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
 
 	if (!logger_health.is_init) {
-		log_text(0, "logger", "not init");
-		return 1 << E_FS_ERROR_OFFSET;
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_LOGGER_NOT_INIT;
 	}
 
 	log_text(10,
@@ -468,5 +474,5 @@ uint32_t logger_get_status(void) {
 			 logger_health.buffer_flush_fails,
 			 logger_health.unsafe_buffer_flushes);
 
-	return status_bitfield;
+	return status;
 }

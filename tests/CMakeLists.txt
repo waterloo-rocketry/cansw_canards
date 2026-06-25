@@ -278,11 +278,11 @@ add_test_group(test_timer
     ${PROC_SRC_DIR}/drivers/timer/timer.c
 )
 
-add_test_group(test_imu_handler
+add_test_group(test_sensor_handler
     # test file(s)
-    ${UNIT_TESTS_DIR}/imu_handler_test.cpp
+    ${UNIT_TESTS_DIR}/sensor_handler_test.cpp
     # src file(s)
-    ${PROC_SRC_DIR}/application/imu_handler/imu_handler.c
+    ${PROC_SRC_DIR}/application/sensor_handler/sensor_handler.c
     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
 )
 
@@ -347,12 +347,13 @@ add_test_group(test_quaternion
 # ${PROC_SRC_DIR}/application/estimator/model/jacobians.c
 # )
 
-add_test_group(test_health_check
-    # test file(s)
-    ${UNIT_TESTS_DIR}/health_checks_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/health_checks/health_checks.c
-)
+# TODO: revive test once implemented
+# add_test_group(test_health_check
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/health_checks_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/health_checks/health_checks.c
+# )
 
 # TODO: revive test once implemented
 # add_test_group(test_projector
@@ -432,6 +433,46 @@ add_test_group(test_health_check
 #     ${PROC_SRC_DIR}/application/estimator/model/model_acceleration.c
 # )
 
+
+add_test_group(test_ms5611_baro
+    # test3 file(s)
+    ${UNIT_TESTS_DIR}/ms5611_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/MS5611/MS5611.c
+)
+
+add_test_group(test_adxl380
+    # test file(s)
+    ${UNIT_TESTS_DIR}/adxl380_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXL380.c
+)
+add_test_group(test_lsm6dsv32x
+    # test file(s)
+    ${UNIT_TESTS_DIR}/lsm6dsv32x_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/lsm6dsv32x/LSM6DSV32X.c
+)
+
+add_test_group(test_ads1219
+    # test file(s)
+    ${UNIT_TESTS_DIR}/ads1219_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADS1219.c
+)
+
+add_test_group(test_adxrs649
+    # test file(s)
+    ${UNIT_TESTS_DIR}/adxrs649_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/ad_breakout_board/ADXRS649.c
+)
+
+add_test_group(test_ak45_driver
+    # test file(s)
+    ${UNIT_TESTS_DIR}/ak45_driver_test.cpp
+    ${UNIT_TESTS_DIR}/ak45_driver_test_helpers.c # source file included here
+)
 
 add_test_group(test_controller_codegen
     # test file(s)

@@ -16,32 +16,21 @@
 
 // ---------- SENSOR TYPES ----------
 
-// measurement data from 1 arbitrary imu
-// TODO: remove old impl of `estimator_imu_measurement_t`
-typedef struct {
-	float64_t timestamp_imu_sec;
-	vector3d_t accelerometer; // gravities
-	vector3d_t gyroscope; // rad/sec
-	vector3d_t magnetometer; // mgauss (pololu) or arbitrary units (movella)
-	float32_t barometer; // Pa
-	bool is_dead;
-} estimator_imu_measurement_t;
-
 // Units are as follows: m/s^2, rad/s, Pa, gauss.
 typedef struct {
 	float64_t meas;
-	bool is_dead;
+	bool is_new;
 } navigator_1d_meas_t;
 
 typedef struct {
 	vector3d_t meas;
-	bool is_dead;
+	bool is_new;
 } navigator_3d_meas_t;
 
 typedef struct {
 	vector3d_t accel;
 	vector3d_t gyro;
-	bool is_dead;
+	bool is_new;
 } navigator_board_imu_meas_t;
 
 /**
@@ -57,11 +46,10 @@ typedef struct {
  * @brief MTi-630 (Movella) measurements
  */
 typedef struct {
-	vector3d_t mti_accel; // m/s^2
-	vector3d_t mti_gyro; // rad/s
-	float64_t mti_baro; // Pa
-	vector3d_t mti_mag; // gauss
-	bool is_dead;
+	navigator_3d_meas_t mti_accel; // m/s^2
+	navigator_3d_meas_t mti_gyro; // rad/s
+	navigator_1d_meas_t mti_baro; // Pa
+	navigator_3d_meas_t mti_mag; // gauss
 } navigator_mti_meas_t;
 
 /**
@@ -77,10 +65,7 @@ typedef struct {
 	navigator_board_meas_t board_meas;
 	navigator_mti_meas_t mti_meas;
 	navigator_ad_meas_t ad_meas;
-
-	// TODO: remove old impl below
-	estimator_imu_measurement_t movella; // raw movella data
-	estimator_imu_measurement_t pololu; // raw pololu data
+	navigator_1d_meas_t motor_encoder_meas;
 } all_sensors_data_t;
 
 // Codegen Type Rename

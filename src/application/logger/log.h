@@ -4,8 +4,10 @@
 #include "rocketlib/include/common.h"
 #include <stdint.h>
 // Include headers for structs used in log_data_container_t
-#include "application/imu_handler/imu_handler.h"
+#include "application/health_checks/health_checks.h"
+#include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
+#include "drivers/altimu-10/altimu-10.h"
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32768
@@ -265,6 +267,6 @@ void log_task(void *argument);
  *
  * @return CAN board status bitfield
  */
-uint32_t logger_get_status(void);
+health_status_t logger_get_status(void);
 
 #endif

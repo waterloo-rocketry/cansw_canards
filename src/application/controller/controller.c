@@ -67,9 +67,7 @@ w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codege
 	return W_SUCCESS;
 }
 
-uint32_t controller_get_status(void) {
-	uint32_t status_bitfield = 0;
-
+health_status_t controller_get_status(void) {
 	// Log all error statistics
 	log_text(0,
 			 "controller",
@@ -90,6 +88,9 @@ uint32_t controller_get_status(void) {
 			 controller_state.can_send_errors,
 			 controller_state.data_miss_counter);
 
-	return status_bitfield;
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_CONTROLLER, .error_bitfield = 0};
+
+	return status;
 }
 

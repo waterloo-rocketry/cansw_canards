@@ -64,56 +64,60 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p
 		   p_sensor_data->board_meas.board_imu.accel.array,
 		   sizeof(float64_t[3]));
 	codegen_sensor_input.board_accel.status =
-		!(p_sensor_data->board_meas.board_imu.is_dead); // status true is on
+		p_sensor_data->board_meas.board_imu.is_new; // status true is on
 
 	memcpy(codegen_sensor_input.board_gyro.meas,
 		   p_sensor_data->board_meas.board_imu.gyro.array,
 		   sizeof(float64_t[3]));
 	codegen_sensor_input.board_gyro.status =
-		!(p_sensor_data->board_meas.board_imu.is_dead); // status true is on
+		p_sensor_data->board_meas.board_imu.is_new; // status true is on
 
 	// Baro
 	codegen_sensor_input.board_baro.meas = p_sensor_data->board_meas.board_baro.meas;
 	codegen_sensor_input.board_baro.status =
-		!(p_sensor_data->board_meas.board_baro.is_dead); // status true is on
+		p_sensor_data->board_meas.board_baro.is_new; // status true is on
 
 	// Mag
 	memcpy(codegen_sensor_input.board_mag.meas,
 		   p_sensor_data->board_meas.board_mag.meas.array,
 		   sizeof(float64_t[3]));
 	codegen_sensor_input.board_mag.status =
-		!(p_sensor_data->board_meas.board_mag.is_dead); // status true is on
+		p_sensor_data->board_meas.board_mag.is_new; // status true is on
 
 	// MTI
 	memcpy(codegen_sensor_input.mti_accel.meas,
-		   p_sensor_data->mti_meas.mti_accel.array,
+		   p_sensor_data->mti_meas.mti_accel.meas.array,
 		   sizeof(float64_t[3]));
-	codegen_sensor_input.mti_accel.status = !(p_sensor_data->mti_meas.is_dead); // status true is on
+	codegen_sensor_input.mti_accel.status =
+		p_sensor_data->mti_meas.mti_accel.is_new; // status true is on
 
 	memcpy(codegen_sensor_input.mti_gyro.meas,
-		   p_sensor_data->mti_meas.mti_gyro.array,
+		   p_sensor_data->mti_meas.mti_gyro.meas.array,
 		   sizeof(float64_t[3]));
-	codegen_sensor_input.mti_gyro.status = !(p_sensor_data->mti_meas.is_dead); // status true is on
+	codegen_sensor_input.mti_gyro.status =
+		p_sensor_data->mti_meas.mti_gyro.is_new; // status true is on
 
 	memcpy(codegen_sensor_input.mti_mag.meas,
-		   p_sensor_data->mti_meas.mti_mag.array,
+		   p_sensor_data->mti_meas.mti_mag.meas.array,
 		   sizeof(float64_t[3]));
-	codegen_sensor_input.mti_mag.status = !(p_sensor_data->mti_meas.is_dead); // status true is on
+	codegen_sensor_input.mti_mag.status =
+		p_sensor_data->mti_meas.mti_mag.is_new; // status true is on
 
-	codegen_sensor_input.mti_baro.meas = p_sensor_data->mti_meas.mti_baro;
-	codegen_sensor_input.mti_baro.status = !(p_sensor_data->mti_meas.is_dead); // status true is on
+	codegen_sensor_input.mti_baro.meas = p_sensor_data->mti_meas.mti_baro.meas;
+	codegen_sensor_input.mti_baro.status =
+		p_sensor_data->mti_meas.mti_baro.is_new; // status true is on
 
 	// AD Accel
 	memcpy(codegen_sensor_input.ad_accel.meas,
 		   p_sensor_data->ad_meas.ad_accel.meas.array,
 		   sizeof(float64_t[3]));
 	codegen_sensor_input.ad_accel.status =
-		!(p_sensor_data->ad_meas.ad_accel.is_dead); // status true is on
+		p_sensor_data->ad_meas.ad_accel.is_new; // status true is on
 
 	codegen_sensor_input.ad_gyro.meas[0] =
 		p_sensor_data->ad_meas.ad_gyro.meas; // TODO: DOUBLE CHECK WHICH ACCESS
 	codegen_sensor_input.ad_gyro.status =
-		!(p_sensor_data->ad_meas.ad_gyro.is_dead); // status true is on
+		p_sensor_data->ad_meas.ad_gyro.is_new; // status true is on
 
 	navigator_codegen_ctx_t output_ctx = {0};
 
@@ -174,9 +178,7 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p
 // 	return status;
 // }
 
-uint32_t navigator_get_status(void) {
-	uint32_t status_bitfield = 0;
-
+health_status_t navigator_get_status(void) {
 	// Log all error statistics
 	log_text(0,
 			 "estimator",
@@ -191,5 +193,8 @@ uint32_t navigator_get_status(void) {
 			 estimator_error_stats.can_log_fails,
 			 estimator_error_stats.invalid_phase_errors);
 
-	return status_bitfield;
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_ESTIMATOR, .error_bitfield = 0};
+
+	return status;
 }

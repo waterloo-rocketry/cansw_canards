@@ -57,7 +57,7 @@ w_status_t navigator_init();
  *
  * @return CAN board specific err bitfield
  */
-uint32_t navigator_get_status(void);
+health_status_t navigator_get_status(void);
 
 /**
  * @brief 1 step of navigator
