@@ -10,7 +10,7 @@
 // extern "C" {
 // #include "application/estimator/ekf.h"
 // #include "application/estimator/estimator_module.h"
-// #include "application/estimator/estimator_types.h"
+// 
 // #include "application/estimator/model/model_dynamics.h"
 // #include "application/estimator/model/quaternion.h"
 // #include "application/fsm/fsm_types.h"

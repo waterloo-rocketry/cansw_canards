@@ -4,7 +4,7 @@
 
 extern "C" {
 // add includes like freertos, hal, proc headers, etc
-#include "application/estimator/estimator_types.h"
+
 #include "application/estimator/model/quaternion.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"

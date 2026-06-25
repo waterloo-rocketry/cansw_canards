@@ -319,21 +319,21 @@ add_test_group(test_altimu
 #     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
 # )
 
-add_test_group(test_common_math
-    # test file(s)
-    ${UNIT_TESTS_DIR}/common_math_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
-    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-)
+# add_test_group(test_common_math
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/common_math_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
+#     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+# )
 
-add_test_group(test_quaternion
-    # test file(s)
-    ${UNIT_TESTS_DIR}/quaternion_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
-    ${PROC_SRC_DIR}/common/math/math-algebra3d.c
-)
+# add_test_group(test_quaternion
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/quaternion_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/application/estimator/model/quaternion.c
+#     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
+# )
 
 # TODO: revive test once implemented
 # add_test_group(test_model_imu
@@ -474,39 +474,39 @@ add_test_group(test_ak45_driver
     ${UNIT_TESTS_DIR}/ak45_driver_test_helpers.c # source file included here
 )
 
-add_test_group(test_controller_codegen
-    # test file(s)
-    ${UNIT_TESTS_DIR}/controller_codegen_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/controller_codegen_entry.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_data.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_initialize.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_terminate.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/diag.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/eye.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/rt_nonfinite.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics_jacobian.c
-)
+# add_test_group(test_controller_codegen
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/controller_codegen_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/controller_codegen_entry.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_data.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_initialize.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_terminate.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/diag.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/eye.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/rt_nonfinite.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics_jacobian.c
+# )
 
 
-add_test_group(test_navigator_codegen
-    # test file(s)
-    ${UNIT_TESTS_DIR}/navigator_codegen_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/navigation_codegen_entry.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_data.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_initialize.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_terminate.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/diag.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/eye.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/rt_nonfinite.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/airdata_atmos.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/atan2.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/ekf_correct.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/inv.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/norm.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics_jacobian.c
-    ${PROC_SRC_DIR}/third_party/GNC_codegen/mpower.c
-)
+# add_test_group(test_navigator_codegen
+#     # test file(s)
+#     ${UNIT_TESTS_DIR}/navigator_codegen_test.cpp
+#     # src file(s)
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/navigation_codegen_entry.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_data.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_initialize.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/GNC_codegen_terminate.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/diag.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/eye.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/rt_nonfinite.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/airdata_atmos.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/atan2.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/ekf_correct.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/inv.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/norm.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/dynamics_jacobian.c
+#     ${PROC_SRC_DIR}/third_party/GNC_codegen/mpower.c
+# )

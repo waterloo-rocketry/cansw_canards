@@ -121,18 +121,15 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(float64_t[2]));
 			controller_input.pdyn = navigator_output.airdata.dynamic_pressure;
 
-			// TODO: switch to motor handler once exists
-			/****************************************************************/
-			ak45_feedback_t motor_feedback = {0};
-			ak45_get_latest_feedback(&motor_feedback);
-			controller_input.motor_angle_rad = motor_feedback.position_deg * DEG_TO_RAD;
+			controller_input.motor_angle_rad = p_sensor_data->motor_encoder_meas.meas;
 			/****************************************************************/
 
-			// roll more into input structs
-			controller_step(p_ctx->p_controller_context,
-							p_ctx->codegen_stack_data,
-							&controller_input,
-							&controller_output);
+			if (p_sensor_data->motor_encoder_meas.is_new) {
+				controller_step(p_ctx->p_controller_context,
+								p_ctx->codegen_stack_data,
+								&controller_input,
+								&controller_output);
+			}
 
 			// TODO: switch to motor handler once exists
 			/****************************************************************/

@@ -3,7 +3,7 @@
 
 // extern "C" {
 
-// #include "application/estimator/estimator_types.h"
+// 
 // #include "application/estimator/model/model_dynamics.h"
 // #include "application/estimator/model/quaternion.h"
 // #include "arm_math.h"

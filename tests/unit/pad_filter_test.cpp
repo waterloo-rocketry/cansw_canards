@@ -7,7 +7,7 @@
 
 // extern "C" {
 // // add includes like freertos, hal, proc headers, etc
-// #include "application/estimator/estimator_types.h"
+// 
 // #include "application/estimator/pad_filter.h"
 // DEFINE_FFF_GLOBALS; // this must be called within the extern c block
 // }
