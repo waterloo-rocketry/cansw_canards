@@ -3,6 +3,7 @@
 
 #include "FreeRTOS.h"
 #include "i2c.h" // for hi2c4
+#include "main.h" // for INT_MAG_Pin
 #include "task.h"
 
 #include "application/logger/log.h"
@@ -25,7 +26,6 @@ static const uint32_t IIS2MDC_REG_WHO_AM_I = 0x4F;
 static const uint32_t IIS2MDC_REG_CFG_A = 0x60;
 static const uint32_t IIS2MDC_REG_CFG_B = 0x61;
 static const uint32_t IIS2MDC_REG_CFG_C = 0x62;
-static const uint32_t IIS2MDC_REG_STATUS = 0x67;
 static const uint32_t IIS2MDC_REG_OUTX_L = 0x68;
 
 // SUB MSB that enables auto-increment for multi-byte reads. Since all registers are less than 0x80
@@ -34,9 +34,6 @@ static const uint32_t IIS2MDC_SUB_AUTO_INC = 0x80;
 
 // Expected WHO_AM_I return value
 static const uint32_t IIS2MDC_WHO_AM_I_VAL = 0x40;
-
-// Checks if new data is available
-static const uint32_t IIS2MDC_STATUS_ZYXDA = (1 << 3);
 
 // Resets config registers
 static const uint32_t IIS2MDC_CFG_A_SOFT_RESET = (1 << 5);
@@ -149,9 +146,10 @@ static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, 
 }
 
 /**
- * @brief Polls status register until a new sample is ready (ZYXDA), waits 1ms between polls
+ * @brief Polls GPIO pin until it asserts (a new sample is ready), waits 1ms between
+ *        polls.
  * @note Bounded by IIS2MDC_SELF_TEST_TIMEOUT_MS (3x sample period). Rejected when the async DMA
- * pipeline is active.
+ *       pipeline is active.
  */
 static w_status_t self_test_wait_data_ready(void) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
@@ -159,28 +157,15 @@ static w_status_t self_test_wait_data_ready(void) {
 		return W_FAILURE;
 	}
 
-	uint8_t status = 0;
 	uint32_t start_ms = 0;
-
 	if (W_SUCCESS != timer_get_ms(&start_ms)) {
 		return W_FAILURE;
 	}
 
 	uint32_t now_ms = start_ms;
 
-	// within this loop, it checks if new data is ready by reading the status register every 1ms. If
-	// data is not ready, updates the current time. Loop exits if the time elapsed exceeds the
-	// timeout threshold, returning W_IO_TIMEOUT to indicate no new data was available during the
-	// timeout period.
 	while ((now_ms - start_ms) < IIS2MDC_SELF_TEST_TIMEOUT_MS) {
-		if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_STATUS, &status, 1)) {
-			return W_FAILURE;
-		}
-		// ZYXDA is bit 3 of STATUS_REG, it is 1 when a fresh sample is available.
-		// ANDing status with IIS2MDC_STATUS_ZYXDA (1 << 3) masks off every other bit, leaving
-		// only bit 3. Comparing that masked value against IIS2MDC_STATUS_ZYXDA is true only when
-		// bit 3 is set, so data_ready is 1 when a sample is ready and 0 when it is not.
-		if ((status & IIS2MDC_STATUS_ZYXDA) == IIS2MDC_STATUS_ZYXDA) {
+		if (GPIO_PIN_SET == HAL_GPIO_ReadPin(INT_MAG_GPIO_Port, INT_MAG_Pin)) {
 			return W_SUCCESS;
 		}
 		vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_POLLING_PERIOD_MS));
@@ -405,6 +390,17 @@ w_status_t iis2mdc_init(void) {
 
 	// load all settings and end use of i2c driver before switching to DMA
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SETTINGS_LOAD_DELAY_MS));
+
+	// Samples have been accumulating since the last sanity-check
+	// read, which means DRDY is pulled high. If we transition to async reads now,
+	// the first EXTI rising edge will never fire since the line is already high, and the pipeline
+	// stalls. Read the output registers once here to clear DRDY. (test irl to verify this fix
+	// works)
+	uint8_t discard_buf[6];
+	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_OUTX_L, discard_buf, sizeof(discard_buf))) {
+		log_text(1, "iis2mdc", "ERROR: failed to clear DRDY before switching to async mode");
+		return W_FAILURE;
+	}
 
 	// register completion callback on the mag's I2C handle.
 	if (HAL_OK !=
