@@ -119,7 +119,7 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 
 			// input the navigator outputs into controller
 			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(float64_t[2]));
-			controller_input.pdyn = navigator_output.airdata.dynamic_pressure;
+			controller_input.dynamic_pressure = navigator_output.dynamic_pressure;
 
 			controller_input.motor_angle_rad = p_sensor_data->motor_encoder_meas.meas;
 			/****************************************************************/
@@ -129,14 +129,14 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 								p_ctx->codegen_stack_data,
 								&controller_input,
 								&controller_output);
-			}
 
-			// TODO: switch to motor handler once exists
-			/****************************************************************/
-			float32_t motor_angle_deg =
-				(float32_t)(controller_output.motor_command_angle_rad / DEG_TO_RAD);
-			ak45_send_position_cmd(motor_angle_deg);
-			/****************************************************************/
+				// TODO: switch to motor handler once exists
+				/****************************************************************/
+				float32_t motor_angle_deg =
+					(float32_t)(controller_output.motor_command_angle_rad / DEG_TO_RAD);
+				ak45_send_position_cmd(motor_angle_deg);
+				/****************************************************************/
+			}
 			break;
 
 			// etc for more cases...

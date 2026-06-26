@@ -76,8 +76,6 @@ typedef struct3_T navigator_codegen_sensor_input_t;
 typedef struct4_T navigator_codegen_sensor_3D_t;
 typedef struct5_T navigator_codegen_sensor_1D_t;
 
-typedef struct6_T airdata_codegen_t;
-
 // ---------- NAVIGATOR TYPES ----------
 typedef struct {
 	uint32_t curr_timestamp_tenth_ms;
@@ -87,8 +85,9 @@ typedef struct {
 typedef struct {
 	uint32_t timestamp_tenth_ms;
 	// TODO: update after Tristan update codegen
-	airdata_codegen_t airdata;
+	double cov_norm;
 	double roll_state[2];
+	double dynamic_pressure; // dynamic pressure
 } navigator_output_t;
 
 // ---------- CONTROLLER TYPES ----------
@@ -97,7 +96,7 @@ typedef struct {
 typedef struct {
 	float64_t motor_angle_rad; /// delta
 	float64_t xR[2];
-	float64_t pdyn;
+	float64_t dynamic_pressure;
 	uint32_t curr_timestamp_ms;
 	uint32_t launch_timestamp_ms;
 } controller_input_t;

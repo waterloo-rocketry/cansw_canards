@@ -44,25 +44,26 @@ w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codege
 
 	float64_t ref_signal = 0.0;
 
-	controller_codegen_ctx_t output_ctx = {0};
+	bool controller_status = false;
 
 	controller_codegen_entry(p_codegen_stack_data,
 							 flight_time_ms,
 							 dt_controller_sec,
 							 input->xR,
-							 input->pdyn,
+							 input->dynamic_pressure,
 							 input->motor_angle_rad,
 							 &(ctx->codegen_ctx),
 							 &(output->motor_command_angle_rad),
 							 &(output->ref_roll_angle_rad),
-							 &output_ctx);
+							 &controller_status);
 
-	// copy over the new ctx
-	memcpy(&(ctx->codegen_ctx), &output_ctx, sizeof(controller_codegen_ctx_t));
-
-	// update new timestamp
-	output->timestamp_ms = input->curr_timestamp_ms;
-	ctx->last_run_ms = input->curr_timestamp_ms;
+	if (controller_status) { // the controller ran
+		// update new timestamp
+		output->timestamp_ms = input->curr_timestamp_ms;
+		ctx->last_run_ms = input->curr_timestamp_ms;
+	} else {
+		log_text(0, "controller", "WARN: controller was not run");
+	}
 
 	return W_SUCCESS;
 }

@@ -119,7 +119,7 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p
 	codegen_sensor_input.ad_gyro.status =
 		p_sensor_data->ad_meas.ad_gyro.is_new; // status true is on
 
-	navigator_codegen_ctx_t output_ctx = {0};
+	bool nav_status = false;
 
 	navigation_codegen_entry(p_codegen_stack_data,
 							 dt_sec,
@@ -129,17 +129,17 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p
 							 &(p_ctx->codegen_ctx.bias),
 							 &(p_ctx->codegen_ctx.sensor_filter),
 							 &codegen_sensor_input,
-							 output_ctx.x,
-							 output_ctx.P,
-							 &(output_ctx.bias),
-							 &(output_ctx.sensor_filter),
-							 &(p_output->airdata),
-							 p_output->roll_state);
+							 &(p_output->cov_norm),
+							 p_output->roll_state,
+							 &(p_output->dynamic_pressure),
+							 &nav_status);
 
-	// update codegen ctx
-	memcpy(&(p_ctx->codegen_ctx), &output_ctx, sizeof(navigator_codegen_ctx_t));
+	if (nav_status) { // if nav ran
+		p_ctx->last_run_tenth_ms = p_input->curr_timestamp_tenth_ms;
+	} else {
+		log_text(0, "Navigator", "WARN: Nav failed to run");
+	}
 
-	p_ctx->last_run_tenth_ms = p_input->curr_timestamp_tenth_ms;
 	return W_SUCCESS;
 }
 
