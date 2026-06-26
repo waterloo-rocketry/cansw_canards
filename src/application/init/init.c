@@ -16,6 +16,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
@@ -31,7 +32,6 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
-#include "application/power_handler/power_handler.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -165,13 +165,13 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
-	
+
 	power_handler_init();
 
 	gpio_toggle(GPIO_PIN_GREEN_LED, 0);
 	gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 
-	while(1) {
+	while (1) {
 		uint32_t status = power_handler_get_status();
 
 		log_text(5, "powerhandler", "power handler status %d", status);
