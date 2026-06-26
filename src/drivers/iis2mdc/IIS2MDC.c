@@ -57,7 +57,7 @@ static const uint32_t IIS2MDC_SELF_TEST_SAMPLES = 50;
 static const uint32_t IIS2MDC_POWERUP_MS = 30;
 static const uint32_t IIS2MDC_SELF_TEST_SETTLE_MS = 60;
 // Wait at most 3 sample periods before declaring no fresh data
-static const uint32_t IIS2MDC_SELF_TEST_TIMEOUT_MS = 3U * IIS2MDC_SAMPLE_PERIOD_MS;
+static const uint32_t IIS2MDC_SELF_TEST_TIMEOUT_MS = 1000;
 static const uint32_t IIS2MDC_SELF_TEST_POLLING_PERIOD_MS = 1;
 
 // Delay before switching to DMA and ending use of I2C driver
@@ -89,7 +89,10 @@ typedef struct {
 	bool valid; // true once at least one sample has been cached
 } iis2mdc_cache_t;
 
-static iis2mdc_cache_t iis2mdc_cache = {0};
+
+iis2mdc_cache_t iis2mdc_cache  
+__attribute__((section(".sram4"))) 
+= {0};
 
 /* Enum for the state of the driver.
  * UNINIT: before init runs, or after a failed init
@@ -189,6 +192,7 @@ static w_status_t self_test_wait_data_ready(void) {
 			return W_FAILURE;
 		}
 	}
+	vTaskDelay(1);
 	return W_IO_TIMEOUT; // no new sample within the timeout
 }
 
@@ -353,6 +357,9 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
  *       sign interpretation, and scaling to gauss are deferred to iis2mdc_get_data.
  */
 static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
+
+	uint32_t timestamp_ms = 0;
+
 	if (hi2c != &hi2c4) {
 		return;
 	}
@@ -360,8 +367,6 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		return;
 	}
-
-	uint32_t timestamp_ms = 0;
 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
 		return;
 	}
@@ -414,6 +419,12 @@ w_status_t iis2mdc_init(void) {
 	}
 
 	iis2mdc_state = IIS2MDC_STATE_ASYNC_DMA_ACTIVE;
+	iis2mdc_handle_drdy_irq();
+
+	vTaskDelay(10);
+	uint32_t error = HAL_I2C_GetError(&hi2c4);
+	log_text(1, "asd", "%d", error);
+
 	return W_SUCCESS;
 }
 

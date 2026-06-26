@@ -38,7 +38,7 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
-static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1; // 10 seconds
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -104,7 +104,6 @@ static void system_init_task(void *arg) {
 	status |= fsm_init();
 	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	status |= iis2mdc_init();
 	status |= adxrs649_init();
 	status |= iis2mdc_init();
 	// status |= ekf_init();
@@ -120,12 +119,12 @@ static void system_init_task(void *arg) {
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	task_status &= xTaskCreate(fsm_task,
-							   "fsm",
-							   8192, // TODO: set the correct size
-							   NULL,
-							   fsm_task_priority,
-							   &fsm_task_handle);
+	// task_status &= xTaskCreate(fsm_task,
+	// 						   "fsm",
+	// 						   8192, // TODO: set the correct size
+	// 						   NULL,
+	// 						   fsm_task_priority,
+	// 						   &fsm_task_handle);
 
 	// task_status &= xTaskCreate(health_check_task,
 	//     "health",
@@ -168,13 +167,21 @@ static void system_init_task(void *arg) {
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+	vector3d_t mag_data = {0};
+	iis2mdc_raw_data_t raw_data = {0};
+	uint32_t time = 0;
+	TickType_t last_wake_time = xTaskGetTickCount();
+	w_status_t sen_status = W_SUCCESS;
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(500);
+		GPIO_PinState state = HAL_GPIO_ReadPin(INT_MAG_GPIO_Port, INT_MAG_Pin);
+		sen_status = iis2mdc_get_data(&mag_data, &raw_data, &time);
+
+		log_text(0, "asd", "%d", state);
+
+		log_text(0, "MAG TEST", "MAG: x %lf, y %lf, z %lf RAW: x %d, y %d, z %d, TIME: %d Status %d",
+			mag_data.x, mag_data.y, mag_data.z, raw_data.x, raw_data.y, raw_data.z, time, sen_status);
+
+		vTaskDelayUntil(&last_wake_time, 10);
 	}
 }
 

@@ -165,6 +165,15 @@ SECTIONS
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM_D1
+  
+  .sram4 :
+  {
+    . = ALIGN(8);
+    *(.sram4)
+    . = ALIGN(8);
+
+  } >RAM_D3 AT>FLASH
+
 
   /* Remove information from the standard libraries */
   /DISCARD/ :
