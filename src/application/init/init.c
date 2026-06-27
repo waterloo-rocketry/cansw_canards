@@ -96,6 +96,7 @@ static void system_init_task(void *arg) {
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
 	status |= health_check_init();
+	status |= power_handler_init();
 	status |= movella_init();
 	status |= flight_phase_init();
 	status |= sensor_handler_init();
@@ -166,13 +167,11 @@ static void system_init_task(void *arg) {
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
-	power_handler_init();
-
 	gpio_toggle(GPIO_PIN_GREEN_LED, 0);
 	gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 
 	while (1) {
-		uint32_t status = power_handler_get_status();
+		health_status_t status = power_handler_get_status();
 
 		log_text(5, "powerhandler", "power handler status %d", status);
 		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");

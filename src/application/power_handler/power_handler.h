@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "application/can_handler/can_handler.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
@@ -21,6 +22,6 @@ w_status_t power_handler_init(void);
  * Returns uint32_t bitfield of active faults.
  * Called by health checks.
  */
-uint32_t power_handler_get_status(void);
+health_status_t power_handler_get_status(void);
 
 #endif // POWER_HANDLER_H
