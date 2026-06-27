@@ -37,7 +37,7 @@ FAKE_VALUE_FUNC(health_status_t, timer_get_status);
 FAKE_VALUE_FUNC(health_status_t, logger_get_status);
 FAKE_VALUE_FUNC(health_status_t, gpio_get_status);
 FAKE_VALUE_FUNC(health_status_t, flight_phase_get_status);
-FAKE_VALUE_FUNC(health_status_t, imu_handler_get_status);
+FAKE_VALUE_FUNC(health_status_t, sensor_handler_get_status);
 FAKE_VALUE_FUNC(health_status_t, uart_get_status);
 FAKE_VALUE_FUNC(int, snprintf_spy, char *, size_t, const char *);
 
@@ -81,7 +81,7 @@ protected:
 		RESET_FAKE(logger_get_status);
 		RESET_FAKE(gpio_get_status);
 		RESET_FAKE(flight_phase_get_status);
-		RESET_FAKE(imu_handler_get_status);
+		RESET_FAKE(sensor_handler_get_status);
 		RESET_FAKE(uart_get_status);
 
 		FFF_RESET_HISTORY();
@@ -100,7 +100,7 @@ protected:
 		health_status_t logger_ok = {HEALTH_OK, MODULE_LOGGER, MODULE_ERR_NONE};
 		health_status_t gpio_ok = {HEALTH_OK, MODULE_GPIO, MODULE_ERR_NONE};
 		health_status_t fp_ok = {HEALTH_OK, MODULE_FLIGHT_PHASE, MODULE_ERR_NONE};
-		health_status_t imu_ok = {HEALTH_OK, MODULE_IMU_HANDLER, MODULE_ERR_NONE};
+		health_status_t sensor_ok = {HEALTH_OK, MODULE_SENSOR_HANDLER, MODULE_ERR_NONE};
 		health_status_t uart_ok = {HEALTH_OK, MODULE_UART, MODULE_ERR_NONE};
 
 		i2c_get_status_fake.return_val = i2c_ok;
@@ -113,7 +113,7 @@ protected:
 		logger_get_status_fake.return_val = logger_ok;
 		gpio_get_status_fake.return_val = gpio_ok;
 		flight_phase_get_status_fake.return_val = fp_ok;
-		imu_handler_get_status_fake.return_val = imu_ok;
+		sensor_handler_get_status_fake.return_val = sensor_ok;
 		uart_get_status_fake.return_val = uart_ok;
 	}
 
