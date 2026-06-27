@@ -8,6 +8,7 @@
 #include "application/estimator/estimator_module.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
+#include "application/logger/log.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/timer/timer.h"
 #include "rocketlib/include/common.h"
@@ -136,7 +137,9 @@ void fsm_task(void *args) {
 
 	while (1) {
 		// Unblock once we receive the notification to unblock fsm
-		ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS));
+		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS)) == 0) {
+			log_text(0, "FSM", "ERROR: FSM loop wait timed out");
+		}
 
 		if (W_SUCCESS != timer_get_ms(&(g_ctx.timestamp_ms))) {
 			// TODO: error handling
