@@ -735,9 +735,9 @@ TEST_F(FlightPhaseTest, AllThreeImusTriggerLaunchDetection) {
     all_sensors_data_t sensor_data = {0};
     flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
 
-    sensor_data.board_meas.board_imu.is_dead = false;
-    sensor_data.mti_meas.is_dead             = false;
-    sensor_data.ad_meas.ad_accel.is_dead     = false;
+    sensor_data.board_meas.board_imu.is_new = true;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
 
     double norms[15] = {
         25.0, 25.0, 50.0, 
@@ -768,9 +768,9 @@ TEST_F(FlightPhaseTest, TwoImusTriggerLaunchDetection) {
     all_sensors_data_t sensor_data = {0};
     flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
 
-    sensor_data.board_meas.board_imu.is_dead = false;
-    sensor_data.mti_meas.is_dead             = false;
-    sensor_data.ad_meas.ad_accel.is_dead     = false;
+    sensor_data.board_meas.board_imu.is_new = true;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
 
     double norms[15] = {
         25.0, 25.0, 15.0, 
@@ -799,9 +799,9 @@ TEST_F(FlightPhaseTest, ImusBelowThresholdDoesNotTriggerLaunchDetection) {
     all_sensors_data_t sensor_data = {0};
     flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
 
-    sensor_data.board_meas.board_imu.is_dead = false;
-    sensor_data.mti_meas.is_dead             = false;
-    sensor_data.ad_meas.ad_accel.is_dead     = false;
+    sensor_data.board_meas.board_imu.is_new = true;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
 
     double norms[15] = {
         25.0, 25.0, 25.0, 
@@ -824,9 +824,9 @@ TEST_F(FlightPhaseTest, ImusBelowThresholdDoesNotTriggerLaunchDetection) {
 TEST_F(FlightPhaseTest, OnlyOneImuAboveThresholdDoesNotTriggerLaunchDetection) {
     // Arrange
     all_sensors_data_t sensor_data = {0};
-    sensor_data.board_meas.board_imu.is_dead = false;
-    sensor_data.mti_meas.is_dead             = false;
-    sensor_data.ad_meas.ad_accel.is_dead     = false;
+    sensor_data.board_meas.board_imu.is_new = true;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
 
     double norms[30] = {
         25.0, 5.0, 5.0,
@@ -851,9 +851,9 @@ TEST_F(FlightPhaseTest, OnlyOneImuAboveThresholdDoesNotTriggerLaunchDetection) {
 TEST_F(FlightPhaseTest, BoardImuDeadTriggersLaunchDetection) {
     // Arrange
     all_sensors_data_t sensor_data = {0};
-    sensor_data.board_meas.board_imu.is_dead = true;
-    sensor_data.mti_meas.is_dead             = false;
-    sensor_data.ad_meas.ad_accel.is_dead     = false;
+    sensor_data.board_meas.board_imu.is_new = false;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
 
     double norms[10] = {
         25.0, 25.0, 
@@ -881,9 +881,9 @@ TEST_F(FlightPhaseTest, BoardImuDeadTriggersLaunchDetection) {
 
 TEST_F(FlightPhaseTest, TwoImusDeadDoesNotTriggerLaunchDetection) {
     all_sensors_data_t sensor_data = {0};
-    sensor_data.board_meas.board_imu.is_dead = true;
-    sensor_data.mti_meas.is_dead             = true;
-    sensor_data.ad_meas.ad_accel.is_dead     = false;
+    sensor_data.board_meas.board_imu.is_new = false;
+    sensor_data.mti_meas.mti_accel.is_new = false;
+    sensor_data.ad_meas.ad_accel.is_new = true;
 
     flight_phase_ctx_t ctx = {0};
 
@@ -904,9 +904,9 @@ TEST_F(FlightPhaseTest, TwoImusDeadDoesNotTriggerLaunchDetection) {
 
 TEST_F(FlightPhaseTest, ThreeImusDeadDoesNotTriggerLaunchAccel) {
     all_sensors_data_t sensor_data = {0};
-    sensor_data.board_meas.board_imu.is_dead = true;
-    sensor_data.mti_meas.is_dead             = true;
-    sensor_data.ad_meas.ad_accel.is_dead     = true;
+    sensor_data.board_meas.board_imu.is_new = false;
+    sensor_data.mti_meas.mti_accel.is_new = false;
+    sensor_data.ad_meas.ad_accel.is_new = false;
 
     flight_phase_ctx_t ctx = {0};
 
