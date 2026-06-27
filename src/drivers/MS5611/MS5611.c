@@ -83,9 +83,8 @@ typedef struct {
 	/* Set true once init succeeds */
 	bool initialized;
 
-	/* Async polling state machine */
+
 	ms5611_conv_state_t conv_state;
-	uint32_t conv_start_tick;
 	uint32_t cached_temperture;
 } ms5611_handle_t;
 
@@ -178,10 +177,13 @@ static w_status_t baro_write_cmd(uint8_t cmd) {
  */
 static w_status_t baro_read_adc(uint32_t *out) {
 	uint8_t prom_buf[3];
+
 	if (baro_read(MS5611_CMD_ADC_READ, prom_buf, 3) != W_SUCCESS) {
 		return W_FAILURE;
 	}
-	*out = ((uint32_t)prom_buf[0] << 16) | ((uint32_t)prom_buf[1] << 8) | prom_buf[2];
+
+	*out = (((uint32_t)prom_buf[0] << 16) | ((uint32_t)prom_buf[1] << 8) | prom_buf[2]);
+
 	return W_SUCCESS;
 }
 
@@ -245,11 +247,13 @@ static w_status_t ms5611_prom_read(void) {
 	// copy into a local var first to avoid modifying the handle with corrupt data on read failure
 	for (i = 0; i < 8; i++) {
 		status = baro_read(MS5611_CMD_PROM_READ_BASE + (i * 2), prom_buf, 2);
+
 		if (status != W_SUCCESS) {
 			log_text(1, "ms5611", "ERROR: failed to read PROM coefficient C%u", i);
 			return W_FAILURE;
 		}
-		prom_coef[i] = ((uint16_t)prom_buf[0] << 8) | prom_buf[1];
+
+		prom_coef[i] = (((uint16_t)prom_buf[0] << 8) | prom_buf[1]);
 	}
 
 	status |= a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0F));
@@ -327,6 +331,7 @@ void ms5611_deinit(void) {
 
 	handle.initialized = false;
 	handle.conv_state = MS5611_CONV_TEMP_PRESSURE;
+	
 	for (size_t i = 0; i < 8; ++i) {
 		handle.prom_coef[i] = 0;
 	}
