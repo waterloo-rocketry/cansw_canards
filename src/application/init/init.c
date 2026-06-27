@@ -173,7 +173,7 @@ static void system_init_task(void *arg) {
 	while (1) {
 		health_status_t status = power_handler_get_status();
 
-		log_text(5, "powerhandler", "power handler status %d", status);
+		log_text(5, "powerhandler", "power handler status %lx", status.error_bitfield);
 		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
 		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
 		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
