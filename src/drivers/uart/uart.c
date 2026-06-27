@@ -43,6 +43,7 @@ typedef struct {
 	uint32_t hw_errors; /**< Count of hardware errors */
 	uint32_t messages_received; /**< Count of messages successfully received */
 	uint32_t messages_sent; /**< Count of messages successfully sent */
+	uint32_t restart_failed; /**< Count of times we failed to restart reception after error */
 } uart_stats_t;
 
 /** @brief Error statistics for each channel */
@@ -288,7 +289,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 			curr_msg->busy = false;
 			// Attempt to restart reception
 			if (HAL_UARTEx_ReceiveToIdle_DMA(huart, curr_msg->data, UART_MAX_LEN) != HAL_OK) {
-				// Critical error, unsure how to recover ISR context
+				s_uart_stats[ch].restart_failed++;
 			}
 			portYIELD_FROM_ISR(higher_priority_task_woken);
 			break;
@@ -321,9 +322,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
  * @brief Gets and logs the current status of all UART channels
  * @return Status code indicating success or failure
  */
-uint32_t uart_get_status(void) {
-	uint32_t status_bitfield = 0;
-
+health_status_t uart_get_status(void) {
 	// Iterate through all UART channels
 	for (uart_channel_t channel = 0; channel < UART_CHANNEL_COUNT; channel++) {
 		const char *channel_name = "";
@@ -352,5 +351,7 @@ uint32_t uart_get_status(void) {
 				 stats->overflows);
 	}
 
-	return status_bitfield;
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_UART, .error_bitfield = 0};
+
+	return status;
 }

@@ -7,6 +7,8 @@
 #include "arm_math.h"
 #include <math.h>
 
+#include "rocketlib/include/common.h"
+
 #include <stdbool.h>
 
 #ifndef M_PI

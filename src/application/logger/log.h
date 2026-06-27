@@ -4,9 +4,10 @@
 #include "rocketlib/include/common.h"
 #include <stdint.h>
 // Include headers for structs used in log_data_container_t
-#include "application/controller/controller.h" // For controller_input_t, controller_output_t
-#include "application/estimator/estimator.h" // For estimator_all_imus_input_t
-#include "application/imu_handler/imu_handler.h"
+#include "application/health_checks/health_checks.h"
+#include "application/sensor_handler/sensor_handler.h"
+#include "common/gnc/gnc_types.h"
+#include "drivers/altimu-10/altimu-10.h"
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32768
@@ -41,7 +42,7 @@
  *
  * Deprecated values: none
  */
-#define LOG_DATA_FORMAT_VERSION 1
+#define LOG_DATA_FORMAT_VERSION 2
 
 /**
  * Magic number to encode into log_data_type_t values: "DL" encoded as a little-endian 16-bit int.
@@ -160,7 +161,7 @@ typedef union __attribute__((packed)) {
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t magnetometer; // mgauss (pololu) or arbitrary units (movella)
 		float barometer; // Pa
-		uint32_t timestamp_imu;
+		uint32_t timestamp_imu_ms;
 		bool is_dead;
 
 	} imu_reading_pt3;
@@ -186,7 +187,7 @@ typedef union __attribute__((packed)) {
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t velocity;
-		float t;
+		uint32_t t_ms;
 
 	} estimator_ctx_pt3;
 
@@ -266,6 +267,6 @@ void log_task(void *argument);
  *
  * @return CAN board status bitfield
  */
-uint32_t logger_get_status(void);
+health_status_t logger_get_status(void);
 
 #endif

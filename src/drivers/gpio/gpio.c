@@ -4,6 +4,7 @@
  */
 #include <stdbool.h>
 
+#include "main.h"
 #include "stm32h7xx_hal.h"
 
 #include "FreeRTOS.h"
@@ -39,12 +40,26 @@ typedef struct {
  * Map gpio pins enums to their hardware data
  */
 static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
-	[GPIO_PIN_RED_LED] = {.port = GPIOE, .pin = GPIO_PIN_9, .access_mutex = NULL},
-	[GPIO_PIN_GREEN_LED] = {.port = GPIOE, .pin = GPIO_PIN_10, .access_mutex = NULL},
-	[GPIO_PIN_BLUE_LED] = {.port = GPIOE, .pin = GPIO_PIN_11, .access_mutex = NULL},
-	[GPIO_PIN_LSM6DSV32X_CS] = {.port = GPIOE, .pin = GPIO_PIN_15, .access_mutex = NULL},
-	[GPIO_PIN_LSM6DSV32X_SA0] = {.port = GPIOD, .pin = GPIO_PIN_1, .access_mutex = NULL},
-	[GPIO_PIN_ALTIMU_SA0] = {.port = GPIOD, .pin = GPIO_PIN_0, .access_mutex = NULL},
+	[GPIO_PIN_RED_LED] = {.port = LED_R_GPIO_Port, .pin = LED_R_Pin, .access_mutex = NULL},
+	[GPIO_PIN_GREEN_LED] = {.port = LED_G_GPIO_Port, .pin = LED_G_Pin, .access_mutex = NULL},
+	[GPIO_PIN_BLUE_LED] = {.port = LED_B_GPIO_Port, .pin = LED_B_Pin, .access_mutex = NULL},
+	[GPIO_PIN_FLASH_CS] = {.port = FLASH_CS_GPIO_Port, .pin = FLASH_CS_Pin, .access_mutex = NULL},
+
+	[GPIO_PIN_EN_EXT_5V] = {.port = EN_EXT_5V_GPIO_Port,
+							.pin = EN_EXT_5V_Pin,
+							.access_mutex = NULL},
+	[GPIO_PIN_PWR_EN] = {.port = PWR_EN_GPIO_Port, .pin = PWR_EN_Pin, .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST1] = {.port = ADXRS_ST1_GPIO_Port,
+							   .pin = ADXRS_ST1_Pin,
+							   .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST2] = {.port = ADXRS_ST2_GPIO_Port,
+							   .pin = ADXRS_ST2_Pin,
+							   .access_mutex = NULL},
+	[GPIO_PIN_ADS1219_INT] = {.port = ADC_INT_GPIO_Port, .pin = ADC_INT_Pin, .access_mutex = NULL},
+	[GPIO_PIN_ADXL380_INT0] = {.port = ADXL_INT_GPIO_Port,
+							   .pin = ADXL_INT_Pin,
+							   .access_mutex = NULL},
+
 };
 
 // Public ---------------------------------------------------------------------
@@ -153,7 +168,7 @@ w_status_t gpio_toggle(gpio_pin_t pin, uint32_t timeout) {
  * Reports the current status of the GPIO module
  * @return Status code indicating success or failure
  */
-uint32_t gpio_get_status(void) {
+health_status_t gpio_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log operation statistics
@@ -164,5 +179,7 @@ uint32_t gpio_get_status(void) {
 			 gpio_status.accesses,
 			 gpio_status.access_fails);
 
-	return status_bitfield;
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_GPIO, .error_bitfield = 0};
+
+	return status;
 }

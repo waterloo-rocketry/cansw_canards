@@ -6,10 +6,10 @@
 #define MODEL_AIRDATA_H
 
 typedef struct {
-    double pressure;
-    double temperature;
-    double density;
-    double mach_local;
+	double pressure;
+	double temperature;
+	double density;
+	double mach_local;
 } estimator_airdata_t;
 
 // altdata function uses barometric pressure to determine current altitude (inside Troposphere)

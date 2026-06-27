@@ -29,9 +29,7 @@ double airfoil(double mach_num);
  * @param vector3d_t *torque_cl to write to
  * @param vector3d_t *torque_delta to write to
  */
-void aerodynamics_jacobian(
-    const x_state_t *state, const estimator_airdata_t *airdata, matrix3d_t *torque_v,
-    vector3d_t *torque_cl, vector3d_t *torque_delta
-);
+void aerodynamics_jacobian(const x_state_t *state, const estimator_airdata_t *airdata,
+						   matrix3d_t *torque_v, vector3d_t *torque_cl, vector3d_t *torque_delta);
 
 #endif // MODEL_AERODYNAMICS_H
