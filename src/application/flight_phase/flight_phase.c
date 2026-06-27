@@ -411,6 +411,8 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 
 	if (NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL <= num_imus_detecting_launch) {
 		p_ctx->num_consec_detection++;
+	} else {
+		p_ctx->num_consec_detection = 0;
 	}
 
 	if (NUM_CONSEC_LAUNCH_DETECT_THRESHOLD <= p_ctx->num_consec_detection) {
