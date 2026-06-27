@@ -354,9 +354,9 @@ static void process_imu_meas(bool is_new, const vector3d_t *accel,
 		return;
 	}
 
-	double accel_magnitude = math_vector3d_norm(accel);
+	float64_t accel_magnitude = math_vector3d_norm(accel);
 
-	if (ACCEL_THRESHOLD_LAUNCH_M_S2 <= (float32_t)accel_magnitude) {
+	if (ACCEL_THRESHOLD_LAUNCH_M_S2 <= accel_magnitude) {
 		(*num_imus_detecting_launch)++;
 	}
 }
@@ -415,7 +415,7 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 		p_ctx->num_consec_detection = 0;
 	}
 
-	if (NUM_CONSEC_LAUNCH_DETECT_THRESHOLD <= p_ctx->num_consec_detection) {
+	if (NUM_CONSEC_LAUNCH_DETECT_THRESHOLD <= (p_ctx->num_consec_detection)) {
 		p_ctx->num_consec_detection = 0;
 		log_text(5, "FlightPhaseSensorDetection", "%d Event Trigger", EVENT_LAUNCH_ACCEL);
 		return EVENT_LAUNCH_ACCEL;
