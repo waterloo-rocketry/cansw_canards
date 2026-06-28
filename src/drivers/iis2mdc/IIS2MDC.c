@@ -86,7 +86,7 @@ typedef struct {
 	bool valid; // true once at least one sample has been cached
 } iis2mdc_cache_t;
 
-static iis2mdc_cache_t iis2mdc_cache = {0};
+static iis2mdc_cache_t iis2mdc_cache __attribute__((section(".sram4"))) = {0};
 
 /* Enum for the state of the driver.
  * UNINIT: before init runs, or after a failed init
@@ -391,17 +391,6 @@ w_status_t iis2mdc_init(void) {
 	// load all settings and end use of i2c driver before switching to DMA
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SETTINGS_LOAD_DELAY_MS));
 
-	// Samples have been accumulating since the last sanity-check
-	// read, which means DRDY is pulled high. If we transition to async reads now,
-	// the first EXTI rising edge will never fire since the line is already high, and the pipeline
-	// stalls. Read the output registers once here to clear DRDY. (test irl to verify this fix
-	// works)
-	uint8_t discard_buf[6];
-	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_OUTX_L, discard_buf, sizeof(discard_buf))) {
-		log_text(1, "iis2mdc", "ERROR: failed to clear DRDY before switching to async mode");
-		return W_FAILURE;
-	}
-
 	// register completion callback on the mag's I2C handle.
 	if (HAL_OK !=
 		HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) {
@@ -410,6 +399,11 @@ w_status_t iis2mdc_init(void) {
 	}
 
 	iis2mdc_state = IIS2MDC_STATE_ASYNC_DMA_ACTIVE;
+
+	if (W_SUCCESS != iis2mdc_handle_drdy_irq()) {
+		log_text(1, "iis2mdc", "ERROR: failed to clear interrupt");
+		return W_FAILURE;
+	}
 	return W_SUCCESS;
 }
 
