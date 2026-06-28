@@ -293,7 +293,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	char *const msg_dest = buffer->data + (msg_num * MAX_TEXT_MSG_LENGTH);
 
 	// Determine the string to display for log severity
-	char *level_string = "";
+	const char *level_string = "";
 	switch (level) {
 		case LOG_LVL_FATAL:
 			level_string = "FATAL";
@@ -306,6 +306,9 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 			break;
 		case LOG_LVL_DEBUG:
 			level_string = "DEBUG";
+			break;
+		default:
+			level_string = "LOG LEVEL ERROR";
 			break;
 	}
 

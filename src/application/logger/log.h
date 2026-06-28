@@ -99,10 +99,10 @@ typedef enum {
 } log_data_type_t;
 
 typedef enum {
-	LOG_LVL_FATAL = 'F', // Errors (non-recoverable)
-	LOG_LVL_WARN = 'W', // Warnings (recoverable issues)
-	LOG_LVL_INFO = 'I', // Info (data from sensors, etc)
-	LOG_LVL_DEBUG = 'D' // Only for debugging on the ground
+	LOG_LVL_FATAL, // Errors (non-recoverable)
+	LOG_LVL_WARN, // Warnings (recoverable issues)
+	LOG_LVL_INFO, // Info (data from sensors, etc)
+	LOG_LVL_DEBUG // Only for debugging on the ground
 } log_level_t;
 
 // Packed vector3d_f32_t for logging only
