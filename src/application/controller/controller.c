@@ -11,6 +11,7 @@
 #define DATA_WAIT_MS 10
 #define LOG_WAIT_MS 10
 static const float64_t MS_TO_SEC = 0.001;
+static const float64_t TENTH_MS_TO_MS = 0.1;
 
 // these two are redundent but different health check structs, should we just have one instead???
 static controller_t controller_state = {0};
@@ -38,16 +39,19 @@ w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codege
 
 	// TODO: check with Tristan
 
-	uint32_t flight_time_ms = (input->curr_timestamp_ms) - (input->launch_timestamp_ms);
+	float64_t flight_time_sec =
+		((float64_t)((uint32_t)((input->curr_timestamp_tenth_ms) * TENTH_MS_TO_MS) -
+					 (input->launch_timestamp_ms))) *
+		MS_TO_SEC;
 	float64_t dt_controller_sec =
-		((float64_t)((input->curr_timestamp_ms) - (ctx->last_run_ms))) * MS_TO_SEC;
+		((float64_t)((input->curr_timestamp_tenth_ms) - (ctx->last_run_tenth_ms))) * MS_TO_SEC;
 
 	float64_t ref_signal = 0.0;
 
 	bool controller_status = false;
 
 	controller_codegen_entry(p_codegen_stack_data,
-							 flight_time_ms,
+							 flight_time_sec,
 							 dt_controller_sec,
 							 input->xR,
 							 input->dynamic_pressure,
@@ -59,8 +63,8 @@ w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codege
 
 	if (controller_status) { // the controller ran
 		// update new timestamp
-		output->timestamp_ms = input->curr_timestamp_ms;
-		ctx->last_run_ms = input->curr_timestamp_ms;
+		output->timestamp_tenth_ms = input->curr_timestamp_tenth_ms;
+		ctx->last_run_tenth_ms = input->curr_timestamp_tenth_ms;
 	} else {
 		log_text(0, "controller", "WARN: controller was not run");
 	}

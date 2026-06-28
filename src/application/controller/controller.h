@@ -39,7 +39,7 @@ typedef struct {
  */
 typedef struct {
 	controller_codegen_ctx_t codegen_ctx;
-	uint32_t last_run_ms; // last time the controller did a full loop. use for rate-limiting
+	uint32_t last_run_tenth_ms; // last time the controller did a full loop. use for rate-limiting
 } controller_ctx_t;
 
 /**

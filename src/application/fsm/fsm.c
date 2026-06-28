@@ -3,6 +3,7 @@
 #include "task.h"
 #include "tim.h"
 
+#include "GNC_codegen_types.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
@@ -25,7 +26,7 @@ static const uint8_t MAX_FSM_DELAY_MS = 4;
 static const uint32_t MS_TO_TENTH_MS = 10;
 
 typedef struct {
-	navigator_module_ctx_t *estimator_context; // global instance of estimator
+	navigator_ctx_t *estimator_context; // global instance of estimator
 	controller_ctx_t *p_controller_context; // global instance of controller
 	uint32_t timestamp_ms; // curr timestamp
 	uint32_t timestamp_tenth_ms; // curr timestamp
@@ -39,7 +40,7 @@ typedef struct {
 static fsm_ctx_t g_ctx = {0};
 
 // create all of the global instances
-static navigator_module_ctx_t g_estimator_context = {0};
+static navigator_ctx_t g_estimator_context = {0};
 
 // make sure controller_output_t is initalized to 0 and valid to read to match original design
 static controller_ctx_t g_controller_context = {0};
@@ -74,8 +75,6 @@ w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
 	// g_estimator_context.x.altitude = 420;
 	// g_estimator_context.x.CL = 3;
 
-	// TODO: ask tristan how to get behaviour of first cycle
-
 	// init rest of input
 	g_ctx.estimator_context = &g_estimator_context;
 	g_ctx.p_controller_context = &g_controller_context;
@@ -100,7 +99,7 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 	// set the inputs
 	navigator_input_t navigator_input = {.curr_timestamp_tenth_ms = p_ctx->timestamp_tenth_ms,
 										 .fsm_state = p_ctx->curr_state};
-	controller_input_t controller_input = {.curr_timestamp_ms = p_ctx->timestamp_ms,
+	controller_input_t controller_input = {.curr_timestamp_tenth_ms = p_ctx->timestamp_tenth_ms,
 										   .launch_timestamp_ms =
 											   p_ctx->p_flight_phase_context->launch_timestamp_ms};
 
@@ -108,8 +107,7 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 	navigator_output_t navigator_output = {0};
 	controller_output_t controller_output = {0};
 
-	// TODO: convert fsm_inputs into the nav/cntl inputs
-
+	// TODO: ask tristan how to get behaviour of first cycle
 	switch (p_ctx->curr_state) {
 		case STATE_IDLE:
 			// do stuff
@@ -117,10 +115,10 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 
 			// both Pad filter and boost will only run estimator step
 		case STATE_PAD_FILTER:
-			// TODO: how to tell estimator it needs to pad filter
+			// Nav enters pad filter
 			/* fall through */
 		case STATE_PAD_NAV:
-			// TODO: enter into flight filter
+			// Nav enters flight filter
 			/* fall through */
 		case STATE_BOOST:
 			navigator_step(p_ctx->estimator_context,

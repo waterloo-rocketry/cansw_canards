@@ -1,4 +1,3 @@
-// TODO: remember to rename the file name to navigator.h
 #ifndef NAVIGATOR_H
 #define NAVIGATOR_H
 
@@ -17,7 +16,7 @@
 typedef struct {
 	uint32_t last_run_tenth_ms; // previous timestamp
 	navigator_codegen_ctx_t codegen_ctx;
-} navigator_module_ctx_t; // TODO: rename to simply navigator_ctx_t
+} navigator_ctx_t;
 
 /**
  * @brief Structure to track navigator errors and status
@@ -68,7 +67,7 @@ health_status_t navigator_get_status(void);
  * @param p_sensor_data pointer to the current sensor data
  * update with new actuation info
  */
-w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p_codegen_stack_data,
+w_status_t navigator_step(navigator_ctx_t *p_ctx, GNC_codegenStackData *p_codegen_stack_data,
 						  const navigator_input_t *p_input, const all_sensors_data_t *p_sensor_data,
 						  navigator_output_t *p_output);
 

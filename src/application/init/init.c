@@ -64,6 +64,11 @@ const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
+// GNC Global Data
+
+static GNC_codegenPersistentData gnc_code_persistent = {0};
+static GNC_codegenStackData gnc_codegen_data = {.pd = &gnc_code_persistent};
+
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -85,8 +90,6 @@ static void system_init_task(void *arg) {
 	}
 
 	// initialize gnc
-	GNC_codegenPersistentData gnc_code_persistent = {0};
-	GNC_codegenStackData gnc_codegen_data = {.pd = &gnc_code_persistent};
 	GNC_codegen_initialize(&gnc_codegen_data);
 
 	w_status_t status = W_SUCCESS;
@@ -178,41 +181,6 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 		vTaskDelay(500);
-
-		//   struct0_T board_accel_tmp;
-		//   struct1_T b_r;
-		//   struct1_T r1;
-		//   struct2_T state;
-		//   struct3_T airdata;
-		//   double roll_state[2];
-		//   double cov_norm;
-		//   /* Initialize function 'navigation_codegen_entry' input arguments. */
-		//   /* Initialize function input argument 'board_accel'. */
-		//   board_accel_tmp = argInit_struct0_T();
-		//   /* Initialize function input argument 'board_gyro'. */
-		//   /* Initialize function input argument 'mti_accel'. */
-		//   /* Initialize function input argument 'mti_gyro'. */
-		//   /* Initialize function input argument 'ad_accel'. */
-		//   /* Initialize function input argument 'ad_gyro'. */
-		//   /* Initialize function input argument 'board_baro'. */
-		//   /* Initialize function input argument 'board_mag'. */
-		//   /* Initialize function input argument 'mti_baro'. */
-		//   /* Initialize function input argument 'mti_mag'. */
-		//   /* Call the entry-point 'navigation_codegen_entry'. */
-		//   b_r = argInit_struct1_T();
-		//   r1 = argInit_struct1_T();
-		//   volatile uint32_t timestart = HAL_GetTick();
-
-		//   navigation_codegen_entry(argInit_real_T(), argInit_boolean_T(),
-		//                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
-		//                            &board_accel_tmp, &board_accel_tmp, &board_accel_tmp,
-		//                            &b_r, &board_accel_tmp, &r1, &board_accel_tmp,
-		//                            &state, &cov_norm, &airdata, roll_state);
-
-		//     volatile uint32_t timeend = HAL_GetTick();
-
-		//     volatile uint32_t timediff = timeend - timestart;
-		//     (void)timediff; // Suppress unused variable warning
 	}
 }
 

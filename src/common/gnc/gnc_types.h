@@ -1,5 +1,3 @@
-// TODO: this file should be cleaned up during gnc impl this year
-
 /**
  * Navigator and controller types used by the whole gnc system
  */
@@ -84,7 +82,6 @@ typedef struct {
 
 typedef struct {
 	uint32_t timestamp_tenth_ms;
-	// TODO: update after Tristan update codegen
 	double cov_norm;
 	double roll_state[2];
 	double dynamic_pressure; // dynamic pressure
@@ -97,7 +94,7 @@ typedef struct {
 	float64_t motor_angle_rad; /// delta
 	float64_t xR[2];
 	float64_t dynamic_pressure;
-	uint32_t curr_timestamp_ms;
+	uint32_t curr_timestamp_tenth_ms;
 	uint32_t launch_timestamp_ms;
 } controller_input_t;
 
@@ -105,7 +102,7 @@ typedef struct {
 typedef struct {
 	float64_t motor_command_angle_rad; // radians
 	float64_t ref_roll_angle_rad;
-	uint32_t timestamp_ms; // ms
+	uint32_t timestamp_tenth_ms;
 } controller_output_t;
 
 typedef struct {

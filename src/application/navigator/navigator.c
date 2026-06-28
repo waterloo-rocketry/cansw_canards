@@ -48,7 +48,7 @@ w_status_t navigator_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p_codegen_stack_data,
+w_status_t navigator_step(navigator_ctx_t *p_ctx, GNC_codegenStackData *p_codegen_stack_data,
 						  const navigator_input_t *p_input, const all_sensors_data_t *p_sensor_data,
 						  navigator_output_t *p_output) {
 	// calculate remainder navigator data
@@ -114,8 +114,9 @@ w_status_t navigator_step(navigator_module_ctx_t *p_ctx, GNC_codegenStackData *p
 	codegen_sensor_input.ad_accel.status =
 		p_sensor_data->ad_meas.ad_accel.is_new; // status true is on
 
-	codegen_sensor_input.ad_gyro.meas[0] =
-		p_sensor_data->ad_meas.ad_gyro.meas; // TODO: DOUBLE CHECK WHICH ACCESS
+	codegen_sensor_input.ad_gyro.meas[0] = p_sensor_data->ad_meas.ad_gyro.meas; // x axis
+	codegen_sensor_input.ad_gyro.meas[1] = 0.0;
+	codegen_sensor_input.ad_gyro.meas[2] = 0.0;
 	codegen_sensor_input.ad_gyro.status =
 		p_sensor_data->ad_meas.ad_gyro.is_new; // status true is on
 
