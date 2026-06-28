@@ -14,9 +14,10 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
-#include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/sensor_handler/sensor_handler.h"
+#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -95,10 +96,10 @@ static void system_init_task(void *arg) {
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
-	// status |= health_check_init();
+	status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
-	status |= imu_handler_init();
+	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
@@ -127,12 +128,12 @@ static void system_init_task(void *arg) {
 							   fsm_task_priority,
 							   &fsm_task_handle);
 
-	// task_status &= xTaskCreate(health_check_task,
-	//     "health",
-	//     512,
-	//     NULL,
-	//     health_checks_task_priority,
-	//     &health_checks_task_handle);
+	task_status &= xTaskCreate(health_check_task,
+							   "health",
+							   512,
+							   NULL,
+							   health_checks_task_priority,
+							   &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",

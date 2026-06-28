@@ -1,24 +1,13 @@
-#ifndef IMU_HANDLER_H
-#define IMU_HANDLER_H
+#ifndef SENSOR_HANDLER_H
+#define SENSOR_HANDLER_H
 
 #include "common/gnc/gnc_types.h"
 #include "drivers/MS5611/MS5611.h"
-#include "drivers/altimu-10/altimu-10.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 
 #include "application/health_checks/health_checks.h"
 #include "rocketlib/include/common.h"
-
-/**
- * raw data read from pololu device registers
- */
-typedef struct __attribute__((packed)) {
-	altimu_raw_imu_data_t raw_acc;
-	altimu_raw_imu_data_t raw_gyro;
-	altimu_raw_imu_data_t raw_mag;
-	altimu_raw_baro_data_t raw_baro;
-} raw_pololu_data_t;
 
 typedef struct { // all of these should be just directly register values
 	lsm6dsv32x_raw_imu_data_t raw_board_accel;
@@ -41,14 +30,15 @@ typedef struct {
 	uint32_t last_mti_mag_timestamp_ms;
 	uint32_t last_mti_pres_timestamp_ms;
 
-} imu_handler_ctx_t;
+	uint32_t last_motor_encoder_timestamp_ms;
+} sensor_handler_ctx_t;
 
 /**
- * @brief Initialize the IMU handler module
+ * @brief Initialize the Sensor handler module
  * Must be called before scheduler starts
  * @return Status of initialization
  */
-w_status_t imu_handler_init(void);
+w_status_t sensor_handler_init(void);
 
 /**
  * @brief Curate fresh data from all sensors. This function executes instantly (non-blocking)
@@ -59,14 +49,14 @@ w_status_t imu_handler_init(void);
  * @param output pointer to update with the latest data
  * @return Status of the execution
  */
-w_status_t imu_handler_get_fresh_meas(imu_handler_ctx_t *ctx, all_sensors_data_t *output);
+w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx, all_sensors_data_t *output);
 
 /**
- * @brief Reports the current status of the IMU handler module
+ * @brief Reports the current status of the Sensor handler module
  * @return CAN board status bitfield
  * @details Logs initialization status, sampling statistics, and error conditions
- * for both IMUs being managed by the handler
+ * for both Sensors being managed by the handler
  */
-health_status_t imu_handler_get_status(void);
+health_status_t sensor_handler_get_status(void);
 
-#endif // IMU_HANDLER_H
+#endif // SENSOR_HANDLER_H
