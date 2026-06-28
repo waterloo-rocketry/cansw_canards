@@ -1,9 +1,12 @@
 #include "FreeRTOS.h"
+#include "stm32h7xx_hal.h"
 #include "task.h"
+#include "tim.h"
 
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
+#include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/timer/timer.h"
@@ -16,7 +19,9 @@ static const float64_t DEG_TO_RAD = (M_PI / 180.0);
 /****************************************************************/
 #include "rocketlib/include/common.h"
 
-static const uint8_t FSM_PERIOD_MS = 2;
+extern TaskHandle_t fsm_task_handle;
+
+static const uint8_t MAX_FSM_DELAY_MS = 4;
 static const uint32_t MS_TO_TENTH_MS = 10;
 
 typedef struct {
@@ -42,6 +47,16 @@ static controller_ctx_t g_controller_context = {0};
 static flight_phase_ctx_t g_flight_phase_context = {.launch_timestamp_ms = UINT32_MAX,
 													.act_allowed_timestamp_ms = UINT32_MAX};
 static sensor_handler_ctx_t g_imu_context = {0};
+
+static void unblock_fsm_loop(TIM_HandleTypeDef *htim) {
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	// check if FSM task has started yet
+	if ((&htim5 == htim) && (fsm_task_handle != NULL)) {
+		vTaskNotifyGiveFromISR(fsm_task_handle, &xHigherPriorityTaskWoken);
+	}
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
 
 w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
 	// init estimator context
@@ -69,6 +84,13 @@ w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
 
 	// initialize fsm state
 	g_ctx.curr_state = STATE_IDLE;
+
+	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, &unblock_fsm_loop);
+
+	// start tim
+	if (HAL_OK != HAL_TIM_Base_Start_IT(&htim5)) {
+		return W_FAILURE;
+	}
 
 	return W_SUCCESS;
 }
@@ -151,9 +173,13 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 
 void fsm_task(void *args) {
 	(void)args;
-	TickType_t last_wake_time = xTaskGetTickCount();
 
 	while (1) {
+		// Unblock once we receive the notification to unblock fsm
+		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS)) == 0) {
+			log_text(0, "FSM", "ERROR: FSM loop wait timed out");
+		}
+
 		if (W_SUCCESS != timer_get_tenth_ms(&(g_ctx.timestamp_tenth_ms))) {
 			// TODO: error handling
 		}
@@ -180,8 +206,5 @@ void fsm_task(void *args) {
 
 		// run actions based on new curr state
 		fsm_exec(&g_ctx, &sensor_data);
-
-		// state machine runs at 500 hz
-		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(FSM_PERIOD_MS));
 	}
 }
