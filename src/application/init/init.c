@@ -18,6 +18,7 @@
 #include "application/logger/log.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -47,6 +48,7 @@ TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
+TaskHandle_t ms5611_task_handle = NULL;
 TaskHandle_t ad_breakout_task_handle = NULL;
 
 // Task priorities
@@ -59,6 +61,7 @@ const uint32_t can_handler_rx_priority = 45;
 const uint32_t can_handler_tx_priority = 40;
 // TODO: update when sure (based on old imu handler priority)
 const uint32_t movella_task_priority = 20;
+const uint32_t ms5611_task_priority = 18;
 const uint32_t ad_breakout_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
@@ -104,6 +107,7 @@ static void system_init_task(void *arg) {
 	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
 	status |= adxrs649_init();
+	status |= ms5611_init();
 	status |= iis2mdc_init();
 	// status |= ekf_init();
 
@@ -148,6 +152,9 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(
 		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+
+	task_status &=
+		xTaskCreate(ms5611_task, "ms5611", 512, NULL, ms5611_task_priority, &ms5611_task_handle);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
