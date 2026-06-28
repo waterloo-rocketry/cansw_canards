@@ -66,7 +66,7 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 	[GPIO_PIN_BAT_FLT2] = {.port = BAT_FLT2_GPIO_Port, .pin = BAT_FLT2_Pin, .access_mutex = NULL},
 	[GPIO_PIN_CHG_MUX_EN] = {.port = CHG_MUX_EN_GPIO_Port,
 							 .pin = CHG_MUX_EN_Pin,
-							 .access_mutex = NULL},				   
+							 .access_mutex = NULL},
 };
 
 // Public ---------------------------------------------------------------------

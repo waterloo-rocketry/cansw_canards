@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "rocketlib/include/common.h"
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
+#include "rocketlib/include/common.h"
 
 /**
  * Initializes power handler.
