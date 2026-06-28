@@ -18,7 +18,8 @@
 /* Period between successive tempreture samples taken by ms5611_task at 10 hz */
 #define MS5611_TEMP_COV_PERIOD_MS 100
 
-static const uint8_t MS5611_TEMP_CONV_STATE_SWITCH_COUNT = MS5611_TEMP_COV_PERIOD_MS / MS5611_TASK_PERIOD_MS;
+static const uint8_t MS5611_TEMP_CONV_STATE_SWITCH_COUNT =
+	MS5611_TEMP_COV_PERIOD_MS / MS5611_TASK_PERIOD_MS;
 
 /* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
 typedef enum {
@@ -65,8 +66,8 @@ typedef enum {
 } ms5611_osr_t;
 
 typedef enum {
-	MS5611_CONV_TEMP_PRESSURE,   // req: get temp at 10 hz
-	MS5611_CONV_PRESSURE_ONLY,   // req: get pressure at 100 hz
+	MS5611_CONV_TEMP_PRESSURE, // req: get temp at 10 hz
+	MS5611_CONV_PRESSURE_ONLY // req: get pressure at 100 hz
 } ms5611_conv_state_t;
 
 typedef struct {
@@ -83,16 +84,17 @@ typedef struct {
 	/* Set true once init succeeds */
 	bool initialized;
 
-
 	ms5611_conv_state_t conv_state;
 	uint32_t cached_temperture;
 } ms5611_handle_t;
 
 /* Conversion time in microseconds - max values from datasheet for safety */
 static const uint32_t CONV_TIME_US[] = {
-	600, /* OSR 256  — datasheet max 0.60ms */  // this one is picked for temperture
+	600,
+	/* OSR 256  — datasheet max 0.60ms */ // this one is picked for temperture
 	1170, /* OSR 512  — datasheet max 1.17ms */
-	2280, /* OSR 1024 — datasheet max 2.28ms */ // this one is picked for pressure
+	2280,
+	/* OSR 1024 — datasheet max 2.28ms */ // this one is picked for pressure
 	4540, /* OSR 2048 — datasheet max 4.54ms */
 	9040, /* OSR 4096 — datasheet max 9.04ms */
 };
@@ -142,9 +144,8 @@ static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom 
 								 .osr_pressure = MS5611_OSR_1024,
 								 .osr_temperature = MS5611_OSR_256,
 								 .initialized = false,
-								.conv_state = MS5611_CONV_TEMP_PRESSURE,
-								.conv_start_tick = 0,
-								.cached_temperture = 0};
+								 .conv_state = MS5611_CONV_TEMP_PRESSURE,
+								 .cached_temperture = 0};
 
 /**
  * @brief Delays for a specified number of microseconds.
@@ -331,7 +332,7 @@ void ms5611_deinit(void) {
 
 	handle.initialized = false;
 	handle.conv_state = MS5611_CONV_TEMP_PRESSURE;
-	
+
 	for (size_t i = 0; i < 8; ++i) {
 		handle.prom_coef[i] = 0;
 	}
@@ -379,14 +380,15 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	}
 
 	if (MS5611_CONV_TEMP_PRESSURE == handle.conv_state) {
-
 		/* D2: temperature conversion */
 		if (W_FAILURE == baro_write_cmd(D2_CMD[handle.osr_temperature])) {
 			log_text(1, "ms5611", "ERROR: failed to write temperature conversion command");
 			return W_IO_ERROR;
 		}
 
-		delay_us(CONV_TIME_US[handle.osr_temperature] + 1000); // 2 ms. Additional 1ms is added here for safety - temp conv time for osr256 does not match the datasheet specifications
+		delay_us(CONV_TIME_US[handle.osr_temperature] +
+				 1000); // 2 ms. Additional 1ms is added here for safety - temp conv time for osr256
+						// does not match the datasheet specifications
 
 		if (W_FAILURE == baro_read_adc(&d2)) {
 			log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
@@ -407,7 +409,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_IO_ERROR;
 	}
 
-	delay_us(CONV_TIME_US[handle.osr_pressure]); // 3 ms
+	delay_us(CONV_TIME_US[handle.osr_pressure] + 1000); // 3 ms
 
 	if (W_FAILURE == baro_read_adc(&d1)) {
 		log_text(1, "ms5611", "ERROR: failed to read pressure ADC");
@@ -470,7 +472,7 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 		return W_INVALID_PARAM;
 	}
 
-	if ((!(handle.initialized))|| (NULL == s_data_mutex)) {
+	if ((!(handle.initialized)) || (NULL == s_data_mutex)) {
 		return W_FAILURE;
 	}
 
@@ -479,8 +481,11 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	if (pdTRUE == xSemaphoreTake(s_data_mutex, 0)) {
 		status = s_latest_status;
 		if (W_SUCCESS != status) {
-			log_text(1, "ms5611", "ERROR: Something failed while getting pressure conv. Status: %d", status);
-		} 
+			log_text(1,
+					 "ms5611",
+					 "ERROR: Something failed while getting pressure conv. Status: %d",
+					 status);
+		}
 
 		*result = s_latest_result;
 		*timestamp_ms = s_latest_timestamp_ms;
@@ -514,7 +519,7 @@ void ms5611_task(void *argument) {
 		}
 
 		// state switching logic
-		if (MS5611_TEMP_CONV_STATE_SWITCH_COUNT == count){
+		if (MS5611_TEMP_CONV_STATE_SWITCH_COUNT == count) {
 			count = 0;
 			handle.conv_state = MS5611_CONV_TEMP_PRESSURE;
 		} else {
