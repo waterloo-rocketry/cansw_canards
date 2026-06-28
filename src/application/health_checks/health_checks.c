@@ -184,7 +184,7 @@ static w_status_t process_module_status(health_status_t status) {
 		uint32_t current_time_ms;
 
 		if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-			log_text(0, "health_checks", "timer_get_ms failure");
+			log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
 			return W_FAILURE; // unable to send CAN msg without timestamp
 		}
 
@@ -293,7 +293,7 @@ w_status_t health_check_exec() {
 	uint32_t current_time_ms = 0;
 
 	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-		log_text(0, "health_checks", "timer_get_ms failure");
+		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
 		return W_FAILURE; // unable to send CAN msg without timestamp
 	}
 
