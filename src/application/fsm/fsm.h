@@ -1,14 +1,12 @@
 #ifndef FSM_H
 #define FSM_H
 
-#include <stdint.h>
-
 #include "rocketlib/include/common.h"
 
 /**
  * Enum representing phase of flight (state machine state)
  */
-typedef enum : uint8_t { // make sure copying this data type is atomic
+typedef enum {
 	STATE_IDLE,
 	STATE_PAD_FILTER,
 	STATE_PAD_NAV,
