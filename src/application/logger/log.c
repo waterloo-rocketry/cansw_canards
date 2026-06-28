@@ -216,7 +216,12 @@ w_status_t log_init(void) {
 		memcpy(&run_count, run_count_buf, sizeof(run_count));
 		run_count++;
 	} else {
-		return W_IO_ERROR;
+		// LOGRUN.BIN missing
+		run_count = 1;
+		status = sd_card_file_create(LOG_RUN_COUNT_FILENAME);
+		if (W_SUCCESS != status) {
+			return W_IO_ERROR;
+		}
 	}
 
 	// Write new run count to file

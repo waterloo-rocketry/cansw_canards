@@ -38,6 +38,21 @@ typedef health_status_t (*get_module_status_t)(void);
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
 static uint32_t num_watchdog_tasks = 0;
 
+static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
+	[MODULE_I2C] = i2c_get_status,
+	[MODULE_ADC] = adc_get_status,
+	[MODULE_CAN_HANDLER] = can_handler_get_status,
+	[MODULE_ESTIMATOR] = estimator_get_status,
+	[MODULE_CONTROLLER] = controller_get_status,
+	[MODULE_SD_CARD] = sd_card_get_status,
+	[MODULE_TIMER] = timer_get_status,
+	[MODULE_GPIO] = gpio_get_status,
+	[MODULE_FLIGHT_PHASE] = flight_phase_get_status,
+	[MODULE_SENSOR_HANDLER] = sensor_handler_get_status,
+	[MODULE_UART] = uart_get_status,
+	[MODULE_LOGGER] = logger_get_status,
+};
+
 w_status_t health_check_init(void) {
 	num_watchdog_tasks = 0;
 	return W_SUCCESS;
@@ -45,10 +60,10 @@ w_status_t health_check_init(void) {
 
 w_status_t watchdog_kick(void) {
 	TaskHandle_t current_task = xTaskGetCurrentTaskHandle();
-	uint32_t current_time = 0;
+	uint32_t current_time_ms = 0;
 	w_status_t status = W_SUCCESS;
 
-	status |= timer_get_ms(&current_time);
+	status |= timer_get_ms(&current_time_ms);
 	if (status != W_SUCCESS) {
 		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
 		return status;
@@ -58,7 +73,7 @@ w_status_t watchdog_kick(void) {
 	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
 		if (watchdog_tasks[i].task_handle == current_task) {
 			watchdog_tasks[i].is_kicked = true;
-			watchdog_tasks[i].last_kick_timestamp_ms = current_time;
+			watchdog_tasks[i].last_kick_timestamp_ms = current_time_ms;
 			return W_SUCCESS;
 		}
 	}
@@ -113,16 +128,17 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
  */
 uint32_t check_watchdog_tasks(void) {
 	uint32_t status_bitfield = 0;
-	uint32_t current_time = 0;
+	uint32_t current_time_ms = 0;
 
-	// failing to get time isn't a fatal err
-	if (timer_get_ms(&current_time) != W_SUCCESS) {
+	// cannot run health check without timer
+	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
 		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
 		status_bitfield |= 1 << E_IO_ERROR_OFFSET;
+		return status_bitfield;
 	}
 
 	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
-		uint32_t time_elapsed = current_time - watchdog_tasks[i].last_kick_timestamp_ms;
+		uint32_t time_elapsed = current_time_ms - watchdog_tasks[i].last_kick_timestamp_ms;
 		uint32_t ticks_elapsed = pdMS_TO_TICKS((uint32_t)time_elapsed); // time to ticks
 
 		if (watchdog_tasks[i].is_kicked || (ticks_elapsed <= watchdog_tasks[i].timeout_ticks)) {
@@ -134,7 +150,7 @@ uint32_t check_watchdog_tasks(void) {
 			uint8_t data[6] = {0};
 			strncpy((char *)data, task_name, sizeof(data));
 			data[sizeof(data) - 1] = '\0'; // ensure null termination
-			build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), data, &msg);
+			build_debug_raw_msg(PRIO_HIGH, (uint16_t)current_time_ms, data, &msg);
 			if (can_handler_transmit(&msg) != W_SUCCESS) {
 				log_text(0, LOG_LVL_WARN, "health", "CAN send failure for watchdog timeout msg");
 			}
@@ -164,37 +180,34 @@ static w_status_t process_module_status(health_status_t status) {
 				 status.severity,
 				 status.error_bitfield);
 
-		uint8_t data[6] = {0};
 		can_msg_t msg = {0};
-		// build error msg in the form "module id:error bitfield:severity"
-		snprintf_((char *)data, sizeof(data), "%d:%lu", status.module_id, status.error_bitfield);
-		build_debug_raw_msg(PRIO_HIGH, xTaskGetTickCount(), data, &msg);
+		uint32_t current_time_ms;
+
+		if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
+			log_text(0, "health_checks", "timer_get_ms failure");
+			return W_FAILURE; // unable to send CAN msg without timestamp
+		}
+
+		build_canard_firmware_error_msg(PRIO_MEDIUM,
+										(uint16_t)current_time_ms,
+										status.module_id,
+										status.error_bitfield,
+										status.severity,
+										&msg);
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			log_text(0, LOG_LVL_WARN, "health", "CAN send failure for module status msg");
 		}
 
 		if (HEALTH_FATAL == status.severity) {
-			proc_handle_fatal_error((char *)data);
+			char data[32];
+			// build error msg in the form "module id:error bitfield:severity"
+			snprintf_(data, sizeof(data), "%d:%lu", status.module_id, status.error_bitfield);
+			proc_handle_fatal_error(data);
 		}
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
 }
-
-static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
-	[MODULE_I2C] = i2c_get_status,
-	[MODULE_ADC] = adc_get_status,
-	[MODULE_CAN_HANDLER] = can_handler_get_status,
-	[MODULE_ESTIMATOR] = estimator_get_status,
-	[MODULE_CONTROLLER] = controller_get_status,
-	[MODULE_SD_CARD] = sd_card_get_status,
-	[MODULE_TIMER] = timer_get_status,
-	[MODULE_GPIO] = gpio_get_status,
-	[MODULE_FLIGHT_PHASE] = flight_phase_get_status,
-	[MODULE_IMU_HANDLER] = sensor_handler_get_status,
-	[MODULE_UART] = uart_get_status,
-	[MODULE_LOGGER] = logger_get_status,
-};
 
 /**
  * @brief Checks the status of all known modules by directly calling their get_status functions
@@ -212,8 +225,7 @@ static uint32_t check_modules_status(void) {
 	}
 
 	if (status != W_SUCCESS) {
-		// this bitfield error offset should later by replaced with E_CANARD_MODULE_FAILURE_OFFSET);
-		status_bitfield |= (1 << E_WATCHDOG_TIMEOUT_OFFSET);
+		status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
 	}
 
 	return status_bitfield;
@@ -278,11 +290,17 @@ w_status_t health_check_exec() {
 
 	// send status CAN msg
 	can_msg_t msg = {0};
+	uint32_t current_time_ms = 0;
+
+	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
+		log_text(0, "health_checks", "timer_get_ms failure");
+		return W_FAILURE; // unable to send CAN msg without timestamp
+	}
 
 	if (0 == status_bitfield) {
-		build_general_board_status_msg(PRIO_LOW, xTaskGetTickCount(), 0, &msg);
+		build_general_board_status_msg(PRIO_LOW, (uint16_t)current_time_ms, 0, &msg);
 	} else {
-		build_general_board_status_msg(PRIO_HIGH, xTaskGetTickCount(), status_bitfield, &msg);
+		build_general_board_status_msg(PRIO_HIGH, (uint16_t)current_time_ms, status_bitfield, &msg);
 	}
 
 	if (can_handler_transmit(&msg) != W_SUCCESS) {

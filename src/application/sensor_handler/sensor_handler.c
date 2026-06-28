@@ -602,7 +602,7 @@ health_status_t sensor_handler_get_status(void) {
 			 sensor_handler_state.motor_encoder_stats.failure_count);
 
 	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_IMU_HANDLER, .error_bitfield = 0};
+		.severity = HEALTH_OK, .module_id = MODULE_SENSOR_HANDLER, .error_bitfield = 0};
 
 	return status;
 }
