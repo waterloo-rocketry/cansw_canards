@@ -82,6 +82,10 @@ w_status_t fsm_init() {
 	return W_SUCCESS;
 }
 
+fsm_state_t fsm_get_state() {
+	return g_ctx.curr_state;
+}
+
 void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 	(void)p_sensor_data;
 	// can't init to {0} as don't have any fields
