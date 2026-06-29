@@ -16,7 +16,7 @@ extern "C" {
 // Needed only so lsm6dsv32x_init() can run in test setup
 FAKE_VALUE_FUNC(w_status_t, i2c_write_reg, i2c_bus_t, uint8_t, uint8_t, const uint8_t *, uint8_t)
 FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *, uint8_t)
-FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...)
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...)
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *)
 
 extern void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c);

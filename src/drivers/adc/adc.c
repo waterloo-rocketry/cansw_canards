@@ -54,7 +54,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
 	if (HAL_OK != HAL_ADCEx_Calibration_Start(adc1_handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) ||
 		HAL_OK != HAL_ADCEx_Calibration_Start(adc2_handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) ||
 		HAL_OK != HAL_ADCEx_Calibration_Start(adc3_handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED)) {
-		log_text(1, "adc", "initfailcal");
+		log_text(1, LOG_LVL_FATAL, "adc", "initfailcal");
 		return W_FAILURE;
 	}
 
@@ -62,7 +62,7 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
 	if (HAL_OK != HAL_ADC_Start_DMA(adc1_handle, (uint32_t *)adc1_dma_counts, ADC1_NUM_CHANNELS) ||
 		HAL_OK != HAL_ADC_Start_DMA(adc2_handle, (uint32_t *)adc2_dma_counts, ADC2_NUM_CHANNELS) ||
 		HAL_OK != HAL_ADC_Start_DMA(adc3_handle, (uint32_t *)adc3_dma_counts, ADC3_NUM_CHANNELS)) {
-		log_text(1, "adc", "initfaildma");
+		log_text(1, LOG_LVL_FATAL, "adc", "initfaildma");
 		return W_FAILURE;
 	}
 
@@ -142,6 +142,7 @@ health_status_t adc_get_status(void) {
 
 	// Log error statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "adc",
 			 "%s conv_timeouts=%lu, invalid_channels=%lu, "
 			 "overflows=%lu",

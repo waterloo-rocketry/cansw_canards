@@ -37,7 +37,7 @@ w_status_t estimator_init(void) {
 	encoder_data_queue_rad = xQueueCreate(1, sizeof(float));
 
 	if (NULL == encoder_data_queue_rad) {
-		log_text(1, "adc", "initfailq");
+		log_text(1, LOG_LVL_FATAL, "estimator", "initfailq");
 		return W_FAILURE;
 	}
 
@@ -92,12 +92,14 @@ w_status_t estimator_log_state_to_can(const x_state_t *current_state) {
 health_status_t estimator_get_status(void) {
 	// Log all error statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "estimator",
 			 "imu_timeouts=%lu, encoder_miss=%lu, controller_miss=%lu,",
 			 estimator_error_stats.imu_data_timeouts,
 			 estimator_error_stats.encoder_data_fails,
 			 estimator_error_stats.controller_data_fails);
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "estimator",
 			 "pad_filter_fails=%lu, can_log_fails=%lu, invalid_phase=%lu",
 			 estimator_error_stats.pad_filter_fails,
