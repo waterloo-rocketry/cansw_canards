@@ -5,8 +5,9 @@
 #include <stdint.h>
 // Include headers for structs used in log_data_container_t
 #include "application/health_checks/health_checks.h"
-#include "application/imu_handler/imu_handler.h"
+#include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
+#include "drivers/altimu-10/altimu-10.h"
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32768
@@ -96,6 +97,13 @@ typedef enum {
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
 } log_data_type_t;
+
+typedef enum {
+	LOG_LVL_FATAL, // Errors (non-recoverable)
+	LOG_LVL_WARN, // Warnings (recoverable issues)
+	LOG_LVL_INFO, // Info (data from sensors, etc)
+	LOG_LVL_DEBUG // Only for debugging on the ground
+} log_level_t;
 
 // Packed vector3d_f32_t for logging only
 typedef union {
@@ -244,7 +252,8 @@ w_status_t log_init(void);
  * @param ... Optional values to print according to format
  * @return Status indicating success or failure
  */
-w_status_t log_text(uint32_t timeout, const char *source, const char *format, ...);
+w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
+					...);
 
 /**
  * @brief Log a message in binary form to the data log file.

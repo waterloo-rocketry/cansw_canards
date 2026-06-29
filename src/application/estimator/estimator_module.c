@@ -40,9 +40,9 @@ w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t f
 				status |= pad_filter_init(&ctx->pad_filter_ctx, &last_movella, &last_pololu);
 
 				if (W_SUCCESS == status) {
-					log_text(5, "Estimator", "Pad filter init!");
+					log_text(5, LOG_LVL_INFO, "Estimator", "Pad filter init!");
 				} else {
-					log_text(10, "Estimator", "Pad filter init fail");
+					log_text(10, LOG_LVL_FATAL, "Estimator", "Pad filter init fail");
 				}
 			}
 
@@ -57,7 +57,7 @@ w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t f
 								 &ctx->bias_pololu);
 
 			if (status != W_SUCCESS) {
-				log_text(10, "Estimator", "ERROR: Pad filter run failed.");
+				log_text(10, LOG_LVL_FATAL, "Estimator", "Pad filter run failed.");
 			}
 			break;
 
@@ -83,7 +83,7 @@ w_status_t estimator_module(const estimator_module_input_t *input, fsm_state_t f
 			break;
 
 		default:
-			log_text(10, "Estimator", "invalid flight phase: %d", flight_phase);
+			log_text(10, LOG_LVL_FATAL, "Estimator", "invalid flight phase: %d", flight_phase);
 			return W_FAILURE;
 			break;
 	}

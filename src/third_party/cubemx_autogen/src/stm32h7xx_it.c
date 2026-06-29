@@ -65,6 +65,7 @@ extern I2C_HandleTypeDef hi2c2;
 extern I2C_HandleTypeDef hi2c4;
 extern I2C_HandleTypeDef hi2c5;
 extern SD_HandleTypeDef hsd2;
+extern TIM_HandleTypeDef htim5;
 extern DMA_HandleTypeDef hdma_uart4_rx;
 extern DMA_HandleTypeDef hdma_usart3_rx;
 extern DMA_HandleTypeDef hdma_usart3_tx;
@@ -354,6 +355,20 @@ void DMA1_Stream7_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Stream7_IRQn 1 */
 
   /* USER CODE END DMA1_Stream7_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM5 global interrupt.
+  */
+void TIM5_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM5_IRQn 0 */
+
+  /* USER CODE END TIM5_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim5);
+  /* USER CODE BEGIN TIM5_IRQn 1 */
+
+  /* USER CODE END TIM5_IRQn 1 */
 }
 
 /**

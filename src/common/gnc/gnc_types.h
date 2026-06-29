@@ -64,6 +64,7 @@ typedef struct {
 	navigator_board_meas_t board_meas;
 	navigator_mti_meas_t mti_meas;
 	navigator_ad_meas_t ad_meas;
+	navigator_1d_meas_t motor_encoder_meas;
 } all_sensors_data_t;
 
 // ---------- NAVIGATOR TYPES ----------

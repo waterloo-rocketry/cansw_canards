@@ -14,9 +14,9 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
-#include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/sensor_handler/sensor_handler.h"
 #include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
@@ -81,7 +81,7 @@ static void system_init_task(void *arg) {
 	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
-		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
+		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
 	}
 
 	w_status_t status = W_SUCCESS;
@@ -94,10 +94,10 @@ static void system_init_task(void *arg) {
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
-	// status |= health_check_init();
+	status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
-	status |= imu_handler_init();
+	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
@@ -110,7 +110,7 @@ static void system_init_task(void *arg) {
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
 		// Log critical initialization failure - specific modules should have logged details
-		log_text(10, "init", "crit init fail (status: 0x%lx).", status);
+		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).", status);
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}
@@ -125,12 +125,12 @@ static void system_init_task(void *arg) {
 							   fsm_task_priority,
 							   &fsm_task_handle);
 
-	// task_status &= xTaskCreate(health_check_task,
-	//     "health",
-	//     512,
-	//     NULL,
-	//     health_checks_task_priority,
-	//     &health_checks_task_handle);
+	task_status &= xTaskCreate(health_check_task,
+							   "health",
+							   512,
+							   NULL,
+							   health_checks_task_priority,
+							   &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
@@ -160,10 +160,13 @@ static void system_init_task(void *arg) {
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
-		log_text(10, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
+		log_text(10,
+				 LOG_LVL_FATAL,
+				 "SystemInit",
+				 "CRITICAL: Failed to create one or more FreeRTOS tasks.");
 		proc_handle_fatal_error("tasks");
 	}
-	log_text(10, "SystemInit", "All tasks created successfully.");
+	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
 	while (1) {
