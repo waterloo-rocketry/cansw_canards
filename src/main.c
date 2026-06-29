@@ -22,13 +22,11 @@
 #include "adc.h"
 #include "bdma.h"
 #include "cmsis_os2.h"
-#include "cmsis_os2.h"
 #include "cordic.h"
 #include "dma.h"
 #include "fatfs.h"
 #include "fdcan.h"
 #include "fmac.h"
-#include "gpio.h"
 #include "gpio.h"
 #include "i2c.h"
 #include "octospi.h"
@@ -68,7 +66,6 @@ void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
 void MX_FREERTOS_Init(void);
-
 
 /* USER CODE BEGIN PFP */
 
