@@ -132,9 +132,9 @@ int main(void) {
 	MX_ADC3_Init();
 	MX_TIM1_Init();
 	MX_UART7_Init();
-	MX_FATFS_Init();
 	MX_TIM2_Init();
 	MX_TIM5_Init();
+	MX_FATFS_Init();
 	/* USER CODE BEGIN 2 */
 
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
