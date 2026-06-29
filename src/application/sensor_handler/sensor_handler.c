@@ -145,7 +145,7 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 		// update timestamp
 		ctx->last_board_imu_timestamp_ms = (raw_data->raw_board_accel.timestamp_ms);
 	} else {
-		log_text(1, "SensorHandler", "WARN: Board IMU failed. CODE: %d", sensor_status);
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "Board IMU failed. CODE: %d", sensor_status);
 		board_data->board_imu.is_new = false;
 
 		sensor_handler_state.board_imu_stats.failure_count++;
@@ -169,7 +169,7 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 
 		ctx->last_mag_timestamp_ms = mag_timestamp_ms;
 	} else {
-		log_text(1, "SensorHandler", "WARN: Board Mag failed. CODE: %d", sensor_status);
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "Board Mag failed. CODE: %d", sensor_status);
 		board_data->board_mag.is_new = false;
 
 		sensor_handler_state.board_mag_stats.failure_count++;
@@ -193,7 +193,7 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 
 		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
 	} else {
-		log_text(1, "SensorHandler", "WARN: Board Baro failed. CODE: %d", sensor_status);
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "Board Baro failed. CODE: %d", sensor_status);
 		board_data->board_baro.is_new = false;
 
 		sensor_handler_state.board_baro_stats.failure_count++;
@@ -265,7 +265,7 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 		// update timestamp
 		ctx->last_ad_accel_timestamp_ms = accel_timestamp_ms;
 	} else {
-		log_text(1, "SensorHandler", "WARN: AD380 failed. CODE: %d", accel_status);
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "AD380 failed. CODE: %d", accel_status);
 		ad_data->ad_accel.is_new = false;
 		sensor_handler_state.ad_accel_stats.failure_count++;
 	}
@@ -290,7 +290,7 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 		// update timestamp
 		ctx->last_ad_gyro_timestamp_ms = gyro_timestamp_ms;
 	} else {
-		log_text(1, "SensorHandler", "WARN: ADXRS649 failed. CODE: %d", gyro_status);
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "ADXRS649 failed. CODE: %d", gyro_status);
 		ad_data->ad_gyro.is_new = false;
 		sensor_handler_state.ad_gyro_stats.failure_count++;
 	}
@@ -383,7 +383,8 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
 		ctx->last_mti_mag_timestamp_ms = movella_data.mag_timestamp_ms;
 		ctx->last_mti_pres_timestamp_ms = movella_data.pres_timestamp_ms;
 	} else {
-		log_text(1, "SensorHandler", "WARN: Movella get data read failed. CODE: %d", status);
+		log_text(
+			1, LOG_LVL_WARN, "SensorHandler", "Movella get data read failed. CODE: %d", status);
 
 		// Set is_new flag to indicate IMU failure
 		imu_data->mti_accel.is_new = false;
@@ -430,13 +431,17 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 
 		// log any error codes
 		if (motor_feedback.fault_code != AK45_FAULT_NONE) {
-			log_text(1, "SensorHandler", "WARN: Motor fault code: %d", motor_feedback.fault_code);
+			log_text(1,
+					 LOG_LVL_WARN,
+					 "SensorHandler",
+					 "Motor fault code: %d",
+					 motor_feedback.fault_code);
 		}
 
 		// update timestamp
 		ctx->last_motor_encoder_timestamp_ms = (motor_feedback.timestamp_ms);
 	} else {
-		log_text(1, "SensorHandler", "WARN: Motor Feedback failed. STATUS: %d", status);
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "Motor Feedback failed. STATUS: %d", status);
 		encoder_data->is_new = false;
 		sensor_handler_state.motor_encoder_stats.failure_count++;
 	}
@@ -463,19 +468,20 @@ w_status_t sensor_handler_init(void) {
 
 	if (orientation_calibrated != true) {
 		log_text(1,
+				 LOG_LVL_WARN,
 				 "SensorHandler",
-				 "WARN: Sensor orientation correction matrices not calibrated yet, using default "
+				 "Sensor orientation correction matrices not calibrated yet, using default "
 				 "orientation.");
 	}
 
-	log_text(10, "SensorHandler", "INFO: Sensor Handler Initialized.");
+	log_text(10, LOG_LVL_INFO, "SensorHandler", "Sensor Handler Initialized.");
 	return W_SUCCESS;
 }
 
 w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 										 all_sensors_data_t *imu_output) {
 	if ((NULL == imu_output) || (NULL == ctx)) {
-		log_text(10, "SensorHandler", "ERROR: invalid ptrs.");
+		log_text(10, LOG_LVL_FATAL, "SensorHandler", "invalid ptrs.");
 		return W_INVALID_PARAM;
 	}
 
@@ -504,7 +510,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	// Get current timestamp
 	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
 		current_time_ms = 0;
-		log_text(1, "SensorHandler", "ERROR: Failed to get current time.");
+		log_text(1, LOG_LVL_FATAL, "SensorHandler", "Failed to get current time.");
 
 		return W_FAILURE; // since without a timestamp the system will be unable to correctly judge
 						  // any of the data therefore the results for all sensors are data
@@ -520,16 +526,16 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 
 	// log system-level failures
 	if (W_SUCCESS != movella_status) {
-		log_text(1, "SensorHandler", "WARN: Read and Processing of Movella IMU failed.");
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "Read and Processing of Movella IMU failed.");
 	}
 	if (W_SUCCESS != board_status) {
-		log_text(1, "SensorHandler", "WARN: Read and Processing of Board Sensors failed.");
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "Read and Processing of Board Sensors failed.");
 	}
 	if (W_SUCCESS != ad_status) {
-		log_text(1, "SensorHandler", "WARN: Read and Processing of AD Sensors failed.");
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "Read and Processing of AD Sensors failed.");
 	}
 	if (W_SUCCESS != motor_status) {
-		log_text(1, "SensorHandler", "WARN: Read and Processing of Motor Feedback failed.");
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "Read and Processing of Motor Feedback failed.");
 	}
 
 	// TODO: add logging for board meas
@@ -548,6 +554,7 @@ health_status_t sensor_handler_get_status(void) {
 
 	// Log sampling statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "SensorHandler",
 			 "%s Sampling -Total: %lu, Errors: %lu",
 			 sensor_handler_state.initialized ? "INIT" : "NOT INIT",
@@ -556,6 +563,7 @@ health_status_t sensor_handler_get_status(void) {
 
 	// Log IMU statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "SensorHandler",
 			 "Board IMU - Success %lu, Failure %lu Mag - Success %lu, Failure %lu Baro - Success "
 			 "%lu, Failure %lu",
@@ -566,6 +574,7 @@ health_status_t sensor_handler_get_status(void) {
 			 sensor_handler_state.board_baro_stats.success_count,
 			 sensor_handler_state.board_baro_stats.failure_count);
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "SensorHandler",
 			 "AD Accel - Success %lu, Failure %lu Gyro - Success %lu, Failure %lu",
 			 sensor_handler_state.ad_accel_stats.success_count,
@@ -573,6 +582,7 @@ health_status_t sensor_handler_get_status(void) {
 			 sensor_handler_state.ad_gyro_stats.success_count,
 			 sensor_handler_state.ad_gyro_stats.failure_count);
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "SensorHandler",
 			 "MTI Accel - Success %lu, Failure %lu Gyro - Success %lu, Failure %lu Mag - Success "
 			 "%lu, Failure %lu Baro - Success %lu, Failure %lu",
@@ -585,6 +595,7 @@ health_status_t sensor_handler_get_status(void) {
 			 sensor_handler_state.mti_baro_stats.success_count,
 			 sensor_handler_state.mti_baro_stats.failure_count);
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "SensorHandler",
 			 "Motor Encoder - Success %lu, Failure %lu ",
 			 sensor_handler_state.motor_encoder_stats.success_count,
