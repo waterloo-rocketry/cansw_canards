@@ -109,7 +109,10 @@ static volatile iis2mdc_state_t iis2mdc_state = IIS2MDC_STATE_UNINIT;
  */
 static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
-		log_text(1, "iis2mdc", "ERROR: I2C register read attempted after async pipeline active");
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: I2C register read attempted after async pipeline active");
 		return W_FAILURE;
 	}
 	if (len > 1) {
@@ -124,7 +127,10 @@ static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
  */
 static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
-		log_text(1, "iis2mdc", "ERROR: I2C register write attempted after async pipeline active");
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: I2C register write attempted after async pipeline active");
 		return W_FAILURE;
 	}
 	return i2c_write_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, &val, 1);
@@ -153,7 +159,10 @@ static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, 
  */
 static w_status_t self_test_wait_data_ready(void) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
-		log_text(1, "iis2mdc", "ERROR: wait_data_ready called after async DMA pipeline active");
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: wait_data_ready called after async DMA pipeline active");
 		return W_FAILURE;
 	}
 
@@ -283,7 +292,11 @@ static w_status_t iis2mdc_sanity_check(void) {
 	// Checks to make sure sanity check is not already in progress or that async DMA is not already
 	// active.
 	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
-		log_text(1, "iis2mdc", "ERROR: sanity check called from invalid state %u", iis2mdc_state);
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: sanity check called from invalid state %u",
+				 iis2mdc_state);
 		return W_FAILURE;
 	}
 
@@ -292,7 +305,7 @@ static w_status_t iis2mdc_sanity_check(void) {
 	iis2mdc_state = IIS2MDC_STATE_CHECKING;
 
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
-		log_text(1, "iis2mdc", "ERROR: failed to read WHO_AM_I");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "ERROR: failed to read WHO_AM_I");
 		status = W_FAILURE;
 	} else if (IIS2MDC_WHO_AM_I_VAL != id) {
 		log_text(1,
@@ -303,7 +316,7 @@ static w_status_t iis2mdc_sanity_check(void) {
 				 id);
 		status = W_FAILURE;
 	} else if (W_SUCCESS != iis2mdc_self_test()) {
-		log_text(1, "iis2mdc", "ERROR: self-test failed");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "ERROR: self-test failed");
 		status = W_FAILURE;
 	}
 
@@ -361,7 +374,11 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 w_status_t iis2mdc_init(void) {
 	// reject reinitialization
 	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
-		log_text(1, "iis2mdc", "ERROR: init called from non-UNINIT state %u", iis2mdc_state);
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: init called from non-UNINIT state %u",
+				 iis2mdc_state);
 		return W_FAILURE;
 	}
 
@@ -395,14 +412,14 @@ w_status_t iis2mdc_init(void) {
 	// register completion callback on the mag's I2C handle.
 	if (HAL_OK !=
 		HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) {
-		log_text(1, "iis2mdc", "ERROR: failed to register DMA complete callback");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "ERROR: failed to register DMA complete callback");
 		return W_FAILURE;
 	}
 
 	iis2mdc_state = IIS2MDC_STATE_ASYNC_DMA_ACTIVE;
 
 	if (W_SUCCESS != iis2mdc_handle_drdy_irq()) {
-		log_text(1, "iis2mdc", "ERROR: failed to clear interrupt");
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "ERROR: failed to clear interrupt");
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
