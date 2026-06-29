@@ -95,9 +95,9 @@ static void system_init_task(void *arg) {
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
-	status |= health_check_init();
+	// status |= health_check_init();
 	status |= power_handler_init();
-	status |= movella_init();
+	// status |= movella_init();
 	status |= flight_phase_init();
 	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
@@ -127,12 +127,12 @@ static void system_init_task(void *arg) {
 							   fsm_task_priority,
 							   &fsm_task_handle);
 
-	task_status &= xTaskCreate(health_check_task,
-							   "health",
-							   512,
-							   NULL,
-							   health_checks_task_priority,
-							   &health_checks_task_handle);
+	// task_status &= xTaskCreate(health_check_task,
+	// 						   "health",
+	// 						   512,
+	// 						   NULL,
+	// 						   health_checks_task_priority,
+	// 						   &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
@@ -148,17 +148,17 @@ static void system_init_task(void *arg) {
 							   can_handler_tx_priority,
 							   &can_handler_handle_tx);
 
-	task_status &= xTaskCreate(
-		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+	// task_status &= xTaskCreate(
+	// 	movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
-	task_status &= xTaskCreate(ad_breakout_board_task,
-							   "ad board task",
-							   2560, // TODO: set when sure of size
-							   NULL,
-							   ad_breakout_task_priority,
-							   &ad_breakout_task_handle);
+	// task_status &= xTaskCreate(ad_breakout_board_task,
+	// 						   "ad board task",
+	// 						   2560, // TODO: set when sure of size
+	// 						   NULL,
+	// 						   ad_breakout_task_priority,
+	// 						   &ad_breakout_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -188,7 +188,7 @@ static void system_init_task(void *arg) {
 
 		gpio_toggle(GPIO_PIN_RED_LED, 1);
 
-		vTaskDelay(pdMS_TO_TICKS(20));
+		vTaskDelay(pdMS_TO_TICKS(2000));
 	}
 
 	// its blinky now

@@ -97,11 +97,9 @@ static power_input_source_t get_active_input(void) {
 	if (((int)vsens_chg == 0) && ((int)vsens_rkt == 0) && ((int)vsens_bat1 == 0) &&
 		((int)vsens_bat2 == 0)) {
 		return POWER_INPUT_NONE; // charged by usb, but we don't really care about usb during flight
-	} else if ((vsens_chg >= vsens_rkt) && (vsens_chg >= vsens_bat1) &&
-			   (vsens_chg >= vsens_bat2)) {
+	} else if ((vsens_chg >= vsens_rkt) && (vsens_chg >= vsens_bat1) && (vsens_chg >= vsens_bat2)) {
 		return POWER_INPUT_CHG;
-	} else if ((vsens_rkt >= vsens_chg) && (vsens_rkt >= vsens_bat1) &&
-			   (vsens_rkt >= vsens_bat2)) {
+	} else if ((vsens_rkt >= vsens_chg) && (vsens_rkt >= vsens_bat1) && (vsens_rkt >= vsens_bat2)) {
 		return POWER_INPUT_RKT;
 	} else {
 		return POWER_INPUT_BAT;
@@ -168,7 +166,10 @@ static void transmit_curr_volt_status_can_msg() {
 	}
 
 	if (W_SUCCESS != can_tx_status) {
-		log_text(1, "power_handler", "WARNING: Some can messages containing voltage and current information failed to transmit during health check.");
+		log_text(1,
+				 "power_handler",
+				 "WARNING: Some can messages containing voltage and current information failed to "
+				 "transmit during health check.");
 	}
 }
 
@@ -187,7 +188,8 @@ health_status_t power_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 	w_status_t gpio_read_status = W_SUCCESS;
 	float adc_value = 0;
-	health_status_t status = {.error_bitfield  = 0, .module_id = MODULE_POWER_HANDLER, .severity = HEALTH_OK};
+	health_status_t status = {
+		.error_bitfield = 0, .module_id = MODULE_POWER_HANDLER, .severity = HEALTH_OK};
 
 	// Check battery fault pins
 	gpio_level_t flt1 = GPIO_LEVEL_HIGH;
@@ -198,27 +200,39 @@ health_status_t power_handler_get_status(void) {
 	gpio_read_status |= gpio_read(GPIO_PIN_BAT_FLT2, &flt2, 5);
 	gpio_read_status |= gpio_read(GPIO_PIN_PG_EXT_5V, &pg_ext_5v, 5);
 
-	if (W_SUCCESS != gpio_read_status){
-		log_text(1,"power_handler", "ERROR: gpio read failed during get status. Code:%lx", gpio_read_status);
+	if (W_SUCCESS != gpio_read_status) {
+		log_text(1,
+				 "power_handler",
+				 "ERROR: gpio read failed during get status. Code:%lx",
+				 gpio_read_status);
 	}
 
 	if (GPIO_LEVEL_LOW == flt1) {
 		status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT1_VOLT;
 		power_handler_status.lipo_1_fault_count++;
-		log_text(1, "power_handler", "bat 1 power fault. Fault count: %d", power_handler_status.lipo_1_fault_count);
+		log_text(1,
+				 "power_handler",
+				 "bat 1 power fault. Fault count: %d",
+				 power_handler_status.lipo_1_fault_count);
 	}
 
 	if (GPIO_LEVEL_LOW == flt2) {
 		status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT2_VOLT;
 		power_handler_status.lipo_2_fault_count++;
-		log_text(1, "power_handler", "bat 2 power fault. Fault count: %d", power_handler_status.lipo_2_fault_count);
+		log_text(1,
+				 "power_handler",
+				 "bat 2 power fault. Fault count: %d",
+				 power_handler_status.lipo_2_fault_count);
 	}
 
 	// Check external 5V output fault
 	if (GPIO_LEVEL_LOW == pg_ext_5v) {
 		status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_5V_EXT_OUTPUT;
 		power_handler_status.external_5v_fault_count++;
-		log_text(1, "power_handler", "ext 5v output fault. Fault count: %d", power_handler_status.external_5v_fault_count);
+		log_text(1,
+				 "power_handler",
+				 "ext 5v output fault. Fault count: %d",
+				 power_handler_status.external_5v_fault_count);
 	}
 
 	// external and internal 5V share the same current sense, so if either is overcurrent it will
@@ -227,7 +241,10 @@ health_status_t power_handler_get_status(void) {
 		if (adc_value > I5V_MAX) {
 			status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_5V_CURR;
 			power_handler_status.overcurrent_count++;
-			log_text(1, "power_handler", "5v power rail current fault. Fault count: %d", power_handler_status.overcurrent_count);
+			log_text(1,
+					 "power_handler",
+					 "5v power rail current fault. Fault count: %d",
+					 power_handler_status.overcurrent_count);
 		}
 	}
 
@@ -235,7 +252,10 @@ health_status_t power_handler_get_status(void) {
 		if (adc_value > I3V3_MAX) {
 			status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_3V3_CURR;
 			power_handler_status.overcurrent_count++;
-			log_text(1, "power_handler", "3v3 power rail current fault. Fault count: %d", power_handler_status.overcurrent_count);
+			log_text(1,
+					 "power_handler",
+					 "3v3 power rail current fault. Fault count: %d",
+					 power_handler_status.overcurrent_count);
 		}
 	}
 
@@ -280,7 +300,10 @@ health_status_t power_handler_get_status(void) {
 				if (adc_value > IBAT_MAX) {
 					status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT1_CURR;
 					power_handler_status.overcurrent_count++;
-					log_text(1, "power_handler", "Bat1 over current! Over current fault count: %d", power_handler_status.overcurrent_count);
+					log_text(1,
+							 "power_handler",
+							 "Bat1 over current! Over current fault count: %d",
+							 power_handler_status.overcurrent_count);
 				}
 			}
 
@@ -288,7 +311,10 @@ health_status_t power_handler_get_status(void) {
 				if (adc_value > IBAT_MAX) {
 					status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT2_CURR;
 					power_handler_status.overcurrent_count++;
-					log_text(1, "power_handler", "Bat2 over current! Over current fault count: %d", power_handler_status.overcurrent_count);
+					log_text(1,
+							 "power_handler",
+							 "Bat2 over current! Over current fault count: %d",
+							 power_handler_status.overcurrent_count);
 				}
 			}
 
@@ -365,7 +391,8 @@ static w_status_t power_handler_set_low_power_mode(bool enabled) {
 	if (enabled) {
 		// Disable external 5V when entering low power mode
 		if (W_SUCCESS != power_handler_set_5V_external(false)) {
-			log_text(1, "power_handler", "ERROR: failed to turn off 5v external in low power mode.");
+			log_text(
+				1, "power_handler", "ERROR: failed to turn off 5v external in low power mode.");
 		}
 
 		// Disable LiPo
@@ -417,9 +444,8 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 	}
 
 	if (W_SUCCESS != timer_get_ms(&timestamp)) {
-		log_text(1,
-					"power_handler",
-					"WARNING: Failed to get timestamp for actuator status can msg.");
+		log_text(
+			1, "power_handler", "WARNING: Failed to get timestamp for actuator status can msg.");
 	}
 
 	if (ACTUATOR_CANARD_5V_OUTPUT == actuator_id) {
@@ -458,10 +484,10 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 						 "WARNING: Can message failed to transmit for actruator status.");
 			}
 		} else {
-			log_text(1,"power_handler", "ERROR: failed to toggle lipo power.");
+			log_text(1, "power_handler", "ERROR: failed to toggle lipo power.");
 		}
 	} else {
-			log_text(1, "power handler", "ERROR: can command is either ");
+		log_text(1, "power handler", "ERROR: can command is either ");
 	}
 
 	return status;
