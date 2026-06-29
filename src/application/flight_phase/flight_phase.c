@@ -68,12 +68,13 @@ w_status_t flight_phase_init(void) {
 
 	if ((NULL == event_queue) ||
 		(W_SUCCESS != can_handler_register_callback(MSG_ACTUATOR_CMD, act_cmd_callback))) {
-		log_text(1, "FlightPhase", "ERROR: Failed to create queues/timers/register callback.");
+		log_text(
+			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
 		return W_FAILURE;
 	}
 
 	flight_phase_status.initialized = true;
-	log_text(10, "FlightPhase", "Flight Phase Initialized Successfully.");
+	log_text(10, LOG_LVL_INFO, "FlightPhase", "Flight Phase Initialized Successfully.");
 	return W_SUCCESS;
 }
 
@@ -111,7 +112,11 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 	}
 
 	if (xQueueSend(event_queue, &event, 0) != pdPASS) {
-		log_text(0, "FlightPhase", "ERROR: Failed to send event %d to queue. Queue full?", event);
+		log_text(0,
+				 LOG_LVL_FATAL,
+				 "FlightPhase",
+				 "Failed to send event %d to queue. Queue full?",
+				 event);
 		flight_phase_status.event_queue_full_count++;
 		return W_FAILURE;
 	}
@@ -128,7 +133,7 @@ static w_status_t act_cmd_callback(const can_msg_t *msg) {
 
 	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
 		(get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
-		log_text(1, "FlightPhase", "invalid actuator data");
+		log_text(1, LOG_LVL_WARN, "FlightPhase", "invalid actuator data");
 		return W_FAILURE;
 	}
 
@@ -159,7 +164,7 @@ flight_phase_event_t flight_phase_get_next_event(void) {
 fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t curr_state,
 									  flight_phase_ctx_t *p_ctx) {
 	if (NULL == p_ctx) {
-		log_text(5, "FlightPhase", "ERROR: Invalid ptrs in update states");
+		log_text(5, LOG_LVL_FATAL, "FlightPhase", "Invalid ptrs in update states");
 		// just return the current state if invalid
 		return curr_state;
 	}
@@ -176,7 +181,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 				new_state = STATE_PAD_FILTER;
 			} else {
 				// Ignore redundant PAD events or other unexpected events
-				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -191,7 +201,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
-				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -203,7 +218,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
-				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -220,7 +240,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 			} else {
 				// Ignore redundant or unexpected events - this is a known safe state
-				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -230,7 +255,12 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 			} else {
 				// Ignore redundant or unexpected events - already in flight
-				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
@@ -239,22 +269,32 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 				new_state = STATE_SLEEPY;
 			} else {
 				// Ignore redundant or unexpected events - already in flight
-				log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+				log_text(5,
+						 LOG_LVL_WARN,
+						 "FlightPhase",
+						 "Unexpected event %d in state %d",
+						 event,
+						 curr_state);
 			}
 			break;
 
 		case STATE_SLEEPY:
 			// Ignore redundant or unexpected events - already in flight
-			log_text(5, "FlightPhase", "Unexpected event %d in state %d", event, curr_state);
+			log_text(5,
+					 LOG_LVL_WARN,
+					 "FlightPhase",
+					 "Unexpected event %d in state %d",
+					 event,
+					 curr_state);
 			break;
 
 		// deprecate time?
 		case STATE_ERROR:
 			// Stay in error state, log repeated invalid event
-			log_text(1, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
+			log_text(1, LOG_LVL_FATAL, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
 			break;
 		default:
-			log_text(10, "FlightPhase", "Unhandled state %d", curr_state);
+			log_text(10, LOG_LVL_FATAL, "FlightPhase", "Unhandled state %d", curr_state);
 			new_state = curr_state; // return thee same state
 			break;
 	}
@@ -272,6 +312,7 @@ health_status_t flight_phase_get_status(void) {
 
 	// Log initialization status and current state
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "flight_phase",
 			 "%s q full: %lu",
 			 flight_phase_status.initialized ? "INIT" : "NOT INIT",
@@ -294,7 +335,7 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
 														 const fsm_state_t curr_state,
 														 const uint32_t timestamp_ms) {
 	if (NULL == p_ctx) {
-		log_text(5, "FlightPhase", "ERROR: Invalid ptrs in timer detection");
+		log_text(5, LOG_LVL_FATAL, "FlightPhase", "Invalid ptrs in timer detection");
 		// just return the current state if invalid
 		return EVENT_NONE;
 	}
@@ -365,7 +406,7 @@ w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_sta
 
 	if (EVENT_NONE != timer_event) {
 		if (flight_phase_send_event(timer_event) != W_SUCCESS) {
-			log_text(1, "flight_phase", "ERROR: timer send event failed.");
+			log_text(1, LOG_LVL_FATAL, "flight_phase", "timer send event failed.");
 			status = W_FAILURE;
 		}
 	}
@@ -376,7 +417,7 @@ w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_sta
 
 	if (EVENT_NONE != sensor_event) {
 		if (flight_phase_send_event(sensor_event) != W_SUCCESS) {
-			log_text(1, "flight_phase", "ERROR: sensor send event failed.");
+			log_text(1, LOG_LVL_FATAL, "flight_phase", "sensor send event failed.");
 			status = W_FAILURE;
 		}
 	}

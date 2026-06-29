@@ -142,7 +142,7 @@ void fsm_task(void *args) {
 	while (1) {
 		// Unblock once we receive the notification to unblock fsm
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS)) == 0) {
-			log_text(0, "FSM", "ERROR: FSM loop wait timed out");
+			log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
 		}
 
 		if (W_SUCCESS != timer_get_ms(&(g_ctx.timestamp_ms))) {
