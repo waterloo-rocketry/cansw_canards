@@ -30,7 +30,7 @@ static can_callback_t callback_map[MSG_ID_ENUM_MAX] = {NULL};
 static w_status_t can_reset_callback(const can_msg_t *msg) {
 	bool need_reset = false;
 	if (check_board_need_reset(msg, &need_reset) != W_SUCCESS) {
-		log_text(1, "CANCallback", "ERROR: failed to read board reset");
+		log_text(1, LOG_LVL_WARN, "CANCallback", "failed to read board reset");
 		return W_FAILURE;
 	}
 	if (need_reset) {
@@ -48,7 +48,7 @@ static w_status_t can_led_on_callback(const can_msg_t *msg) {
 	status |= gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 5);
 
 	if (status != W_SUCCESS) {
-		log_text(1, "CANCallback", "ERROR: LED ON callback failed to set GPIO.");
+		log_text(1, LOG_LVL_WARN, "CANCallback", "LED ON callback failed to set GPIO.");
 	}
 	return status;
 }
@@ -61,7 +61,7 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 	status |= gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 5);
 
 	if (status != W_SUCCESS) {
-		log_text(1, "CANCallback", "ERROR: LED OFF callback failed to set GPIO.");
+		log_text(1, LOG_LVL_WARN, "CANCallback", "LED OFF callback failed to set GPIO.");
 	}
 	return status;
 }
@@ -91,19 +91,19 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 	bus_queue_tx = xQueueCreate(BUS_QUEUE_LENGTH, sizeof(can_msg_t));
 
 	if ((NULL == bus_queue_tx) || (NULL == bus_queue_rx)) {
-		log_text(1, "can", "initfailq");
+		log_text(1, LOG_LVL_FATAL, "can", "initfailq");
 		return W_FAILURE;
 	}
 
 	if (!stm32h7_can_init(hfdcan, &can_handle_rx_message)) {
-		log_text(1, "CANHandler", "ERROR: can_init_stm failed.");
+		log_text(1, LOG_LVL_FATAL, "CANHandler", "can_init_stm failed.");
 		return W_FAILURE;
 	}
 
 	if ((W_SUCCESS != can_handler_register_callback(MSG_RESET_CMD, can_reset_callback)) ||
 		(W_SUCCESS != can_handler_register_callback(MSG_LEDS_ON, can_led_on_callback)) ||
 		(W_SUCCESS != can_handler_register_callback(MSG_LEDS_OFF, can_led_off_callback))) {
-		log_text(1, "CANHandler", "ERROR: Failed to register mandatory CAN callbacks.");
+		log_text(1, LOG_LVL_FATAL, "CANHandler", "Failed to register mandatory CAN callbacks.");
 		return W_FAILURE;
 	}
 
@@ -117,7 +117,7 @@ w_status_t can_handler_register_callback(can_msg_type_t msg_type, can_callback_t
 
 w_status_t can_handler_transmit(const can_msg_t *message) {
 	if (pdPASS != xQueueSend(bus_queue_tx, message, 0)) {
-		log_text(1, "CANHandler", "ERROR: Failed to queue message for TX. Queue full?");
+		log_text(1, LOG_LVL_WARN, "CANHandler", "Failed to queue message for TX. Queue full?");
 		can_error_stats.dropped_tx_counter++; // Track dropped TX messages
 		return W_FAILURE;
 	}
@@ -135,7 +135,11 @@ void can_handler_task_rx(void *argument) {
 			can_msg_type_t msg_type = get_message_type(&rx_msg);
 			if (callback_map[msg_type] != NULL) {
 				if (callback_map[msg_type](&rx_msg) != W_SUCCESS) {
-					log_text(1, "CANHandlerRX", "WARN: Callback failed for msg type %d.", msg_type);
+					log_text(1,
+							 LOG_LVL_WARN,
+							 "CANHandlerRX",
+							 "Callback failed for msg type %d.",
+							 msg_type);
 					can_error_stats.rx_callback_errors++; // Track callback execution errors
 				}
 			}
@@ -143,7 +147,7 @@ void can_handler_task_rx(void *argument) {
 			// timed out waiting; log once per second
 			TickType_t now = xTaskGetTickCount();
 			if ((now - last_rx_warn_tick) >= pdMS_TO_TICKS(1000)) {
-				log_text(1, "CANHandlerRX", "WARN: Timed out waiting for RX message.");
+				log_text(1, LOG_LVL_WARN, "CANHandlerRX", "Timed out waiting for RX message.");
 				can_error_stats.rx_timeouts++; // Track RX timeouts
 				last_rx_warn_tick = now; // update last warning time
 			}
@@ -162,7 +166,7 @@ void can_handler_task_tx(void *argument) {
 			// send to CAN bus; log errors
 			if (!stm32h7_can_send(&tx_msg)) {
 				can_error_stats.tx_failures++;
-				log_text(3, "CAN tx", "CAN send failed!");
+				log_text(3, LOG_LVL_WARN, "CAN tx", "CAN send failed!");
 			}
 			// hardware limitation stm32 backtoback tx fifo queue has 2 msgs..
 			// but trying to do 2 in a row didnt work so just delay between every tx
@@ -172,7 +176,7 @@ void can_handler_task_tx(void *argument) {
 			// expect we send at least 1 message every 1.5sec
 			TickType_t now = xTaskGetTickCount();
 			if ((now - last_tx_warn_tick) >= pdMS_TO_TICKS(1500)) {
-				log_text(1, "CANHandlerTX", "no tx msg in queue");
+				log_text(1, LOG_LVL_WARN, "CANHandlerTX", "no tx msg in queue");
 				last_tx_warn_tick = now;
 			}
 		}
@@ -184,12 +188,14 @@ health_status_t can_handler_get_status(void) {
 
 	// Log all error statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "CAN",
 			 "dropped_rx=%lu, dropped_tx=%lu, tx_failures=%lu, ",
 			 dropped_rx_counter,
 			 can_error_stats.dropped_tx_counter,
 			 can_error_stats.tx_failures);
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "CAN",
 			 "rx_callback_errors=%lu, rx_timeouts=%lu, tx_timeouts=%lu",
 			 can_error_stats.rx_callback_errors,

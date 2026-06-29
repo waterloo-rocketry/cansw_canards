@@ -69,12 +69,12 @@ static w_status_t adxrs649_self_test() {
 	// make sure self-test 1 is turned off. Make sure the command is sent regardless of previous
 	// status
 	if (gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_LOW, 1) != W_SUCCESS) {
-		log_text(0, "ADXRS649", "ERROR: Failed to set ST1 to LOW");
+		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to set ST1 to LOW");
 		return W_FAILURE;
 	}
 
 	if (MAX_NUM_TESTS < test_num) {
-		log_text(0, "ADXRS649", "ERROR: Failed ST1.");
+		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed ST1.");
 		return W_FAILURE;
 	}
 
@@ -103,11 +103,11 @@ static w_status_t adxrs649_self_test() {
 	// make sure self-test 2 is turned off. Make sure the command is sent regardless of previous
 	// status
 	if (gpio_write(GPIO_PIN_ADXRS649_ST2, GPIO_LEVEL_LOW, 1) != W_SUCCESS) {
-		log_text(0, "ADXRS649", "ERROR: Failed to set ST2 to LOW");
+		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to set ST2 to LOW");
 		return W_FAILURE;
 	}
 	if (MAX_NUM_TESTS < test_num) {
-		log_text(0, "ADXRS649", "ERROR: Failed ST2.");
+		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed ST2.");
 		return W_FAILURE;
 	}
 
@@ -121,14 +121,14 @@ static w_status_t adxrs649_self_test() {
 w_status_t adxrs649_init() {
 	// don't reinit
 	if (is_initialized) {
-		log_text(0, "ADXRS649", "ERROR: Reinitialization is not allowed.");
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Reinitialization is not allowed.");
 		return W_FAILURE;
 	}
 
 	// reset both gpio pins to low to start
 
 	if (W_SUCCESS != ads1219_init(&g_ads_handle, I2C_BUS_2, ADS1219_ADDR)) {
-		log_text(0, "ADXRS649", "ERROR: Unable to initialize the ADC.");
+		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Unable to initialize the ADC.");
 		return W_FAILURE;
 	}
 
@@ -141,12 +141,13 @@ w_status_t adxrs649_init() {
 		&g_ads_handle, ADS1219_VREF_EXTERNAL, V_EXTERNAL_REF_N_mV, V_EXTERNAL_REF_P_mV);
 
 	if (adc_setup_status != W_SUCCESS) {
-		log_text(0, "ADXRS649", "ERROR: Failed to write settings ADC for gyro.");
+		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to write settings ADC for gyro.");
 		return W_FAILURE;
 	}
 
 	if (ads1219_start(&g_ads_handle) != W_SUCCESS) {
-		log_text(0, "ADXRS649", "ERROR: Failed to start continuous conversion for the ADC.");
+		log_text(
+			0, LOG_LVL_FATAL, "ADXRS649", "Failed to start continuous conversion for the ADC.");
 		return W_FAILURE;
 	}
 
@@ -155,29 +156,61 @@ w_status_t adxrs649_init() {
 	// currect ads setting 00001111 -> 0x0F
 	// perform sanity check
 	if (ads1219_sanity_check(&g_ads_handle, ADS1219_CONFIG_SETTINGS) != W_SUCCESS) {
-		log_text(0, "ADXRS649", "ERROR: Failed ADC sanity check.");
+		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed ADC sanity check.");
 		return W_FAILURE;
 	}
 
 	if (adxrs649_self_test() != W_SUCCESS) {
 		// Make sure ST pins are low
 		if (gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_LOW, 1) != W_SUCCESS) {
-			log_text(0, "ADXRS649", "ERROR: Failed to set ST1 to LOW");
+			log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to set ST1 to LOW");
 		}
 		if (gpio_write(GPIO_PIN_ADXRS649_ST2, GPIO_LEVEL_LOW, 1) != W_SUCCESS) {
-			log_text(0, "ADXRS649", "ERROR: Failed to set ST2 to LOW");
+			log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to set ST2 to LOW");
 		}
 
-		log_text(0, "ADXRS649", "ERROR: Failed gyro self-test.");
+		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed gyro self-test.");
 		return W_FAILURE;
 	}
 
 	if (ads1219_start(&g_ads_handle) != W_SUCCESS) {
-		log_text(0, "ADXRS649", "ERROR: Failed to start continuous conversion for the ADC.");
+		log_text(
+			0, LOG_LVL_FATAL, "ADXRS649", "Failed to start continuous conversion for the ADC.");
 		return W_FAILURE;
 	}
 
 	is_initialized = true;
+
+	return W_SUCCESS;
+}
+
+/**
+ * @brief gets the state of new data for the gyro
+ * @param p_drdy a return pointer for if adxrs649 is data ready
+ * @return the status of getting data from gyro
+ */
+w_status_t adxrs649_is_data_ready(bool *p_drdy) {
+	if (!is_initialized) {
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed initialized.");
+		return W_FAILURE;
+	}
+	if ((NULL == p_drdy)) {
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Invalid return ptr.");
+		return W_INVALID_PARAM;
+	}
+
+	gpio_level_t ndrdy; // NOT-DRDY
+
+	if (W_SUCCESS == gpio_read(GPIO_PIN_ADS1219_INT, &ndrdy, 0)) {
+		// data ready is on the negative-edge
+		*p_drdy = (GPIO_LEVEL_LOW == ndrdy) ? true : false;
+
+	} else {
+		// use I2C to get value
+		if (ads1219_conversion_ready(&g_ads_handle, p_drdy) != W_SUCCESS) {
+			return W_IO_ERROR;
+		}
+	}
 
 	return W_SUCCESS;
 }
@@ -191,26 +224,13 @@ w_status_t adxrs649_init() {
  */
 w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 	if (!is_initialized) {
-		log_text(0, "ADXRS649", "ERROR: Failed initialized.");
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed initialized.");
 		return W_FAILURE;
 	}
 
-	bool is_new_data = false;
-	gpio_level_t ndrdy; // NOT-DRDY
-
-	if (W_SUCCESS == gpio_read(GPIO_PIN_ADS1219_INT, &ndrdy, 0)) {
-		// data ready is on the negative-edge
-		is_new_data = (GPIO_LEVEL_LOW == ndrdy) ? true : false;
-
-	} else {
-		// use I2C to get value
-		if (ads1219_conversion_ready(&g_ads_handle, &is_new_data) != W_SUCCESS) {
-			return W_IO_ERROR;
-		}
-	}
-
-	if (!is_new_data) {
-		return W_FAILURE;
+	if ((NULL == p_data) || (NULL == p_raw_data)) {
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Invalid return ptrs.");
+		return W_INVALID_PARAM;
 	}
 
 	if (ads1219_read_value(&g_ads_handle, p_raw_data) != W_SUCCESS) {

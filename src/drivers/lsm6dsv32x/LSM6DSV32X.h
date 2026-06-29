@@ -6,7 +6,6 @@
 #include "rocketlib/include/common.h"
 
 #include "common/math/math.h"
-#include "drivers/lsm6dsv32x/LSM6DSV32X_regmap.h"
 
 /**
  * raw data from imu/mag registers

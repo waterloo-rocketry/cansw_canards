@@ -80,7 +80,7 @@ w_status_t gpio_init() {
 		gpio_map[i].access_mutex = xSemaphoreCreateMutex();
 		if (gpio_map[i].access_mutex == NULL) {
 			gpio_status.err = true;
-			log_text(10, "gpio", "initfail %d", i);
+			log_text(10, LOG_LVL_FATAL, "gpio", "initfail %d", i);
 			status = W_FAILURE;
 		}
 	}
@@ -173,6 +173,7 @@ health_status_t gpio_get_status(void) {
 
 	// Log operation statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "gpio",
 			 "%s Successful accesses: %lu, Failed accesses: %lu",
 			 gpio_status.is_init ? "INIT" : "NOT INIT",

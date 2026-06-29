@@ -35,6 +35,7 @@ typedef struct {
 	uint32_t timestamp_ms[2];
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
+	w_status_t latest_status;
 
 } lsm6dsv32x_ctx_t;
 
@@ -70,7 +71,8 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
  */
 static w_status_t lsm6dsv32x_check_sanity() {
 	if (lsm6dsv32x_ctx.switched_callback) {
-		log_text(1, "LSM6DSV32X", "ERROR: Attempting to reinitialize after switching callback.");
+		log_text(
+			1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
 		return W_FAILURE;
 	}
 
@@ -105,6 +107,8 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 	memcpy(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER],
 		   lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER],
 		   CTX_BUFFER_SIZE);
+	lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER] =
+		lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER];
 }
 
 /**
@@ -114,7 +118,8 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
  */
 w_status_t lsm6dsv32x_init() {
 	if (lsm6dsv32x_ctx.switched_callback) {
-		log_text(1, "LSM6DSV32X", "ERROR: Attempting to reinitialize after switching callback.");
+		log_text(
+			1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
 		return W_FAILURE;
 	}
 	lsm6dsv32x_ctx.hi2c = &hi2c1;
@@ -176,7 +181,7 @@ w_status_t lsm6dsv32x_init() {
 	// AFTER THIS POINT NEVER USE OLD I2C OR VERY BAD ERRORS
 
 	if (status != W_SUCCESS) {
-		log_text(1, "LSM6DSV32X", "initfail");
+		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "initfail");
 	}
 
 	// only open the i2c bus once fully ready
@@ -191,19 +196,24 @@ w_status_t lsm6dsv32x_init() {
  */
 w_status_t lsm6dsv32x_int1_isr_handler() {
 	if (!lsm6dsv32x_ctx.switched_callback) {
-		log_text(
-			1, "LSM6DSV32X", "ERROR: Attempting to complete DMA callback before new callback.");
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "LSM6DSV32X",
+				 "Attempting to complete DMA callback before new callback.");
 		return W_FAILURE;
 	}
 
-	w_status_t status = W_SUCCESS;
+	// store the timestamp when the data is received
+	if (timer_get_ms(&lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER]) != W_SUCCESS) {
+		log_text(1, LOG_LVL_WARN, "LSM6DSV32X", "Failed to get time through timer.");
+		return W_FAILURE;
+	}
+
+	lsm6dsv32x_ctx.latest_status = W_SUCCESS;
 
 	// set the bus to occupied meanining that data is
 	// actively being streamed via DMA into the Buffer from the IMU
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_BUSY;
-
-	// store the timestamp when the data is received
-	status |= timer_get_ms(&lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER]);
 
 	// begin dma read to the main buffer
 	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
@@ -216,10 +226,10 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 							 CTX_BUFFER_SIZE);
 	if (hal_status != HAL_OK) {
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
-		status |= W_FAILURE;
+		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
 	}
 
-	return status;
+	return lsm6dsv32x_ctx.latest_status;
 }
 
 // TODO: make below function into a separate module, interrupts or gpio or dma
@@ -253,6 +263,8 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		// enter a critical section while copying the data
 		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER], CTX_BUFFER_SIZE);
 		raw_acc->timestamp_ms = lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER];
+		// get status
+		status = lsm6dsv32x_ctx.latest_status;
 
 		taskEXIT_CRITICAL();
 
@@ -278,8 +290,8 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		acc_data->y = ((float64_t)((int16_t)raw_acc->y)) * ACC_FS;
 		acc_data->z = ((float64_t)((int16_t)raw_acc->z)) * ACC_FS;
 	} else {
-		return W_IO_ERROR;
+		status = W_FAILURE;
 	}
 
-	return W_SUCCESS;
+	return status;
 }

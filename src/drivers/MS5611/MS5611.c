@@ -1,4 +1,12 @@
+#include "FreeRTOS.h"
+#include "task.h"
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "application/logger/log.h"
 #include "drivers/MS5611/MS5611.h"
+#include "drivers/gpio/gpio.h"
+#include "drivers/i2c/i2c.h"
 #include "drivers/timer/timer.h"
 
 /* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
@@ -187,7 +195,7 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	n_prom[7] = (0xFF00U & crc_read); /* set crc read */
 
 	if (n_rem != crc) {
-		log_text(1, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
+		log_text(1, LOG_LVL_WARN, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
 		return W_FAILURE;
 	}
 
@@ -208,7 +216,7 @@ static w_status_t ms5611_prom_read(void) {
 	for (i = 0; i < 8; i++) {
 		status = baro_read(MS5611_CMD_PROM_READ_BASE + (i * 2), prom_buf, 2);
 		if (status != W_SUCCESS) {
-			log_text(1, "ms5611", "ERROR: failed to read PROM coefficient C%u", i);
+			log_text(1, LOG_LVL_FATAL, "ms5611", "failed to read PROM coefficient C%u", i);
 			return W_FAILURE;
 		}
 		prom_coef[i] = ((uint16_t)prom_buf[0] << 8) | prom_buf[1];
@@ -223,6 +231,7 @@ static w_status_t ms5611_prom_read(void) {
 
 		log_text(
 			1,
+			LOG_LVL_INFO,
 			"ms5611",
 			"INFO: PROM read successful, coefficients: C1=%u, C2=%u, C3=%u, C4=%u, C5=%u, C6=%u",
 			handle.prom_coef[1],
@@ -232,7 +241,7 @@ static w_status_t ms5611_prom_read(void) {
 			handle.prom_coef[5],
 			handle.prom_coef[6]);
 	} else {
-		log_text(1, "ms5611", "ERROR: PROM read failed.");
+		log_text(1, LOG_LVL_FATAL, "ms5611", "PROM read failed.");
 	}
 
 	return status;
@@ -245,24 +254,24 @@ static w_status_t ms5611_prom_read(void) {
 w_status_t ms5611_init(void) {
 	// make sure can't reinitialize the driver
 	if (handle.initialized) {
-		log_text(1, "ms5611", "ERROR: attempted to reinitialize driver.");
+		log_text(1, LOG_LVL_WARN, "ms5611", "attempted to reinitialize driver.");
 		return W_FAILURE;
 	}
 
 	if (W_SUCCESS != baro_write_cmd(MS5611_CMD_RESET)) {
-		log_text(1, "ms5611", "ERROR: initialization failed during command reset.");
+		log_text(1, LOG_LVL_FATAL, "ms5611", "initialization failed during command reset.");
 		return W_FAILURE;
 	}
 
 	vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_TIME_MS)); // 3ms wait time from AN520 datasheet
 
 	if (W_SUCCESS != ms5611_prom_read()) {
-		log_text(1, "ms5611", "ERROR: initialization failed during PROM read .");
+		log_text(1, LOG_LVL_FATAL, "ms5611", "initialization failed during PROM read .");
 		return W_FAILURE;
 	}
 
 	handle.initialized = true;
-	log_text(1, "ms5611", "INFO: initialization successful");
+	log_text(1, LOG_LVL_INFO, "ms5611", "initialization successful");
 
 	return W_SUCCESS;
 }
@@ -274,6 +283,7 @@ w_status_t ms5611_init(void) {
 void ms5611_deinit(void) {
 	if (!(handle.initialized)) {
 		log_text(1,
+				 LOG_LVL_WARN,
 				 "ms5611",
 				 "ERROR: attempted to uninitialize the driver before successful initialization");
 		return;
@@ -310,43 +320,46 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 	int64_t sens2;
 
 	if (NULL == result) {
-		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
+		log_text(1, LOG_LVL_WARN, "ms5611", "NULL pointer passed to ms5611_get_pressure");
 		return W_INVALID_PARAM;
 	}
 
 	if (!(handle.initialized)) {
-		log_text(1, "ms5611", "ERROR: attempted to read pressure before successful initialization");
+		log_text(1,
+				 LOG_LVL_WARN,
+				 "ms5611",
+				 "attempted to read pressure before successful initialization");
 		return W_FAILURE;
 	}
 
 	/* D2: temperature conversion */
 	if (W_FAILURE == baro_write_cmd(D2_CMD[handle.osr_temperature])) {
-		log_text(1, "ms5611", "ERROR: failed to write temperature conversion command");
+		log_text(1, LOG_LVL_WARN, "ms5611", "failed to write temperature conversion command");
 		return W_IO_ERROR;
 	}
 
 	delay_us(CONV_TIME_US[handle.osr_temperature]); // 600 us
 
 	if (W_FAILURE == baro_read_adc(&d2)) {
-		log_text(1, "ms5611", "ERROR: failed to read temperature ADC");
+		log_text(1, LOG_LVL_WARN, "ms5611", "failed to read temperature ADC");
 		return W_IO_ERROR;
 	}
 
 	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
-		log_text(1, "ms5611", "ERROR: failed to get timestamp");
+		log_text(1, LOG_LVL_WARN, "ms5611", "failed to get timestamp");
 		return W_FAILURE;
 	}
 
 	/* D1: pressure conversion */
 	if (W_FAILURE == baro_write_cmd(D1_CMD[handle.osr_pressure])) {
-		log_text(1, "ms5611", "ERROR: failed to write pressure conversion command");
+		log_text(1, LOG_LVL_WARN, "ms5611", "failed to write pressure conversion command");
 		return W_IO_ERROR;
 	}
 
 	delay_us(CONV_TIME_US[handle.osr_pressure]); // 2280 us
 
 	if (W_FAILURE == baro_read_adc(&d1)) {
-		log_text(1, "ms5611", "ERROR: failed to read pressure ADC");
+		log_text(1, LOG_LVL_WARN, "ms5611", "failed to read pressure ADC");
 		return W_IO_ERROR;
 	}
 
