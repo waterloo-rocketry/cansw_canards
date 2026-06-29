@@ -17,7 +17,6 @@
 #include "application/init/init.h"
 #include "application/logger/log.h"
 #include "application/sensor_handler/sensor_handler.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
