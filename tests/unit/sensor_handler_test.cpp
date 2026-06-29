@@ -191,7 +191,7 @@ static w_status_t set_ad_breakout_board_get_gyro_data(float64_t *data, uint32_t 
 	return g_adxrs649_get_return_val.return_val;
 }
 
-class ImuHandlerTest : public ::testing::Test {
+class SensorHandlerTest : public ::testing::Test {
 protected:
 	void SetUp() override {
 		// Reset all fakes before each test
@@ -272,12 +272,12 @@ protected:
 };
 
 // Tests for initialization
-TEST_F(ImuHandlerTest, InitSuccess) {
+TEST_F(SensorHandlerTest, InitSuccess) {
 	EXPECT_EQ(W_SUCCESS, sensor_handler_init());
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasAllSensorNew) {
+TEST_F(SensorHandlerTest, GetFreshMeasAllSensorNew) {
 
     // set up output ptr
 	all_sensors_data_t output = {0};
@@ -331,7 +331,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasAllSensorNew) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasComDeadLSM6) {
+TEST_F(SensorHandlerTest, GetFreshMeasComDeadLSM6) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
@@ -389,7 +389,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadLSM6) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewLSM6) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewLSM6) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 997;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 997;
@@ -446,7 +446,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewLSM6) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasFailGetLSM6) {
+TEST_F(SensorHandlerTest, GetFreshMeasFailGetLSM6) {
 	// Mock Sensor Readings
 	g_lsm6_get_return_val.raw_acc.timestamp_ms = 999;
 	g_lsm6_get_return_val.raw_gyro.timestamp_ms = 999;
@@ -504,7 +504,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetLSM6) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasComDeadMag) {
+TEST_F(SensorHandlerTest, GetFreshMeasComDeadMag) {
 
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_IO_ERROR;
@@ -561,7 +561,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMag) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewMag) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewMag) {
 
 	g_iis2_get_return_val.timestamp_ms = 995;
 	g_iis2_get_return_val.return_val = W_SUCCESS;
@@ -618,7 +618,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMag) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasFailGetMag) {
+TEST_F(SensorHandlerTest, GetFreshMeasFailGetMag) {
 
 	g_iis2_get_return_val.timestamp_ms = 999;
 	g_iis2_get_return_val.return_val = W_FAILURE;
@@ -675,7 +675,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailGetMag) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasComDeadMTI) {
+TEST_F(SensorHandlerTest, GetFreshMeasComDeadMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
@@ -737,7 +737,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasComDeadMTI) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewAccelMTI) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewAccelMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 997;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
@@ -800,7 +800,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewAccelMTI) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewGyroMTI) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewGyroMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 997;
@@ -863,7 +863,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewGyroMTI) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaroMTI) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaroMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
@@ -926,7 +926,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaroMTI) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewMagMTI) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewMagMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
@@ -989,7 +989,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMagMTI) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewOtherMTI) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewOtherMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
@@ -1052,7 +1052,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewOtherMTI) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasGetFailMTI) {
+TEST_F(SensorHandlerTest, GetFreshMeasGetFailMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
@@ -1115,7 +1115,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasGetFailMTI) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaro) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaro) {
 
 	g_ms5611_get_return_val.timestamp_ms = 980;
 	g_ms5611_get_return_val.return_val = W_SUCCESS;
@@ -1168,7 +1168,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewBaro) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasFailBaro) {
+TEST_F(SensorHandlerTest, GetFreshMeasFailBaro) {
 
 	g_ms5611_get_return_val.timestamp_ms = 999;
 	g_ms5611_get_return_val.return_val = W_FAILURE;
@@ -1221,7 +1221,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailBaro) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewADAccel) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewADAccel) {
 
 	g_adxl380_get_return_val.timestamp_ms = 980;
 	g_adxl380_get_return_val.return_val = W_SUCCESS;
@@ -1278,7 +1278,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewADAccel) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasFailADAccel) {
+TEST_F(SensorHandlerTest, GetFreshMeasFailADAccel) {
 
 	g_adxl380_get_return_val.timestamp_ms = 999;
 	g_adxl380_get_return_val.return_val = W_FAILURE;
@@ -1335,7 +1335,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailADAccel) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewADGyro) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewADGyro) {
 
 	g_adxrs649_get_return_val.timestamp_ms = 980;
 	g_adxrs649_get_return_val.return_val = W_SUCCESS;
@@ -1392,7 +1392,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewADGyro) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasFailADGyro) {
+TEST_F(SensorHandlerTest, GetFreshMeasFailADGyro) {
 
 	g_adxrs649_get_return_val.timestamp_ms = 999;
 	g_adxrs649_get_return_val.return_val = W_FAILURE;
@@ -1449,7 +1449,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailADGyro) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasNotNewMotorEncoder) {
+TEST_F(SensorHandlerTest, GetFreshMeasNotNewMotorEncoder) {
 
 	g_ak45_get_return_val.data.timestamp_ms = 980;
 	g_ak45_get_return_val.data.fault_code = AK45_FAULT_NONE;
@@ -1507,7 +1507,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasNotNewMotorEncoder) {
 }
 
 // Test successful run with all IMUs working
-TEST_F(ImuHandlerTest, GetFreshMeasFailMotorEncoder) {
+TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 
 	g_ak45_get_return_val.data.timestamp_ms = 999;
 	g_ak45_get_return_val.data.fault_code = AK45_FAULT_NONE;
@@ -1566,7 +1566,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailMotorEncoder) {
 
 // TODO: consider what to do
 // Test successful run with all IMUs working
-// TEST_F(ImuHandlerTest, GetFreshMeasMotorError) {
+// TEST_F(SensorHandlerTest, GetFreshMeasMotorError) {
 
 // 	g_ak45_get_return_val.data.timestamp_ms = 999;
 // 	g_ak45_get_return_val.data.fault_code = AK45_FAULT_OVERVOLTAGE;
@@ -1621,7 +1621,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailMotorEncoder) {
 // 	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
 // }
 
-TEST_F(ImuHandlerTest, GetFreshMeasWithInvalidPtrOutput) {
+TEST_F(SensorHandlerTest, GetFreshMeasWithInvalidPtrOutput) {
 	// Set up values
 
 	lsm6dsv32x_get_gyro_acc_data_fake.return_val = W_SUCCESS;
@@ -1643,7 +1643,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasWithInvalidPtrOutput) {
 	EXPECT_EQ(W_INVALID_PARAM, result);
 }
 
-TEST_F(ImuHandlerTest, GetFreshMeasWithInvalidPtrCtx) {
+TEST_F(SensorHandlerTest, GetFreshMeasWithInvalidPtrCtx) {
 	// Set up values
 
 	lsm6dsv32x_get_gyro_acc_data_fake.return_val = W_SUCCESS;
@@ -1665,7 +1665,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasWithInvalidPtrCtx) {
 	EXPECT_EQ(W_INVALID_PARAM, result);
 }
 
-TEST_F(ImuHandlerTest, GetFreshMeasFailWithTimerFail) {
+TEST_F(SensorHandlerTest, GetFreshMeasFailWithTimerFail) {
 	// Set up values
 	g_timer_get_return_val.timestamp_ms = 1000;
 	g_timer_get_return_val.return_val = W_FAILURE;
@@ -1700,7 +1700,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailWithTimerFail) {
 
 // Revive once this has been reimplmented
 // // Test CAN logging respects rate limit
-// TEST_F(ImuHandlerTest, ImuHandlerRunLoop_CanRateLimit) {
+// TEST_F(SensorHandlerTest, ImuHandlerRunLoop_CanRateLimit) {
 // 	// Arrange
 // 	const uint32_t can_tx_rate = 16; // period is now 6 ms, so 100/6=16
 // 	const uint32_t num_loops = 120; // Run for enough loops to cover multiple send cycles
@@ -1740,7 +1740,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailWithTimerFail) {
 // 	EXPECT_EQ(can_handler_transmit_fake.call_count, expected_log_loops * 7);
 // }
 
-// TEST_F(ImuHandlerTest, ImuHandlerRun_CanLogNominal) {
+// TEST_F(SensorHandlerTest, ImuHandlerRun_CanLogNominal) {
 // 	// Arrange
 // 	const uint32_t loop_count = 16; // Trigger CAN logging at this loop count
 // 	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
@@ -1788,7 +1788,7 @@ TEST_F(ImuHandlerTest, GetFreshMeasFailWithTimerFail) {
 // 	EXPECT_EQ(build_baro_data_msg_fake.arg4_history[0], 33); // Raw temperature
 // }
 
-TEST_F(ImuHandlerTest, ImuHandlerRun_CalibrationWarning) {
+TEST_F(SensorHandlerTest, ImuHandlerRun_CalibrationWarning) {
 	// Arrange
 	// Simulate uncalibrated orientation by setting the flag to failure
 	bool orientation_calibrated = false;
@@ -1798,8 +1798,8 @@ TEST_F(ImuHandlerTest, ImuHandlerRun_CalibrationWarning) {
 
 	// Assert
 	EXPECT_EQ(result, W_SUCCESS); // Initialization should still succeed
-	EXPECT_STREQ(log_text_fake.arg1_history[0], "IMUHandler");
+	EXPECT_STREQ(log_text_fake.arg1_history[0], "SensorHandler");
 	EXPECT_STREQ(log_text_fake.arg2_history[0],
-				 "WARN: IMU orientation correction matrices not calibrated yet, using default "
+				 "WARN: Sensor orientation correction matrices not calibrated yet, using default "
 				 "orientation.");
 }

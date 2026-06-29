@@ -3,14 +3,14 @@
 #include "task.h"
 #include "timers.h"
 
-#include "canlib/message_types.h"
-#include "rocketlib/include/common.h"
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
+#include "canlib/message_types.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
 #include "power_handler.h"
+#include "rocketlib/include/common.h"
 
 // Fault bit positions
 static uint32_t FAULT_BAT1_VOLT = (UINT32_C(1) << 0);
@@ -75,31 +75,47 @@ static power_input_source_t get_active_input(void) {
 	w_status_t status = W_FAILURE;
 
 	status = adc_get_converted_val(VSENS_CHG, &vsens_chg);
-	if (W_SUCCESS != status){
-		log_text(1, "power handler", "adc communication failed while getting charge voltage. Status: %d", status);
+	if (W_SUCCESS != status) {
+		log_text(1,
+				 "power handler",
+				 "adc communication failed while getting charge voltage. Status: %d",
+				 status);
 	}
 
 	status = adc_get_converted_val(vsens_rkt, &vsens_rkt);
-	if (W_SUCCESS != status){
-		log_text(1, "power handler", "adc communication failed while getting rocket voltage.Status: %d", status);
+	if (W_SUCCESS != status) {
+		log_text(1,
+				 "power handler",
+				 "adc communication failed while getting rocket voltage.Status: %d",
+				 status);
 	}
 
 	status = adc_get_converted_val(vsens_usb, &vsens_usb);
-	if (W_SUCCESS != status){
-		log_text(1, "power handler", "adc communication failed while getting usb voltage.Status: %d", status);
+	if (W_SUCCESS != status) {
+		log_text(1,
+				 "power handler",
+				 "adc communication failed while getting usb voltage.Status: %d",
+				 status);
 	}
 
 	status = adc_get_converted_val(vsens_bat1, &vsens_bat1);
-	if (W_SUCCESS != status){
-		log_text(1, "power handler", "adc communication failed while getting battery 1 voltage.Status: %d", status);
+	if (W_SUCCESS != status) {
+		log_text(1,
+				 "power handler",
+				 "adc communication failed while getting battery 1 voltage.Status: %d",
+				 status);
 	}
 
 	status = adc_get_converted_val(vsens_bat2, &vsens_bat2);
-	if (W_SUCCESS != status){
-		log_text(1, "power handler", "adc communication failed while getting battery 2 voltage.Status: %d", status);
+	if (W_SUCCESS != status) {
+		log_text(1,
+				 "power handler",
+				 "adc communication failed while getting battery 2 voltage.Status: %d",
+				 status);
 	}
 
-	if ((vsens_chg == 0) && (vsens_rkt == 0) && (vsens_usb == 0) && (vsens_bat1 == 0) && (vsens_bat2 == 0)) {
+	if ((vsens_chg == 0) && (vsens_rkt == 0) && (vsens_usb == 0) && (vsens_bat1 == 0) &&
+		(vsens_bat2 == 0)) {
 		return POWER_INPUT_NONE;
 	} else if ((vsens_chg >= vsens_rkt) && (vsens_chg >= vsens_usb) && (vsens_chg >= vsens_bat1) &&
 			   (vsens_chg >= vsens_bat2)) {
@@ -112,13 +128,13 @@ static power_input_source_t get_active_input(void) {
 	}
 }
 
-
 /*
  * Transmits power status CAN messages and power fault CAN messages if faults are detected.
  * Power status messages include battery voltages and currents, rocket voltage, charge voltage, and
- * 5V rail current. Fault messages include a bitfield of active faults. Called by power_handler_get_status
+ * 5V rail current. Fault messages include a bitfield of active faults. Called by
+ * power_handler_get_status
  */
-static void transmit_status_can_msg(uint32_t status_bitfield) { 
+static void transmit_status_can_msg(uint32_t status_bitfield) {
 	can_msg_t status_msg = {0};
 	float adc_value = 0;
 	can_msg_t msg = {0};
@@ -126,7 +142,7 @@ static void transmit_status_can_msg(uint32_t status_bitfield) {
 	uint32_t timestamp = 0;
 	w_status_t can_tx_status = W_SUCCESS;
 
-	if (W_SUCCESS != timer_get_ms(&timestamp)){
+	if (W_SUCCESS != timer_get_ms(&timestamp)) {
 		log_text(1, "power_handler", "WARNING: Failed to get timestamp for power status can msg.");
 	}
 
@@ -172,10 +188,9 @@ static void transmit_status_can_msg(uint32_t status_bitfield) {
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
-	if (W_SUCCESS != can_tx_status){
+	if (W_SUCCESS != can_tx_status) {
 		log_text(1, "power_handler", "WARNING: Some can messages failed to transmit.");
 	}
-
 }
 
 /**
@@ -186,7 +201,7 @@ static void transmit_status_can_msg(uint32_t status_bitfield) {
  * 		FAULT_RKT_VOLT: Rocket voltage exceeds thresholds
  * 		FAULT_CHG_VOLT: Charge line exceeds thresholds
  * 		FAULT_5V_CURR: 5V power rail overcurrent
- * 		FAULT_5V_OUTPUT: 5V extern output fault 
+ * 		FAULT_5V_OUTPUT: 5V extern output fault
  * 		FAULT_BAT1_CURR: BAT1 overcurrent
  * 		FAULT_BAT2_CURR: BAT2 overcurrent
  * Returns 0 if no faults are detected.
@@ -204,9 +219,7 @@ uint32_t power_handler_get_status(void) {
 
 	gpio_read_status |= gpio_read(GPIO_PIN_BAT_FLT1, &flt1, 5);
 	gpio_read_status |= gpio_read(GPIO_PIN_BAT_FLT2, &flt2, 5);
-	gpio_read_status |= gpio_read(GPIO_PIN_PG_EXT_5V,
-			  &pg_ext_5v,
-			  5);
+	gpio_read_status |= gpio_read(GPIO_PIN_PG_EXT_5V, &pg_ext_5v, 5);
 
 	if (GPIO_LEVEL_LOW == flt1) {
 		status_bitfield |= FAULT_BAT1_VOLT;
@@ -304,8 +317,10 @@ uint32_t power_handler_get_status(void) {
 		timer_get_ms(&timestamp);
 		log_text(10, "power_handler", "Power fault detected: 0x%lx", status_bitfield);
 		build_general_board_status_msg(PRIO_HIGH, (uint16_t)timestamp, status_bitfield, &msg);
-		if(W_SUCCESS != can_handler_transmit(&msg)) {
-			log_text(1, "power_handler", "WARNING: can messsage tx failed at power handler status check.");
+		if (W_SUCCESS != can_handler_transmit(&msg)) {
+			log_text(1,
+					 "power_handler",
+					 "WARNING: can messsage tx failed at power handler status check.");
 		}
 	}
 
@@ -347,8 +362,11 @@ static w_status_t power_handler_set_5V_external(bool enabled) {
 
 	power_handler_status.external_5v_enabled = enabled;
 
-	if (W_SUCCESS != gpio_status){
-		log_text(1, "power_handler", "ERROR: gpio write failed while toggling 5v external. Error code: %d", gpio_status);
+	if (W_SUCCESS != gpio_status) {
+		log_text(1,
+				 "power_handler",
+				 "ERROR: gpio write failed while toggling 5v external. Error code: %d",
+				 gpio_status);
 		return gpio_status;
 	}
 
@@ -369,8 +387,11 @@ static w_status_t power_handler_set_low_power_mode(bool enabled) {
 		// Disable LiPo
 		gpio_status |= gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_LOW, 5);
 
-		if (W_SUCCESS != gpio_status){
-			log_text(1, "power_handler", "ERROR: gpio write failed while diabling lipo. Error code: %d", gpio_status);
+		if (W_SUCCESS != gpio_status) {
+			log_text(1,
+					 "power_handler",
+					 "ERROR: gpio write failed while diabling lipo. Error code: %d",
+					 gpio_status);
 			return gpio_status;
 		}
 
@@ -379,8 +400,11 @@ static w_status_t power_handler_set_low_power_mode(bool enabled) {
 		// Enable LiPo when exiting low power mode
 		gpio_status |= gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
 
-		if (W_SUCCESS != gpio_status){
-			log_text(1, "power_handler", "ERROR: gpio write failed while enabling lipo. Error code: %d", gpio_status);
+		if (W_SUCCESS != gpio_status) {
+			log_text(1,
+					 "power_handler",
+					 "ERROR: gpio write failed while enabling lipo. Error code: %d",
+					 gpio_status);
 			return gpio_status;
 		}
 
@@ -415,8 +439,10 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 		status = power_handler_set_low_power_mode(!lipo_enable);
 
 		if (W_SUCCESS == status) {
-			if (W_SUCCESS != timer_get_ms(&timestamp)){
-				log_text(1, "power_handler", "WARNING: Failed to get timestamp for actuator status can msg.");
+			if (W_SUCCESS != timer_get_ms(&timestamp)) {
+				log_text(1,
+						 "power_handler",
+						 "WARNING: Failed to get timestamp for actuator status can msg.");
 			}
 			build_actuator_status_msg(PRIO_MEDIUM,
 									  (uint16_t)timestamp,
@@ -424,8 +450,10 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 									  cmd_state,
 									  lipo_enable ? ACT_STATE_ON : ACT_STATE_OFF,
 									  &response_msg);
-			if(W_SUCCESS != can_handler_transmit(&response_msg)) {
-				log_text(1, "power_handler", "WARNING: Can message failed to transmit for actruator status.");
+			if (W_SUCCESS != can_handler_transmit(&response_msg)) {
+				log_text(1,
+						 "power_handler",
+						 "WARNING: Can message failed to transmit for actruator status.");
 			}
 		}
 	}
