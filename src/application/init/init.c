@@ -90,6 +90,7 @@ static void system_init_task(void *arg) {
 	status |= gpio_init();
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
+	status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
