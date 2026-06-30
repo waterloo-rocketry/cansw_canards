@@ -232,17 +232,6 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	return lsm6dsv32x_ctx.latest_status;
 }
 
-// TODO: make below function into a separate module, interrupts or gpio or dma
-/**
- * @brief interrupt handler for the int1 pin
- */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if ((IMU_INT1_Pin == GPIO_Pin) && (LSM6DSV32X_BUS_FREE == lsm6dsv32x_ctx.bus_status) &&
-		lsm6dsv32x_ctx.switched_callback) {
-		lsm6dsv32x_int1_isr_handler();
-	}
-}
-
 /**
  * @brief Retrieves all 12 bytes of imu data
  * @param[out] acc_data    Processed accelerometer data (gravities)

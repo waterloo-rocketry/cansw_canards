@@ -2,6 +2,7 @@
 #define HAL_GPIO_MOCK_H
 
 #include "fff.h"
+#include "rocketlib/include/common.h"
 #include <stdint.h>
 
 // Copy over HAL GPIO definitions for mocking
@@ -54,5 +55,10 @@ DECLARE_FAKE_VOID_FUNC(HAL_GPIO_WritePin, GPIO_TypeDef*, uint16_t, GPIO_PinState
 
 // void HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
 DECLARE_FAKE_VOID_FUNC(HAL_GPIO_TogglePin, GPIO_TypeDef*, uint16_t);
+
+// w_status_t lsm6dsv32x_int1_isr_handler(void);
+// w_status_t iis2mdc_handle_drdy_irq(void);
+DECLARE_FAKE_VALUE_FUNC(w_status_t, lsm6dsv32x_int1_isr_handler);
+DECLARE_FAKE_VALUE_FUNC(w_status_t, iis2mdc_handle_drdy_irq);
 
 #endif // HAL_GPIO_MOCK_H
