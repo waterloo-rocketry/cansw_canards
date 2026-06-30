@@ -7,13 +7,12 @@
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
 #include "drivers/gpio/gpio.h"
-#include "fdcan.h" // For hfdcan1 for fatal error handler
 #include "queue.h"
-#include "stm32h7xx_hal.h" /* For __disable_irq, __NOP */
 #include "third_party/canlib/message/msg_general.h" /* For build_debug_raw_msg */
 #include "third_party/canlib/message_types.h" /* For MSG_DEBUG_RAW, PRIO_HIGH, etc. */
 
 #include "application/can_handler/can_handler.h"
+#include "application/can_handler/can_telemetry_scaling.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/gpio/gpio.h"
