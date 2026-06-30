@@ -360,6 +360,9 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 		return;
 	}
 
+	// make sure to not block dma if timer fails
+	iis2mdc_dma_busy = false;
+
 	uint32_t timestamp_ms = 0;
 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
 		return;
@@ -367,8 +370,14 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 
 	iis2mdc_cache.timestamp_ms = timestamp_ms;
 	iis2mdc_cache.valid = true;
+}
 
+/**
+ * @brief i2c dma error handler
+ */
+static void iis2mdc_dma_error(I2C_HandleTypeDef *hi2c) {
 	iis2mdc_dma_busy = false;
+	iis2mdc_cache.valid = false; // error
 }
 
 w_status_t iis2mdc_init(void) {
@@ -410,8 +419,9 @@ w_status_t iis2mdc_init(void) {
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SETTINGS_LOAD_DELAY_MS));
 
 	// register completion callback on the mag's I2C handle.
-	if (HAL_OK !=
-		HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) {
+	if ((HAL_OK !=
+		 HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) ||
+		(HAL_OK != HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_ERROR_CB_ID, iis2mdc_dma_error))) {
 		log_text(1, LOG_LVL_FATAL, "iis2mdc", "ERROR: failed to register DMA complete callback");
 		return W_FAILURE;
 	}
