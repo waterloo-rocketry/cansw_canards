@@ -3,6 +3,14 @@
 
 #include <stdint.h>
 
+// A float sensor reading is packed into a fixed-width integer CAN field, but a
+// float can also be NaN or +/-Inf. These are signalled in-band by reserving the
+// top SENTINEL_COUNT codes of every integer type's range. The reserved value for
+// a given type is: sentinel_value = type_max - SENTINEL_*.
+
+#define SENTINEL_POS_INF 0U // type_max - 1
+#define SENTINEL_NEG_INF 1U // type_max - 2
+
 typedef enum {
 	TYPE_INT8,
 	TYPE_UINT8,
@@ -14,28 +22,6 @@ typedef enum {
 	TYPE_UINT32,
 	TYPE_COUNT
 } can_types_t;
-
-
-// A float sensor reading is packed into a fixed-width integer CAN field, but a
-// float can also be NaN or +/-Inf. These are signalled in-band by reserving the
-// top SENTINEL_COUNT codes of every integer type's range. The reserved value for
-// a given type is: sentinel_value = type_max - SENTINEL_*.
-//
-// ENCODE (this firmware, can_handler.c): non-finite inputs store the matching
-// sentinel; finite values are clamped to [type_min, type_max - SENTINEL_COUNT] so
-// they can never alias a reserved code.
-//
-// DECODE: for a received raw integer R
-// of a given type with maximum type_max,
-//     R == type_max - 0  -> NaN
-//     R == type_max - 1  -> +Inf
-//     R == type_max - 2  -> -Inf
-//     otherwise          -> finite value = R / scale
-
-#define SENTINEL_NAN 0U // type_max - 0
-#define SENTINEL_POS_INF 1U // type_max - 1
-#define SENTINEL_NEG_INF 2U // type_max - 2
-#define SENTINEL_COUNT 3U // number of reserved codes at the top of the range
 
 typedef enum {
 	SCALE_NAV_Q,

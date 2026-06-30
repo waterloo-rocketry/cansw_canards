@@ -8,25 +8,7 @@
 #include "stm32h7xx_hal.h"
 
 #include "application/can_handler/can_telemetry_scaling.h"
-
-#define UINT24_MAX (1U << 24) - 1U
-#define INT24_MIN -(1 << 23)
-#define INT24_MAX (1 << 23) - 1
-
-/**
- * @brief Structure to track CAN handler stats, errors and status
- */
-typedef struct {
-	bool initialized; /**< Initialization status flag */
-	uint32_t dropped_rx_counter; /**< Number of dropped RX messages from rx isr */
-	uint32_t dropped_tx_counter; /**< Number of dropped TX messages from tx queue */
-	uint32_t tx_failures; /**< Number of transmission failures */
-	uint32_t rx_callback_errors; /**< Number of RX callback execution errors */
-	uint32_t rx_timeouts; /**< Number of RX queue timeouts */
-	uint32_t tx_timeouts; /**< Number of TX queue timeouts */
-	uint32_t messages_sent; /**< Number of messages successfully sent */
-	uint32_t messages_received; /**< Number of messages successfully received */
-} can_handler_status_t;
+#include "application/health_checks/health_checks.h"
 
 // Signature for rx callback functions
 typedef w_status_t (*can_callback_t)(const can_msg_t *);
@@ -65,16 +47,6 @@ void can_handler_task_tx(void *argument);
 /**
  * @brief Encodes a float telemetry value into an integer representation according to predefined
  * scaling rules.
- *
- * The function also handles non-finite floats as reserved sentinel codes at the top of the
- * target type's range. The same rule applies to both signed and unsigned types
- * (see can_telemetry_scaling.h for the full encode/decode contract):
- * NaN   -> type_max - 0,
- * +Inf  -> type_max - 1,
- * -Inf  -> type_max - 2.
- * Finite values are clamped to [type_min, type_max - SENTINEL_COUNT] so they can never
- * alias a sentinel. On a non-finite input the value is still stored but W_MATH_ERROR is returned.
- *
  * @param sensor The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
  * @param input The raw telemetry integer value to encode
  * @param out Pointer to the output variable where the encoded value will be stored
@@ -86,7 +58,6 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void
 /**
  * @brief Encodes an integer telemetry value into an integer representation according to predefined
  * scaling rules.
- *
  * @param sensor The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
  * @param input The raw telemetry value to encode
  * @param out Pointer to the output variable where the encoded value will be stored
@@ -94,19 +65,6 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float input, void
  * @return w_status_t indicating success or type of failure
  */
 w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void *out);
-
-/**
- * @brief Handles a fatal system error by sending a CAN message.
- *
- * This function attempts to send a CAN message indicating the error and then
- * enters a safe, non-recoverable state (infinite loop with interrupts disabled).
- * It is designed to be called in critical failure scenarios where normal error
- * logging (e.g., to SD card) or task execution may not be possible.
- *
- * It uses the canlib library to send a DEBUG_RAW message with a coarse timestamp
- * and the first few characters of the error message.
- */
-void proc_handle_fatal_error(const char *errorMsg);
 
 /**
  * @brief Report CAN handler module health status
