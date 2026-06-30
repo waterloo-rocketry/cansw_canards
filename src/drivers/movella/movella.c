@@ -6,8 +6,10 @@
 
 #include "third_party/xsens-mti/src/xsens_mti.h"
 
+#include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/movella/movella.h"
+#include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
 #define UART_TX_TIMEOUT_MS 100
@@ -37,57 +39,68 @@ static movella_state_t s_movella = {0};
 
 static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtdata) {
 	if (xSemaphoreTake(s_movella.data_mutex, 0) == pdTRUE) {
-		switch (event) {
-			case XSENS_EVT_ACCELERATION:
-				if (mtdata->type == XSENS_EVT_TYPE_FLOAT3) {
-					s_movella.latest_data.acc.x = mtdata->data.f4x3[0];
-					s_movella.latest_data.acc.y = mtdata->data.f4x3[1];
-					s_movella.latest_data.acc.z = mtdata->data.f4x3[2];
-				}
-				break;
+		uint32_t curr_timestamp_ms = 0;
+		if (timer_get_ms(&curr_timestamp_ms) == W_SUCCESS) {
+			switch (event) {
+				case XSENS_EVT_ACCELERATION:
+					if (mtdata->type == XSENS_EVT_TYPE_FLOAT3) {
+						s_movella.latest_data.acc_timestamp_ms = curr_timestamp_ms;
+						s_movella.latest_data.acc.x = mtdata->data.f4x3[0];
+						s_movella.latest_data.acc.y = mtdata->data.f4x3[1];
+						s_movella.latest_data.acc.z = mtdata->data.f4x3[2];
+					}
+					break;
 
-			case XSENS_EVT_RATE_OF_TURN:
-				if (mtdata->type == XSENS_EVT_TYPE_FLOAT3) {
-					s_movella.latest_data.gyr.x = mtdata->data.f4x3[0];
-					s_movella.latest_data.gyr.y = mtdata->data.f4x3[1];
-					s_movella.latest_data.gyr.z = mtdata->data.f4x3[2];
-				}
-				break;
+				case XSENS_EVT_RATE_OF_TURN:
+					if (mtdata->type == XSENS_EVT_TYPE_FLOAT3) {
+						s_movella.latest_data.gyr_timestamp_ms = curr_timestamp_ms;
+						s_movella.latest_data.gyr.x = mtdata->data.f4x3[0];
+						s_movella.latest_data.gyr.y = mtdata->data.f4x3[1];
+						s_movella.latest_data.gyr.z = mtdata->data.f4x3[2];
+					}
+					break;
 
-			case XSENS_EVT_MAGNETIC:
-				if (mtdata->type == XSENS_EVT_TYPE_FLOAT3) {
-					s_movella.latest_data.mag.x = mtdata->data.f4x3[0];
-					s_movella.latest_data.mag.y = mtdata->data.f4x3[1];
-					s_movella.latest_data.mag.z = mtdata->data.f4x3[2];
-				}
-				break;
+				case XSENS_EVT_MAGNETIC:
+					if (mtdata->type == XSENS_EVT_TYPE_FLOAT3) {
+						s_movella.latest_data.mag_timestamp_ms = curr_timestamp_ms;
+						s_movella.latest_data.mag.x = mtdata->data.f4x3[0];
+						s_movella.latest_data.mag.y = mtdata->data.f4x3[1];
+						s_movella.latest_data.mag.z = mtdata->data.f4x3[2];
+					}
+					break;
 
-			case XSENS_EVT_QUATERNION:
-				if (mtdata->type == XSENS_EVT_TYPE_FLOAT4) {
-					float euler_rad[3] = {0};
-					// xsens_quaternion_to_euler(mtdata->data.f4x4, euler_rad);
-					// TODO: add quaternion function once implemented
+				case XSENS_EVT_QUATERNION:
+					if (mtdata->type == XSENS_EVT_TYPE_FLOAT4) {
+						float euler_rad[3] = {0};
+						// xsens_quaternion_to_euler(mtdata->data.f4x4, euler_rad);
+						// TODO: add quaternion function once implemented
+						s_movella.latest_data.euler_timestamp_ms = curr_timestamp_ms;
 
-					s_movella.latest_data.euler.x = euler_rad[0] * DEG_PER_RAD;
-					s_movella.latest_data.euler.y = euler_rad[1] * DEG_PER_RAD;
-					s_movella.latest_data.euler.z = euler_rad[2] * DEG_PER_RAD;
-				}
-				break;
+						s_movella.latest_data.euler.x = euler_rad[0] * DEG_PER_RAD;
+						s_movella.latest_data.euler.y = euler_rad[1] * DEG_PER_RAD;
+						s_movella.latest_data.euler.z = euler_rad[2] * DEG_PER_RAD;
+					}
+					break;
 
-			case XSENS_EVT_PRESSURE:
-				if (mtdata->type == XSENS_EVT_TYPE_U32) {
-					s_movella.latest_data.pres = (float)mtdata->data.u4;
-				}
-				break;
+				case XSENS_EVT_PRESSURE:
+					if (mtdata->type == XSENS_EVT_TYPE_U32) {
+						s_movella.latest_data.pres_timestamp_ms = curr_timestamp_ms;
+						s_movella.latest_data.pres = (float)mtdata->data.u4;
+					}
+					break;
 
-			case XSENS_EVT_TEMPERATURE:
-				if (mtdata->type == XSENS_EVT_TYPE_FLOAT) {
-					s_movella.latest_data.temp = mtdata->data.f4;
-				}
-				break;
-			default:
-				// Need a default case to avoid compiler warning (error)
-				break;
+				case XSENS_EVT_TEMPERATURE:
+					if (mtdata->type == XSENS_EVT_TYPE_FLOAT) {
+						s_movella.latest_data.temp_timestamp_ms = curr_timestamp_ms;
+						s_movella.latest_data.temp = mtdata->data.f4;
+					}
+					break;
+				default:
+					// Need a default case to avoid compiler warning (error)
+					break;
+			}
+		} else {
+			log_text(0, LOG_LVL_WARN, "MTI", "Unable to get timestamp");
 		}
 
 		xSemaphoreGive(s_movella.data_mutex);

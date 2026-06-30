@@ -24,7 +24,7 @@ FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
 FAKE_VOID_FUNC(build_general_board_status_msg, can_msg_prio_t, uint16_t, uint32_t, can_msg_t *);
 
 // FAKE_VALUE_FUNC(TaskHandle_t, xTaskGetCurrentTaskHandle);
-FAKE_VOID_FUNC(log_text, uint32_t, const char *, const char *, void *);
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...);
 
 // Mock implementations for all the module get_status functions
 FAKE_VALUE_FUNC(health_status_t, i2c_get_status);
@@ -37,7 +37,7 @@ FAKE_VALUE_FUNC(health_status_t, timer_get_status);
 FAKE_VALUE_FUNC(health_status_t, logger_get_status);
 FAKE_VALUE_FUNC(health_status_t, gpio_get_status);
 FAKE_VALUE_FUNC(health_status_t, flight_phase_get_status);
-FAKE_VALUE_FUNC(health_status_t, imu_handler_get_status);
+FAKE_VALUE_FUNC(health_status_t, sensor_handler_get_status);
 FAKE_VALUE_FUNC(health_status_t, uart_get_status);
 FAKE_VALUE_FUNC(int, snprintf_spy, char *, size_t, const char *);
 
@@ -81,7 +81,7 @@ protected:
 		RESET_FAKE(logger_get_status);
 		RESET_FAKE(gpio_get_status);
 		RESET_FAKE(flight_phase_get_status);
-		RESET_FAKE(imu_handler_get_status);
+		RESET_FAKE(sensor_handler_get_status);
 		RESET_FAKE(uart_get_status);
 
 		FFF_RESET_HISTORY();
@@ -100,7 +100,7 @@ protected:
 		health_status_t logger_ok = {HEALTH_OK, MODULE_LOGGER, MODULE_ERR_NONE};
 		health_status_t gpio_ok = {HEALTH_OK, MODULE_GPIO, MODULE_ERR_NONE};
 		health_status_t fp_ok = {HEALTH_OK, MODULE_FLIGHT_PHASE, MODULE_ERR_NONE};
-		health_status_t imu_ok = {HEALTH_OK, MODULE_IMU_HANDLER, MODULE_ERR_NONE};
+		health_status_t sensor_ok = {HEALTH_OK, MODULE_SENSOR_HANDLER, MODULE_ERR_NONE};
 		health_status_t uart_ok = {HEALTH_OK, MODULE_UART, MODULE_ERR_NONE};
 
 		i2c_get_status_fake.return_val = i2c_ok;
@@ -113,7 +113,7 @@ protected:
 		logger_get_status_fake.return_val = logger_ok;
 		gpio_get_status_fake.return_val = gpio_ok;
 		flight_phase_get_status_fake.return_val = fp_ok;
-		imu_handler_get_status_fake.return_val = imu_ok;
+		sensor_handler_get_status_fake.return_val = sensor_ok;
 		uart_get_status_fake.return_val = uart_ok;
 	}
 

@@ -284,11 +284,11 @@ add_test_group(test_timer
     ${PROC_SRC_DIR}/drivers/timer/timer.c
 )
 
-add_test_group(test_imu_handler
+add_test_group(test_sensor_handler
     # test file(s)
-    ${UNIT_TESTS_DIR}/imu_handler_test.cpp
+    ${UNIT_TESTS_DIR}/sensor_handler_test.cpp
     # src file(s)
-    ${PROC_SRC_DIR}/application/imu_handler/imu_handler.c
+    ${PROC_SRC_DIR}/application/sensor_handler/sensor_handler.c
     ${PROC_SRC_DIR}/common/math/math-algebra3d.c
 )
 

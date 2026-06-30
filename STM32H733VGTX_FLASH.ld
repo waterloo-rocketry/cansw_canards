@@ -166,6 +166,13 @@ SECTIONS
     . = ALIGN(8);
   } >RAM_D1
 
+  .sram4 :
+  {
+    . = ALIGN(4);
+    *(.sram4)
+    . = ALIGN(4);
+  } >RAM_D3 AT>FLASH
+
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {

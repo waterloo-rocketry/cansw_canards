@@ -14,16 +14,18 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
-#include "application/imu_handler/imu_handler.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/sensor_handler/sensor_handler.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
+#include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
@@ -45,6 +47,7 @@ TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
+TaskHandle_t ad_breakout_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
@@ -54,7 +57,9 @@ const uint32_t fsm_task_priority = configMAX_PRIORITIES - 1;
 const uint32_t can_handler_rx_priority = 45;
 // in general, prioritize consumers (estimator) over producers (imus) to avoid congestion
 const uint32_t can_handler_tx_priority = 40;
+// TODO: update when sure (based on old imu handler priority)
 const uint32_t movella_task_priority = 20;
+const uint32_t ad_breakout_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
@@ -76,7 +81,7 @@ static void system_init_task(void *arg) {
 	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
-		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
+		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
 	}
 
 	w_status_t status = W_SUCCESS;
@@ -84,27 +89,29 @@ static void system_init_task(void *arg) {
 	// INIT REQUIRED MODULES
 	status |= gpio_init();
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
+	status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
-	// status |= health_check_init();
+	status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
-	status |= imu_handler_init();
+	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
 	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
 	status |= adxrs649_init();
+	status |= iis2mdc_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
 		// Log critical initialization failure - specific modules should have logged details
-		log_text(10, "init", "crit init fail (status: 0x%lx).", status);
+		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).", status);
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}
@@ -119,12 +126,12 @@ static void system_init_task(void *arg) {
 							   fsm_task_priority,
 							   &fsm_task_handle);
 
-	// task_status &= xTaskCreate(health_check_task,
-	//     "health",
-	//     512,
-	//     NULL,
-	//     health_checks_task_priority,
-	//     &health_checks_task_handle);
+	task_status &= xTaskCreate(health_check_task,
+							   "health",
+							   512,
+							   NULL,
+							   health_checks_task_priority,
+							   &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
@@ -145,12 +152,22 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
+	task_status &= xTaskCreate(ad_breakout_board_task,
+							   "ad board task",
+							   2560, // TODO: set when sure of size
+							   NULL,
+							   ad_breakout_task_priority,
+							   &ad_breakout_task_handle);
+
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
-		log_text(10, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
+		log_text(10,
+				 LOG_LVL_FATAL,
+				 "SystemInit",
+				 "CRITICAL: Failed to create one or more FreeRTOS tasks.");
 		proc_handle_fatal_error("tasks");
 	}
-	log_text(10, "SystemInit", "All tasks created successfully.");
+	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
 	while (1) {
