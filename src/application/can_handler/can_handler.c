@@ -51,13 +51,7 @@ static can_handler_status_t can_error_stats = {0};
 static can_callback_t callback_map[MSG_ID_ENUM_MAX] = {NULL};
 
 static w_status_t can_reset_callback(const can_msg_t *msg) {
-	uint8_t board_type_id;
-	uint8_t board_inst_id;
 	bool need_reset = false;
-
-	if (get_reset_board_id(msg, &board_type_id, &board_inst_id) != W_SUCCESS) {
-		log_text(1, "can_handler", LOG_LVL_WARN, "Failed to read reset command");
-	}
 
 	if (check_board_need_reset(msg, &need_reset) != W_SUCCESS) {
 		log_text(1, LOG_LVL_WARN, "CANCallback", "Failed to read board reset");
