@@ -37,8 +37,6 @@ typedef struct {
 	uint32_t messages_received; /**< Number of messages successfully received */
 } can_handler_status_t;
 
-const can_scale_data_t scale_map[SCALE_COUNT] = SCALE_MAP_INIT;
-
 // TODO: calculate better. for now make excessively large and check dropped tx counter
 #define BUS_QUEUE_LENGTH 32
 
@@ -109,10 +107,6 @@ void can_handler_rx_message(const can_msg_t *message) {
 
 static void can_get_signed_limits(can_types_t type, int32_t *min_out, int32_t *max_out) {
 	switch (type) {
-		case TYPE_INT8:
-			*min_out = INT8_MIN;
-			*max_out = INT8_MAX;
-			break;
 		case TYPE_INT16:
 			*min_out = INT16_MIN;
 			*max_out = INT16_MAX;
@@ -134,14 +128,8 @@ static void can_get_signed_limits(can_types_t type, int32_t *min_out, int32_t *m
 
 static void can_get_unsigned_max(can_types_t type, uint32_t *max_out) {
 	switch (type) {
-		case TYPE_UINT8:
-			*max_out = UINT8_MAX;
-			break;
 		case TYPE_UINT16:
 			*max_out = UINT16_MAX;
-			break;
-		case TYPE_UINT24:
-			*max_out = UINT24_MAX;
 			break;
 		case TYPE_UINT32:
 			*max_out = UINT32_MAX;
@@ -153,8 +141,7 @@ static void can_get_unsigned_max(can_types_t type, uint32_t *max_out) {
 }
 
 static bool can_type_is_unsigned(can_types_t type) {
-	return (type == TYPE_UINT8) || (type == TYPE_UINT16) || (type == TYPE_UINT24) ||
-		   (type == TYPE_UINT32);
+	return ((type == TYPE_UINT16) || (type == TYPE_UINT32));
 }
 
 static w_status_t can_store_unsigned(can_types_t type, uint32_t value, void *out) {
@@ -163,17 +150,11 @@ static w_status_t can_store_unsigned(can_types_t type, uint32_t value, void *out
 	}
 
 	switch (type) {
-		case TYPE_UINT8: {
-			uint8_t encoded = (uint8_t)value;
-			memcpy(out, &encoded, sizeof(encoded));
-			return W_SUCCESS;
-		}
 		case TYPE_UINT16: {
 			uint16_t encoded = (uint16_t)value;
 			memcpy(out, &encoded, sizeof(encoded));
 			return W_SUCCESS;
 		}
-		case TYPE_UINT24: // using uint32
 		case TYPE_UINT32: {
 			uint32_t encoded = (uint32_t)value;
 			memcpy(out, &encoded, sizeof(encoded));
@@ -190,11 +171,6 @@ static w_status_t can_store_signed(can_types_t type, int32_t value, void *out) {
 	}
 
 	switch (type) {
-		case TYPE_INT8: {
-			int8_t encoded = (int8_t)value;
-			memcpy(out, &encoded, sizeof(encoded));
-			return W_SUCCESS;
-		}
 		case TYPE_INT16: {
 			int16_t encoded = (int16_t)value;
 			memcpy(out, &encoded, sizeof(encoded));
@@ -334,7 +310,7 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 		return W_INVALID_PARAM;
 	}
 
-	can_types_t target_type = scale_map[sensor].type;
+	can_types_t target_type = can_scale_factor[sensor].type;
 	bool is_unsigned = can_type_is_unsigned(target_type);
 
 	if (isnan(input)) {
@@ -349,7 +325,7 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 		return store_status;
 	}
 
-	float32_t scaled = input * (float32_t)scale_map[sensor].scale;
+	float32_t scaled = input * (float32_t)can_scale_factor[sensor].scale;
 
 	if (is_unsigned) {
 		uint32_t maxv = 0U;
@@ -380,10 +356,10 @@ w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void
 		return W_INVALID_PARAM;
 	}
 
-	can_types_t target_type = scale_map[sensor].type;
+	can_types_t target_type = can_scale_factor[sensor].type;
 	bool is_unsigned = can_type_is_unsigned(target_type);
 
-	int64_t scaled = input * scale_map[sensor].scale;
+	int64_t scaled = input * can_scale_factor[sensor].scale;
 
 	// Scale and bounds check according to target type
 	if (is_unsigned) {
