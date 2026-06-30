@@ -65,7 +65,7 @@ w_status_t watchdog_kick(void) {
 
 	status |= timer_get_ms(&current_time_ms);
 	if (status != W_SUCCESS) {
-		log_text(0, "health_checks", "timer_get_ms failure");
+		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
 		return status;
 	}
 
@@ -82,19 +82,23 @@ w_status_t watchdog_kick(void) {
 
 w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_ticks) {
 	if ((NULL == task_handle) || (0 == timeout_ticks)) {
-		log_text(0, "health_checks", "invalid arguments into watchdog register");
+		log_text(0, LOG_LVL_WARN, "health_checks", "invalid arguments into watchdog register");
 		return W_INVALID_PARAM;
 	}
 
 	if (num_watchdog_tasks >= MAX_WATCHDOG_TASKS) {
-		log_text(0, "health_checks", "max watchdog tasks reached");
+		log_text(0, LOG_LVL_WARN, "health_checks", "max watchdog tasks reached");
 		return W_FAILURE;
 	}
 
 	// Check if the task is already registered
 	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
 		if (watchdog_tasks[i].task_handle == task_handle) {
-			log_text(0, "health_checks", "duplicate task registration:%p", (void *)task_handle);
+			log_text(0,
+					 LOG_LVL_WARN,
+					 "health_checks",
+					 "duplicate task registration:%p",
+					 (void *)task_handle);
 			return W_FAILURE;
 		}
 	}
@@ -128,7 +132,7 @@ uint32_t check_watchdog_tasks(void) {
 
 	// cannot run health check without timer
 	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-		log_text(0, "health_checks", "timer_get_ms failure");
+		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
 		status_bitfield |= 1 << E_IO_ERROR_OFFSET;
 		return status_bitfield;
 	}
@@ -148,9 +152,9 @@ uint32_t check_watchdog_tasks(void) {
 			data[sizeof(data) - 1] = '\0'; // ensure null termination
 			build_debug_raw_msg(PRIO_HIGH, (uint16_t)current_time_ms, data, &msg);
 			if (can_handler_transmit(&msg) != W_SUCCESS) {
-				log_text(0, "health", "CAN send failure for watchdog timeout msg");
+				log_text(0, LOG_LVL_WARN, "health", "CAN send failure for watchdog timeout msg");
 			}
-			log_text(0, "health_checks", "task timeout: %d", *task_name);
+			log_text(0, LOG_LVL_WARN, "health_checks", "task timeout: %d", *task_name);
 			status_bitfield |= 1 << E_WATCHDOG_TIMEOUT_OFFSET;
 		}
 
@@ -169,6 +173,7 @@ uint32_t check_watchdog_tasks(void) {
 static w_status_t process_module_status(health_status_t status) {
 	if (status.severity != HEALTH_OK) {
 		log_text(0,
+				 LOG_LVL_WARN,
 				 "health",
 				 "module=%d: sev=%d, err=%d",
 				 status.module_id,
@@ -179,7 +184,7 @@ static w_status_t process_module_status(health_status_t status) {
 		uint32_t current_time_ms;
 
 		if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-			log_text(0, "health_checks", "timer_get_ms failure");
+			log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
 			return W_FAILURE; // unable to send CAN msg without timestamp
 		}
 
@@ -190,7 +195,7 @@ static w_status_t process_module_status(health_status_t status) {
 										status.severity,
 										&msg);
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0, "health", "CAN send failure for module status msg");
+			log_text(0, LOG_LVL_WARN, "health", "CAN send failure for module status msg");
 		}
 
 		if (HEALTH_FATAL == status.severity) {
@@ -288,7 +293,7 @@ w_status_t health_check_exec() {
 	uint32_t current_time_ms = 0;
 
 	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-		log_text(0, "health_checks", "timer_get_ms failure");
+		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
 		return W_FAILURE; // unable to send CAN msg without timestamp
 	}
 
@@ -299,7 +304,7 @@ w_status_t health_check_exec() {
 	}
 
 	if (can_handler_transmit(&msg) != W_SUCCESS) {
-		log_text(0, "health_checks", "CAN send failure for status msg");
+		log_text(0, LOG_LVL_WARN, "health_checks", "CAN send failure for status msg");
 		return W_FAILURE;
 	}
 

@@ -13,7 +13,7 @@ extern "C" {
 FDCAN_HandleTypeDef hfdcan1;
 
 DEFINE_FFF_GLOBALS;
-FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...);
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 }
 

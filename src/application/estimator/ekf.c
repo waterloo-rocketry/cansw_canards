@@ -197,7 +197,7 @@ void ekf_matrix_correct_imu(x_state_t *x_state, double P_flat[SIZE_STATE * SIZE_
 		.numRows = SIZE_IMU_MEAS, .numCols = SIZE_IMU_MEAS, .pData = L_inv_flat};
 	// this line clears L after inversing
 	if (arm_mat_inverse_f64(&L, &L_inv) != ARM_MATH_SUCCESS) {
-		log_text(5, "ekf", "L inv fail");
+		log_text(5, LOG_LVL_FATAL, "ekf", "L inv fail");
 		return;
 	}
 
