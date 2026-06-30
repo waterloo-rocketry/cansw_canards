@@ -40,6 +40,7 @@ static const matrix3d_t g_mti_correction_matrix = {
 	.array = {{0, 0, 1.0}, {1.0, 0, 0}, {0, 1.0, 0}}};
 static const matrix3d_t g_board_imu_correction_matrix = {
 	.array = {{0, 0, -1.0}, {1.0, 0, 0}, {0, -1.0, 0}}};
+// TODO: Must be confirmed on July 11th
 static const matrix3d_t g_board_mag_correction_matrix = {
 	.array = {{0, 0, -1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 static const matrix3d_t g_ad_accel_correction_matrix = {
