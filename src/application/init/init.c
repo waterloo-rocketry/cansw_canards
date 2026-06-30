@@ -104,7 +104,6 @@ static void system_init_task(void *arg) {
 	status |= fsm_init();
 	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	status |= iis2mdc_init();
 	status |= adxrs649_init();
 	status |= iis2mdc_init();
 	// status |= ekf_init();

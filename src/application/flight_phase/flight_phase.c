@@ -139,7 +139,8 @@ static w_status_t act_cmd_callback(const can_msg_t *msg) {
 
 	if ((ACTUATOR_OX_INJECTOR_VALVE == msg_id) && (ACT_STATE_ON == msg_state)) {
 		return flight_phase_send_event(EVENT_INJ_OPEN);
-		// TODO: add ignition once added to canlib
+	} else if ((ACTUATOR_IGNITION == msg_id) && (ACT_STATE_ON == msg_state)) {
+		return flight_phase_send_event(EVENT_IGNITOR);
 	} else if ((ACTUATOR_CANARD_PAD_FILTER == msg_id) && (ACT_STATE_ON == msg_state)) {
 		return flight_phase_send_event(EVENT_PAD_FILTER);
 	}
