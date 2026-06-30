@@ -101,7 +101,7 @@ typedef struct {
 // Output of controller: latest commanded canard angle
 typedef struct {
 	float64_t motor_command_angle_rad; // radians
-	float64_t ref_roll_angle_rad;
+	float64_t ref_roll[2]; // {roll angle (rad), roll rate (rad/s)}
 	uint32_t timestamp_tenth_ms;
 } controller_output_t;
 

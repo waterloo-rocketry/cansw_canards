@@ -58,7 +58,7 @@ w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codege
 							 input->motor_angle_rad,
 							 &(ctx->codegen_ctx),
 							 &(output->motor_command_angle_rad),
-							 &(output->ref_roll_angle_rad),
+							 output->ref_roll,
 							 &controller_status);
 
 	if (controller_status) { // the controller ran

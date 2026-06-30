@@ -27,21 +27,9 @@ static const float64_t TENTH_MS_TO_SEC = 0.0001;
 // Error tracking
 static navigator_error_data_t estimator_error_stats = {0};
 
-// TODO remove this once we get encorder reintegrated into the system
-// latest encoder reading (millidegrees) from CAN
-static QueueHandle_t encoder_data_queue_rad = NULL;
-
 // ---------- public functions ----------
 
 w_status_t navigator_init(void) {
-	// create queues for imu data, encoder data, and controller cmd
-	encoder_data_queue_rad = xQueueCreate(1, sizeof(float));
-
-	if (NULL == encoder_data_queue_rad) {
-		log_text(1, "adc", "initfailq");
-		return W_FAILURE;
-	}
-
 	// Initialize error tracking
 	estimator_error_stats = (navigator_error_data_t){.is_init = true};
 
@@ -138,7 +126,7 @@ w_status_t navigator_step(navigator_ctx_t *p_ctx, GNC_codegenStackData *p_codege
 	if (nav_status) { // if nav ran
 		p_ctx->last_run_tenth_ms = p_input->curr_timestamp_tenth_ms;
 	} else {
-		log_text(0, "Navigator", "WARN: Nav failed to run");
+		log_text(0, LOG_LVL_WARN, "Navigator", "Nav failed to run");
 	}
 
 	return W_SUCCESS;
@@ -182,13 +170,15 @@ w_status_t navigator_step(navigator_ctx_t *p_ctx, GNC_codegenStackData *p_codege
 health_status_t navigator_get_status(void) {
 	// Log all error statistics
 	log_text(0,
-			 "estimator",
+			 LOG_LVL_INFO,
+			 "Navigator",
 			 "imu_timeouts=%lu, encoder_miss=%lu, controller_miss=%lu,",
 			 estimator_error_stats.imu_data_timeouts,
 			 estimator_error_stats.encoder_data_fails,
 			 estimator_error_stats.controller_data_fails);
 	log_text(0,
-			 "estimator",
+			 LOG_LVL_INFO,
+			 "Navigator",
 			 "pad_filter_fails=%lu, can_log_fails=%lu, invalid_phase=%lu",
 			 estimator_error_stats.pad_filter_fails,
 			 estimator_error_stats.can_log_fails,

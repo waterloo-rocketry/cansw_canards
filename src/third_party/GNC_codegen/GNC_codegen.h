@@ -15,10 +15,11 @@ extern void GNC_codegen_initialize(GNC_codegenStackData *SD);
 extern void GNC_codegen_terminate(void);
 
 extern void controller_codegen_entry(GNC_codegenStackData *SD, double b_time,
-                                     double dt_ctrl, const double xR[2],
-                                     double pdyn, double delta_encoder,
-                                     struct0_T *ctrl_mem, double *u_motor,
-                                     double *r, bool *w_status_ctrl);
+                                     double dt_ctrl,
+                                     const double where_it_is[2], double pdyn,
+                                     double delta_encoder, struct0_T *ctrl_mem,
+                                     double *u_motor, double where_it_isnt[2],
+                                     bool *w_status_ctrl);
 
 extern void navigation_codegen_entry(GNC_codegenStackData *SD, double dt,
                                      bool flight_phase, double x[11],
