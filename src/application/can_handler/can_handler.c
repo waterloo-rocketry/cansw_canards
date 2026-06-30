@@ -22,6 +22,9 @@
 
 const can_scale_data_t scale_map[SCALE_COUNT] = SCALE_MAP_INIT;
 
+// Non-finite sentinel codes (SENTINEL_NAN / POS_INF / NEG_INF / SENTINEL_COUNT)
+// and the encode/decode contract are defined in can_telemetry_scaling.h.
+
 // TODO: calculate better. for now make excessively large and check dropped tx counter
 #define BUS_QUEUE_LENGTH 32
 
@@ -195,6 +198,22 @@ static w_status_t can_store_signed(can_types_t type, int32_t value, void *out) {
 	}
 }
 
+// Store the reserved sentinel code for a non-finite float into the target type.
+// offset is one of SENTINEL_NAN / SENTINEL_POS_INF / SENTINEL_NEG_INF and selects
+// a code at the top of the type's range (type_max - offset).
+static w_status_t can_store_sentinel(can_types_t type, bool is_unsigned, uint32_t offset, void *out) {
+	if (is_unsigned) {
+		uint32_t maxv = 0U;
+		can_get_unsigned_max(type, &maxv);
+		return can_store_unsigned(type, maxv - offset, out);
+	} else {
+		int32_t minv = 0;
+		int32_t maxv = 0;
+		can_get_signed_limits(type, &minv, &maxv);
+		return can_store_signed(type, maxv - (int32_t)offset, out);
+	}
+}
+
 w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 	if (NULL == hfdcan) {
 		return W_INVALID_PARAM;
@@ -300,51 +319,24 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 	can_types_t target_type = scale_map[sensor].type;
 	bool is_unsigned = can_type_is_unsigned(target_type);
 
-	// handle NaN or +/-Inf with reserved sentinel codes near the limits of the target type
+	// handle NaN or +/-Inf with reserved sentinel codes at the top of the target type
 	if (!isfinite(input)) {
-		if (is_unsigned) {
-			uint32_t maxv = 0U;
-			can_get_unsigned_max(target_type, &maxv);
-			uint64_t encoded = 0U;
+		uint32_t offset = isnan(input) ? SENTINEL_NAN
+						  : signbit(input) ? SENTINEL_NEG_INF
+										   : SENTINEL_POS_INF;
 
-			if (isinf(input)) {
-				if (signbit(input)) {
-					encoded = (maxv >= 2U) ? (maxv - 1U) : 0U; // -Inf
-				} else {
-					encoded = (maxv >= 2U) ? (maxv - 2U) : maxv; // +Inf
-				}
-			} else {
-				encoded = (maxv >= 3U) ? (maxv - 3U) : 0U; // NaN
-			}
-
-			w_status_t store_status = can_store_unsigned(target_type, encoded, out);
-			return (store_status == W_SUCCESS) ? W_MATH_ERROR : store_status;
-		} else {
-			int32_t minv = 0, maxv = 0;
-			can_get_signed_limits(target_type, &minv, &maxv);
-			int64_t encoded = 0;
-
-			if (isinf(input)) {
-				if (signbit(input)) {
-					encoded = (minv <= INT32_MAX - 2) ? (minv + 2) : minv; // -Inf
-				} else {
-					encoded = (maxv >= 1) ? (maxv - 1) : maxv; // +Inf
-				}
-			} else {
-				encoded = (minv <= INT32_MAX - 3) ? (minv + 3) : minv; // NaN
-			}
-
-			w_status_t store_status = can_store_signed(target_type, encoded, out);
-			return (store_status == W_SUCCESS) ? W_MATH_ERROR : store_status;
-		}
+		w_status_t store_status = can_store_sentinel(target_type, is_unsigned, offset, out);
+		return (store_status == W_SUCCESS) ? W_MATH_ERROR : store_status;
 	}
 
 	float32_t scaled = input * (float32_t)scale_map[sensor].scale;
 
-	// clamp according to target type
+	// clamp according to target type; keep finite values below the reserved
+	// sentinel codes at the top of the range so they can never alias one
 	if (is_unsigned) {
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
+		maxv -= SENTINEL_COUNT;
 
 		return can_store_unsigned(
 			target_type, value_clamp_float32(scaled, 0.0f, (float32_t)maxv), out);
@@ -352,6 +344,7 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 	} else {
 		int32_t minv = 0, maxv = 0;
 		can_get_signed_limits(target_type, &minv, &maxv);
+		maxv -= (int32_t)SENTINEL_COUNT;
 
 		return can_store_signed(
 			target_type, value_clamp_float32(scaled, (float32_t)minv, (float32_t)maxv), out);

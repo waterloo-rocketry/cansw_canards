@@ -66,18 +66,14 @@ void can_handler_task_tx(void *argument);
  * @brief Encodes a float telemetry value into an integer representation according to predefined
  * scaling rules.
  *
- * The function also handles special float values as specific reserved integer values near the
- * limits of the target type.
- *
- * Unsigned output:
- * NaN -> max - 3,
- * +Inf -> max - 2,
- * -Inf -> max - 1.
- *
- * Signed output:
- * NaN -> min + 3,
- * -Inf -> min + 2,
- * +Inf -> max - 1.
+ * The function also handles non-finite floats as reserved sentinel codes at the top of the
+ * target type's range. The same rule applies to both signed and unsigned types
+ * (see can_telemetry_scaling.h for the full encode/decode contract):
+ * NaN   -> type_max - 0,
+ * +Inf  -> type_max - 1,
+ * -Inf  -> type_max - 2.
+ * Finite values are clamped to [type_min, type_max - SENTINEL_COUNT] so they can never
+ * alias a sentinel. On a non-finite input the value is still stored but W_MATH_ERROR is returned.
  *
  * @param sensor The predefined scaling rule to apply (defined in can_telemetry_scaling.h)
  * @param input The raw telemetry integer value to encode
