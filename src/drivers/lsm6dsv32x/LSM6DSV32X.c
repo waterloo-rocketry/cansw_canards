@@ -115,6 +115,10 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
  * @brief i2c dma error handler
  */
 static void lsm6dsv32x_dma_error_handle(I2C_HandleTypeDef *hi2c) {
+	if (hi2c != lsm6dsv32x_ctx.hi2c) {
+		return;
+	}
+
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
 	lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
 }
@@ -136,11 +140,11 @@ w_status_t lsm6dsv32x_init() {
 
 	// LSM6DSV32X: https://www.st.com/resource/en/datasheet/lsm6dsv32x.pdf
 
-	// Accel ODR: 960 Hz
+	// Accel ODR: 480 Hz
 	// Accel mode: high performance
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL1_XL, 0x08);
 
-	// Gyro ODR: 960 Hz
+	// Gyro ODR: 480 Hz
 	// Gyro mode: high performance
 	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL2_G, 0x08);
 
