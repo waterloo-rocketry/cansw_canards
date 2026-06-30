@@ -20,6 +20,7 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "adc.h"
+#include "bdma.h"
 #include "cmsis_os2.h"
 #include "cordic.h"
 #include "dma.h"
@@ -109,6 +110,7 @@ int main(void) {
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_DMA_Init();
+	MX_BDMA_Init();
 	MX_CORDIC_Init();
 	MX_FMAC_Init();
 	MX_FDCAN2_Init();
@@ -130,8 +132,8 @@ int main(void) {
 	MX_TIM1_Init();
 	MX_UART7_Init();
 	MX_TIM2_Init();
-	MX_FATFS_Init();
 	MX_TIM5_Init();
+	MX_FATFS_Init();
 	/* USER CODE BEGIN 2 */
 
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
