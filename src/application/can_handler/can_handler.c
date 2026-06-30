@@ -22,8 +22,7 @@
 
 const can_scale_data_t scale_map[SCALE_COUNT] = SCALE_MAP_INIT;
 
-// Non-finite sentinel codes (SENTINEL_NAN / POS_INF / NEG_INF / SENTINEL_COUNT)
-// and the encode/decode contract are defined in can_telemetry_scaling.h.
+// Encode/decode contract (saturation scheme) is defined in can_telemetry_scaling.h.
 
 // TODO: calculate better. for now make excessively large and check dropped tx counter
 #define BUS_QUEUE_LENGTH 32
@@ -36,16 +35,18 @@ static can_handler_status_t can_error_stats = {0};
 static can_callback_t callback_map[MSG_ID_ENUM_MAX] = {NULL};
 
 static w_status_t can_reset_callback(const can_msg_t *msg) {
-	uint8_t board_type_id, board_inst_id;
+	uint8_t board_type_id;
+	uint8_t board_inst_id;
+
 	bool need_reset = false;
 
-	if (get_reset_board_id(msg, &board_type_id, &board_inst_id) != W_SUCCESS) {
+	if (W_SUCCESS != get_reset_board_id(msg, &board_type_id, &board_inst_id)) {
 		log_text(1, "can_handler", "ERROR: failed to read reset command");
 		return W_FAILURE;
 	}
 
-	if (check_board_need_reset(msg, &need_reset) == W_SUCCESS && need_reset) {
-		log_text(0, "can_handler", "System reset initiated");
+	if ((W_SUCCESS == check_board_need_reset(msg, &need_reset)) && need_reset) {
+		log_text(1, "can_handler", "System reset initiated");
 		NVIC_SystemReset();
 	}
 
@@ -145,7 +146,7 @@ static bool can_type_is_unsigned(can_types_t type) {
 }
 
 static w_status_t can_store_unsigned(can_types_t type, uint32_t value, void *out) {
-	if (out == NULL) {
+	if (NULL == out) {
 		return W_INVALID_PARAM;
 	}
 
@@ -160,7 +161,7 @@ static w_status_t can_store_unsigned(can_types_t type, uint32_t value, void *out
 			memcpy(out, &encoded, sizeof(encoded));
 			return W_SUCCESS;
 		}
-		case TYPE_UINT24:
+		case TYPE_UINT24: 
 		case TYPE_UINT32: {
 			uint32_t encoded = (uint32_t)value;
 			memcpy(out, &encoded, sizeof(encoded));
@@ -172,7 +173,7 @@ static w_status_t can_store_unsigned(can_types_t type, uint32_t value, void *out
 }
 
 static w_status_t can_store_signed(can_types_t type, int32_t value, void *out) {
-	if (out == NULL) {
+	if (NULL == out) {
 		return W_INVALID_PARAM;
 	}
 
@@ -187,7 +188,11 @@ static w_status_t can_store_signed(can_types_t type, int32_t value, void *out) {
 			memcpy(out, &encoded, sizeof(encoded));
 			return W_SUCCESS;
 		}
-		case TYPE_INT24:
+		case TYPE_INT24: {
+			int24_t encoded = (int24_t)value;
+			memcpy(out, &encoded, sizeof(encoded));
+			return W_SUCCESS;
+		}
 		case TYPE_INT32: {
 			int32_t encoded = (int32_t)value;
 			memcpy(out, &encoded, sizeof(encoded));
@@ -195,22 +200,6 @@ static w_status_t can_store_signed(can_types_t type, int32_t value, void *out) {
 		}
 		default:
 			return W_INVALID_PARAM;
-	}
-}
-
-// Store the reserved sentinel code for a non-finite float into the target type.
-// offset is one of SENTINEL_NAN / SENTINEL_POS_INF / SENTINEL_NEG_INF and selects
-// a code at the top of the type's range (type_max - offset).
-static w_status_t can_store_sentinel(can_types_t type, bool is_unsigned, uint32_t offset, void *out) {
-	if (is_unsigned) {
-		uint32_t maxv = 0U;
-		can_get_unsigned_max(type, &maxv);
-		return can_store_unsigned(type, maxv - offset, out);
-	} else {
-		int32_t minv = 0;
-		int32_t maxv = 0;
-		can_get_signed_limits(type, &minv, &maxv);
-		return can_store_signed(type, maxv - (int32_t)offset, out);
 	}
 }
 
@@ -290,7 +279,7 @@ void can_handler_task_tx(void *argument) {
 	for (;;) {
 		can_msg_t tx_msg;
 
-		if (xQueueReceive(bus_queue_tx, &tx_msg, pdMS_TO_TICKS(5)) == pdPASS) {
+		if (pdPASS == xQueueReceive(bus_queue_tx, &tx_msg, pdMS_TO_TICKS(5))) {
 			// send to CAN bus; log errors
 			if (!stm32h7_can_send(&tx_msg)) {
 				can_error_stats.tx_failures++;
@@ -299,7 +288,7 @@ void can_handler_task_tx(void *argument) {
 			// hardware limitation stm32 backtoback tx fifo queue has 2 msgs..
 			// but trying to do 2 in a row didnt work so just delay between every tx
 			// also 1ms delay didnt work so 2ms???
-			vTaskDelay(2);
+			vTaskDelay(pdMS_TO_TICKS(2));
 		} else {
 			// expect we send at least 1 message every 1.5sec
 			TickType_t now = xTaskGetTickCount();
@@ -316,123 +305,134 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 		return W_INVALID_PARAM;
 	}
 
+	// NaN has no meaningful integer representation: drop the sample without storing.
+	if (isnan(input)) {
+		can_error_stats.encode_nan++;
+		return W_MATH_ERROR;
+	}
+
 	can_types_t target_type = scale_map[sensor].type;
 	bool is_unsigned = can_type_is_unsigned(target_type);
 
-	// handle NaN or +/-Inf with reserved sentinel codes at the top of the target type
-	if (!isfinite(input)) {
-		uint32_t offset = isnan(input) ? SENTINEL_NAN
-						  : signbit(input) ? SENTINEL_NEG_INF
-										   : SENTINEL_POS_INF;
-
-		w_status_t store_status = can_store_sentinel(target_type, is_unsigned, offset, out);
-		return (store_status == W_SUCCESS) ? W_MATH_ERROR : store_status;
-	}
-
-	float32_t scaled = input * (float32_t)scale_map[sensor].scale;
-
-	// clamp according to target type; keep finite values below the reserved
-	// sentinel codes at the top of the range so they can never alias one
 	if (is_unsigned) {
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
-		maxv -= SENTINEL_COUNT;
 
-		return can_store_unsigned(
-			target_type, value_clamp_float32(scaled, 0.0f, (float32_t)maxv), out);
+		// Inverted sentinel mapping: +Inf / above-range -> type min (0),
+		// -Inf / below-range -> type max.
+		static const uint32_t sentinel_pos_inf_min = 0U;
+		const uint32_t sentinel_neg_inf_max = maxv;
+
+		// Check the raw input before scaling.
+		if (input == (float32_t)INFINITY) {
+			can_error_stats.encode_pos_inf++;
+			return can_store_unsigned(target_type, sentinel_pos_inf_min, out);
+		}
+		if (input == (float32_t)(-INFINITY)) {
+			can_error_stats.encode_neg_inf++;
+			return can_store_unsigned(target_type, sentinel_neg_inf_max, out);
+		}
+
+		// Check the value again after scaling, in case the multiply pushes it out of range.
+		float32_t scaled = input * (float32_t)scale_map[sensor].scale;
+		if (scaled > (float32_t)maxv) {
+			can_error_stats.encode_overflow++;
+			return can_store_unsigned(target_type, sentinel_pos_inf_min, out);
+		}
+		if (scaled < 0.0f) {
+			can_error_stats.encode_underflow++;
+			return can_store_unsigned(target_type, sentinel_neg_inf_max, out);
+		}
+		return can_store_unsigned(target_type, (uint32_t)scaled, out);
 
 	} else {
 		int32_t minv = 0, maxv = 0;
 		can_get_signed_limits(target_type, &minv, &maxv);
-		maxv -= (int32_t)SENTINEL_COUNT;
 
-		return can_store_signed(
-			target_type, value_clamp_float32(scaled, (float32_t)minv, (float32_t)maxv), out);
+		// Inverted sentinel mapping: +Inf / above-range -> type min,
+		// -Inf / below-range -> type max.
+		const int32_t sentinel_pos_inf_min = minv;
+		const int32_t sentinel_neg_inf_max = maxv;
+
+		// Check the raw input before scaling.
+		if (input == (float32_t)INFINITY) {
+			can_error_stats.encode_pos_inf++;
+			return can_store_signed(target_type, sentinel_pos_inf_min, out);
+		}
+		if (input == (float32_t)(-INFINITY)) {
+			can_error_stats.encode_neg_inf++;
+			return can_store_signed(target_type, sentinel_neg_inf_max, out);
+		}
+
+		// Check the value again after scaling, in case the multiply pushes it out of range.
+		float32_t scaled = input * (float32_t)scale_map[sensor].scale;
+		if (scaled > (float32_t)maxv) {
+			can_error_stats.encode_overflow++;
+			return can_store_signed(target_type, sentinel_pos_inf_min, out);
+		}
+		if (scaled < (float32_t)minv) {
+			can_error_stats.encode_underflow++;
+			return can_store_signed(target_type, sentinel_neg_inf_max, out);
+		}
+		return can_store_signed(target_type, (int32_t)scaled, out);
 	}
-	return W_SUCCESS;
 }
 
 w_status_t can_encode_scaled_int(can_scaling_types_t sensor, int64_t input, void *out) {
-	if ((sensor >= SCALE_COUNT) || (out == NULL)) {
+	if ((sensor >= SCALE_COUNT) || (NULL == out)) {
 		return W_INVALID_PARAM;
 	}
 
 	can_types_t target_type = scale_map[sensor].type;
 	bool is_unsigned = can_type_is_unsigned(target_type);
 
-	int64_t scaled = input * scale_map[sensor].scale;
+	// int64 holds input * scale (scale <= 65535, maxv <= UINT32_MAX) without overflow
+	// for any realistic sensor reading, so the range checks below are valid 64-bit
+	// comparisons and the narrowing cast only runs once the value is known in range.
+	int64_t scaled = input * (int64_t)scale_map[sensor].scale;
 
-	// Scale and clamp according to target type
+	// Out-of-range values map with the same inverted sentinel scheme as the float
+	// encoder so decode is identical regardless of source: above-range -> type min,
+	// below-range -> type max (no wraparound).
 	if (is_unsigned) {
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
 
-		return can_store_unsigned(target_type, value_clamp_uint32(scaled, 0U, maxv), out);
+		static const uint32_t sentinel_pos_inf_min = 0U;
+		const uint32_t sentinel_neg_inf_max = maxv;
+
+		uint32_t stored;
+		if (scaled > (int64_t)maxv) {
+			can_error_stats.encode_overflow++;
+			stored = sentinel_pos_inf_min;
+		} else if (scaled < 0) {
+			can_error_stats.encode_underflow++;
+			stored = sentinel_neg_inf_max;
+		} else {
+			stored = (uint32_t)scaled;
+		}
+		return can_store_unsigned(target_type, stored, out);
 
 	} else {
 		int32_t minv = 0, maxv = 0;
 		can_get_signed_limits(target_type, &minv, &maxv);
 
-		return can_store_signed(target_type, value_clamp_uint32(scaled, minv, maxv), out);
-	}
-	return W_SUCCESS;
-}
+		const int32_t sentinel_pos_inf_min = minv;
+		const int32_t sentinel_neg_inf_max = maxv;
 
-// --- Fatal Error Handler Implementation ---
-
-// Note: All IDs (Board Type, Message Type, Instance ID)
-//       are used directly from canlib/message_types.h
-
-void proc_handle_fatal_error(const char *errorMsg) {
-	static bool can_initialized = false;
-	// safe state - loop here forever and send CAN err msg repeatedly
-	while (1) {
-		can_initialized =
-			can_initialized ||
-			stm32h7_can_init(
-				&hfdcan1,
-				can_handle_rx_message); // BEWARE: this is hardcoded to use hfdcan1, remember
-										// to change this when our CAN handle changes
-		__disable_irq();
-
-		// let CAN still work
-		HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
-
-		can_msg_t msg;
-		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
-
-		// Copy error message to the data buffer
-		if (errorMsg != NULL) {
-			strncpy((char *)data, errorMsg, sizeof(data));
-			// Ensure null termination
-			data[sizeof(data) - 1] = '\0';
+		int32_t stored;
+		if (scaled > (int64_t)maxv) {
+			can_error_stats.encode_overflow++;
+			stored = sentinel_pos_inf_min;
+		} else if (scaled < (int64_t)minv) {
+			can_error_stats.encode_underflow++;
+			stored = sentinel_neg_inf_max;
+		} else {
+			stored = (int32_t)scaled;
 		}
-
-		// Use canlib's helper function to build the debug message
-		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
-		// state)
-		build_debug_raw_msg(PRIO_LOW, 0, data, &msg);
-		if (can_initialized) {
-			stm32h7_can_send(&msg);
-		}
-
-		// scream a few times then attempt to reset.
-		// delay for ~1sec without using systick-based delays (no hal_delay)
-		volatile int dummy;
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 50000000; j++) {
-				dummy++;
-			}
-		}
-
-		dummy++;
-
-		// resetting is always a safe state even in midflight, as flightphase starts IDLE
-		NVIC_SystemReset();
+		return can_store_signed(target_type, stored, out);
 	}
 }
-
-// --- End Fatal Error Handler ---
 
 health_status_t can_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
@@ -450,8 +450,17 @@ health_status_t can_handler_get_status(void) {
 			 can_error_stats.rx_callback_errors,
 			 can_error_stats.rx_timeouts,
 			 can_error_stats.tx_timeouts);
+	log_text(0,
+			 "CAN",
+			 "enc_overflow=%lu, enc_underflow=%lu, enc_pos_inf=%lu, enc_neg_inf=%lu, enc_nan=%lu",
+			 can_error_stats.encode_overflow,
+			 can_error_stats.encode_underflow,
+			 can_error_stats.encode_pos_inf,
+			 can_error_stats.encode_neg_inf,
+			 can_error_stats.encode_nan);
 
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_CAN_HANDLER, .error_bitfield = status_bitfield};
-	
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_CAN_HANDLER, .error_bitfield = status_bitfield};
+
 	return status;
 }

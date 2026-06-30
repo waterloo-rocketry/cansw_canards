@@ -102,51 +102,55 @@ TEST_F(CanHandlerTest, InitFails3) {
     EXPECT_EQ(status, W_FAILURE);
 }
 
-// --- Non-finite (NaN / +/-Inf) sentinel encoding ------------------------------
-// Contract (can_telemetry_scaling.h): sentinel = type_max - SENTINEL_*, and finite
-// values clamp to [type_min, type_max - SENTINEL_COUNT].
+// --- Non-finite (NaN / +/-Inf) and out-of-range inverted sentinel mapping ------
+// Contract (can_telemetry_scaling.h): +Inf/above-range -> type_min,
+// -Inf/below-range -> type_max, NaN -> dropped (W_MATH_ERROR, out untouched).
 
 // SCALE_NAV_Q -> TYPE_INT16 (max 32767), SCALE_NAV_RX -> TYPE_UINT16 (max 65535).
 
-TEST_F(CanHandlerTest, EncodeNonFiniteSignedSentinels) {
+TEST_F(CanHandlerTest, EncodeNonFiniteSignedSaturates) {
     int16_t out = 0;
 
+    // NaN is dropped and out is left untouched.
+    out = 123;
     EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_Q, NAN, &out), W_MATH_ERROR);
-    EXPECT_EQ(out, (int16_t)(INT16_MAX - SENTINEL_NAN));
+    EXPECT_EQ(out, 123);
 
-    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_Q, INFINITY, &out), W_MATH_ERROR);
-    EXPECT_EQ(out, (int16_t)(INT16_MAX - SENTINEL_POS_INF));
+    // +Inf -> type_min, -Inf -> type_max (inverted).
+    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_Q, INFINITY, &out), W_SUCCESS);
+    EXPECT_EQ(out, (int16_t)INT16_MIN);
 
-    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_Q, -INFINITY, &out), W_MATH_ERROR);
-    EXPECT_EQ(out, (int16_t)(INT16_MAX - SENTINEL_NEG_INF));
+    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_Q, -INFINITY, &out), W_SUCCESS);
+    EXPECT_EQ(out, (int16_t)INT16_MAX);
 }
 
-TEST_F(CanHandlerTest, EncodeNonFiniteUnsignedSentinels) {
+TEST_F(CanHandlerTest, EncodeNonFiniteUnsignedSaturates) {
     uint16_t out = 0;
 
+    out = 123;
     EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_RX, NAN, &out), W_MATH_ERROR);
-    EXPECT_EQ(out, (uint16_t)(UINT16_MAX - SENTINEL_NAN));
+    EXPECT_EQ(out, 123);
 
-    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_RX, INFINITY, &out), W_MATH_ERROR);
-    EXPECT_EQ(out, (uint16_t)(UINT16_MAX - SENTINEL_POS_INF));
+    // +Inf -> type_min (0), -Inf -> type_max (inverted).
+    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_RX, INFINITY, &out), W_SUCCESS);
+    EXPECT_EQ(out, (uint16_t)0);
 
-    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_RX, -INFINITY, &out), W_MATH_ERROR);
-    EXPECT_EQ(out, (uint16_t)(UINT16_MAX - SENTINEL_NEG_INF));
+    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_RX, -INFINITY, &out), W_SUCCESS);
+    EXPECT_EQ(out, (uint16_t)UINT16_MAX);
 }
 
-TEST_F(CanHandlerTest, EncodeFiniteClampsBelowSentinels) {
-    // A huge finite value must clamp to type_max - SENTINEL_COUNT, never onto a sentinel.
+TEST_F(CanHandlerTest, EncodeFiniteOutOfRangeMapsInverted) {
+    // A huge finite value above range -> type_min, below range -> type_max.
     uint16_t u_out = 0;
     EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_RX, 1e9f, &u_out), W_SUCCESS);
-    EXPECT_EQ(u_out, (uint16_t)(UINT16_MAX - SENTINEL_COUNT));
+    EXPECT_EQ(u_out, (uint16_t)0);
 
     int16_t s_out = 0;
     EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_Q, 1e9f, &s_out), W_SUCCESS);
-    EXPECT_EQ(s_out, (int16_t)(INT16_MAX - SENTINEL_COUNT));
-
-    // Lower bound is untouched (sentinels only live at the top).
-    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_Q, -1e9f, &s_out), W_SUCCESS);
     EXPECT_EQ(s_out, (int16_t)INT16_MIN);
+
+    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_Q, -1e9f, &s_out), W_SUCCESS);
+    EXPECT_EQ(s_out, (int16_t)INT16_MAX);
 }
 
 TEST_F(CanHandlerTest, EncodeRejectsBadParams) {
