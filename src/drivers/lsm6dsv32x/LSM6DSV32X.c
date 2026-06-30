@@ -196,16 +196,11 @@ w_status_t lsm6dsv32x_init() {
  */
 w_status_t lsm6dsv32x_int1_isr_handler() {
 	if (!lsm6dsv32x_ctx.switched_callback) {
-		log_text(1,
-				 LOG_LVL_FATAL,
-				 "LSM6DSV32X",
-				 "Attempting to complete DMA callback before new callback.");
 		return W_FAILURE;
 	}
 
 	// store the timestamp when the data is received
 	if (timer_get_ms(&lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER]) != W_SUCCESS) {
-		log_text(1, LOG_LVL_WARN, "LSM6DSV32X", "Failed to get time through timer.");
 		return W_FAILURE;
 	}
 
