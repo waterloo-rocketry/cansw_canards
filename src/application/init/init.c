@@ -17,7 +17,6 @@
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -26,6 +25,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
@@ -86,7 +86,7 @@ static void system_init_task(void *arg) {
 	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
-		log_text(10, "init", "Non-crit init fail 0x%lx", non_crit_status);
+		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
 	}
 
 	// initialize gnc
@@ -97,6 +97,7 @@ static void system_init_task(void *arg) {
 	// INIT REQUIRED MODULES
 	status |= gpio_init();
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
+	status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
@@ -118,7 +119,7 @@ static void system_init_task(void *arg) {
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
 		// Log critical initialization failure - specific modules should have logged details
-		log_text(10, "init", "crit init fail (status: 0x%lx).", status);
+		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).", status);
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}
@@ -168,10 +169,13 @@ static void system_init_task(void *arg) {
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
-		log_text(10, "SystemInit", "CRITICAL: Failed to create one or more FreeRTOS tasks.");
+		log_text(10,
+				 LOG_LVL_FATAL,
+				 "SystemInit",
+				 "CRITICAL: Failed to create one or more FreeRTOS tasks.");
 		proc_handle_fatal_error("tasks");
 	}
-	log_text(10, "SystemInit", "All tasks created successfully.");
+	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
 	while (1) {

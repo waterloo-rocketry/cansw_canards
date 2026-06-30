@@ -25,7 +25,7 @@ w_status_t controller_init(void) {
 	// Initialize error tracking
 	controller_error_stats = (controller_error_data_t){.is_init = true};
 	// return w_status_t state
-	log_text(LOG_WAIT_MS, "controller", "initialization successful");
+	log_text(LOG_WAIT_MS, LOG_LVL_INFO, "controller", "initialization successful");
 	return W_SUCCESS;
 }
 
@@ -33,7 +33,7 @@ w_status_t controller_init(void) {
 w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codegen_stack_data,
 						   const controller_input_t *input, controller_output_t *output) {
 	if (NULL == ctx) {
-		log_text(LOG_WAIT_MS, "controller", "ERROR: Invalid context ptr.");
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "controller", "Invalid context ptr.");
 		return W_INVALID_PARAM;
 	}
 
@@ -66,7 +66,7 @@ w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codege
 		output->timestamp_tenth_ms = input->curr_timestamp_tenth_ms;
 		ctx->last_run_tenth_ms = input->curr_timestamp_tenth_ms;
 	} else {
-		log_text(0, "controller", "WARN: controller was not run");
+		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
 	}
 
 	return W_SUCCESS;
@@ -75,6 +75,7 @@ w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codege
 health_status_t controller_get_status(void) {
 	// Log all error statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "controller",
 			 "can_send=%lu, data_misses=%lu, timestamp=%lu, gain_interp=%lu, "
 			 "angle_calc=%lu, log=%lu",
@@ -87,6 +88,7 @@ health_status_t controller_get_status(void) {
 
 	// Also log the internal controller state error counters for comparison
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "controller",
 			 "%s can_send_errors=%lu, data_miss_counter=%lu",
 			 controller_error_stats.is_init ? "true" : "false",

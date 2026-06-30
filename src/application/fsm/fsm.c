@@ -94,6 +94,10 @@ w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
 	return W_SUCCESS;
 }
 
+fsm_state_t fsm_get_state() {
+	return g_ctx.curr_state;
+}
+
 void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 	(void)p_sensor_data;
 	// set the inputs
@@ -175,7 +179,7 @@ void fsm_task(void *args) {
 	while (1) {
 		// Unblock once we receive the notification to unblock fsm
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS)) == 0) {
-			log_text(0, "FSM", "ERROR: FSM loop wait timed out");
+			log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
 		}
 
 		if (W_SUCCESS != timer_get_tenth_ms(&(g_ctx.timestamp_tenth_ms))) {

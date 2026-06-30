@@ -115,6 +115,7 @@ health_status_t timer_get_status(void) {
 
 	// Log call statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "timer",
 			 "Call statistics: total=%lu, successful=%lu",
 			 total_calls,
@@ -126,6 +127,7 @@ health_status_t timer_get_status(void) {
 
 	if (total_errors > 0) {
 		log_text(0,
+				 LOG_LVL_WARN,
 				 "timer",
 				 "Error statistics: invalid_param=%lu, timer_stopped=%lu, timer_invalid=%lu",
 				 timer_health.invalid_param,
