@@ -35,6 +35,13 @@ w_status_t can_handler_transmit(const can_msg_t *message);
 w_status_t can_handler_register_callback(can_msg_type_t msg_type, can_callback_t callback);
 
 /**
+ * @brief CAN rx callback — software-filters incoming messages and queues
+ *        those with a registered handler. Pass to stm32h7_can_init().
+ * @param message Pointer to the received CAN message
+ */
+void can_handler_rx_message(const can_msg_t *message);
+
+/**
  * @brief When busqueue_rx recieves a message, this task calls the corresponding callback
  */
 void can_handler_task_rx(void *argument);
