@@ -87,14 +87,14 @@ void ad_breakout_board_task(void *argument) {
 				if (adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas),
 										   &raw_gyro) != W_SUCCESS) {
 					g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-					log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro.");
+					log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read gyro.");
 				}
 			}
 
 		} else {
 			update_gyro_data = true;
 			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read gyro drdy.");
+			log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read gyro drdy.");
 		}
 
 		// if new gyro data update the timestamp
@@ -112,14 +112,14 @@ void ad_breakout_board_task(void *argument) {
 				if (adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
 										   &raw_accel) != W_SUCCESS) {
 					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-					log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read accel.");
+					log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read accel.");
 				}
 			}
 
 		} else {
 			update_accel_data = true;
 			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to read accel drdy.");
+			log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read accel drdy.");
 		}
 
 		// if new gyro data update the timestamp
@@ -143,7 +143,7 @@ void ad_breakout_board_task(void *argument) {
 
 		// LOG/TELEMETRY
 		if (W_SUCCESS != ad_breakout_board_data_logging(loop_count, raw_gyro, &raw_accel)) {
-			log_text(0, "AD BREAKBOARD TASK", "ERROR: Failed to complete data logging.");
+			log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to complete data logging.");
 		}
 
 		loop_count++;
@@ -160,7 +160,7 @@ void ad_breakout_board_task(void *argument) {
  */
 w_status_t ad_breakout_board_get_accel_data(vector3d_t *p_accel_data, uint32_t *timestamp_ms) {
 	if ((NULL == p_accel_data) || (NULL == timestamp_ms)) {
-		log_text(0, "AD BREAKBOARD TASK", "ERROR: Invalid return ptrs.");
+		log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Invalid return ptrs.");
 		return W_INVALID_PARAM;
 	}
 
@@ -182,7 +182,7 @@ w_status_t ad_breakout_board_get_accel_data(vector3d_t *p_accel_data, uint32_t *
  */
 w_status_t ad_breakout_board_get_gyro_data(float64_t *p_gyro_data, uint32_t *timestamp_ms) {
 	if ((NULL == p_gyro_data) || (NULL == timestamp_ms)) {
-		log_text(0, "AD BREAKBOARD TASK", "ERROR: Invalid return ptrs.");
+		log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Invalid return ptrs.");
 		return W_INVALID_PARAM;
 	}
 

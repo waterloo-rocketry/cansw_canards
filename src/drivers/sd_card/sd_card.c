@@ -202,6 +202,7 @@ health_status_t sd_card_get_status(void) {
 
 	// Log operation statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "sd_card",
 			 "%s files_created=%lu, reads=%lu, writes=%lu",
 			 sd_card_health.is_init ? "init" : "not init",

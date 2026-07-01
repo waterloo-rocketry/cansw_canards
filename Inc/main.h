@@ -167,10 +167,6 @@ void Error_Handler(void);
 #define SERVO2_TX_GPIO_Port GPIOA
 #define SERVO2_RX_Pin GPIO_PIN_10
 #define SERVO2_RX_GPIO_Port GPIOA
-#define USB_D__Pin GPIO_PIN_11
-#define USB_D__GPIO_Port GPIOA
-#define USB_D_A12_Pin GPIO_PIN_12
-#define USB_D_A12_GPIO_Port GPIOA
 #define DEBUG_SWDIO_Pin GPIO_PIN_13
 #define DEBUG_SWDIO_GPIO_Port GPIOA
 #define DEBUG_SWCLK_Pin GPIO_PIN_14
@@ -209,6 +205,7 @@ void Error_Handler(void);
 #define MAG_SDA_GPIO_Port GPIOB
 #define INT_MAG_Pin GPIO_PIN_0
 #define INT_MAG_GPIO_Port GPIOE
+#define INT_MAG_EXTI_IRQn EXTI0_IRQn
 #define INT1_MAG_ACCEL_Pin GPIO_PIN_1
 #define INT1_MAG_ACCEL_GPIO_Port GPIOE
 
