@@ -472,3 +472,9 @@ add_test_group(test_ak45_driver
     ${UNIT_TESTS_DIR}/ak45_driver_test.cpp
     ${UNIT_TESTS_DIR}/ak45_driver_test_helpers.c # source file included here
 )
+add_test_group(test_iis2mdc
+    # test file(s)
+    ${UNIT_TESTS_DIR}/iis2mdc_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/drivers/IIS2MDC/IIS2MDC.c
+)
