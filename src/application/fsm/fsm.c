@@ -8,6 +8,7 @@
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
@@ -33,6 +34,10 @@ typedef struct {
 	sensor_handler_ctx_t *p_imu_context; // global instance of flight phase
 	GNC_codegenStackData *p_codegen_stack_data;
 } fsm_ctx_t;
+
+typedef struct {
+	all_sensors_data_t *p_sensor_data;
+} fsm_input_t;
 
 // global
 static fsm_ctx_t g_ctx = {0};
@@ -99,10 +104,11 @@ fsm_state_t fsm_get_state() {
 	return g_ctx.curr_state;
 }
 
-void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
-			  const all_sensors_data_t *p_sensor_data) {
+void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
+			  const fsm_ctx_t *p_ctx) {
 	// set the inputs
-	navigator_input_t navigator_input = {.fsm_state = p_ctx->curr_state};
+	navigator_input_t navigator_input = {.sensor_data = p_fsm_input->p_sensor_data,
+										 .fsm_state = p_ctx->curr_state};
 	controller_input_t controller_input = {.launch_timestamp_ms =
 											   p_ctx->p_flight_phase_context->launch_timestamp_ms};
 
@@ -143,10 +149,10 @@ void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(controller_input.xR));
 			controller_input.dynamic_pressure = navigator_output.dynamic_pressure;
 
-			controller_input.canard_angle_rad = p_sensor_data->motor_encoder_meas.meas;
+			controller_input.canard_angle_rad = p_fsm_input->p_sensor_data->motor_encoder_meas.meas;
 			/****************************************************************/
 
-			if (p_sensor_data->motor_encoder_meas.is_new) {
+			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new) {
 				controller_step(&controller_input,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
@@ -207,6 +213,7 @@ void fsm_task(void *args) {
 		g_ctx.curr_state = new_state;
 
 		// run actions based on new curr state
-		fsm_exec(timestamp_tenth_ms, &g_ctx, &sensor_data);
+		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
+		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
 	}
 }

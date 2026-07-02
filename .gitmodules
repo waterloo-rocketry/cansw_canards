@@ -19,3 +19,4 @@
 [submodule "src/third_party/closedrocket"]
 	path = src/third_party/closedrocket
 	url = https://github.com/waterloo-rocketry/closedrocket.git
+    shallow = true

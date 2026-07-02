@@ -94,7 +94,6 @@ typedef struct {
 	float64_t canard_angle_rad; /// delta
 	float64_t xR[2];
 	float64_t dynamic_pressure;
-	uint32_t curr_timestamp_tenth_ms;
 	uint32_t launch_timestamp_ms;
 } controller_input_t;
 
