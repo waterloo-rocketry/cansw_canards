@@ -12,6 +12,9 @@
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/timer/timer.h"
+#ifdef HIL
+#include "application/hil/hil.h"
+#endif
 
 // TODO: remove after motor_handler implemented
 /****************************************************************/
@@ -92,6 +95,14 @@ w_status_t fsm_init() {
 		return W_FAILURE;
 	}
 
+#ifdef HIL
+	// init hil here to keep all hil changes in fsm.c
+	if (hil_init() != W_SUCCESS) {
+		log_text(1, LOG_LVL_WARN, "HIL", "init fail");
+		return W_FAILURE;
+	}
+#endif
+
 	return W_SUCCESS;
 }
 
@@ -158,6 +169,14 @@ void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 					(float32_t)(controller_output.canard_command_angle_rad * DEG_PER_RAD);
 				ak45_send_position_cmd(motor_angle_deg);
 				/****************************************************************/
+#ifdef HIL
+				/******************************** HIL START ********************************/
+				if (hil_send_simulink_cmd(controller_output.canard_command_angle_rad) !=
+					W_SUCCESS) {
+					log_text(1, LOG_LVL_WARN, "HIL", "Failed to send cmd to simulink");
+				}
+				/******************************** HIL END ********************************/
+#endif
 			}
 			break;
 
@@ -196,6 +215,16 @@ void fsm_task(void *args) {
 		// - imu data
 		// - etc (probably more later)
 		sensor_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
+
+#ifdef HIL
+		/******************************** HIL START ********************************/
+		// override sensor data with simulink sensors in HIL mode
+		if (hil_get_latest_sensor_data(&sensor_data) != W_SUCCESS) {
+			log_text(1, LOG_LVL_WARN, "HIL", "Failed to get latest sensor data");
+		}
+		/******************************** HIL END ********************************/
+
+#endif
 
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, timestamp_ms, &sensor_data);
