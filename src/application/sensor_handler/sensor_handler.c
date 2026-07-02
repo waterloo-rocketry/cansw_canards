@@ -35,16 +35,15 @@ static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 5;
 // static const uint32_t IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
 // static const uint32_t IMU_HANDLER_CAN_TX_RATE =
 // 	(IMU_HANDLER_CAN_TX_PERIOD_MS / ST_IMU_FRESHNESS_TIMEOUT_MS);
-
-// TODO: add calibration matrix for this year
 static const matrix3d_t g_mti_correction_matrix = {
-	.array = {{0, 0, 1.000000000}, {1.0000000, 0, 0}, {0, 1.0000000000, 0}}};
+	.array = {{0, 0, 1.0}, {1.0, 0, 0}, {0, 1.0, 0}}};
 static const matrix3d_t g_board_imu_correction_matrix = {
-	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+	.array = {{0, 0, -1.0}, {1.0, 0, 0}, {0, -1.0, 0}}};
+// TODO: Must be confirmed on July 11th
 static const matrix3d_t g_board_mag_correction_matrix = {
-	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+	.array = {{0, 0, -1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 static const matrix3d_t g_ad_accel_correction_matrix = {
-	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+	.array = {{0, 0, 1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
