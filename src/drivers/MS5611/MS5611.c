@@ -518,12 +518,11 @@ void ms5611_task(void *argument) {
 			xSemaphoreGive(s_data_mutex);
 		}
 
-		// state switching logic
-		if (MS5611_TEMP_CONV_STATE_SWITCH_COUNT == count) {
+		// state switching logic (applies to the *next* loop)
+		if (++count >= MS5611_TEMP_CONV_STATE_SWITCH_COUNT) {
 			count = 0;
 			handle.conv_state = MS5611_CONV_TEMP_PRESSURE;
 		} else {
-			count++;
 			handle.conv_state = MS5611_CONV_PRESSURE_ONLY;
 		}
 
