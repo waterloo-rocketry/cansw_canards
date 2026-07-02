@@ -15,11 +15,11 @@
 
 /* Period between successive pressure samples taken by ms5611_task at 100 hz */
 #define MS5611_TASK_PERIOD_MS 10
-/* Period between successive tempreture samples taken by ms5611_task at 10 hz */
-#define MS5611_TEMP_COV_PERIOD_MS 100
+/* Period between successive temperature samples taken by ms5611_task at 10 Hz */
+#define MS5611_TEMP_CONV_PERIOD_MS 100
 
 static const uint8_t MS5611_TEMP_CONV_STATE_SWITCH_COUNT =
-	MS5611_TEMP_COV_PERIOD_MS / MS5611_TASK_PERIOD_MS;
+	MS5611_TEMP_CONV_PERIOD_MS / MS5611_TASK_PERIOD_MS;
 
 /* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
 typedef enum {
