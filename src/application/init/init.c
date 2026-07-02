@@ -16,9 +16,9 @@
 #include "application/health_checks/health_checks.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
-#include "drivers/MS5611/MS5611.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -171,8 +171,7 @@ static void system_init_task(void *arg) {
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
 
-
-		/* Log the barometer sample timestamp at 200 Hz (5 ms period). */
+	/* Log the barometer sample timestamp at 200 Hz (5 ms period). */
 	TickType_t lastWakeTime = 0;
 	ms5611_raw_result_t result;
 	uint32_t timestamp_ms = 0;
@@ -181,22 +180,39 @@ static void system_init_task(void *arg) {
 	gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 
 	for (;;) {
-		w_status_t status =  ms5611_get_raw_pressure(&result, &timestamp_ms);
+		w_status_t status = ms5611_get_raw_pressure(&result, &timestamp_ms);
 
 		if (W_SUCCESS == status) {
-			log_text(5, "ms5611", "ts = %lu, temp = %lu, p = %lu", (unsigned long)timestamp_ms, (unsigned long)result.temperature_centideg, (unsigned long)result.pressure_centimbar);
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(5,
+					 "ms5611",
+					 "ts = %lu, temp = %lu, p = %lu",
+					 (unsigned long)timestamp_ms,
+					 (unsigned long)result.temperature_centideg,
+					 (unsigned long)result.pressure_centimbar);
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
+			log_text(
+				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
 
 		} else {
 			log_text(5, "ms5611", "can't get fresh data, status code: %d", status);
