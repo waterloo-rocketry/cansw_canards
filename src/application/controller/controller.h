@@ -2,15 +2,13 @@
 #define CONTROLLER_H_
 
 #include "FreeRTOS.h"
-#include "application/health_checks/health_checks.h"
 #include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "FreeRTOS.h"
-
+#include "GNC_codegen_types.h"
+#include "application/health_checks/health_checks.h"
 #include "common/gnc/gnc_types.h"
-#include "third_party/rocketlib/include/common.h"
 
 /* Enums/Types */
 
@@ -38,8 +36,9 @@ typedef struct {
  * state of a controller instance.
  */
 typedef struct {
-	controller_codegen_ctx_t codegen_ctx;
-	uint32_t last_run_tenth_ms; // last time the controller did a full loop. use for rate-limiting
+	uint32_t last_run_tenth_ms; // previous timestamp
+	gnc_controller_ctx_t gnc_controller_ctx;
+	GNC_codegenStackData *p_gnc_stack_data;
 } controller_ctx_t;
 
 /**
@@ -51,15 +50,13 @@ w_status_t controller_init(void);
 
 /**
  * @brief run 1 step of the controller
- * @param context pointer to controller global context
- * @param p_codegen_stack_data codegen stack data
- * @param input pointer to new inputs for this iteration
- * @param output pointer to the output struct to update with new command
- * @param launch_timestamp_ms the timestamp at which rocket launch
- * @param curr_timestamp_ms the currrent timestamp
+ * @param p_input pointer to new inputs for this iteration
+ * @param timestamp_tenth_ms is the current timestamp in tenth of a ms
+ * @param p_ctx pointer to controller global context
+ * @param p_output pointer to the output struct to update with new command
  */
-w_status_t controller_step(controller_ctx_t *context, GNC_codegenStackData *p_codegen_stack_data,
-						   const controller_input_t *input, controller_output_t *output);
+w_status_t controller_step(const controller_input_t *p_input, const uint32_t timestamp_tenth_ms,
+						   controller_ctx_t *p_ctx, controller_output_t *p_output);
 
 /**
  * Controller task function for RTOS

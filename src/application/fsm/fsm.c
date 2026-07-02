@@ -3,6 +3,7 @@
 #include "task.h"
 #include "tim.h"
 
+#include "GNC_codegen.h"
 #include "GNC_codegen_types.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
@@ -16,7 +17,6 @@
 /****************************************************************/
 #include "common/math/math.h"
 #include "drivers/ak45_driver/ak45_driver.h"
-static const float64_t DEG_TO_RAD = (M_PI / 180.0);
 /****************************************************************/
 #include "rocketlib/include/common.h"
 
@@ -26,14 +26,12 @@ static const uint8_t MAX_FSM_DELAY_MS = 4;
 static const uint32_t MS_TO_TENTH_MS = 10;
 
 typedef struct {
-	navigator_ctx_t *estimator_context; // global instance of estimator
+	navigator_ctx_t *p_navigator_context; // global instance of estimator
 	controller_ctx_t *p_controller_context; // global instance of controller
-	uint32_t timestamp_ms; // curr timestamp
-	uint32_t timestamp_tenth_ms; // curr timestamp
 	fsm_state_t curr_state;
 	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
 	sensor_handler_ctx_t *p_imu_context; // global instance of flight phase
-	GNC_codegenStackData *codegen_stack_data;
+	GNC_codegenStackData *p_codegen_stack_data;
 } fsm_ctx_t;
 
 // global
@@ -49,6 +47,10 @@ static flight_phase_ctx_t g_flight_phase_context = {.launch_timestamp_ms = UINT3
 													.act_allowed_timestamp_ms = UINT32_MAX};
 static sensor_handler_ctx_t g_imu_context = {0};
 
+// gnc context
+static GNC_codegenPersistentData g_gnc_code_persistent = {0};
+static GNC_codegenStackData g_gnc_codegen_data = {.pd = &g_gnc_code_persistent};
+
 static void unblock_fsm_loop(TIM_HandleTypeDef *htim) {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -59,7 +61,7 @@ static void unblock_fsm_loop(TIM_HandleTypeDef *htim) {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
+w_status_t fsm_init() {
 	// init estimator context
 	// initialize ctx timestamp to current time
 	uint32_t init_time_tenth_ms = 0;
@@ -68,15 +70,14 @@ w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
 		return W_FAILURE;
 	}
 
-	// init the stack data
-	g_ctx.codegen_stack_data = codegen_stack_data;
+	// initialize gnc
+	GNC_codegen_initialize(&g_gnc_codegen_data);
 
-	// g_estimator_context.x.attitude = (quaternion_t){.w = 1.0, .x = 0.0, .y = 0.0, .z = 0.0};
-	// g_estimator_context.x.altitude = 420;
-	// g_estimator_context.x.CL = 3;
+	// init the stack data
+	g_ctx.p_codegen_stack_data = &g_gnc_codegen_data;
 
 	// init rest of input
-	g_ctx.estimator_context = &g_estimator_context;
+	g_ctx.p_navigator_context = &g_estimator_context;
 	g_ctx.p_controller_context = &g_controller_context;
 	g_ctx.p_flight_phase_context = &g_flight_phase_context;
 	g_ctx.p_imu_context = &g_imu_context;
@@ -87,7 +88,7 @@ w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data) {
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, &unblock_fsm_loop);
 
 	// start tim
-	if (HAL_OK != HAL_TIM_Base_Start_IT(&htim5)) {
+	if (HAL_TIM_Base_Start_IT(&htim5) != HAL_OK) {
 		return W_FAILURE;
 	}
 
@@ -98,13 +99,11 @@ fsm_state_t fsm_get_state() {
 	return g_ctx.curr_state;
 }
 
-void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
-	(void)p_sensor_data;
+void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
+			  const all_sensors_data_t *p_sensor_data) {
 	// set the inputs
-	navigator_input_t navigator_input = {.curr_timestamp_tenth_ms = p_ctx->timestamp_tenth_ms,
-										 .fsm_state = p_ctx->curr_state};
-	controller_input_t controller_input = {.curr_timestamp_tenth_ms = p_ctx->timestamp_tenth_ms,
-										   .launch_timestamp_ms =
+	navigator_input_t navigator_input = {.fsm_state = p_ctx->curr_state};
+	controller_input_t controller_input = {.launch_timestamp_ms =
 											   p_ctx->p_flight_phase_context->launch_timestamp_ms};
 
 	// initialize the outputs
@@ -114,7 +113,7 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 	// TODO: ask tristan how to get behaviour of first cycle
 	switch (p_ctx->curr_state) {
 		case STATE_IDLE:
-			// do stuff
+			p_ctx->p_navigator_context->last_run_tenth_ms = timestamp_tenth_ms;
 			break;
 
 			// both Pad filter and boost will only run estimator step
@@ -125,39 +124,38 @@ void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
 			// Nav enters flight filter
 			/* fall through */
 		case STATE_BOOST:
-			navigator_step(p_ctx->estimator_context,
-						   p_ctx->codegen_stack_data,
-						   &navigator_input,
-						   p_sensor_data,
+			navigator_step(&navigator_input,
+						   timestamp_tenth_ms,
+						   p_ctx->p_navigator_context,
 						   &navigator_output);
+			p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
 			break;
 
 			// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
-			navigator_step(p_ctx->estimator_context,
-						   p_ctx->codegen_stack_data,
-						   &navigator_input,
-						   p_sensor_data,
+			navigator_step(&navigator_input,
+						   timestamp_tenth_ms,
+						   p_ctx->p_navigator_context,
 						   &navigator_output);
 
 			// input the navigator outputs into controller
-			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(float64_t[2]));
+			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(controller_input.xR));
 			controller_input.dynamic_pressure = navigator_output.dynamic_pressure;
 
-			controller_input.motor_angle_rad = p_sensor_data->motor_encoder_meas.meas;
+			controller_input.canard_angle_rad = p_sensor_data->motor_encoder_meas.meas;
 			/****************************************************************/
 
 			if (p_sensor_data->motor_encoder_meas.is_new) {
-				controller_step(p_ctx->p_controller_context,
-								p_ctx->codegen_stack_data,
-								&controller_input,
+				controller_step(&controller_input,
+								timestamp_tenth_ms,
+								p_ctx->p_controller_context,
 								&controller_output);
 
 				// TODO: switch to motor handler once exists
 				/****************************************************************/
 				float32_t motor_angle_deg =
-					(float32_t)(controller_output.motor_command_angle_rad / DEG_TO_RAD);
+					(float32_t)(controller_output.canard_command_angle_rad * DEG_PER_RAD);
 				ak45_send_position_cmd(motor_angle_deg);
 				/****************************************************************/
 			}
@@ -182,11 +180,13 @@ void fsm_task(void *args) {
 			log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
 		}
 
-		if (W_SUCCESS != timer_get_tenth_ms(&(g_ctx.timestamp_tenth_ms))) {
+		uint32_t timestamp_tenth_ms = 0;
+
+		if (W_SUCCESS != timer_get_tenth_ms(&timestamp_tenth_ms)) {
 			// TODO: error handling
 		}
 
-		g_ctx.timestamp_ms = g_ctx.timestamp_tenth_ms / MS_TO_TENTH_MS;
+		uint32_t timestamp_ms = timestamp_tenth_ms / MS_TO_TENTH_MS;
 
 		all_sensors_data_t sensor_data = {0};
 
@@ -198,7 +198,7 @@ void fsm_task(void *args) {
 		sensor_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
 
 		flight_phase_gen_sync_events(
-			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_data);
+			g_ctx.p_flight_phase_context, g_ctx.curr_state, timestamp_ms, &sensor_data);
 
 		// run 1 cycle of state transition
 		flight_phase_event_t next_event = flight_phase_get_next_event();
@@ -207,6 +207,6 @@ void fsm_task(void *args) {
 		g_ctx.curr_state = new_state;
 
 		// run actions based on new curr state
-		fsm_exec(&g_ctx, &sensor_data);
+		fsm_exec(timestamp_tenth_ms, &g_ctx, &sensor_data);
 	}
 }

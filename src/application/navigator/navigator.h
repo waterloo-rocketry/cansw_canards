@@ -1,21 +1,23 @@
 #ifndef NAVIGATOR_H
 #define NAVIGATOR_H
 
-#include "application/fsm/fsm.h"
-#include "common/gnc/gnc_types.h"
-#include "common/math/math.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 #include "third_party/rocketlib/include/common.h"
 
-#include <stdbool.h>
-#include <stdint.h>
+#include "GNC_codegen_types.h"
+#include "application/fsm/fsm.h"
+#include "common/gnc/gnc_types.h"
+#include "common/math/math.h"
 
 /**
  * persistent state updated by navigator and fsm
  */
 typedef struct {
 	uint32_t last_run_tenth_ms; // previous timestamp
-	navigator_codegen_ctx_t codegen_ctx;
+	gnc_navigator_ctx_t gnc_navigator_ctx;
+	GNC_codegenStackData *p_gnc_stack_data;
 } navigator_ctx_t;
 
 /**
@@ -60,15 +62,13 @@ health_status_t navigator_get_status(void);
 
 /**
  * @brief 1 step of navigator
- * @param ctx pointer to navigator context
- * @param p_codegen_stack_data codegen persistent data
  * @param p_input pointer to the new navigator input
+ * @param timestamp_tenth_ms is the current timestamp in tenth of a ms
+ * @param p_ctx pointer to navigator context
  * @param p_output pointer to navigator output to update with new results
- * @param p_sensor_data pointer to the current sensor data
  * update with new actuation info
  */
-w_status_t navigator_step(navigator_ctx_t *p_ctx, GNC_codegenStackData *p_codegen_stack_data,
-						  const navigator_input_t *p_input, const all_sensors_data_t *p_sensor_data,
-						  navigator_output_t *p_output);
+w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t timestamp_tenth_ms,
+						  navigator_ctx_t *p_ctx, navigator_output_t *p_output);
 
 #endif

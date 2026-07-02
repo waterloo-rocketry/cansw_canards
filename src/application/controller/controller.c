@@ -1,7 +1,7 @@
+#include <math.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
-
-#include <math.h>
 
 #include "GNC_codegen.h"
 #include "application/controller/controller.h"
@@ -30,41 +30,40 @@ w_status_t controller_init(void) {
 }
 
 // helper to run 1 iteration of the controller algo, including delaying where needed.
-w_status_t controller_step(controller_ctx_t *ctx, GNC_codegenStackData *p_codegen_stack_data,
-						   const controller_input_t *input, controller_output_t *output) {
-	if (NULL == ctx) {
+w_status_t controller_step(const controller_input_t *p_input, const uint32_t timestamp_tenth_ms,
+						   controller_ctx_t *p_ctx, controller_output_t *p_output) {
+	if ((NULL == p_input) || (NULL == p_ctx) || (NULL == p_output)) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "controller", "Invalid context ptr.");
 		return W_INVALID_PARAM;
 	}
 
 	// TODO: check with Tristan
 
-	float64_t flight_time_sec =
-		((float64_t)((uint32_t)((input->curr_timestamp_tenth_ms) * TENTH_MS_TO_MS) -
-					 (input->launch_timestamp_ms))) *
-		MS_TO_SEC;
+	float64_t flight_time_sec = ((float64_t)((uint32_t)(timestamp_tenth_ms * TENTH_MS_TO_MS) -
+											 (p_input->launch_timestamp_ms))) *
+								MS_TO_SEC;
 	float64_t dt_controller_sec =
-		((float64_t)((input->curr_timestamp_tenth_ms) - (ctx->last_run_tenth_ms))) * MS_TO_SEC;
+		((float64_t)(timestamp_tenth_ms - (p_ctx->last_run_tenth_ms))) * MS_TO_SEC;
 
 	float64_t ref_signal = 0.0;
 
-	bool controller_status = false;
+	bool is_run = false;
 
-	controller_codegen_entry(p_codegen_stack_data,
+	controller_codegen_entry(p_ctx->p_gnc_stack_data,
 							 flight_time_sec,
 							 dt_controller_sec,
-							 input->xR,
-							 input->dynamic_pressure,
-							 input->motor_angle_rad,
-							 &(ctx->codegen_ctx),
-							 &(output->motor_command_angle_rad),
-							 output->ref_roll,
-							 &controller_status);
+							 p_input->xR,
+							 p_input->dynamic_pressure,
+							 p_input->canard_angle_rad,
+							 &(p_ctx->gnc_controller_ctx),
+							 &(p_output->canard_command_angle_rad),
+							 p_output->ref_roll,
+							 &is_run);
 
-	if (controller_status) { // the controller ran
+	if (is_run) { // the controller ran
 		// update new timestamp
-		output->timestamp_tenth_ms = input->curr_timestamp_tenth_ms;
-		ctx->last_run_tenth_ms = input->curr_timestamp_tenth_ms;
+		p_output->timestamp_tenth_ms = timestamp_tenth_ms;
+		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
 		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
 	}

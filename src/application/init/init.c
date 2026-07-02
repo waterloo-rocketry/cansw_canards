@@ -64,11 +64,6 @@ const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
-// GNC Global Data
-
-static GNC_codegenPersistentData gnc_code_persistent = {0};
-static GNC_codegenStackData gnc_codegen_data = {.pd = &gnc_code_persistent};
-
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -89,9 +84,6 @@ static void system_init_task(void *arg) {
 		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
 	}
 
-	// initialize gnc
-	GNC_codegen_initialize(&gnc_codegen_data);
-
 	w_status_t status = W_SUCCESS;
 
 	// INIT REQUIRED MODULES
@@ -109,7 +101,7 @@ static void system_init_task(void *arg) {
 	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
-	status |= fsm_init(&gnc_codegen_data);
+	status |= fsm_init();
 	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
 	status |= adxrs649_init();

@@ -67,16 +67,16 @@ typedef struct {
 } all_sensors_data_t;
 
 // Codegen Type Rename
-typedef struct1_T navigator_codegen_bias_t;
-typedef struct2_T navigator_codegen_sensor_filter_t;
-typedef struct3_T navigator_codegen_sensor_input_t;
+typedef struct1_T gnc_navigator_bias_t;
+typedef struct2_T gnc_navigator_sensor_filter_t;
+typedef struct3_T gnc_navigator_sensor_input_t;
 
-typedef struct4_T navigator_codegen_sensor_3D_t;
-typedef struct5_T navigator_codegen_sensor_1D_t;
+typedef struct4_T gnc_navigator_sensor_3D_t;
+typedef struct5_T gnc_navigator_sensor_1D_t;
 
 // ---------- NAVIGATOR TYPES ----------
 typedef struct {
-	uint32_t curr_timestamp_tenth_ms;
+	all_sensors_data_t *sensor_data;
 	fsm_state_t fsm_state;
 } navigator_input_t;
 
@@ -91,7 +91,7 @@ typedef struct {
 
 // output from navigator aka input to controller
 typedef struct {
-	float64_t motor_angle_rad; /// delta
+	float64_t canard_angle_rad; /// delta
 	float64_t xR[2];
 	float64_t dynamic_pressure;
 	uint32_t curr_timestamp_tenth_ms;
@@ -100,19 +100,19 @@ typedef struct {
 
 // Output of controller: latest commanded canard angle
 typedef struct {
-	float64_t motor_command_angle_rad; // radians
+	float64_t canard_command_angle_rad; // radians
 	float64_t ref_roll[2]; // {roll angle (rad), roll rate (rad/s)}
 	uint32_t timestamp_tenth_ms;
 } controller_output_t;
 
 typedef struct {
-	navigator_codegen_bias_t bias;
-	navigator_codegen_sensor_filter_t sensor_filter;
+	gnc_navigator_bias_t bias;
+	gnc_navigator_sensor_filter_t sensor_filter;
 	float64_t x[11];
 	float64_t P[121];
-} navigator_codegen_ctx_t;
+} gnc_navigator_ctx_t;
 
 // codegen controller
-typedef struct0_T controller_codegen_ctx_t;
+typedef struct0_T gnc_controller_ctx_t;
 
 #endif

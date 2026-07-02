@@ -36,95 +36,89 @@ w_status_t navigator_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t navigator_step(navigator_ctx_t *p_ctx, GNC_codegenStackData *p_codegen_stack_data,
-						  const navigator_input_t *p_input, const all_sensors_data_t *p_sensor_data,
-						  navigator_output_t *p_output) {
+w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t timestamp_tenth_ms,
+						  navigator_ctx_t *p_ctx, navigator_output_t *p_output) {
+	if ((NULL == p_input) || (NULL == p_ctx) || (NULL == p_output)) {
+		log_text(0, LOG_LVL_WARN, "navigator", "Invalid context ptr.");
+		return W_INVALID_PARAM;
+	}
 	// calculate remainder navigator data
-	float64_t dt_sec =
-		((p_input->curr_timestamp_tenth_ms) - (p_ctx->last_run_tenth_ms)) * TENTH_MS_TO_SEC;
+	float64_t dt_sec = (timestamp_tenth_ms - (p_ctx->last_run_tenth_ms)) * TENTH_MS_TO_SEC;
 	bool in_flight_phase =
 		(STATE_PAD_FILTER != p_input->fsm_state); // since earliest entry point is pad filter
 
 	// construct sensor inputs
-	navigator_codegen_sensor_input_t codegen_sensor_input = {0};
+	gnc_navigator_sensor_input_t codegen_sensor_input = {0};
+
+	// status repersents if this sensor should be used in this cycle of nav
 	// lsm6
 	memcpy(codegen_sensor_input.board_accel.meas,
-		   p_sensor_data->board_meas.board_imu.accel.array,
-		   sizeof(float64_t[3]));
-	codegen_sensor_input.board_accel.status =
-		p_sensor_data->board_meas.board_imu.is_new; // status true is on
+		   p_input->sensor_data->board_meas.board_imu.accel.array,
+		   sizeof(codegen_sensor_input.board_accel.meas));
+	codegen_sensor_input.board_accel.status = p_input->sensor_data->board_meas.board_imu.is_new;
 
 	memcpy(codegen_sensor_input.board_gyro.meas,
-		   p_sensor_data->board_meas.board_imu.gyro.array,
-		   sizeof(float64_t[3]));
-	codegen_sensor_input.board_gyro.status =
-		p_sensor_data->board_meas.board_imu.is_new; // status true is on
+		   p_input->sensor_data->board_meas.board_imu.gyro.array,
+		   sizeof(codegen_sensor_input.board_gyro.meas));
+	codegen_sensor_input.board_gyro.status = p_input->sensor_data->board_meas.board_imu.is_new;
 
 	// Baro
-	codegen_sensor_input.board_baro.meas = p_sensor_data->board_meas.board_baro.meas;
-	codegen_sensor_input.board_baro.status =
-		p_sensor_data->board_meas.board_baro.is_new; // status true is on
+	codegen_sensor_input.board_baro.meas = p_input->sensor_data->board_meas.board_baro.meas;
+	codegen_sensor_input.board_baro.status = p_input->sensor_data->board_meas.board_baro.is_new;
 
 	// Mag
 	memcpy(codegen_sensor_input.board_mag.meas,
-		   p_sensor_data->board_meas.board_mag.meas.array,
-		   sizeof(float64_t[3]));
-	codegen_sensor_input.board_mag.status =
-		p_sensor_data->board_meas.board_mag.is_new; // status true is on
+		   p_input->sensor_data->board_meas.board_mag.meas.array,
+		   sizeof(codegen_sensor_input.board_mag.meas));
+	codegen_sensor_input.board_mag.status = p_input->sensor_data->board_meas.board_mag.is_new;
 
 	// MTI
 	memcpy(codegen_sensor_input.mti_accel.meas,
-		   p_sensor_data->mti_meas.mti_accel.meas.array,
-		   sizeof(float64_t[3]));
-	codegen_sensor_input.mti_accel.status =
-		p_sensor_data->mti_meas.mti_accel.is_new; // status true is on
+		   p_input->sensor_data->mti_meas.mti_accel.meas.array,
+		   sizeof(codegen_sensor_input.mti_accel.meas));
+	codegen_sensor_input.mti_accel.status = p_input->sensor_data->mti_meas.mti_accel.is_new;
 
 	memcpy(codegen_sensor_input.mti_gyro.meas,
-		   p_sensor_data->mti_meas.mti_gyro.meas.array,
-		   sizeof(float64_t[3]));
-	codegen_sensor_input.mti_gyro.status =
-		p_sensor_data->mti_meas.mti_gyro.is_new; // status true is on
+		   p_input->sensor_data->mti_meas.mti_gyro.meas.array,
+		   sizeof(codegen_sensor_input.mti_gyro.meas));
+	codegen_sensor_input.mti_gyro.status = p_input->sensor_data->mti_meas.mti_gyro.is_new;
 
 	memcpy(codegen_sensor_input.mti_mag.meas,
-		   p_sensor_data->mti_meas.mti_mag.meas.array,
-		   sizeof(float64_t[3]));
-	codegen_sensor_input.mti_mag.status =
-		p_sensor_data->mti_meas.mti_mag.is_new; // status true is on
+		   p_input->sensor_data->mti_meas.mti_mag.meas.array,
+		   sizeof(codegen_sensor_input.mti_mag.meas));
+	codegen_sensor_input.mti_mag.status = p_input->sensor_data->mti_meas.mti_mag.is_new;
 
-	codegen_sensor_input.mti_baro.meas = p_sensor_data->mti_meas.mti_baro.meas;
-	codegen_sensor_input.mti_baro.status =
-		p_sensor_data->mti_meas.mti_baro.is_new; // status true is on
+	codegen_sensor_input.mti_baro.meas = p_input->sensor_data->mti_meas.mti_baro.meas;
+	codegen_sensor_input.mti_baro.status = p_input->sensor_data->mti_meas.mti_baro.is_new;
 
 	// AD Accel
 	memcpy(codegen_sensor_input.ad_accel.meas,
-		   p_sensor_data->ad_meas.ad_accel.meas.array,
-		   sizeof(float64_t[3]));
-	codegen_sensor_input.ad_accel.status =
-		p_sensor_data->ad_meas.ad_accel.is_new; // status true is on
+		   p_input->sensor_data->ad_meas.ad_accel.meas.array,
+		   sizeof(codegen_sensor_input.ad_accel.meas));
+	codegen_sensor_input.ad_accel.status = p_input->sensor_data->ad_meas.ad_accel.is_new;
 
-	codegen_sensor_input.ad_gyro.meas[0] = p_sensor_data->ad_meas.ad_gyro.meas; // x axis
+	codegen_sensor_input.ad_gyro.meas[0] = p_input->sensor_data->ad_meas.ad_gyro.meas; // x axis
 	codegen_sensor_input.ad_gyro.meas[1] = 0.0;
 	codegen_sensor_input.ad_gyro.meas[2] = 0.0;
-	codegen_sensor_input.ad_gyro.status =
-		p_sensor_data->ad_meas.ad_gyro.is_new; // status true is on
+	codegen_sensor_input.ad_gyro.status = p_input->sensor_data->ad_meas.ad_gyro.is_new;
 
-	bool nav_status = false;
+	bool is_run = false;
 
-	navigation_codegen_entry(p_codegen_stack_data,
+	navigation_codegen_entry(p_ctx->p_gnc_stack_data,
 							 dt_sec,
 							 in_flight_phase,
-							 p_ctx->codegen_ctx.x,
-							 p_ctx->codegen_ctx.P,
-							 &(p_ctx->codegen_ctx.bias),
-							 &(p_ctx->codegen_ctx.sensor_filter),
+							 p_ctx->gnc_navigator_ctx.x,
+							 p_ctx->gnc_navigator_ctx.P,
+							 &(p_ctx->gnc_navigator_ctx.bias),
+							 &(p_ctx->gnc_navigator_ctx.sensor_filter),
 							 &codegen_sensor_input,
 							 &(p_output->cov_norm),
 							 p_output->roll_state,
 							 &(p_output->dynamic_pressure),
-							 &nav_status);
+							 &is_run);
 
-	if (nav_status) { // if nav ran
-		p_ctx->last_run_tenth_ms = p_input->curr_timestamp_tenth_ms;
+	if (is_run) { // if nav ran
+		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
 		log_text(0, LOG_LVL_WARN, "Navigator", "Nav failed to run");
 	}

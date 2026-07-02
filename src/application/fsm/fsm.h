@@ -1,7 +1,6 @@
 #ifndef FSM_H
 #define FSM_H
 
-#include "GNC_codegen_types.h"
 #include "rocketlib/include/common.h"
 
 /**
@@ -20,9 +19,8 @@ typedef enum {
 
 /**
  * @brief init fsm
- * @param codegen_stack_data the pointer to our global codegen data
  */
-w_status_t fsm_init(GNC_codegenStackData *codegen_stack_data);
+w_status_t fsm_init();
 
 /**
  * @brief get current fsm state
