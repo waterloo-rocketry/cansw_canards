@@ -17,6 +17,12 @@ typedef struct __attribute__((packed)) {
 	uint32_t timestamp_ms;
 } lsm6dsv32x_raw_imu_data_t;
 
+typedef struct {
+	bool is_init;
+	bool is_not_insane // failed sanity check
+	uint32_t stuff;
+} lsm6dsv32x_health_t;
+
 /**
  * @brief Initializes the bit registers for lsm6dsv32x
  * @note Must be called to wake up imu
@@ -41,5 +47,15 @@ w_status_t lsm6dsv32x_int1_isr_handler();
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
 										lsm6dsv32x_raw_imu_data_t *raw_acc,
 										lsm6dsv32x_raw_imu_data_t *raw_gyro);
+
+/**
+ * @brief Get and report the lsm6dsv32x status for the health check system
+ *
+ * Gets the lsm6dsv32x health status and logs relevant information.
+ * Follows the module_get_status naming convention used by health_checks.
+ *
+ * @return CAN board status bitfield
+ */
+health_status_t lsm6dsv32x_get_status(void);
 
 #endif

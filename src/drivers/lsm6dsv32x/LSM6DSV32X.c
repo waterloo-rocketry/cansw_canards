@@ -59,6 +59,8 @@ static lsm6dsv32x_ctx_t lsm6dsv32x_ctx = {.switched_callback = false};
 
 static const uint8_t CTX_BUFFER_SIZE = sizeof(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER]);
 
+lsm6dsv32x_health_t lsm6dsv32x_health = {0};
+
 // Helper function for writing config (passing value as literal)
 static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
 	return i2c_write_reg(I2C_BUS_1, addr, reg, &data, 1);
@@ -87,6 +89,7 @@ static w_status_t lsm6dsv32x_check_sanity() {
 	}
 
 	if ((W_SUCCESS == device_status) && (W_SUCCESS == i2c_status)) {
+		lsm6dsv32x_health.is_not_insane = 1;
 		return W_SUCCESS;
 	} else {
 		return W_FAILURE;
@@ -187,6 +190,10 @@ w_status_t lsm6dsv32x_init() {
 	// only open the i2c bus once fully ready
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
 
+	if (status == W_SUCCESS) {
+		lsm6dsv32x_health.is_init = 1;
+	}
+
 	return status;
 }
 
@@ -275,6 +282,17 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		acc_data->z = ((float64_t)((int16_t)raw_acc->z)) * ACC_FS;
 	} else {
 		status = W_FAILURE;
+	}
+
+	return status;
+}
+
+health_status_t lsm6dsv32x_get_status(void) {
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
+
+	if (!lsm6dsv32x_health.is_init) {
+		status.severity = HEALTH_ERROR;
 	}
 
 	return status;
