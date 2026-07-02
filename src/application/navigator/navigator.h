@@ -7,7 +7,6 @@
 #include "third_party/rocketlib/include/common.h"
 
 #include "GNC_codegen_types.h"
-#include "application/fsm/fsm.h"
 #include "common/gnc/gnc_types.h"
 #include "common/math/math.h"
 

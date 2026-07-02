@@ -26,24 +26,11 @@ extern TaskHandle_t fsm_task_handle;
 static const uint8_t MAX_FSM_DELAY_MS = 4;
 static const uint32_t MS_TO_TENTH_MS = 10;
 
-typedef struct {
-	navigator_ctx_t *p_navigator_context; // global instance of estimator
-	controller_ctx_t *p_controller_context; // global instance of controller
-	fsm_state_t curr_state;
-	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
-	sensor_handler_ctx_t *p_imu_context; // global instance of flight phase
-	GNC_codegenStackData *p_codegen_stack_data;
-} fsm_ctx_t;
-
-typedef struct {
-	all_sensors_data_t *p_sensor_data;
-} fsm_input_t;
-
 // global
 static fsm_ctx_t g_ctx = {0};
 
 // create all of the global instances
-static navigator_ctx_t g_estimator_context = {0};
+static navigator_ctx_t g_navigator_context = {0};
 
 // make sure controller_output_t is initalized to 0 and valid to read to match original design
 static controller_ctx_t g_controller_context = {0};
@@ -80,9 +67,11 @@ w_status_t fsm_init() {
 
 	// init the stack data
 	g_ctx.p_codegen_stack_data = &g_gnc_codegen_data;
+	g_navigator_context.p_gnc_stack_data = &g_gnc_codegen_data;
+	g_controller_context.p_gnc_stack_data = &g_gnc_codegen_data;
 
 	// init rest of input
-	g_ctx.p_navigator_context = &g_estimator_context;
+	g_ctx.p_navigator_context = &g_navigator_context;
 	g_ctx.p_controller_context = &g_controller_context;
 	g_ctx.p_flight_phase_context = &g_flight_phase_context;
 	g_ctx.p_imu_context = &g_imu_context;

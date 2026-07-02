@@ -8,9 +8,24 @@
 #include <stdint.h>
 
 #include "GNC_codegen_types.h"
-#include "application/fsm/fsm.h"
 #include "common/math/math.h"
 #include "third_party/rocketlib/include/common.h"
+
+// ---------- FSM STATE ----------
+
+/**
+ * Enum representing phase of flight (state machine state)
+ */
+typedef enum {
+	STATE_IDLE,
+	STATE_PAD_FILTER,
+	STATE_PAD_NAV,
+	STATE_BOOST,
+	STATE_ACT_ALLOWED,
+	STATE_RECOVERY,
+	STATE_SLEEPY,
+	STATE_ERROR
+} fsm_state_t;
 
 // ---------- SENSOR TYPES ----------
 
