@@ -154,7 +154,7 @@ static void system_init_task(void *arg) {
 		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
 	task_status &=
-		xTaskCreate(ms5611_task, "ms5611", 512, NULL, ms5611_task_priority, &ms5611_task_handle);
+		xTaskCreate(ms5611_task, "ms5611", 512, NULL, ms5611_task_priority, &ms5611_task_handle); // TODO: set the correct size
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
