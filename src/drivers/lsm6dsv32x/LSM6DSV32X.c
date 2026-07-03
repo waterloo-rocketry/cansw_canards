@@ -92,7 +92,7 @@ static w_status_t lsm6dsv32x_check_sanity() {
 	if ((W_SUCCESS == device_status) && (W_SUCCESS == i2c_status)) {
 		return W_SUCCESS;
 	} else {
-		lsm6dsv32x_health.insane++;
+		lsm6dsv32x_health.is_insane++;
 		return W_FAILURE;
 	}
 }
@@ -185,7 +185,7 @@ w_status_t lsm6dsv32x_init() {
 
 	// AFTER THIS POINT NEVER USE OLD I2C OR VERY BAD ERRORS
 
-	if (status != W_SUCCESS) {
+	if (status == W_SUCCESS) {
 		lsm6dsv32x_health.is_init = 1;
 	} else {
 		lsm6dsv32x_health.failed_init++;
@@ -300,14 +300,13 @@ health_status_t lsm6dsv32x_get_status(void) {
 	health_status_t status = {
 		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
 
-	if (lsm6dsv32x_health.DMA_data_transfer_failed_mem_read ||
-		lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure) {
+	if (lsm6dsv32x_ctx.latest_status == W_IO_ERROR) {
 		status.severity = HEALTH_ERROR;
 		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
 	}
 
 	if (!lsm6dsv32x_health.is_init || !lsm6dsv32x_ctx.switched_callback ||
-		!lsm6dsv32x_health.insane) {
+		lsm6dsv32x_health.is_insane) {
 		status.severity = HEALTH_FATAL;
 		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
@@ -315,10 +314,10 @@ health_status_t lsm6dsv32x_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "LSM6DSV32X",
-			 "init=%d, failed_init=%d, insane=%d, sanity_checks=%d, bus_status=%d",
+			 "init=%d, failed_init=%d, is_insane=%d, sanity_checks=%d, bus_status=%d",
 			 lsm6dsv32x_health.is_init,
 			 lsm6dsv32x_health.failed_init,
-			 lsm6dsv32x_health.insane,
+			 lsm6dsv32x_health.is_insane,
 			 lsm6dsv32x_health.post_init_sanity_checks,
 			 lsm6dsv32x_ctx.bus_status);
 

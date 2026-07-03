@@ -20,7 +20,7 @@ typedef struct __attribute__((packed)) {
 typedef struct {
 	bool is_init;
 	uint32_t failed_init;
-	uint32_t insane;
+	uint32_t is_insane;
 	uint32_t post_init_sanity_checks;
 	uint32_t DMA_handle_wrong_i2c;
 	uint32_t DMA_data_transfer_unswitched_callback;
