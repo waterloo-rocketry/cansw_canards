@@ -24,6 +24,11 @@ typedef struct {
 	bool is_dead; // true if detected dead - ie, no uart comms within UART_RX_TIMEOUT_MS
 } movella_data_t;
 
+typedef struct {
+	uint32_t failed_data_gets;
+	uint32_t failed_event_callbacks;
+} movella_health_t;
+
 // Initialize the xsens interface, pass the configuration to the sensor
 w_status_t movella_init(void);
 

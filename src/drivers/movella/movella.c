@@ -37,6 +37,8 @@ typedef struct {
 
 static movella_state_t s_movella = {0};
 
+static movella_health_t movella_health = {0};
+
 static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtdata) {
 	if (xSemaphoreTake(s_movella.data_mutex, 0) == pdTRUE) {
 		uint32_t curr_timestamp_ms = 0;
@@ -100,6 +102,7 @@ static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtd
 					break;
 			}
 		} else {
+			movella_health.failed_event_callbacks++;
 			log_text(0, LOG_LVL_WARN, "MTI", "Unable to get timestamp");
 		}
 
@@ -131,10 +134,12 @@ w_status_t movella_init(void) {
 
 w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
 	if (NULL == out_data) {
+		movella_health.failed_data_gets++;
 		return W_INVALID_PARAM;
 	}
 
 	if (!s_movella.initialized) {
+		movella_health.failed_data_gets++;
 		return W_FAILURE;
 	}
 
@@ -188,6 +193,7 @@ w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
 		return W_SUCCESS;
 	}
 
+	movella_health.failed_data_gets++;
 	return W_FAILURE;
 }
 
@@ -237,4 +243,27 @@ void movella_task(void *parameters) {
 			s_movella.latest_data.is_dead = true;
 		}
 	}
+}
+
+health_status_t movella_get_status(void) {
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
+
+	if (!s_movella.initialized) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_INIT_FAIL;
+	}
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "init=%d, configured=%d, dead_latest_data=%d, failed_data_gets=%d, "
+			 "failed_event_callbacks=%d",
+			 s_movella.initialized,
+			 s_movella.configured,
+			 s_movella.latest_data.is_dead,
+			 movella_health.failed_data_gets,
+			 movella_health.failed_event_callbacks);
+
+	return status;
 }
