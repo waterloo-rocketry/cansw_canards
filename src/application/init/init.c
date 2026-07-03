@@ -106,7 +106,7 @@ static void system_init_task(void *arg) {
 	status |= lsm6dsv32x_init();
 	status |= adxrs649_init();
 	status |= iis2mdc_init();
-	status |= ekf_init();
+	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -168,9 +168,6 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
-
-	gpio_toggle(GPIO_PIN_GREEN_LED, 0);
-	gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 
 	// its blinky now
 	while (1) {
