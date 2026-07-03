@@ -98,6 +98,13 @@ typedef enum {
 	// LOG_TYPE_XXX = M(unique_small_integer),
 } log_data_type_t;
 
+typedef enum {
+	LOG_LVL_FATAL, // Errors (non-recoverable)
+	LOG_LVL_WARN, // Warnings (recoverable issues)
+	LOG_LVL_INFO, // Info (data from sensors, etc)
+	LOG_LVL_DEBUG // Only for debugging on the ground
+} log_level_t;
+
 // Packed vector3d_f32_t for logging only
 typedef union {
 	float array[SIZE_VECTOR_3D];
@@ -245,7 +252,8 @@ w_status_t log_init(void);
  * @param ... Optional values to print according to format
  * @return Status indicating success or failure
  */
-w_status_t log_text(uint32_t timeout, const char *source, const char *format, ...);
+w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
+					...);
 
 /**
  * @brief Log a message in binary form to the data log file.
