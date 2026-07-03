@@ -22,7 +22,7 @@ extern "C" {
 #include "task.h"
 #include "third_party/rocketlib/include/common.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/ak45_driver/ak45_driver.h"
@@ -42,7 +42,7 @@ extern "C" {
 
     // Fakes for logging
     FAKE_VALUE_FUNC(w_status_t, log_init);
-    FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char*, const char*, ...);
+    FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char*, const char*, ...);
     FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t*);
 
 	FAKE_VALUE_FUNC(w_status_t, ak45_get_latest_feedback, ak45_feedback_t*);
@@ -1798,8 +1798,8 @@ TEST_F(SensorHandlerTest, ImuHandlerRun_CalibrationWarning) {
 
 	// Assert
 	EXPECT_EQ(result, W_SUCCESS); // Initialization should still succeed
-	EXPECT_STREQ(log_text_fake.arg1_history[0], "SensorHandler");
-	EXPECT_STREQ(log_text_fake.arg2_history[0],
-				 "WARN: Sensor orientation correction matrices not calibrated yet, using default "
+	EXPECT_STREQ(log_text_fake.arg2_history[0], "SensorHandler");
+	EXPECT_STREQ(log_text_fake.arg3_history[0],
+				 "Sensor orientation correction matrices not calibrated yet, using default "
 				 "orientation.");
 }
