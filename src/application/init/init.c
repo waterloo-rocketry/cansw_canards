@@ -17,6 +17,7 @@
 #include "application/init/init.h"
 #include "application/logger/log.h"
 #include "application/sensor_handler/sensor_handler.h"
+#include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -25,7 +26,6 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
-#include "drivers/MS5611/MS5611.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
@@ -154,8 +154,12 @@ static void system_init_task(void *arg) {
 	task_status &= xTaskCreate(
 		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
-	task_status &=
-		xTaskCreate(ms5611_task, "ms5611", 512, NULL, ms5611_task_priority, &ms5611_task_handle); // TODO: set the correct size
+	task_status &= xTaskCreate(ms5611_task,
+							   "ms5611",
+							   512,
+							   NULL,
+							   ms5611_task_priority,
+							   &ms5611_task_handle); // TODO: set the correct size
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 

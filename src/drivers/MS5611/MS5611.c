@@ -249,7 +249,7 @@ static w_status_t ms5611_prom_read(void) {
 		status = baro_read(MS5611_CMD_PROM_READ_BASE + (i * 2), prom_buf, 2);
 
 		if (status != W_SUCCESS) {
-			log_text(1, LOG_LVL_FATAL, "ms5611", "failed to read PROM coefficient C%u", i);
+			log_text(1, LOG_LVL_WARN, "ms5611", "failed to read PROM coefficient C%u", i);
 			return W_FAILURE;
 		}
 
@@ -275,7 +275,7 @@ static w_status_t ms5611_prom_read(void) {
 			handle.prom_coef[5],
 			handle.prom_coef[6]);
 	} else {
-		log_text(1, LOG_LVL_FATAL, "ms5611", "PROM read failed.");
+		log_text(1, LOG_LVL_WARN, "ms5611", "PROM read failed.");
 	}
 
 	return status;
@@ -295,20 +295,20 @@ w_status_t ms5611_init(void) {
 	if (NULL == s_data_mutex) {
 		s_data_mutex = xSemaphoreCreateMutex();
 		if (NULL == s_data_mutex) {
-			log_text(1, "ms5611", "ERROR: failed to create data mutex");
+			log_text(1, LOG_LVL_WARN, "ms5611", "Failed to create data mutex");
 			return W_FAILURE;
 		}
 	}
 
 	if (W_SUCCESS != baro_write_cmd(MS5611_CMD_RESET)) {
-		log_text(1, LOG_LVL_FATAL, "ms5611", "initialization failed during command reset.");
+		log_text(1, LOG_LVL_WARN, "ms5611", "initialization failed during command reset.");
 		return W_FAILURE;
 	}
 
 	vTaskDelay(pdMS_TO_TICKS(RESET_WAIT_TIME_MS)); // 3ms wait time from AN520 datasheet
 
 	if (W_SUCCESS != ms5611_prom_read()) {
-		log_text(1, LOG_LVL_FATAL, "ms5611", "initialization failed during PROM read .");
+		log_text(1, LOG_LVL_WARN, "ms5611", "initialization failed during PROM read .");
 		return W_FAILURE;
 	}
 
@@ -373,7 +373,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	}
 
 	if (NULL == timestamp_ms) {
-		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_pressure");
+		log_text(1, LOG_LVL_WARN, "ms5611", "NULL pointer passed to ms5611_get_pressure");
 		return W_INVALID_PARAM;
 	}
 
@@ -391,9 +391,9 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_IO_ERROR;
 	}
 
-		delay_us(CONV_TIME_US[handle.osr_temperature] +
-				 1000); // 2 ms. Additional 1ms is added here for safety - temp conv time for osr256
-						// does not match the datasheet specifications
+	delay_us(CONV_TIME_US[handle.osr_temperature] +
+			 1000); // 2 ms. Additional 1ms is added here for safety - temp conv time for osr256
+					// does not match the datasheet specifications
 
 	if (W_FAILURE == baro_read_adc(&d2)) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "failed to read temperature ADC");
@@ -472,7 +472,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
  */
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
 	if ((NULL == result) || (NULL == timestamp_ms)) {
-		log_text(1, "ms5611", "ERROR: NULL pointer passed to ms5611_get_raw_pressure");
+		log_text(1, LOG_LVL_WARN, "ms5611", "NULL pointer passed to ms5611_get_raw_pressure");
 		return W_INVALID_PARAM;
 	}
 
@@ -486,8 +486,9 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
 		status = s_latest_status;
 		if (W_SUCCESS != status) {
 			log_text(1,
+					 LOG_LVL_WARN,
 					 "ms5611",
-					 "ERROR: Something failed while getting pressure conv. Status: %d",
+					 "Something failed while getting pressure conv. Status: %d",
 					 status);
 		}
 
