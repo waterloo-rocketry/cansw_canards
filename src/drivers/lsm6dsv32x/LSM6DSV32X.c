@@ -229,7 +229,7 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 							 I2C_MEMADD_SIZE_8BIT,
 							 lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER],
 							 CTX_BUFFER_SIZE);
-	if (hal_status == HAL_OK) {
+	if (hal_status != HAL_OK) {
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
 		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
 		lsm6dsv32x_health.DMA_data_transfer_failed_mem_read++;
