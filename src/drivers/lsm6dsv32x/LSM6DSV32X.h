@@ -17,6 +17,9 @@ typedef struct __attribute__((packed)) {
 	uint32_t timestamp_ms;
 } lsm6dsv32x_raw_imu_data_t;
 
+/**
+ * health check information
+ */
 typedef struct {
 	bool is_init;
 	uint32_t failed_init;

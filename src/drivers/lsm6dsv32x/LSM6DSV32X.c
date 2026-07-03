@@ -299,12 +299,14 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 health_status_t lsm6dsv32x_get_status(void) {
 	health_status_t status = {
 		.severity = HEALTH_OK, .module_id = MODULE_LSM6DSV32X, .error_bitfield = 0};
-
+	
+	// I2C errors
 	if (lsm6dsv32x_ctx.latest_status == W_IO_ERROR) {
 		status.severity = HEALTH_ERROR;
 		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
 	}
 
+	// Failed initialization on critical component
 	if (!lsm6dsv32x_health.is_init) {
 		status.severity = HEALTH_FATAL;
 		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
@@ -320,6 +322,7 @@ health_status_t lsm6dsv32x_get_status(void) {
 			 lsm6dsv32x_health.post_init_sanity_checks,
 			 lsm6dsv32x_ctx.bus_status);
 
+	// expect the unswitched callback count to be high but most importantly constant. it is called about 10000 times before initialization completes
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "LSM6DSV32X",
@@ -332,10 +335,9 @@ health_status_t lsm6dsv32x_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "LSM6DSV32X",
-			 "get_data_unswitched_cb=%d, get_data_status_fail=%d, switched_cb=%d, latest_status=%d",
+			 "get_data_unswitched_cb=%d, get_data_status_fail=%d, latest_status=%d",
 			 lsm6dsv32x_health.get_gyro_acc_data_unswitched_callback,
 			 lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure,
-			 lsm6dsv32x_ctx.switched_callback,
 			 lsm6dsv32x_ctx.latest_status);
 
 	return status;
