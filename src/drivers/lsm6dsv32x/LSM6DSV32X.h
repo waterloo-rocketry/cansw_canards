@@ -19,8 +19,15 @@ typedef struct __attribute__((packed)) {
 
 typedef struct {
 	bool is_init;
-	uint32_t failed_gyro_acc_data_gets;
-	uint32_t failed_DMA_data_transfers;
+	uint32_t failed_init;
+	uint32_t insane;
+	uint32_t post_init_sanity_checks;
+	uint32_t DMA_handle_wrong_i2c;
+	uint32_t DMA_data_transfer_unswitched_callback;
+	uint32_t DMA_data_transfer_failed_timer;
+	uint32_t DMA_data_transfer_failed_mem_read;
+	uint32_t get_gyro_acc_data_unswitched_callback;
+	uint32_t get_gyro_acc_data_lastest_status_failure;
 } lsm6dsv32x_health_t;
 
 /**
