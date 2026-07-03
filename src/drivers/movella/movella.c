@@ -102,7 +102,7 @@ static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtd
 					break;
 			}
 		} else {
-			movella_health.failed_event_callbacks++;
+			movella_health.event_callback_timer_fail++;
 			log_text(0, LOG_LVL_WARN, "MTI", "Unable to get timestamp");
 		}
 
@@ -116,12 +116,14 @@ static void movella_uart_send(uint8_t *data, uint16_t length) {
 
 w_status_t movella_init(void) {
 	if (s_movella.initialized) {
+		movella_health.double_init++;
 		return W_SUCCESS;
 	}
 
 	s_movella.data_mutex = xSemaphoreCreateMutex();
 
 	if (s_movella.data_mutex == NULL) {
+		movella_health.init_null_mutex++;
 		return W_FAILURE;
 	}
 
@@ -134,12 +136,12 @@ w_status_t movella_init(void) {
 
 w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
 	if (NULL == out_data) {
-		movella_health.failed_data_gets++;
+		movella_health.get_data_null_out_param++;
 		return W_INVALID_PARAM;
 	}
 
 	if (!s_movella.initialized) {
-		movella_health.failed_data_gets++;
+		movella_health.get_data_not_init++;
 		return W_FAILURE;
 	}
 
@@ -193,7 +195,7 @@ w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
 		return W_SUCCESS;
 	}
 
-	movella_health.failed_data_gets++;
+	movella_health.get_data_failed_take_mutex++;
 	return W_FAILURE;
 }
 
@@ -251,19 +253,32 @@ health_status_t movella_get_status(void) {
 
 	if (!s_movella.initialized) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_INIT_FAIL;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "movella",
-			 "init=%d, configured=%d, dead_latest_data=%d, failed_data_gets=%d, "
-			 "failed_event_callbacks=%d",
+			 "init=%d, configured=%d, dead_latest_data=%d, double_init=%d, init_null_mutex=%d",
 			 s_movella.initialized,
 			 s_movella.configured,
 			 s_movella.latest_data.is_dead,
-			 movella_health.failed_data_gets,
-			 movella_health.failed_event_callbacks);
+			 movella_health.double_init,
+			 movella_health.init_null_mutex);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "get_data_null_out_param=%d, get_data_not_init=%d, get_data_failed_take_mutex=%d",
+			 movella_health.get_data_null_out_param,
+			 movella_health.get_data_not_init,
+			 movella_health.get_data_failed_take_mutex);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "event_callback_timer_fail=%d",
+			 movella_health.event_callback_timer_fail);
 
 	return status;
 }

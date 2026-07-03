@@ -25,8 +25,12 @@ typedef struct {
 } movella_data_t;
 
 typedef struct {
-	uint32_t failed_data_gets;
-	uint32_t failed_event_callbacks;
+	uint32_t double_init;
+	uint32_t init_null_mutex;
+	uint32_t get_data_null_out_param;
+	uint32_t get_data_not_init;
+	uint32_t get_data_failed_take_mutex;
+	uint32_t event_callback_timer_fail;
 } movella_health_t;
 
 // Initialize the xsens interface, pass the configuration to the sensor
