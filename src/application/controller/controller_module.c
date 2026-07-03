@@ -65,7 +65,7 @@ w_status_t controller_module(controller_input_t input, uint32_t act_allowed_ms,
 
 	// validate inputs
 	if ((NULL == output) || (NULL == ref_signal)) {
-		log_text(10, "cntlmodule", "nullptrs");
+		log_text(10, LOG_LVL_FATAL, "cntlmodule", "nullptrs");
 		return W_INVALID_PARAM;
 	}
 
@@ -84,7 +84,7 @@ w_status_t controller_module(controller_input_t input, uint32_t act_allowed_ms,
 		r = STEP_4_ANGLE_DEG;
 	} else {
 		// this case should never occur unless timer gone wrong somehow. it must be an err
-		log_text(10, "cntlmodule", "invalid flight ms %d", act_allowed_ms);
+		log_text(10, LOG_LVL_FATAL, "cntlmodule", "invalid flight ms %d", act_allowed_ms);
 		return W_FAILURE;
 	}
 
@@ -96,7 +96,7 @@ w_status_t controller_module(controller_input_t input, uint32_t act_allowed_ms,
 	// %%% Gain scheduling
 	if (interpolate_gain(input.pressure_dynamic, input.canard_coeff, &controller_gain) !=
 		W_SUCCESS) {
-		log_text(10, "cntlmodule", "interp fail");
+		log_text(10, LOG_LVL_FATAL, "cntlmodule", "interp fail");
 		return W_FAILURE;
 	}
 

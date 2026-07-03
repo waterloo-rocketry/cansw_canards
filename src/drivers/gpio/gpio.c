@@ -12,6 +12,8 @@
 #include "semphr.h"
 
 #include "drivers/gpio/gpio.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 
 // Private --------------------------------------------------------------------
 
@@ -87,7 +89,7 @@ w_status_t gpio_init() {
 		gpio_map[i].access_mutex = xSemaphoreCreateMutex();
 		if (gpio_map[i].access_mutex == NULL) {
 			gpio_status.err = true;
-			log_text(10, "gpio", "initfail %d", i);
+			log_text(10, LOG_LVL_FATAL, "gpio", "initfail %d", i);
 			status = W_FAILURE;
 		}
 	}
@@ -180,6 +182,7 @@ health_status_t gpio_get_status(void) {
 
 	// Log operation statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "gpio",
 			 "%s Successful accesses: %lu, Failed accesses: %lu",
 			 gpio_status.is_init ? "INIT" : "NOT INIT",
@@ -189,4 +192,15 @@ health_status_t gpio_get_status(void) {
 	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_GPIO, .error_bitfield = 0};
 
 	return status;
+}
+
+/**
+ * @brief HAL interrupt callback for GPIO pins.
+ */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (IMU_INT1_Pin == GPIO_Pin) {
+		lsm6dsv32x_int1_isr_handler();
+	} else if (INT_MAG_Pin == GPIO_Pin) {
+		iis2mdc_handle_drdy_irq();
+	}
 }

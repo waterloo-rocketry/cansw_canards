@@ -1,11 +1,9 @@
 DST=src/third_party/cubemx_autogen
 
-mkdir -p "$DST/src"
+# clean old autogen stuff entirely. Nothing in there should ever persist
+rm -rf "$DST"/*
 
-# rm old autogen folders
-rm -rf "$DST/Drivers"
-rm -rf "$DST/Middlewares"
-rm -rf "$DST/Startup"
+mkdir -p "$DST/src"
 
 # move top-level files from src/ to dst/src (none of our source code is top-level, so this is safe)
 # BUT keep main.c cuz its the only file we have USER-CODE in so dont let cubemx regen over it
