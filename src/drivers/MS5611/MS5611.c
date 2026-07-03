@@ -84,11 +84,11 @@ typedef struct {
 	bool initialized;
 
 	ms5611_conv_state_t conv_state;
-	uint32_t cached_temperature;
+	uint32_t cached_temp_d2;
 } ms5611_handle_t;
 
 /* Conversion time in microseconds - max values from datasheet for safety */
-static const uint32_t CONV_TIME_US[] = {
+static const uint32_t MAX_CONV_TIME_US[OSR_COUNT] = {
 	600,
 	/* OSR 256  — datasheet max 0.60ms */ // this one is picked for temperature
 	1170, /* OSR 512  — datasheet max 1.17ms */
@@ -98,6 +98,16 @@ static const uint32_t CONV_TIME_US[] = {
 	9040, /* OSR 4096 — datasheet max 9.04ms */
 };
 
+/* Conversion time in microseconds - max values from datasheet for safety */
+static const uint32_t AVE_CONV_TIME_US[OSR_COUNT] = {
+	540,
+	/* OSR 256  — datasheet max 0.60ms */ // this one is picked for temperature
+	1060, /* OSR 512  — datasheet max 1.17ms */
+	2080,
+	/* OSR 1024 — datasheet max 2.28ms */ // this one is picked for pressure
+	4130, /* OSR 2048 — datasheet max 4.54ms */
+	8220, /* OSR 4096 — datasheet max 9.04ms */
+};
 /* D1 (pressure) convert commands indexed by ms5611_osr_t */
 static const uint8_t D1_CMD[OSR_COUNT] = {
 	[MS5611_OSR_256] = MS5611_CMD_CONVERT_D1_OSR256,
@@ -116,9 +126,9 @@ static const uint8_t D2_CMD[OSR_COUNT] = {
 	[MS5611_OSR_4096] = MS5611_CMD_CONVERT_D2_OSR4096,
 };
 
-static const int32_t second_comp_temp_threshold_centi_degrees =
+static const int32_t SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES =
 	2000; /* temperature (in centidegrees) below which second-order compensation is applied */
-static const int32_t second_comp_extreme_temp_threshold_centi_degrees =
+static const int32_t SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES =
 	-1500; /* temperature (in centidegrees) below which additional extreme cold compensation is
 			  applied */
 static const uint32_t RESET_WAIT_TIME_MS = 3;
@@ -144,7 +154,7 @@ static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom 
 								 .osr_temperature = MS5611_OSR_256,
 								 .initialized = false,
 								 .conv_state = MS5611_CONV_TEMP_PRESSURE,
-								 .cached_temperature = 0};
+								 .cached_temp_d2 = 0};
 
 /**
  * @brief Delays for a specified number of microseconds.
@@ -385,19 +395,21 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_FAILURE;
 	}
 
-	/* D2: temperature conversion */
-	if (W_FAILURE == baro_write_cmd(D2_CMD[handle.osr_temperature])) {
-		log_text(1, LOG_LVL_WARN, "ms5611", "failed to write temperature conversion command");
-		return W_IO_ERROR;
-	}
+	if (MS5611_CONV_TEMP_PRESSURE == handle.conv_state) {
+		/* D2: temperature conversion */
+		if (W_FAILURE == baro_write_cmd(D2_CMD[handle.osr_temperature])) {
+			log_text(1, LOG_LVL_WARN, "ms5611", "failed to write temperature conversion command");
+			return W_IO_ERROR;
+		}
 
-	delay_us(CONV_TIME_US[handle.osr_temperature] +
-			 1000); // 2 ms. Additional 1ms is added here for safety - temp conv time for osr256
-					// does not match the datasheet specifications
+		delay_us(MAX_CONV_TIME_US[handle.osr_temperature] +
+				 1000); // 2 ms. Additional 1ms is added here for safety - temp conv time for osr256
+						// does not match the datasheet specifications
 
-	if (W_FAILURE == baro_read_adc(&d2)) {
-		log_text(1, LOG_LVL_WARN, "ms5611", "failed to read temperature ADC");
-		return W_IO_ERROR;
+		if (W_FAILURE == baro_read_adc(&(handle.cached_temp_d2))) {
+			log_text(1, LOG_LVL_WARN, "ms5611", "failed to read temperature ADC");
+			return W_IO_ERROR;
+		}
 	}
 
 	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
@@ -411,7 +423,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_IO_ERROR;
 	}
 
-	delay_us(CONV_TIME_US[handle.osr_pressure] + 1000); // 3 ms
+	delay_us(MAX_CONV_TIME_US[handle.osr_pressure] + 1000); // 3 ms
 
 	if (W_FAILURE == baro_read_adc(&d1)) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "failed to read pressure ADC");
@@ -419,8 +431,8 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	}
 
 	/* First-order compensation */
-	dt = (int32_t)handle.cached_temperature - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) << 8);
-	temp = second_comp_temp_threshold_centi_degrees +
+	dt = (int32_t)handle.cached_temp_d2 - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) << 8);
+	temp = SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES +
 		   (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
 	off = (((int64_t)handle.prom_coef[MS5611_COEFF_OFF]) << 16) +
 		  ((((int64_t)handle.prom_coef[MS5611_COEFF_TCO]) * dt) >> 7);
@@ -432,20 +444,20 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	off2 = 0;
 	sens2 = 0;
 
-	if (temp < second_comp_temp_threshold_centi_degrees) {
+	if (temp < SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) {
 		T2 = ((int64_t)dt * dt) >> 31;
-		off2 = (5 * ((int64_t)(temp - second_comp_temp_threshold_centi_degrees) *
-					 (temp - second_comp_temp_threshold_centi_degrees))) >>
+		off2 = (5 * ((int64_t)(temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) *
+					 (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) >>
 			   1;
-		sens2 = (5 * ((int64_t)(temp - second_comp_temp_threshold_centi_degrees) *
-					  (temp - second_comp_temp_threshold_centi_degrees))) >>
+		sens2 = (5 * ((int64_t)(temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) *
+					  (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) >>
 				2;
 
-		if (temp < second_comp_extreme_temp_threshold_centi_degrees) {
-			off2 += 7 * ((int64_t)(temp - second_comp_extreme_temp_threshold_centi_degrees) *
-						 (temp - second_comp_extreme_temp_threshold_centi_degrees));
-			sens2 += (11 * ((int64_t)(temp - second_comp_extreme_temp_threshold_centi_degrees) *
-							(temp - second_comp_extreme_temp_threshold_centi_degrees))) >>
+		if (temp < SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES) {
+			off2 += 7 * ((int64_t)(temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES) *
+						 (temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES));
+			sens2 += (11 * ((int64_t)(temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES) *
+							(temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES))) >>
 					 1;
 		}
 
@@ -459,7 +471,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	result->temperature_centideg = temp;
 	result->pressure_centimbar = (int32_t)p;
 
-	*timestamp_ms += (conv_us_to_ms(CONV_TIME_US[handle.osr_pressure]) /
+	*timestamp_ms += (conv_us_to_ms(AVE_CONV_TIME_US[handle.osr_pressure]) /
 					  2); // getting the midpoint of the conversion time for the timestamp to be
 						  // more accurate (tristan suggestion)
 
@@ -526,7 +538,7 @@ void ms5611_task(void *argument) {
 		}
 
 		// state switching logic (applies to the *next* loop)
-		if (++count >= MS5611_TEMP_CONV_STATE_SWITCH_COUNT) {
+		if ((++count) >= MS5611_TEMP_CONV_STATE_SWITCH_COUNT) {
 			count = 0;
 			handle.conv_state = MS5611_CONV_TEMP_PRESSURE;
 		} else {
