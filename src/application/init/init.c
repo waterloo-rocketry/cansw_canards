@@ -16,7 +16,6 @@
 #include "application/health_checks/health_checks.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
-#include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
@@ -96,19 +95,18 @@ static void system_init_task(void *arg) {
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= estimator_init();
-	// status |= health_check_init();
-	status |= power_handler_init();
-	// status |= movella_init();
+	status |= health_check_init();
+	status |= movella_init();
 	status |= flight_phase_init();
 	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	// status |= adxl380_init();
-	// status |= lsm6dsv32x_init();
-	// status |= adxrs649_init();
-	// status |= iis2mdc_init();
-	// status |= ekf_init();
+	status |= adxl380_init();
+	status |= lsm6dsv32x_init();
+	status |= adxrs649_init();
+	status |= iis2mdc_init();
+	status |= ekf_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -128,12 +126,12 @@ static void system_init_task(void *arg) {
 							   fsm_task_priority,
 							   &fsm_task_handle);
 
-	// task_status &= xTaskCreate(health_check_task,
-	// 						   "health",
-	// 						   512,
-	// 						   NULL,
-	// 						   health_checks_task_priority,
-	// 						   &health_checks_task_handle);
+	task_status &= xTaskCreate(health_check_task,
+							   "health",
+							   512,
+							   NULL,
+							   health_checks_task_priority,
+							   &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx,
 							   "can handler rx",
@@ -149,17 +147,17 @@ static void system_init_task(void *arg) {
 							   can_handler_tx_priority,
 							   &can_handler_handle_tx);
 
-	// task_status &= xTaskCreate(
-	// 	movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+	task_status &= xTaskCreate(
+		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
-	// task_status &= xTaskCreate(ad_breakout_board_task,
-	// 						   "ad board task",
-	// 						   2560, // TODO: set when sure of size
-	// 						   NULL,
-	// 						   ad_breakout_task_priority,
-	// 						   &ad_breakout_task_handle);
+	task_status &= xTaskCreate(ad_breakout_board_task,
+							   "ad board task",
+							   2560, // TODO: set when sure of size
+							   NULL,
+							   ad_breakout_task_priority,
+							   &ad_breakout_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -173,27 +171,6 @@ static void system_init_task(void *arg) {
 
 	gpio_toggle(GPIO_PIN_GREEN_LED, 0);
 	gpio_toggle(GPIO_PIN_BLUE_LED, 0);
-
-	while (1) {
-		health_status_t status = power_handler_get_status();
-
-		log_text(5, "powerhandler", "power handler status %lx", status.error_bitfield);
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-		log_text(5, "powerhandler", "spamspamspamspamspamspamspamspamspamspamspam");
-
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-
-		vTaskDelay(pdMS_TO_TICKS(2000));
-	}
 
 	// its blinky now
 	while (1) {
