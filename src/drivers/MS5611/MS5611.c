@@ -13,11 +13,11 @@
 
 /* Period between successive pressure samples taken by ms5611_task at 100 hz */
 #define MS5611_TASK_PERIOD_MS 10
-/* Period between successive tempreture samples taken by ms5611_task at 10 hz */
-#define MS5611_TEMP_COV_PERIOD_MS 100
+/* Period between successive temperature samples taken by ms5611_task at 10 Hz */
+#define MS5611_TEMP_CONV_PERIOD_MS 100
 
 static const uint8_t MS5611_TEMP_CONV_STATE_SWITCH_COUNT =
-	MS5611_TEMP_COV_PERIOD_MS / MS5611_TASK_PERIOD_MS;
+	MS5611_TEMP_CONV_PERIOD_MS / MS5611_TASK_PERIOD_MS;
 
 /* IIC address: CSB pin low = 0x77, CSB pin high = 0x76 */
 typedef enum {
@@ -410,7 +410,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		return W_IO_ERROR;
 	}
 
-	delay_us(CONV_TIME_US[handle.osr_pressure]); // 3 ms
+	delay_us(CONV_TIME_US[handle.osr_pressure] + 1000); // 3 ms
 
 	if (W_FAILURE == baro_read_adc(&d1)) {
 		log_text(1, "ms5611", "ERROR: failed to read pressure ADC");
@@ -523,8 +523,8 @@ void ms5611_task(void *argument) {
 			xSemaphoreGive(s_data_mutex);
 		}
 
-		// state switching logic
-		if (MS5611_TEMP_CONV_STATE_SWITCH_COUNT == count++) {
+		// state switching logic (applies to the *next* loop)
+		if (++count >= MS5611_TEMP_CONV_STATE_SWITCH_COUNT) {
 			count = 0;
 			handle.conv_state = MS5611_CONV_TEMP_PRESSURE;
 		} else {

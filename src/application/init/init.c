@@ -103,10 +103,11 @@ static void system_init_task(void *arg) {
 	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
-	// status |= fsm_init();
-	// status |= adxl380_init();
+	status |= fsm_init();
+	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	// status |= adxrs649_init();
+	status |= adxrs649_init();
+	status |= ms5611_init();
 	status |= iis2mdc_init();
 	// status |= ekf_init();
 
@@ -121,12 +122,12 @@ static void system_init_task(void *arg) {
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	// task_status &= xTaskCreate(fsm_task,
-	// 						   "fsm",
-	// 						   8192, // TODO: set the correct size
-	// 						   NULL,
-	// 						   fsm_task_priority,
-	// 						   &fsm_task_handle);
+	task_status &= xTaskCreate(fsm_task,
+							   "fsm",
+							   8192, // TODO: set the correct size
+							   NULL,
+							   fsm_task_priority,
+							   &fsm_task_handle);
 
 	task_status &= xTaskCreate(health_check_task,
 							   "health",
@@ -157,12 +158,12 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
-	// task_status &= xTaskCreate(ad_breakout_board_task,
-	// 						   "ad board task",
-	// 						   2560, // TODO: set when sure of size
-	// 						   NULL,
-	// 						   ad_breakout_task_priority,
-	// 						   &ad_breakout_task_handle);
+	task_status &= xTaskCreate(ad_breakout_board_task,
+							   "ad board task",
+							   2560, // TODO: set when sure of size
+							   NULL,
+							   ad_breakout_task_priority,
+							   &ad_breakout_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -170,58 +171,6 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, "SystemInit", "All tasks created successfully.");
-
-	/* Log the barometer sample timestamp at 200 Hz (5 ms period). */
-	TickType_t lastWakeTime = 0;
-	ms5611_raw_result_t result;
-	uint32_t timestamp_ms = 0;
-
-	gpio_toggle(GPIO_PIN_GREEN_LED, 0);
-	gpio_toggle(GPIO_PIN_BLUE_LED, 0);
-
-	for (;;) {
-		w_status_t status = ms5611_get_raw_pressure(&result, &timestamp_ms);
-
-		if (W_SUCCESS == status) {
-			log_text(5,
-					 "ms5611",
-					 "ts = %lu, temp = %lu, p = %lu",
-					 (unsigned long)timestamp_ms,
-					 (unsigned long)result.temperature_centideg,
-					 (unsigned long)result.pressure_centimbar);
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-			log_text(
-				5, "ms5611", "676767677676767676767677676767676767676767676767676767676767676767");
-
-		} else {
-			log_text(5, "ms5611", "can't get fresh data, status code: %d", status);
-		}
-
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-
-		vTaskDelay(pdMS_TO_TICKS(10));
-	}
 
 	// its blinky now
 	while (1) {
