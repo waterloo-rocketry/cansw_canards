@@ -66,7 +66,7 @@ static power_input_source_t get_active_input(void) {
 	if (W_SUCCESS != status) {
 		log_text(1,
 				 "power handler",
-				 "adc communication failed while getting charge voltage. Status: %d",
+				 LOG_LVL_WARN, "adc communication failed while getting charge voltage. Status: %d",
 				 status);
 	}
 
@@ -74,7 +74,7 @@ static power_input_source_t get_active_input(void) {
 	if (W_SUCCESS != status) {
 		log_text(1,
 				 "power handler",
-				 "adc communication failed while getting rocket voltage.Status: %d",
+				 LOG_LVL_WARN, "adc communication failed while getting rocket voltage.Status: %d",
 				 status);
 	}
 
@@ -82,7 +82,7 @@ static power_input_source_t get_active_input(void) {
 	if (W_SUCCESS != status) {
 		log_text(1,
 				 "power handler",
-				 "adc communication failed while getting battery 1 voltage.Status: %d",
+				 LOG_LVL_WARN, "adc communication failed while getting battery 1 voltage.Status: %d",
 				 status);
 	}
 
@@ -90,7 +90,7 @@ static power_input_source_t get_active_input(void) {
 	if (W_SUCCESS != status) {
 		log_text(1,
 				 "power handler",
-				 "adc communication failed while getting battery 2 voltage.Status: %d",
+				 LOG_LVL_WARN, "adc communication failed while getting battery 2 voltage.Status: %d",
 				 status);
 	}
 
@@ -120,7 +120,7 @@ static void transmit_curr_volt_status_can_msg() {
 	w_status_t can_tx_status = W_SUCCESS;
 
 	if (W_SUCCESS != timer_get_ms(&timestamp)) {
-		log_text(1, "power_handler", "WARNING: Failed to get timestamp for power status can msg.");
+		log_text(1, "power_handler", LOG_LVL_WARN, "Failed to get timestamp for power status can msg.");
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(VSENS_BAT1, &adc_value)) {
@@ -168,7 +168,8 @@ static void transmit_curr_volt_status_can_msg() {
 	if (W_SUCCESS != can_tx_status) {
 		log_text(1,
 				 "power_handler",
-				 "WARNING: Some can messages containing voltage and current information failed to "
+				 LOG_LVL_WARN,
+				 "Some can messages containing voltage and current information failed to "
 				 "transmit during health check.");
 	}
 }
@@ -203,6 +204,7 @@ health_status_t power_handler_get_status(void) {
 	if (W_SUCCESS != gpio_read_status) {
 		log_text(1,
 				 "power_handler",
+				 LOG_LVL_WARN,
 				 "ERROR: gpio read failed during get status. Code:%lx",
 				 gpio_read_status);
 	}
@@ -212,6 +214,7 @@ health_status_t power_handler_get_status(void) {
 		power_handler_status.lipo_1_fault_count++;
 		log_text(1,
 				 "power_handler",
+				 LOG_LVL_WARN,
 				 "bat 1 power fault. Fault count: %d",
 				 power_handler_status.lipo_1_fault_count);
 	}
@@ -221,6 +224,7 @@ health_status_t power_handler_get_status(void) {
 		power_handler_status.lipo_2_fault_count++;
 		log_text(1,
 				 "power_handler",
+				 LOG_LVL_WARN,
 				 "bat 2 power fault. Fault count: %d",
 				 power_handler_status.lipo_2_fault_count);
 	}
@@ -231,6 +235,7 @@ health_status_t power_handler_get_status(void) {
 		power_handler_status.external_5v_fault_count++;
 		log_text(1,
 				 "power_handler",
+				 LOG_LVL_WARN,
 				 "ext 5v output fault. Fault count: %d",
 				 power_handler_status.external_5v_fault_count);
 	}
@@ -243,6 +248,7 @@ health_status_t power_handler_get_status(void) {
 			power_handler_status.overcurrent_count++;
 			log_text(1,
 					 "power_handler",
+					 LOG_LVL_WARN,
 					 "5v power rail current fault. Fault count: %d",
 					 power_handler_status.overcurrent_count);
 		}
@@ -254,6 +260,7 @@ health_status_t power_handler_get_status(void) {
 			power_handler_status.overcurrent_count++;
 			log_text(1,
 					 "power_handler",
+					 LOG_LVL_WARN,
 					 "3v3 power rail current fault. Fault count: %d",
 					 power_handler_status.overcurrent_count);
 		}
@@ -270,7 +277,7 @@ health_status_t power_handler_get_status(void) {
 				}
 			}
 
-			log_text(1, "power_handler", "Active power source: CHG");
+			log_text(1, "power_handler", LOG_LVL_INFO, "Active power source: CHG");
 			break;
 
 		case POWER_INPUT_RKT:
@@ -280,7 +287,7 @@ health_status_t power_handler_get_status(void) {
 				}
 			}
 
-			log_text(1, "power_handler", "Active power source: RKT");
+			log_text(1, "power_handler", LOG_LVL_INFO, "Active power source: RKT");
 			break;
 
 		case POWER_INPUT_BAT:
@@ -318,11 +325,11 @@ health_status_t power_handler_get_status(void) {
 				}
 			}
 
-			log_text(1, "power_handler", "Active power source: BAT");
+			log_text(1, "power_handler", LOG_LVL_INFO, "Active power source: BAT");
 			break;
 
 		default:
-			log_text(1, "power_handler", "Active power source: NONE");
+			log_text(1, "power_handler", LOG_LVL_INFO, "Active power source: NONE");
 			break;
 	}
 
@@ -347,13 +354,13 @@ static w_status_t power_handler_set_5V_external(bool enabled) {
 	if (enabled) {
 		// Prevent enabling when low power mode active
 		if (power_handler_status.low_power_mode) {
-			log_text(10, "power_handler", "Cannot enable 5V external in low power mode");
+			log_text(10, "power_handler", LOG_LVL_WARN, "Cannot enable 5V external in low power mode");
 			return W_FAILURE;
 		}
 
 		// Prevent enabling when charge line is active
 		if (POWER_INPUT_CHG == get_active_input()) {
-			log_text(10, "power_handler", "Cannot enable 5V external when CHG is active");
+			log_text(10, "power_handler", LOG_LVL_WARN, "Cannot enable 5V external when CHG is active");
 			return W_FAILURE;
 		}
 
@@ -372,7 +379,8 @@ static w_status_t power_handler_set_5V_external(bool enabled) {
 	if (W_SUCCESS != gpio_status) {
 		log_text(1,
 				 "power_handler",
-				 "ERROR: gpio write failed while toggling 5v external or charge mux. Error: %d",
+				 LOG_LVL_WARN,
+				 "gpio write failed while toggling 5v external or charge mux. Error: %d",
 				 gpio_status);
 		return gpio_status;
 	}
@@ -392,7 +400,7 @@ static w_status_t power_handler_set_low_power_mode(bool enabled) {
 		// Disable external 5V when entering low power mode
 		if (W_SUCCESS != power_handler_set_5V_external(false)) {
 			log_text(
-				1, "power_handler", "ERROR: failed to turn off 5v external in low power mode.");
+				1, "power_handler", LOG_LVL_WARN, "Failed to turn off 5v external in low power mode.");
 		}
 
 		// Disable LiPo
@@ -401,12 +409,13 @@ static w_status_t power_handler_set_low_power_mode(bool enabled) {
 		if (W_SUCCESS != gpio_status) {
 			log_text(1,
 					 "power_handler",
-					 "ERROR: gpio write failed while diabling lipo. Error code: %d",
+					 LOG_LVL_WARN,
+					 "gpio write failed while disabling lipo. Error code: %d",
 					 gpio_status);
 			return gpio_status;
 		}
 
-		log_text(1, "power_handler", "Low power mode enabled: LiPo disabled");
+		log_text(1, "power_handler", LOG_LVL_INFO, "Low power mode enabled: LiPo disabled");
 	} else {
 		// Enable LiPo when exiting low power mode
 		gpio_status = gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
@@ -414,12 +423,13 @@ static w_status_t power_handler_set_low_power_mode(bool enabled) {
 		if (W_SUCCESS != gpio_status) {
 			log_text(1,
 					 "power_handler",
-					 "ERROR: gpio write failed while enabling lipo. Error code: %d",
+					 LOG_LVL_WARN,
+					 "gpio write failed while enabling lipo. Error code: %d",
 					 gpio_status);
 			return gpio_status;
 		}
 
-		log_text(1, "power_handler", "INFO: Low power mode disabled: LiPo enabled");
+		log_text(1, "power_handler", LOG_LVL_INFO, "Low power mode disabled: LiPo enabled");
 	}
 
 	power_handler_status.low_power_mode = enabled;
@@ -439,13 +449,13 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 
 	if ((W_SUCCESS != get_actuator_id(msg, &actuator_id)) ||
 		(W_SUCCESS != get_cmd_actuator_state(msg, &cmd_state))) {
-		log_text(5, "power_handler", "ERROR: Failed to get actuator id or state.");
+		log_text(5, "power_handler", LOG_LVL_WARN, "Failed to get actuator id or state.");
 		return W_FAILURE;
 	}
 
 	if (W_SUCCESS != timer_get_ms(&timestamp)) {
 		log_text(
-			1, "power_handler", "WARNING: Failed to get timestamp for actuator status can msg.");
+			1, "power_handler", LOG_LVL_WARN, "Failed to get timestamp for actuator status can msg.");
 	}
 
 	if (ACTUATOR_CANARD_5V_OUTPUT == actuator_id) {
@@ -462,10 +472,11 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 			if (W_SUCCESS != can_handler_transmit(&response_msg)) {
 				log_text(1,
 						 "power_handler",
-						 "WARNING: Can message failed to transmit for actruator status.");
+						 LOG_LVL_WARN,
+						 "Can message failed to transmit for actruator status.");
 			}
 		} else {
-			log_text(1, "power handler", "ERROR: failed to toggle 5v external power.");
+			log_text(1, "power handler", LOG_LVL_WARN, "Failed to toggle 5v external power.");
 		}
 	} else if (ACTUATOR_CANARD_LIPO_ON == actuator_id) {
 		bool lipo_enable = (ACT_STATE_ON == cmd_state);
@@ -481,13 +492,14 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 			if (W_SUCCESS != can_handler_transmit(&response_msg)) {
 				log_text(1,
 						 "power_handler",
-						 "WARNING: Can message failed to transmit for actruator status.");
+						 LOG_LVL_WARN,
+						 "Can message failed to transmit for actruator status.");
 			}
 		} else {
-			log_text(1, "power_handler", "ERROR: failed to toggle lipo power.");
+			log_text(1, "power_handler", LOG_LVL_WARN, "Failed to toggle lipo power.");
 		}
 	} else {
-		log_text(1, "power handler", "ERROR: can command is either ");
+		log_text(1, "power handler", LOG_LVL_WARN, "Invalid can command. Actuator ID: %d", actuator_id);
 	}
 
 	return status;
@@ -500,10 +512,10 @@ static w_status_t power_reset_callback(const can_msg_t *msg) {
 	bool need_reset = true;
 
 	if ((W_SUCCESS == check_board_need_reset(msg, &need_reset)) && need_reset) {
-		log_text(1, "power_handler", "INFO: System reset initiated");
+		log_text(1, "power_handler", LOG_LVL_INFO, "System reset initiated");
 		NVIC_SystemReset();
 	} else {
-		log_text(1, "power_handler", "ERROR: failed to read reset command");
+		log_text(1, "power_handler", LOG_LVL_WARN, "Failed to read reset command");
 		return W_FAILURE;
 	}
 
@@ -526,7 +538,7 @@ w_status_t power_handler_init(void) {
 	gpio_status |= gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
 
 	if (W_SUCCESS != gpio_status) {
-		log_text(5, "power_handler", "ERROR: Failed with gpio write during init.");
+		log_text(5, "power_handler", LOG_LVL_WARN, "Failed with gpio write during init.");
 	}
 
 	// Register callbacks
@@ -534,7 +546,7 @@ w_status_t power_handler_init(void) {
 	cb_status |= can_handler_register_callback(MSG_RESET_CMD, power_reset_callback);
 
 	if (W_SUCCESS != cb_status) {
-		log_text(1, "power_handler", "ERROR: Failed to register CAN callbacks during init.");
+		log_text(1, "power_handler", LOG_LVL_WARN, "Failed to register CAN callbacks during init.");
 	}
 
 	init_status = (cb_status & gpio_status);

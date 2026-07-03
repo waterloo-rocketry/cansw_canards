@@ -439,14 +439,6 @@ add_test_group(test_power_handler
     ${PROC_SRC_DIR}/application/power_handler/power_handler.c
 )
 
-add_test_group(test_power_handler
-    # test file(s)
-    ${UNIT_TESTS_DIR}/power_handler_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/power_handler/power_handler.c
-)
-
-
 add_test_group(test_ms5611_baro
     # test3 file(s)
     ${UNIT_TESTS_DIR}/ms5611_test.cpp
