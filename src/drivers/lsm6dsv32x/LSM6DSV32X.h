@@ -19,8 +19,8 @@ typedef struct __attribute__((packed)) {
 
 typedef struct {
 	bool is_init;
-	bool is_not_insane // failed sanity check
-	uint32_t stuff;
+	uint32_t failed_gyro_acc_data_gets;
+	uint32_t failed_DMA_data_transfers;
 } lsm6dsv32x_health_t;
 
 /**

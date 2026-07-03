@@ -89,7 +89,6 @@ static w_status_t lsm6dsv32x_check_sanity() {
 	}
 
 	if ((W_SUCCESS == device_status) && (W_SUCCESS == i2c_status)) {
-		lsm6dsv32x_health.is_not_insane = 1;
 		return W_SUCCESS;
 	} else {
 		return W_FAILURE;
@@ -184,15 +183,15 @@ w_status_t lsm6dsv32x_init() {
 	// AFTER THIS POINT NEVER USE OLD I2C OR VERY BAD ERRORS
 
 	if (status != W_SUCCESS) {
+		lsm6dsv32x_health.is_init = 1;
+	} else {
 		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "initfail");
 	}
 
 	// only open the i2c bus once fully ready
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
 
-	if (status == W_SUCCESS) {
-		lsm6dsv32x_health.is_init = 1;
-	}
+	if (status == W_SUCCESS) {}
 
 	return status;
 }
@@ -204,11 +203,13 @@ w_status_t lsm6dsv32x_init() {
 w_status_t lsm6dsv32x_int1_isr_handler() {
 	if (!lsm6dsv32x_ctx.switched_callback) {
 		return W_FAILURE;
+		lsm6dsv32x_health.failed_DMA_data_transfers++;
 	}
 
 	// store the timestamp when the data is received
 	if (timer_get_ms(&lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER]) != W_SUCCESS) {
 		return W_FAILURE;
+		lsm6dsv32x_health.failed_DMA_data_transfers++;
 	}
 
 	lsm6dsv32x_ctx.latest_status = W_SUCCESS;
@@ -229,6 +230,7 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	if (hal_status != HAL_OK) {
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
 		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
+		lsm6dsv32x_health.failed_DMA_data_transfers++;
 	}
 
 	return lsm6dsv32x_ctx.latest_status;
@@ -284,6 +286,10 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		status = W_FAILURE;
 	}
 
+	if (status == W_FAILURE) {
+		lsm6dsv32x_health.failed_gyro_acc_data_gets++;
+	}
+
 	return status;
 }
 
@@ -291,9 +297,22 @@ health_status_t lsm6dsv32x_get_status(void) {
 	health_status_t status = {
 		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
 
-	if (!lsm6dsv32x_health.is_init) {
+	if (!lsm6dsv32x_health.is_init || !lsm6dsv32x_ctx.switched_callback) {
 		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= MODULE_ERR_INIT_FAIL;
 	}
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "LSM6DSV32X",
+			 "init=%d, bus_free=%d, switched_callback=%d, latest_status=%d, data_stale=%d, "
+			 "failed_gyro_acc_data_gets=%d, failed_DMA_data_transfers=%d",
+			 lsm6dsv32x_health.is_init,
+			 lsm6dsv32x_ctx.bus_status,
+			 lsm6dsv32x_ctx.switched_callback,
+			 lsm6dsv32x_ctx.latest_status,
+			 lsm6dsv32x_health.failed_gyro_acc_data_gets,
+			 lsm6dsv32x_health.failed_DMA_data_transfers);
 
 	return status;
 }
