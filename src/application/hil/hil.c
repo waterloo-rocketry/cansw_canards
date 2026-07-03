@@ -13,10 +13,10 @@
 #define HIL_HEADER_SIZE_BYTES (4U)
 #define HIL_FOOTER_SIZE_BYTES (1U)
 
-#define HIL_HEADER_CHAR_0 ('!')
-#define HIL_HEADER_CHAR_1 ('o')
-#define HIL_HEADER_CHAR_2 ('r')
-#define HIL_HEADER_CHAR_3 ('z')
+#define HIL_HEADER_CHAR_0 ('o')
+#define HIL_HEADER_CHAR_1 ('r')
+#define HIL_HEADER_CHAR_2 ('z')
+#define HIL_HEADER_CHAR_3 ('!')
 
 #define HIL_FOOTER_CHAR ('\n')
 
@@ -35,13 +35,13 @@ typedef struct __attribute__((packed)) {
 	float32_t board_gyro_x;
 	float32_t board_gyro_y;
 	float32_t board_gyro_z;
-
-	float32_t board_baro;
-
+    
 	float32_t board_mag_x;
 	float32_t board_mag_y;
 	float32_t board_mag_z;
 
+	float32_t board_baro;
+    
 	float32_t mti_accel_x;
 	float32_t mti_accel_y;
 	float32_t mti_accel_z;
@@ -49,18 +49,22 @@ typedef struct __attribute__((packed)) {
 	float32_t mti_gyro_x;
 	float32_t mti_gyro_y;
 	float32_t mti_gyro_z;
-
-	float32_t mti_baro;
-
+    
 	float32_t mti_mag_x;
 	float32_t mti_mag_y;
 	float32_t mti_mag_z;
+    
+    float32_t mti_baro;
 
 	float32_t ad_accel_x;
 	float32_t ad_accel_y;
 	float32_t ad_accel_z;
 
 	float32_t ad_gyro;
+    // simulink is stuck giving xyz for gyro even though only the x-axis actually exists
+	float32_t ad_gyro_dummy_y;
+	float32_t ad_gyro_dummy_z;
+
 	float32_t motor_encoder;
 
 	bool ignitor_can_msg;
