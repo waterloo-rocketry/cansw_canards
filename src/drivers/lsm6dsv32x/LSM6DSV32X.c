@@ -229,7 +229,7 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 							 I2C_MEMADD_SIZE_8BIT,
 							 lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER],
 							 CTX_BUFFER_SIZE);
-	if (hal_status != HAL_OK) {
+	if (hal_status == HAL_OK) {
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
 		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
 		lsm6dsv32x_health.DMA_data_transfer_failed_mem_read++;
@@ -298,15 +298,14 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 
 health_status_t lsm6dsv32x_get_status(void) {
 	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
+		.severity = HEALTH_OK, .module_id = MODULE_LSM6DSV32X, .error_bitfield = 0};
 
 	if (lsm6dsv32x_ctx.latest_status == W_IO_ERROR) {
 		status.severity = HEALTH_ERROR;
 		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
 	}
 
-	if (!lsm6dsv32x_health.is_init || !lsm6dsv32x_ctx.switched_callback ||
-		lsm6dsv32x_health.is_insane) {
+	if (!lsm6dsv32x_health.is_init) {
 		status.severity = HEALTH_FATAL;
 		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
