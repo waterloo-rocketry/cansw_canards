@@ -7,6 +7,9 @@
 #include "task.h"
 #include "usart.h"
 
+#include "canlib.h"
+#include "application/power_handler/power_handler.h"
+
 #include "GNC_codegen.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
@@ -105,11 +108,12 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	status |= adxl380_init();
+	// status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
+	// status |= adxrs649_init();
 	status |= ms5611_init();
 	status |= iis2mdc_init();
+	status |= power_handler_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -181,13 +185,119 @@ static void system_init_task(void *arg) {
 	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
 
 	// its blinky now
+	TickType_t last_wake_time = xTaskGetTickCount();
+
+	gpio_toggle(GPIO_PIN_RED_LED, 1);
+	gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+	gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+	can_msg_t msg = {0};
+	uint32_t timestamp_ms = 0;
+	uint16_t i = 0;
+
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
-		vTaskDelay(500);
+		(void)timer_get_ms(&timestamp_ms);
+		uint16_t ts = (uint16_t)timestamp_ms;
+
+		// 10 Hz
+		build_3d_analog_sensor_16bit_msg(
+			PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_NAV_ORIENTATION_QUAT_QX_QY_QZ, 0, 0, 0, &msg);
+		(void)can_handler_transmit(&msg);
+		build_3d_analog_sensor_16bit_msg(
+			PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_NAV_ORIENTATION_QUAT_QW_ALT_VARNORM, 0, 0, 0, &msg);
+		(void)can_handler_transmit(&msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, ts, SENSOR_CANARD_CTRL_CMD_ANGLE, 0, &msg);
+		(void)can_handler_transmit(&msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, ts, SENSOR_CANARD_CTRL_CMD_ANGLE, 0, &msg);
+		(void)can_handler_transmit(&msg); // #2
+		vTaskDelay(1);
+
+		build_analog_sensor_16bit_msg(PRIO_LOW, ts, SENSOR_CANARD_CTRL_COEFF_LIFT, 0, &msg);
+		(void)can_handler_transmit(&msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, ts, SENSOR_CANARD_SERVO_ANGLE, 0, &msg);
+		(void)can_handler_transmit(&msg);
+		build_3d_analog_sensor_16bit_msg(
+			PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_LSM6DSV32X_ACCEL, 0, 0, 0, &msg);
+		(void)can_handler_transmit(&msg);
+		vTaskDelay(1);
+
+		build_3d_analog_sensor_16bit_msg(
+			PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_LSM6DSV32X_GYRO, 0, 0, 0, &msg);
+		(void)can_handler_transmit(&msg);
+		build_3d_analog_sensor_16bit_msg(
+			PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_ADXL380_ACCEL, 0, 0, 0, &msg);
+		(void)can_handler_transmit(&msg);
+		build_analog_sensor_32bit_msg(PRIO_LOW, ts, SENSOR_CANARD_ADXRS649_GYRO, 0, &msg);
+		(void)can_handler_transmit(&msg);
+
+		vTaskDelay(1);
+		build_analog_sensor_16bit_msg(PRIO_LOW, ts, SENSOR_CANARD_SERVO_ANGLE, 0, &msg);
+		(void)can_handler_transmit(&msg); // duplicate in list
+		build_analog_sensor_16bit_msg(PRIO_LOW, ts, SENSOR_CANARD_SERVO_CURR, 0, &msg);
+		(void)can_handler_transmit(&msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, ts, SENSOR_CANARD_SERVO_TEMP, 0, &msg);
+		(void)can_handler_transmit(&msg);
+
+		vTaskDelay(1);
+
+		if (i % 2 == 0) { // 5 Hz
+			build_2d_analog_sensor_24bit_msg(
+				PRIO_LOW, ts, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_X, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+			build_2d_analog_sensor_24bit_msg(
+				PRIO_LOW, ts, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Y, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+			build_2d_analog_sensor_24bit_msg(
+				PRIO_LOW, ts, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Z, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+			build_2d_analog_sensor_24bit_msg(
+				PRIO_LOW, ts, DEM_2D_SENSOR_CANARD_MS5611_BARO_TEMP, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+		}
+
+		vTaskDelay(1);
+
+		if (i % 5 == 0) { // 2 Hz
+			build_3d_analog_sensor_16bit_msg(
+				PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_IIS2MDC_MAG, 0, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+			build_3d_analog_sensor_16bit_msg(
+				PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_MTI630_ACCEL, 0, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+			build_3d_analog_sensor_16bit_msg(
+				PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_MTI630_GYRO, 0, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+			build_3d_analog_sensor_16bit_msg(
+				PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_MTI630_MAG, 0, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+			build_analog_sensor_32bit_msg(PRIO_LOW, ts, SENSOR_CANARD_MTI630_BARO_0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+		}
+
+		vTaskDelay(1);
+
+		if (i % 10 == 0) { // 1 Hz
+			build_2d_analog_sensor_24bit_msg(
+				PRIO_LOW, ts, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_X, 0, 0, &msg);
+			(void)can_handler_transmit(&msg); // #2
+			build_2d_analog_sensor_24bit_msg(
+				PRIO_LOW, ts, DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_X, 0, 0, &msg);
+			(void)can_handler_transmit(&msg); // #3
+			build_3d_analog_sensor_16bit_msg(
+				PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_MTI630_EST_ANGLE_VEL, 0, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+			build_3d_analog_sensor_16bit_msg(
+				PRIO_LOW, ts, DEM_3D_SENSOR_CANARD_MTI630_EST_VEL, 0, 0, 0, &msg);
+			(void)can_handler_transmit(&msg);
+
+			gpio_toggle(GPIO_PIN_RED_LED, 1);
+			gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+			gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+		}
+
+		vTaskDelay(1);
+
+		i = (i + 1) % 10;
+		vTaskDelayUntil(&last_wake_time, 100);
 	}
 }
 

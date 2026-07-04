@@ -18,7 +18,7 @@
 #include "third_party/rocketlib/include/mathops.h" /* For clamp functions */
 
 // TODO: calculate better. for now make excessively large and check dropped tx counter
-#define BUS_QUEUE_LENGTH 32
+#define BUS_QUEUE_LENGTH 64
 
 static QueueHandle_t bus_queue_rx = NULL;
 static QueueHandle_t bus_queue_tx = NULL;
