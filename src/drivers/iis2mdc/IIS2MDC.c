@@ -345,7 +345,7 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
 		return W_FAILURE;
 	}
 	iis2mdc_dma_busy = true;
-	iis2mdc_latest_status = W_SUCCESS; //clears error if last drdy failed, will retry on next drdy
+	iis2mdc_latest_status = W_SUCCESS; // clears error if last drdy failed, will retry on next drdy
 
 	if (HAL_OK != HAL_I2C_Mem_Read_DMA(&hi2c4,
 									   IIS2MDC_HAL_ADDR,
