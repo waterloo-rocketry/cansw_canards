@@ -252,16 +252,15 @@ uint32_t sd_card_get_status(void) {
         status_bitfield |= (1 << E_FS_ERROR_OFFSET);
     }
 
-    // Log operation statistics
-    log_text(
-        0,
-        "sd_card",
-        "%s files_created=%lu, reads=%lu, writes=%lu",
-        sd_card_health.is_init ? "init" : "not init",
-        sd_card_health.file_create_count,
-        sd_card_health.read_count,
-        sd_card_health.write_count
-    );
+	// Log operation statistics
+	log_text(0,
+			 LOG_LVL_INFO,
+			 "sd_card",
+			 "%s files_created=%lu, reads=%lu, writes=%lu",
+			 sd_card_health.is_init ? "init" : "not init",
+			 sd_card_health.file_create_count,
+			 sd_card_health.read_count,
+			 sd_card_health.write_count);
 
     return status_bitfield;
 }

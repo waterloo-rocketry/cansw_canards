@@ -266,7 +266,8 @@ w_status_t log_init(void) {
 	return status;
 }
 
-w_status_t log_text(uint32_t timeout, const char *source, const char *format, ...) {
+w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
+					...) {
 	// Get timestamp as close to time of call as possible
 	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log
 	// message anyway. We're trying to log as much as possible and a missing timestamp does not
@@ -318,12 +319,33 @@ w_status_t log_text(uint32_t timeout, const char *source, const char *format, ..
 	// Get pointer to message region to write to
 	char *const msg_dest = buffer->data + (msg_num * MAX_TEXT_MSG_LENGTH);
 
+	// Determine the string to display for log severity
+	const char *level_string = "";
+	switch (level) {
+		case LOG_LVL_FATAL:
+			level_string = "FATAL";
+			break;
+		case LOG_LVL_WARN:
+			level_string = "WARN";
+			break;
+		case LOG_LVL_INFO:
+			level_string = "INFO";
+			break;
+		case LOG_LVL_DEBUG:
+			level_string = "DEBUG";
+			break;
+		default:
+			level_string = "LOG LEVEL ERROR";
+			break;
+	}
+
 	uint32_t chars_written = 0;
 	// Write log message header to region
 	chars_written += snprintf_(msg_dest + chars_written,
 							   MAX_TEXT_MSG_LENGTH - chars_written,
-							   "[%" PRIu32 "] %s;",
+							   "[%" PRIu32 "] %s; %s; ",
 							   timestamp,
+							   level_string,
 							   source);
 	// If truncated, set first char to '!'
 	if (chars_written >= MAX_TEXT_MSG_LENGTH) {
@@ -476,6 +498,7 @@ health_status_t logger_get_status(void) {
 	}
 
 	log_text(10,
+			 LOG_LVL_INFO,
 			 "logger",
 			 "init=%d, drop_txt=%d, drop_data=%d, trunc=%d, "
 			 "full_buff=%d, log_w_timeouts=%d",
@@ -487,6 +510,7 @@ health_status_t logger_get_status(void) {
 			 logger_health.log_write_timeouts);
 
 	log_text(10,
+			 LOG_LVL_INFO,
 			 "logger",
 			 "invalid_region=%d, crit_errs=%d, no_full_buf=%d, "
 			 "buffer_flush_fails=%d, unsafe_buffer_flush=%d",

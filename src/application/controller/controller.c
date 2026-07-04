@@ -1,17 +1,18 @@
+#include <math.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include <math.h>
-
+#include "GNC_codegen.h"
 #include "application/controller/controller.h"
-#include "application/controller/controller_module.h"
-#include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "common/gnc/gnc_types.h"
 
 #define DATA_WAIT_MS 10
 #define LOG_WAIT_MS 10
-#define RECOVERY_PERIOD_MS 1000
-#define IDLE_PERIOD_MS 1
+static const float64_t MS_TO_SEC = 0.001;
+static const float64_t TENTH_MS_TO_MS = 0.1;
 
 // these two are redundent but different health check structs, should we just have one instead???
 static controller_t controller_state = {0};
@@ -25,53 +26,56 @@ w_status_t controller_init(void) {
 	// Initialize error tracking
 	controller_error_stats = (controller_error_data_t){.is_init = true};
 	// return w_status_t state
-	log_text(LOG_WAIT_MS, "controller", "initialization successful");
+	log_text(LOG_WAIT_MS, LOG_LVL_INFO, "controller", "initialization successful");
 	return W_SUCCESS;
 }
 
 // helper to run 1 iteration of the controller algo, including delaying where needed.
-w_status_t controller_step(controller_ctx_t *ctx, const controller_input_t *input,
-						   controller_output_t *output, const uint32_t act_allowed_timestamp_ms,
-						   const uint32_t curr_timestamp_ms) {
-	if (NULL == ctx) {
-		log_text(LOG_WAIT_MS, "controller", "ERROR: Invalid context ptr.");
+w_status_t controller_step(const controller_input_t *p_input, const uint32_t timestamp_tenth_ms,
+						   controller_ctx_t *p_ctx, controller_output_t *p_output) {
+	if ((NULL == p_input) || (NULL == p_ctx) || (NULL == p_output)) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "controller", "Invalid context ptr.");
 		return W_INVALID_PARAM;
 	}
 
-	log_data_container_t log_container = {0};
-	w_status_t status = W_SUCCESS;
+	// TODO: check with Tristan
 
-	uint32_t act_allowed_ms = curr_timestamp_ms - act_allowed_timestamp_ms;
+	float64_t flight_time_sec = ((float64_t)((uint32_t)(timestamp_tenth_ms * TENTH_MS_TO_MS) -
+											 (p_input->launch_timestamp_ms))) *
+								MS_TO_SEC;
+	float64_t dt_controller_sec =
+		((float64_t)(timestamp_tenth_ms - (p_ctx->last_run_tenth_ms))) * MS_TO_SEC;
 
-	float ref_signal = 0.0f; // track latest reference signal for logging only
+	float64_t ref_signal = 0.0;
 
-	// TODO: call codegen to run controller module
-	// status |=
-	//     controller_module(ctx, act_allowed_ms, &output, &ref_signal);
-	(void)input;
+	bool is_run = false;
 
-	// TODO: reorder structre to multiple return points
-	// send motor cmd if we can
-	if (W_SUCCESS == status) {
-		// TODO: motor
+	controller_codegen_entry(p_ctx->p_gnc_stack_data,
+							 flight_time_sec,
+							 dt_controller_sec,
+							 p_input->xR,
+							 p_input->dynamic_pressure,
+							 p_input->canard_angle_rad,
+							 &(p_ctx->gnc_controller_ctx),
+							 &(p_output->canard_command_angle_rad),
+							 p_output->ref_roll,
+							 &is_run);
 
-		log_container.controller.cmd_angle = (float)output->commanded_angle;
-		log_container.controller.ref_signal = ref_signal;
-		if (W_SUCCESS != log_data(5, LOG_TYPE_CANARD_CMD, &log_container)) {
-			log_text(LOG_WAIT_MS, "cntl act", "log cmd fail");
-			status |= W_FAILURE;
-		}
+	if (is_run) { // the controller ran
+		// update new timestamp
+		p_output->timestamp_tenth_ms = timestamp_tenth_ms;
+		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
-		// if anything fails, send no cmd. MCB failsafes to 0 after some ms of silence
-		log_text(LOG_WAIT_MS, "cntl act", "fail; send no cmd");
+		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
 	}
 
-	return status;
+	return W_SUCCESS;
 }
 
 health_status_t controller_get_status(void) {
 	// Log all error statistics
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "controller",
 			 "can_send=%lu, data_misses=%lu, timestamp=%lu, gain_interp=%lu, "
 			 "angle_calc=%lu, log=%lu",
@@ -84,6 +88,7 @@ health_status_t controller_get_status(void) {
 
 	// Also log the internal controller state error counters for comparison
 	log_text(0,
+			 LOG_LVL_INFO,
 			 "controller",
 			 "%s can_send_errors=%lu, data_miss_counter=%lu",
 			 controller_error_stats.is_init ? "true" : "false",

@@ -133,7 +133,7 @@ w_status_t altimu_init() {
 	status |= write_1_byte(LPS22DF_ADDR, LPS22DF_CTRL_REG2, 0x18);
 
 	if (status != W_SUCCESS) {
-		log_text(1, "altimu", "initfail");
+		log_text(1, LOG_LVL_FATAL, "altimu", "initfail");
 	}
 
 	return status;
