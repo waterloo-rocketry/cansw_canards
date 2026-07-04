@@ -6,7 +6,6 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 
-#include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "common/gnc/gnc_types.h"
 #include "rocketlib/include/common.h"

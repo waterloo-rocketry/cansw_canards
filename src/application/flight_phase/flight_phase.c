@@ -5,9 +5,9 @@
 
 #include "application/can_handler/can_handler.h"
 #include "application/flight_phase/flight_phase.h"
-#include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "canlib.h"
+#include "common/gnc/gnc_types.h"
 #include "common/math/math-algebra3d.h"
 #include "drivers/timer/timer.h"
 

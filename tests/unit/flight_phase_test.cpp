@@ -7,7 +7,7 @@ extern "C" {
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/flight_phase/flight_phase.h"
-#include "application/fsm/fsm.h"
+#include "common/gnc/gnc_types.h"
 #include "application/logger/log.h"
 #include "canlib.h"
 #include "queue.h"
