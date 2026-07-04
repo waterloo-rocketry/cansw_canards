@@ -51,6 +51,7 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 	[MODULE_SENSOR_HANDLER] = sensor_handler_get_status,
 	[MODULE_UART] = uart_get_status,
 	[MODULE_LOGGER] = logger_get_status,
+	[MODULE_MOVELLA] = movella_get_status,
 };
 
 w_status_t health_check_init(void) {

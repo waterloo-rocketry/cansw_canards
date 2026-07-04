@@ -249,7 +249,7 @@ void movella_task(void *parameters) {
 
 health_status_t movella_get_status(void) {
 	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
+		.severity = HEALTH_OK, .module_id = MODULE_MOVELLA, .error_bitfield = 0};
 
 	if (!s_movella.initialized) {
 		status.severity = HEALTH_ERROR;
