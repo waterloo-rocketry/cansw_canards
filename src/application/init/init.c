@@ -7,15 +7,15 @@
 #include "task.h"
 #include "usart.h"
 
+#include "GNC_codegen.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
-#include "application/estimator/ekf.h"
-#include "application/estimator/estimator.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
@@ -97,7 +97,7 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
-	status |= estimator_init();
+	status |= navigator_init();
 	status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
