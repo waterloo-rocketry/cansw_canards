@@ -2,9 +2,10 @@
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
-#include "application/estimator/estimator.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
+#include "application/navigator/navigator.h"
+#include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "can.h"
 #include "drivers/adc/adc.h"
@@ -42,7 +43,7 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 	[MODULE_I2C] = i2c_get_status,
 	[MODULE_ADC] = adc_get_status,
 	[MODULE_CAN_HANDLER] = can_handler_get_status,
-	[MODULE_ESTIMATOR] = estimator_get_status,
+	[MODULE_ESTIMATOR] = navigator_get_status,
 	[MODULE_CONTROLLER] = controller_get_status,
 	[MODULE_SD_CARD] = sd_card_get_status,
 	[MODULE_TIMER] = timer_get_status,
@@ -51,6 +52,7 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 	[MODULE_SENSOR_HANDLER] = sensor_handler_get_status,
 	[MODULE_UART] = uart_get_status,
 	[MODULE_LOGGER] = logger_get_status,
+	[MODULE_POWER_HANDLER] = power_handler_get_status,
 	[MODULE_LSM6DSV32X] = lsm6dsv32x_get_status,
 };
 

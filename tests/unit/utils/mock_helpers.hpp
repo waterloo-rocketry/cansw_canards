@@ -8,7 +8,7 @@
 #include <string.h>
 
 extern "C" {
-#include "application/estimator/estimator_types.h"
+
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
 #include "drivers/timer/timer.h"
