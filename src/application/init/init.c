@@ -16,6 +16,7 @@
 #include "application/init/init.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
+#include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
@@ -110,6 +111,7 @@ static void system_init_task(void *arg) {
 	status |= adxrs649_init();
 	status |= ms5611_init();
 	status |= iis2mdc_init();
+	status |= power_handler_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
