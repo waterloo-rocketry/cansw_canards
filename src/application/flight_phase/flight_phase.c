@@ -8,10 +8,15 @@
 #include "application/logger/log.h"
 #include "canlib.h"
 #include "common/gnc/gnc_types.h"
+#include "common/math/math-algebra3d.h"
 #include "drivers/timer/timer.h"
 
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these
+
+static const float32_t ACCEL_THRESHOLD_LAUNCH_M_S2 =
+	20; // minimum acceleration in m/s^2 for a launch to be detected
+
 static const uint32_t ACT_DELAY_MS =
 	7000; // Q - the minimum time after launch before allowing canards to actuate
 
@@ -23,6 +28,13 @@ static const uint32_t RECOVERY_LOG_TIMEOUT_MS =
 // to be matched with main at apogee time
 static const uint32_t SLEEPY_LOG_TIMEOUT_MS =
 	1600000; // K - the approximate time between launch and main at apogee launch to land time
+
+static const uint32_t NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL =
+	2; // minimum number of IMUs that must detect launch acceleration for launch event to be
+	   // triggered
+static const uint32_t NUM_CONSEC_LAUNCH_DETECT_THRESHOLD =
+	5; // minimum number of consecutive detections required for an IMU to be considered as detecting
+	   // launch
 
 // #define TASK_TIMEOUT_MS 1000
 
@@ -375,6 +387,32 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
 }
 
 /**
+ * @brief increments number of consecutive detections if the IMU is alive and
+ *        its acceleration magnitude meets the launch threshold, resets otherwise.
+ * @param is_new whether this IMU is currently receiving new data
+ * @param accel pointer to the IMU's acceleration vector
+ * @param num_consec_detection pointer to this IMU's number of consecutive launch detections
+ * @param imu_name name of the IMU for logging purposes
+ */
+static void process_imu_meas(bool is_new, const vector3d_t *accel, uint8_t *num_consec_detection,
+							 const char *imu_name) {
+	if (!is_new) {
+		log_text(
+			5, LOG_LVL_WARN, "FlightPhaseSensorDetection", "WARNING: %s IMU is dead", imu_name);
+		(*num_consec_detection) = 0;
+		return;
+	}
+
+	float64_t accel_magnitude = math_vector3d_norm(accel);
+
+	if (accel_magnitude >= ACCEL_THRESHOLD_LAUNCH_M_S2) {
+		(*num_consec_detection)++;
+	} else {
+		(*num_consec_detection) = 0;
+	}
+}
+
+/**
  * @brief performs any sensor based state transition detection
  * @param p_context pointer to the global flight phase global context
  * @param curr_state current fsm state
@@ -384,6 +422,48 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
 static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
 														  const fsm_state_t curr_state,
 														  const all_sensors_data_t *p_sensor_data) {
+	if ((curr_state != STATE_PAD_FILTER) && (curr_state != STATE_PAD_NAV)) {
+		p_ctx->num_consec_board = 0;
+		p_ctx->num_consec_movella = 0;
+		p_ctx->num_consec_ad = 0;
+		return EVENT_NONE;
+	}
+	bool board_imu_new = p_sensor_data->board_meas.board_imu.is_new;
+	bool mti_imu_new = p_sensor_data->mti_meas.mti_accel.is_new;
+	bool ad_imu_new = p_sensor_data->ad_meas.ad_accel.is_new;
+
+	process_imu_meas(board_imu_new,
+					 &p_sensor_data->board_meas.board_imu.accel,
+					 &p_ctx->num_consec_board,
+					 "board");
+	process_imu_meas(mti_imu_new,
+					 &p_sensor_data->mti_meas.mti_accel.meas,
+					 &p_ctx->num_consec_movella,
+					 "movella");
+	process_imu_meas(
+		ad_imu_new, &p_sensor_data->ad_meas.ad_accel.meas, &p_ctx->num_consec_ad, "ad");
+
+	uint32_t num_imu_detect_launch = 0;
+
+	if (p_ctx->num_consec_board >= NUM_CONSEC_LAUNCH_DETECT_THRESHOLD) {
+		num_imu_detect_launch++;
+	}
+	if (p_ctx->num_consec_movella >= NUM_CONSEC_LAUNCH_DETECT_THRESHOLD) {
+		num_imu_detect_launch++;
+	}
+	if (p_ctx->num_consec_ad >= NUM_CONSEC_LAUNCH_DETECT_THRESHOLD) {
+		num_imu_detect_launch++;
+	}
+
+	if (num_imu_detect_launch >= NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL) {
+		p_ctx->num_consec_board = 0;
+		p_ctx->num_consec_movella = 0;
+		p_ctx->num_consec_ad = 0;
+		log_text(
+			5, LOG_LVL_INFO, "FlightPhaseSensorDetection", "%d Event Trigger", EVENT_LAUNCH_ACCEL);
+		return EVENT_LAUNCH_ACCEL;
+	}
+
 	return EVENT_NONE;
 }
 
