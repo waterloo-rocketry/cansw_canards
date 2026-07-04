@@ -11,6 +11,8 @@
 #include "drivers/timer/timer.h"
 #include "power_handler.h"
 #include "rocketlib/include/common.h"
+#include "third_party/canlib/message_types.h"
+#include "third_party/canlib/message/msg_general.h"
 
 /**
  * States of the power handler.
@@ -116,7 +118,7 @@ static power_input_source_t get_active_input(void) {
  * 5V rail current. Fault messages include a bitfield of active faults. Called by
  * power_handler_get_status
  */
-static void transmit_curr_volt_status_can_msg() {
+static void transmit_curr_volt_status_can_msg(uint16_t board_error_bitfield) {
 	float adc_value = 0;
 	can_msg_t msg = {0};
 
@@ -170,6 +172,8 @@ static void transmit_curr_volt_status_can_msg() {
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
+	build_general_board_status_msg(PRIO_LOW, (uint16_t)timestamp, board_error_bitfield, &msg);
+
 	if (W_SUCCESS != can_tx_status) {
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -194,6 +198,8 @@ health_status_t power_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 	w_status_t gpio_read_status = W_SUCCESS;
 	float adc_value = 0;
+	uint16_t board_error_bitfield = 0;
+
 	health_status_t status = {
 		.error_bitfield = 0, .module_id = MODULE_POWER_HANDLER, .severity = HEALTH_OK};
 
@@ -214,8 +220,13 @@ health_status_t power_handler_get_status(void) {
 				 gpio_read_status);
 	}
 
+	// flt 1 and flt 2 are active low and are 0 in these cases (according to datasheet)
+	// UVLO — Under Voltage Lockout (supply voltage too low)
+	// OV — Over Voltage (supply voltage too high)
+	// OCP — Over Current Protection (too much current flowing)
+	// SCP — Short Circuit Protection (short circuit detected)
+
 	if (GPIO_LEVEL_LOW == flt1) {
-		status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_BAT1_UNDER_VOLT;
 		power_handler_status.lipo_1_fault_count++;
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -225,7 +236,6 @@ health_status_t power_handler_get_status(void) {
 	}
 
 	if (GPIO_LEVEL_LOW == flt2) {
-		status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_BAT2_UNDER_VOLT;
 		power_handler_status.lipo_2_fault_count++;
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -234,9 +244,11 @@ health_status_t power_handler_get_status(void) {
 				 power_handler_status.lipo_2_fault_count);
 	}
 
+
 	// Check external 5V output fault
 	if (GPIO_LEVEL_LOW == pg_ext_5v) {
 		status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_5V_EXT_EFUSE_FAULT;
+		board_error_bitfield |= (1) << E_5V_EFUSE_FAULT_OFFSET;
 		power_handler_status.external_5v_fault_count++;
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -250,6 +262,7 @@ health_status_t power_handler_get_status(void) {
 	if (W_SUCCESS == adc_get_converted_val(ISENS_5V, &adc_value)) {
 		if (adc_value > I5V_MAX) {
 			status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_5V_OVER_CURR;
+			board_error_bitfield |= (1) << E_5V_OVER_CURRENT_OFFSET;
 			power_handler_status.overcurrent_count++;
 			log_text(1,
 					 LOG_LVL_WARN,
@@ -262,6 +275,9 @@ health_status_t power_handler_get_status(void) {
 	if (W_SUCCESS == adc_get_converted_val(ISENS_3V3, &adc_value)) {
 		if (adc_value > I3V3_MAX) {
 			status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_3V3_OVER_CURR;
+			// board_error_bitfield |= (1) << E_3V3_OVER_CURRENT_OFFSET;  
+			// 3v3 doesn't exist??
+
 			power_handler_status.overcurrent_count++;
 			log_text(1,
 					 LOG_LVL_WARN,
@@ -291,8 +307,10 @@ health_status_t power_handler_get_status(void) {
 			if (W_SUCCESS == adc_get_converted_val(VSENS_RKT, &adc_value)) {
 				if (adc_value < VRKT_MIN) {
 					status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_RKT_UNDER_VOLT;
+					board_error_bitfield |= (1) << E_12V_UNDER_VOLTAGE_OFFSET;
 				} else if (adc_value > VRKT_MAX) {
 					status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_RKT_OVER_VOLT;
+					board_error_bitfield |= (1) << E_12V_OVER_VOLTAGE_OFFSET;
 				}
 			}
 
@@ -303,22 +321,27 @@ health_status_t power_handler_get_status(void) {
 			if (W_SUCCESS == adc_get_converted_val(VSENS_BAT1, &adc_value)) {
 				if (adc_value < VBAT_MIN) {
 					status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_BAT1_UNDER_VOLT;
+					board_error_bitfield |= (1) << E_BATT_UNDER_VOLTAGE_OFFSET;
 				} else if (adc_value > VBAT_MAX) {
 					status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_BAT1_OVER_VOLT;
+					board_error_bitfield |= (1) << E_BATT_OVER_VOLTAGE_OFFSET;
 				}
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(VSENS_BAT2, &adc_value)) {
 				if (adc_value < VBAT_MIN) {
 					status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_BAT2_UNDER_VOLT;
+					board_error_bitfield |= (1) << E_BATT_UNDER_VOLTAGE_OFFSET;
 				} else if (adc_value > VBAT_MAX) {
 					status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_BAT2_OVER_VOLT;
+					board_error_bitfield |= (1) << E_BATT_OVER_VOLTAGE_OFFSET;
 				}
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT1, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
 					status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_BAT1_OVER_CURR;
+					board_error_bitfield |= (1) << E_BATT_OVER_CURRENT_OFFSET;
 					power_handler_status.overcurrent_count++;
 					log_text(1,
 							 LOG_LVL_WARN,
@@ -331,6 +354,8 @@ health_status_t power_handler_get_status(void) {
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT2, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
 					status_bitfield |= (1) << MODULE_ERR_POWER_HANDLER_BAT2_OVER_CURR;
+					board_error_bitfield |= (1) << E_BATT_OVER_CURRENT_OFFSET;
+
 					power_handler_status.overcurrent_count++;
 					log_text(1,
 							 LOG_LVL_WARN,
@@ -354,7 +379,7 @@ health_status_t power_handler_get_status(void) {
 
 	status.error_bitfield = status_bitfield;
 
-	transmit_curr_volt_status_can_msg();
+	transmit_curr_volt_status_can_msg(board_error_bitfield);
 
 	log_text(1,
 			 LOG_LVL_INFO,
