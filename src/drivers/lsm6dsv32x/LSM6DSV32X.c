@@ -299,7 +299,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 health_status_t lsm6dsv32x_get_status(void) {
 	health_status_t status = {
 		.severity = HEALTH_OK, .module_id = MODULE_LSM6DSV32X, .error_bitfield = 0};
-	
+
 	// I2C errors
 	if (lsm6dsv32x_ctx.latest_status == W_IO_ERROR) {
 		status.severity = HEALTH_ERROR;
@@ -322,7 +322,8 @@ health_status_t lsm6dsv32x_get_status(void) {
 			 lsm6dsv32x_health.post_init_sanity_checks,
 			 lsm6dsv32x_ctx.bus_status);
 
-	// expect the unswitched callback count to be high but most importantly constant. it is called about 10000 times before initialization completes
+	// expect the unswitched callback count to be high but most importantly constant. it is called
+	// about 10000 times before initialization completes
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "LSM6DSV32X",
