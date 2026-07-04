@@ -259,12 +259,14 @@ health_status_t movella_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "movella",
-			 "init=%d, configured=%d, dead_latest_data=%d, double_init=%d, init_null_mutex=%d",
+			 "init=%d, dead_latest_data=%d, double_init=%d, init_null_mutex=%d, "
+			 "event_callback_timer_fail=%d",
 			 s_movella.initialized,
 			 s_movella.configured,
 			 s_movella.latest_data.is_dead,
 			 movella_health.double_init,
-			 movella_health.init_null_mutex);
+			 movella_health.init_null_mutex,
+			 movella_health.event_callback_timer_fail);
 
 	log_text(10,
 			 LOG_LVL_INFO,
@@ -273,12 +275,6 @@ health_status_t movella_get_status(void) {
 			 movella_health.get_data_null_out_param,
 			 movella_health.get_data_not_init,
 			 movella_health.get_data_failed_take_mutex);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "movella",
-			 "event_callback_timer_fail=%d",
-			 movella_health.event_callback_timer_fail);
 
 	return status;
 }
