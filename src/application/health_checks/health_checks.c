@@ -11,6 +11,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
@@ -51,6 +52,7 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 	[MODULE_SENSOR_HANDLER] = sensor_handler_get_status,
 	[MODULE_UART] = uart_get_status,
 	[MODULE_LOGGER] = logger_get_status,
+	[MODULE_IIS2MDC] = iis2mdc_get_status,
 };
 
 w_status_t health_check_init(void) {
