@@ -83,9 +83,9 @@ typedef enum {
 	LOG_TYPE_MOVELLA_READING_PT2 = M(0x11),
 	LOG_TYPE_MOVELLA_READING_PT3 = M(0x12),
 
-	LOG_TYPE_ESTIMATOR_CTX_PT1 = M(0x13),
-	LOG_TYPE_ESTIMATOR_CTX_PT2 = M(0x14),
-	LOG_TYPE_ESTIMATOR_CTX_PT3 = M(0x15),
+	LOG_TYPE_NAVIGATOR_READING_PT1 = M(0x13),
+	LOG_TYPE_NAVIGATOR_READING_PT2 = M(0x14),
+	LOG_TYPE_NAVIGATOR_READING_PT3 = M(0x15),
 
 	LOG_TYPE_POLOLU_READING_PT1 = M(0x16),
 	LOG_TYPE_POLOLU_READING_PT2 = M(0x17),
@@ -173,30 +173,30 @@ typedef union __attribute__((packed)) {
 
 	} imu_reading_pt3;
 
-	// LOG_TYPE_ESTIMATOR_CTX:
+	// LOG_TYPE_NAVIGATOR_READING:
 	struct __attribute__((packed)) {
 		// quaternion_f32_t attitude;
-		float w;
-		float x;
-		float y;
-		float z;
+		float orientation_w;
+		float orientation_x;
+		float orientation_y;
+		float orientation_z;
 
 		float altitude;
 
-	} estimator_ctx_pt1;
+	} navigator_reading_pt1;
 
 	struct __attribute__((packed)) {
-		vector3d_f32_packed_t rates;
-		float CL;
-		float delta;
+		vector3d_f32_packed_t angular_velocity; // rad/sec
+		vector3d_f32_packed_t velocity; // m/s
+		uint32_t variance_norm;
 
-	} estimator_ctx_pt2;
+	} navigator_reading_pt2;
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t velocity;
 		uint32_t t_ms;
 
-	} estimator_ctx_pt3;
+	} navigator_reading_pt3;
 
 	// LOG_TYPE_ENCODER:
 	struct __attribute__((packed)) {
