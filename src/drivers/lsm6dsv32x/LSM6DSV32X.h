@@ -5,8 +5,8 @@
 
 #include "rocketlib/include/common.h"
 
-#include "common/math/math.h"
 #include "application/health_checks/health_checks.h"
+#include "common/math/math.h"
 
 /**
  * raw data from imu/mag registers
