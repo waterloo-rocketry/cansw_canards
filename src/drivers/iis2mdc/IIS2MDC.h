@@ -18,14 +18,15 @@ typedef struct {
 } iis2mdc_raw_data_t;
 
 /**
- * Status variables describing the current health of the magnetometer module
- * @note Self-test/init-time checks are pre-flight so not counted here.
+ * Status variables describing the current health of the magnetometer module.
  */
 typedef struct {
-	uint32_t dma_read_fails; // HAL_I2C_Mem_Read_DMA failed to start in the DRDY handler
+	uint32_t failed_init; // init aborted at some point
+	uint32_t invalid_state; // functions being called from an invalid state for that function
+	uint32_t dma_read_fails;
+	uint32_t i2c_handle_mismatch;
 	uint32_t timestamp_fails; // timer_get_ms failed in the DMA-complete callback
-	uint32_t get_data_unavailable; // could not get data
-	uint32_t i2c_after_callback_switch; // I2C functions called after callback switch
+	uint32_t get_data_fails; // get_data failed for any reason
 } iis2mdc_health_t;
 
 /**
