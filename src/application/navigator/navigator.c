@@ -8,9 +8,10 @@
 
 #include "GNC_codegen.h"
 #include "application/can_handler/can_handler.h"
-#include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
+#include "common/gnc/gnc_types.h"
 #include "drivers/timer/timer.h"
 
 // ---------- private variables ----------

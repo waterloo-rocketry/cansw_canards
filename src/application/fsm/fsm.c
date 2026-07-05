@@ -8,6 +8,7 @@
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
@@ -29,20 +30,11 @@ extern TaskHandle_t fsm_task_handle;
 static const uint8_t MAX_FSM_DELAY_MS = 4;
 static const uint32_t MS_TO_TENTH_MS = 10;
 
-typedef struct {
-	navigator_ctx_t *p_navigator_context; // global instance of estimator
-	controller_ctx_t *p_controller_context; // global instance of controller
-	fsm_state_t curr_state;
-	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
-	sensor_handler_ctx_t *p_imu_context; // global instance of flight phase
-	GNC_codegenStackData *p_codegen_stack_data;
-} fsm_ctx_t;
-
 // global
 static fsm_ctx_t g_ctx = {0};
 
 // create all of the global instances
-static navigator_ctx_t g_estimator_context = {0};
+static navigator_ctx_t g_navigator_context = {0};
 
 // make sure controller_output_t is initalized to 0 and valid to read to match original design
 static controller_ctx_t g_controller_context = {0};
@@ -79,9 +71,11 @@ w_status_t fsm_init() {
 
 	// init the stack data
 	g_ctx.p_codegen_stack_data = &g_gnc_codegen_data;
+	g_navigator_context.p_gnc_stack_data = &g_gnc_codegen_data;
+	g_controller_context.p_gnc_stack_data = &g_gnc_codegen_data;
 
 	// init rest of input
-	g_ctx.p_navigator_context = &g_estimator_context;
+	g_ctx.p_navigator_context = &g_navigator_context;
 	g_ctx.p_controller_context = &g_controller_context;
 	g_ctx.p_flight_phase_context = &g_flight_phase_context;
 	g_ctx.p_imu_context = &g_imu_context;
@@ -116,7 +110,8 @@ void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
 
 	// set the inputs
-	navigator_input_t navigator_input = {.fsm_state = p_ctx->curr_state};
+	navigator_input_t navigator_input = {.sensor_data = p_fsm_input->p_sensor_data,
+										 .fsm_state = p_ctx->curr_state};
 	controller_input_t controller_input = {.launch_timestamp_ms =
 											   p_ctx->p_flight_phase_context->launch_timestamp_ms};
 
@@ -157,10 +152,10 @@ void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(controller_input.xR));
 			controller_input.dynamic_pressure = navigator_output.dynamic_pressure;
 
-			controller_input.canard_angle_rad = p_sensor_data->motor_encoder_meas.meas;
+			controller_input.canard_angle_rad = p_fsm_input->p_sensor_data->motor_encoder_meas.meas;
 			/****************************************************************/
 
-			if (p_sensor_data->motor_encoder_meas.is_new) {
+			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new) {
 				controller_step(&controller_input,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
@@ -271,6 +266,7 @@ void fsm_task(void *args) {
 		g_ctx.curr_state = new_state;
 
 		// run actions based on new curr state
-		fsm_exec(timestamp_tenth_ms, &g_ctx, &sensor_data);
+		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
+		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
 	}
 }
