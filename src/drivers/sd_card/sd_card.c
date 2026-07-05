@@ -20,11 +20,13 @@ sd_card_health_t sd_card_health = {0};
 // Only 1 SD card mutex is needed because only 1 sd card exists
 SemaphoreHandle_t sd_mutex = NULL;
 
+#define SD_FILE_BUFFER_SIZE 512
+
 // Static 32-byte aligned file buffer for lfs_file_opencfg.
 // Prevents LittleFS from heap-allocating an unaligned per-file cache which
 // causes SDMMC IDMA to fault when it targets a non-DMA-accessible address.
 // Safe to share: the mutex guarantees only one file is open at a time.
-static uint8_t __attribute__((aligned(32))) sd_file_buf[512];
+static uint8_t sd_file_buf[SD_FILE_BUFFER_SIZE] = {0};
 static const struct lfs_file_config sd_file_cfg = {.buffer = sd_file_buf};
 
 w_status_t sd_card_init(void) {
@@ -33,44 +35,27 @@ w_status_t sd_card_init(void) {
 		return W_SUCCESS;
 	}
 
-	// HAL_SD_InitCard(&hsd2);
-
-	// // Get card geometry so lfs_format knows the block count
-	// HAL_SD_CardInfoTypeDef card_info;
-	// if (HAL_SD_GetCardInfo(&hsd2, &card_info) != HAL_OK) {
-	//     printf("Could not get SD card info\n");
-	//     return W_FAILURE;
-	// }
-
 	// Try to mount directly at block offset 0 (no MBR)
 	// NOTE: must be called AFTER scheduler starts; HAL SD uses HAL_Delay() which
 	// depends on systick, which FreeRTOS masks before the scheduler starts.
+
+    // attempt with partition first, if not use mount from 0
 	if (lfsshim_sd_mount(&g_fs_obj, &hsd2, 0) != W_SUCCESS) {
-		printf("Mount failed, formatting SD card\n");
 
-		// Get card geometry so lfs_format knows the block count
-		HAL_SD_CardInfoTypeDef card_info;
-		if (HAL_SD_GetCardInfo(&hsd2, &card_info) != HAL_OK) {
-			printf("Could not get SD card info\n");
-			return W_FAILURE;
-		}
+		// // Get card geometry so lfs_format knows the block count
+		// HAL_SD_CardInfoTypeDef card_info;
+		// if (HAL_SD_GetCardInfo(&hsd2, &card_info) != HAL_OK) {
+		// 	return W_FAILURE;
+		// }
 
-		// lfs_format requires block_count != 0; supply it via a local config copy
-		struct lfs_config format_cfg = cfg;
-		format_cfg.block_count = card_info.BlockNbr;
+		// // lfs_format requires block_count != 0; supply it via a local config copy
+		// struct lfs_config format_cfg = cfg;
+		// format_cfg.block_count = card_info.BlockNbr;
 
-		if (lfs_format(&g_fs_obj, &format_cfg) != 0) {
-			printf("Could not format SD card\n");
-			return W_FAILURE;
-		}
-
-		printf("Formatted SD card\n");
-
-		if (lfsshim_sd_mount(&g_fs_obj, &hsd2, 0) != W_SUCCESS) {
-			printf("Remount after format failed\n");
-			return W_FAILURE;
-		}
-		// return W_FAILURE;
+		// if (lfs_format(&g_fs_obj, &format_cfg) != 0) {
+		// 	return W_FAILURE;
+		// }
+		return W_FAILURE;
 	}
 
 	/*
@@ -152,7 +137,7 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 	 * Use LFS_O_WRONLY | LFS_O_APPEND to open always for safety in case file wasn't created
 	 * successfully for some reason. This is a failsafe
 	 */
-	int flags = LFS_O_WRONLY | LFS_O_CREAT | (append ? LFS_O_APPEND : 0);
+	int flags = LFS_O_WRONLY | LFS_O_CREAT | (append ? LFS_O_APPEND : LFS_O_TRUNC);
 	res = lfs_file_opencfg(&g_fs_obj, &file, file_name, flags, &sd_file_cfg);
 	if (res != 0) {
 		// lfs_unmount(&g_fs_obj);
@@ -161,16 +146,6 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
 		return W_FAILURE;
-	}
-
-	// when not appending, truncate to zero so the write fully replaces the file contents
-	if (!append) {
-		if (lfs_file_truncate(&g_fs_obj, &file, 0) < 0) {
-			lfs_file_close(&g_fs_obj, &file);
-			xSemaphoreGive(sd_mutex);
-			sd_card_health.err_count++;
-			return W_FAILURE;
-		}
 	}
 
 	/* Write data from buffer to file. */
@@ -221,22 +196,6 @@ w_status_t sd_card_file_create(const char *file_name) {
 	sd_card_health.file_create_count++;
 	return W_SUCCESS;
 }
-
-// commenting this out to prevent accidentally deleting files somehow
-// w_status_t sd_card_file_delete(char *file_name) {
-//     /* Acquire the mutex. */
-//     if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
-//         return W_FAILURE;
-//     }
-//
-//     int res = lfs_remove(&g_fs_obj, file_name);
-//     xSemaphoreGive(sd_mutex);
-//
-//     if (res != 0) {
-//         return W_FAILURE;
-//     }
-//     return W_SUCCESS;
-// }
 
 w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 	/*

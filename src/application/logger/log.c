@@ -8,13 +8,12 @@
 #include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
+#include "lfs.h"
 #include "message_types.h"
 #include "queue.h"
 #include "rocketlib/include/common.h"
 #include "semphr.h"
-#include "lfs.h"
 #include "third_party/printf/printf.h"
-
 
 // number of times to try writing a log message in case fails once
 #define LOG_WRITE_TRY_COUNT 2
@@ -25,15 +24,15 @@ static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
 static char text_log_filename[8 + 1 + 3 + 1] = "XXXXXXXX.TXT";
 static char data_log_filename[8 + 1 + 3 + 1] = "XXXXXXXX.BIN";
 
-extern lfs_t g_fs_obj; 
-struct lfs_info info; 
+extern lfs_t g_fs_obj;
+struct lfs_info info;
 
-// int err = LFSSTAT(&lfs, LOG_RUN_COUNT_FILENAME, &info); 
+// int err = LFSSTAT(&lfs, LOG_RUN_COUNT_FILENAME, &info);
 
-// if (err == LFS_ERR_NOENT) { 
-// 	lfs_file_t file; 
-// 	lfs_file_open(&lfs, &file,LOG_RUN_COUNT_FILENAME, LFS_O_WRONLY | LFS_O_CREAT); 
-// 	lfs_file_close(&lfs, &file); 
+// if (err == LFS_ERR_NOENT) {
+// 	lfs_file_t file;
+// 	lfs_file_open(&lfs, &file,LOG_RUN_COUNT_FILENAME, LFS_O_WRONLY | LFS_O_CREAT);
+// 	lfs_file_close(&lfs, &file);
 // }
 
 typedef struct {
@@ -171,15 +170,6 @@ w_status_t log_init(void) {
 	// alr init so its good to go
 	if (logger_health.is_init) {
 		return W_SUCCESS;
-	}
-
-	int err = lfs_stat(&g_fs_obj, LOG_RUN_COUNT_FILENAME, &info);
-
-	if (err == LFS_ERR_NOENT) {
-		lfs_file_t file;
-		if (lfs_file_open(&g_fs_obj, &file, LOG_RUN_COUNT_FILENAME, LFS_O_WRONLY | LFS_O_CREAT) == 0) {
-			lfs_file_close(&g_fs_obj, &file);
-		}
 	}
 
 	full_buffers_queue =
