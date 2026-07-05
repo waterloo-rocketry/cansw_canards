@@ -5,6 +5,7 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
+#include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "can.h"
 #include "drivers/adc/adc.h"
@@ -52,6 +53,7 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 	[MODULE_SENSOR_HANDLER] = sensor_handler_get_status,
 	[MODULE_UART] = uart_get_status,
 	[MODULE_LOGGER] = logger_get_status,
+	[MODULE_POWER_HANDLER] = power_handler_get_status,
 	[MODULE_IIS2MDC] = iis2mdc_get_status,
 };
 
