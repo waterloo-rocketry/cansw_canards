@@ -74,25 +74,27 @@ typedef enum {
 	// Message type values in use
 	LOG_TYPE_HEADER = 0x44414548, // "HEAD" encoded as a little-endian 32-bit int
 	LOG_TYPE_TEST = M(0x01),
-	LOG_TYPE_CANARD_CMD = M(0x02),
-	LOG_TYPE_CONTROLLER_INPUT = M(0x03),
 
-	LOG_TYPE_ENCODER = M(0x06),
+	LOG_TYPE_NAVIGATOR_PT1 = M(0x02),
+	LOG_TYPE_NAVIGATOR_PT2 = M(0x03),
 
-	LOG_TYPE_MOVELLA_READING_PT1 = M(0x10),
-	LOG_TYPE_MOVELLA_READING_PT2 = M(0x11),
-	LOG_TYPE_MOVELLA_READING_PT3 = M(0x12),
+	LOG_TYPE_CONTROLLER = M(0x04),
 
-	LOG_TYPE_NAVIGATOR_READING_PT1 = M(0x13),
-	LOG_TYPE_NAVIGATOR_READING_PT2 = M(0x14),
-	LOG_TYPE_NAVIGATOR_READING_PT3 = M(0x15),
+	LOG_TYPE_ST_IMU = M(0x05),
 
-	LOG_TYPE_POLOLU_READING_PT1 = M(0x16),
-	LOG_TYPE_POLOLU_READING_PT2 = M(0x17),
-	LOG_TYPE_POLOLU_READING_PT3 = M(0x18),
+	LOG_TYPE_BAROMETER = M(0x06),
 
-	LOG_TYPE_POLOLU_RAW_PT1 = M(0x19),
-	LOG_TYPE_POLOLU_RAW_PT2 = M(0x1A)
+	LOG_TYPE_COMPASS = M(0x07),
+
+	LOG_TYPE_MOVELLA_PT1 = M(0x08),
+	LOG_TYPE_MOVELLA_PT2 = M(0x09),
+	LOG_TYPE_MOVELLA_PT3 = M(0x0A),
+	LOG_TYPE_MOVELLA_PT4 = M(0x0B),
+
+	LOG_TYPE_AD_ACCEL = M(0x0C),
+	LOG_TYPE_AD_GYRO = M(0x0D),
+
+	LOG_TYPE_ENCODER = M(0x0E)
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -136,87 +138,91 @@ typedef union __attribute__((packed)) {
 		float test_val;
 	} test;
 
-	// LOG_TYPE_CANARD_CMD:
+	// LOG_TYPE_NAVIGATOR:
 	struct __attribute__((packed)) {
-		float cmd_angle;
-		float ref_signal;
-	} controller;
+		// quaternion_f32_t attitude;
+		float orient_w;
+		float orient_x;
+		float orient_y;
+		float orient_z;
 
-	// LOG_TYPE_CONTROLLER_INPUT:
+		vector3d_f32_packed_t angular_velocity; // rad/sec
+
+	} navigator_pt1;
+
+	struct __attribute__((packed)) {
+		vector3d_f32_packed_t velocity; // m/s
+		float altitude; // m
+		uint32_t variance_norm;
+	} navigator_pt2;
+
+	// LOG_TYPE_CONTROLLER:
 	struct __attribute__((packed)) {
 		// the 3 vars in roll_state_t
-		float roll_angle;
-		float roll_rate;
-		float canard_angle;
-		// Scheduling variables (flight condition)
-		float pressure_dynamic;
+		float command; // deg
+		float roll_target; // deg
 		float canard_coeff;
-	} controller_input_t;
+	} controller;
 
-	// LOG_TYPE_MOVELLA_READING or LOG_TYPE_POLOLU_READING:
+	// LOG_TYPE_ST_IMU:
+	struct __attribute__((packed)) {
+		vector3d_f32_packed_t accelerometer; // m/s^2
+		vector3d_f32_packed_t gyroscope; // rad/s
+	} st_imu;
+
+	// LOG_TYPE_BAROMETER:
+	struct __attribute__((packed)) {
+		uint32_t barometer; // Pa
+		int32_t thermometer; // C
+	} barometer;
+
+	// LOG_TYPE_COMPASS:
+	struct __attribute__((packed)) {
+		vector3d_f32_packed_t accelerometer; // m/s^2
+		vector3d_f32_packed_t magnetometer; // Gauss
+	} compass;
+
+	// LOG_TYPE_MOVELLA
 	// note: dont use the all_imus_input_t struct here because packing isn't recursive
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
-
-	} imu_reading_pt1;
-
-	struct __attribute__((packed)) {
-		vector3d_f32_packed_t gyroscope; // rad/sec
-
-	} imu_reading_pt2;
+		vector3d_f32_packed_t gyroscope; // rad/s
+	} movella_pt1;
 
 	struct __attribute__((packed)) {
-		vector3d_f32_packed_t magnetometer; // mgauss (pololu) or arbitrary units (movella)
-		float barometer; // Pa
-		uint32_t timestamp_imu_ms;
-		bool is_dead;
+		vector3d_f32_packed_t magnetometer; // Gauss
+		uint32_t barometer; // Pa
+	} movella_pt2;
 
-	} imu_reading_pt3;
-
-	// LOG_TYPE_NAVIGATOR_READING:
 	struct __attribute__((packed)) {
-		// quaternion_f32_t attitude;
-		float orientation_w;
-		float orientation_x;
-		float orientation_y;
-		float orientation_z;
-
-		float altitude;
-
-	} navigator_reading_pt1;
+		float orient_w;
+		float orient_x;
+		float orient_y;
+		float orient_z;
+	} movella_pt3;
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t angular_velocity; // rad/sec
 		vector3d_f32_packed_t velocity; // m/s
-		uint32_t variance_norm;
+	} movella_pt4;
 
-	} navigator_reading_pt2;
-
+	// LOG_TYPE_AD_ACCEL:
 	struct __attribute__((packed)) {
-		vector3d_f32_packed_t velocity;
-		uint32_t t_ms;
+		vector3d_f32_packed_t accelerometer; // m/s^2
+	} ad_accel;
 
-	} navigator_reading_pt3;
+	// LOG_TYPE_AD_GYRO:
+	struct __attribute__((packed)) {
+		int32_t gyroscope; // rad/s
+	} ad_gyro;
 
 	// LOG_TYPE_ENCODER:
 	struct __attribute__((packed)) {
-		// radians. this is the value estimator module uses
-		float angle_rad;
-		bool is_dead;
+		int32_t motor_angle; // deg
+		int32_t motor_current; // mA
+		int32_t motor_temperature; // C
 	} encoder;
 
-	// LOG_TYPE_POLOLU_RAW:
-	struct __attribute__((packed)) {
-		altimu_raw_imu_data_t raw_acc; // raw accelerometer data
-		altimu_raw_imu_data_t raw_gyro; // raw gyroscope data
-
-	} raw_pololu_data_pt1;
-
-	struct __attribute__((packed)) {
-		altimu_raw_imu_data_t raw_mag; // raw magnetometer data
-		altimu_raw_baro_data_t raw_baro; // raw barometer data
-
-	} raw_pololu_data_pt2;
 } log_data_container_t;
 
 /**
