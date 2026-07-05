@@ -4,10 +4,13 @@
 #include <string.h>
 
 #include "FreeRTOS.h"
+#include "task.h"
+
 #include "usbd_cdc_if.h"
 
 #include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
+#include "common/math/math.h"
 
 // Packet framing bytes
 #define HIL_HEADER_SIZE_BYTES (4U)
@@ -35,13 +38,13 @@ typedef struct __attribute__((packed)) {
 	float32_t board_gyro_x;
 	float32_t board_gyro_y;
 	float32_t board_gyro_z;
-    
+
 	float32_t board_mag_x;
 	float32_t board_mag_y;
 	float32_t board_mag_z;
 
 	float32_t board_baro;
-    
+
 	float32_t mti_accel_x;
 	float32_t mti_accel_y;
 	float32_t mti_accel_z;
@@ -49,26 +52,29 @@ typedef struct __attribute__((packed)) {
 	float32_t mti_gyro_x;
 	float32_t mti_gyro_y;
 	float32_t mti_gyro_z;
-    
+
 	float32_t mti_mag_x;
 	float32_t mti_mag_y;
 	float32_t mti_mag_z;
-    
-    float32_t mti_baro;
+
+	float32_t mti_baro;
 
 	float32_t ad_accel_x;
 	float32_t ad_accel_y;
 	float32_t ad_accel_z;
 
 	float32_t ad_gyro;
-    // simulink is stuck giving xyz for gyro even though only the x-axis actually exists
+	// simulink is stuck giving xyz for gyro even though only the x-axis actually exists
 	float32_t ad_gyro_dummy_y;
 	float32_t ad_gyro_dummy_z;
 
 	float32_t motor_encoder;
 
-	bool ignitor_can_msg;
-	bool inj_valve_can_msg;
+	float32_t can_msg_start_byte; // cuz tristan vibecoded it
+	float32_t can_msg; //
+	// bool pad_filter_can_msg;
+	// bool ignitor_can_msg;
+	// bool inj_valve_can_msg;
 
 	uint8_t footer;
 } hil_rx_payload_t;
@@ -82,6 +88,22 @@ typedef struct __attribute__((packed)) {
 // Payload + footer to transmit
 typedef struct __attribute__((packed)) {
 	float64_t canard_cmd;
+	float64_t att_w;
+	float64_t att_x;
+	float64_t att_y;
+	float64_t att_z;
+	float64_t rates_x;
+	float64_t rates_y;
+	float64_t rates_z;
+	float64_t vel_x;
+	float64_t vel_y;
+	float64_t vel_z;
+	float64_t altitude;
+	float64_t cl;
+	float64_t delta;
+	// float64_t cov_norm;
+	// float64_t where_it_is[2]; // {roll angle (rad), roll rate (rad/s)}
+	// float64_t where_it_isnt[2]; // {roll angle (rad), roll rate (rad/s)}
 	uint8_t footer[HIL_FOOTER_SIZE_BYTES];
 } hil_tx_payload_t;
 
@@ -158,11 +180,9 @@ void hil_parse_rx_bytes(uint8_t byte) {
 	// all bytes after header have been reeived, so the packet must be done
 	if (hil_ctx.wip_rx_body_idx >= HIL_RX_BODY_SIZE_BYTES) {
 		// publish completed simulink reading
-		taskENTER_CRITICAL();
 		memcpy(hil_ctx.ready_rx_packet, hil_ctx.wip_rx_packet, HIL_RX_BODY_SIZE_BYTES);
 		hil_ctx.is_reading_avail = true;
 		hil_ctx.parsed_packet_count++;
-		taskEXIT_CRITICAL();
 
 		// reset parser state to wait for next packet
 		hil_ctx.parse_state = HIL_PARSE_WAIT_FOR_HEADER;
@@ -172,18 +192,19 @@ void hil_parse_rx_bytes(uint8_t byte) {
 		// check if any fake CAN msgs triggered. If so, send the flight phase event directly.
 		// fake CAN bypasses CAN handler intentionally cuz that's tested in real CAN tests later
 		hil_rx_payload_t *ready_packet = (hil_rx_payload_t *)&hil_ctx.ready_rx_packet[0];
-		if (ready_packet->ignitor_can_msg) {
-			flight_phase_send_event(EVENT_IGNITOR);
-			log_text(1, LOG_LVL_INFO, "hil", "ignitor can msg");
+		if (float_equal(ready_packet->can_msg, 1)) {
+			flight_phase_send_event(EVENT_PAD_FILTER);
 		}
-		if (ready_packet->inj_valve_can_msg) {
+		if (float_equal(ready_packet->can_msg, 2)) {
+			flight_phase_send_event(EVENT_IGNITOR);
+		}
+		if (float_equal(ready_packet->can_msg, 3)) {
 			flight_phase_send_event(EVENT_INJ_OPEN);
-			log_text(1, LOG_LVL_INFO, "hil", "inj valve can msg");
 		}
 	}
 }
 
-w_status_t hil_get_latest_sensor_data(all_sensors_data_t *out) {
+w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	if (NULL == out) {
 		return W_INVALID_PARAM;
 	}
@@ -192,13 +213,21 @@ w_status_t hil_get_latest_sensor_data(all_sensors_data_t *out) {
 	uint8_t ready_packet_bytes[sizeof(hil_rx_payload_t)] = {0};
 	hil_rx_payload_t *ready_packet = (hil_rx_payload_t *)&ready_packet_bytes[0];
 
-	// return immediately if no completed packet is ready, dont wait
-	taskENTER_CRITICAL();
-	if (!hil_ctx.is_reading_avail) {
-		log_text(1, LOG_LVL_WARN, "hil", "no ready packet avail");
-		taskEXIT_CRITICAL();
-		return W_FAILURE;
+	// // return immediately if no completed packet is ready, dont wait
+	// if (!hil_ctx.is_reading_avail) {
+	// 	log_text(1, LOG_LVL_WARN, "hil", "no ready packet avail");
+	// 	return W_FAILURE;
+	// }
+
+	// blocking wait for data
+	uint32_t timeout_ms = 30000; // 30 second timeout
+	uint32_t start_time = xTaskGetTickCount();
+	while (!hil_ctx.is_reading_avail &&
+		   (xTaskGetTickCount() - start_time) < pdMS_TO_TICKS(timeout_ms)) {
+		vTaskDelay(pdMS_TO_TICKS(1)); // wait 1 ms before checking again
 	}
+	// critical section
+	taskENTER_CRITICAL();
 	memcpy(ready_packet_bytes, hil_ctx.ready_rx_packet, sizeof(ready_packet_bytes));
 	taskEXIT_CRITICAL();
 
@@ -247,18 +276,84 @@ w_status_t hil_get_latest_sensor_data(all_sensors_data_t *out) {
 	out->motor_encoder_meas.meas = ready_packet->motor_encoder;
 	out->motor_encoder_meas.is_new = true;
 
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "hil rx imu",
+			 "acc %f, %f, %f gyro %f, %f, %f mag %f, %f, %f baro %f",
+			 out->board_meas.board_imu.accel.x,
+			 out->board_meas.board_imu.accel.y,
+			 out->board_meas.board_imu.accel.z,
+			 out->board_meas.board_imu.gyro.x,
+			 out->board_meas.board_imu.gyro.y,
+			 out->board_meas.board_imu.gyro.z,
+			 out->board_meas.board_mag.meas.x,
+			 out->board_meas.board_mag.meas.y,
+			 out->board_meas.board_mag.meas.z,
+			 out->board_meas.board_baro.meas);
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "hil rx mti",
+			 "acc %f, %f, %f gyro %f, %f, %f mag %f, %f, %f baro %f",
+			 out->mti_meas.mti_accel.meas.x,
+			 out->mti_meas.mti_accel.meas.y,
+			 out->mti_meas.mti_accel.meas.z,
+			 out->mti_meas.mti_gyro.meas.x,
+			 out->mti_meas.mti_gyro.meas.y,
+			 out->mti_meas.mti_gyro.meas.z,
+			 out->mti_meas.mti_mag.meas.x,
+			 out->mti_meas.mti_mag.meas.y,
+			 out->mti_meas.mti_mag.meas.z,
+			 out->mti_meas.mti_baro.meas);
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "hil rx ad",
+			 "acc %f, %f, %f gyro %f",
+			 out->ad_meas.ad_accel.meas.x,
+			 out->ad_meas.ad_accel.meas.y,
+			 out->ad_meas.ad_accel.meas.z,
+			 out->ad_meas.ad_gyro.meas);
+	log_text(1, LOG_LVL_INFO, "hil rx encoder", "meas %f", out->motor_encoder_meas.meas);
+
 	log_text(1, LOG_LVL_INFO, "hil", "rx footer: %c", ready_packet->footer);
+	log_text(1, LOG_LVL_INFO, "hil", "rx canmsg: %f", ready_packet->can_msg);
+
+	// reading is now consumed, so mark it as no longer available
+	hil_ctx.is_reading_avail = false;
+
 	return W_SUCCESS;
 }
 
-w_status_t hil_send_simulink_cmd(float64_t canard_cmd_rad) {
+w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
+								 gnc_x_state_t *p_x_state, controller_input_t *p_cntl_in,
+								 controller_output_t *p_cntl_out) {
+	log_text(1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", p_cntl_in->canard_angle_rad);
 	hil_tx_packet_t tx_packet = {0};
 	tx_packet.header[0] = HIL_HEADER_CHAR_0;
 	tx_packet.header[1] = HIL_HEADER_CHAR_1;
 	tx_packet.header[2] = HIL_HEADER_CHAR_2;
 	tx_packet.header[3] = HIL_HEADER_CHAR_3;
-	tx_packet.payload.canard_cmd = canard_cmd_rad;
-	// TODO: stream more telem to simulink
+
+	tx_packet.payload.canard_cmd = p_cntl_in->canard_angle_rad;
+
+	tx_packet.payload.att_w = p_x_state->q.w;
+	tx_packet.payload.att_x = p_x_state->q.x;
+	tx_packet.payload.att_y = p_x_state->q.y;
+	tx_packet.payload.att_z = p_x_state->q.z;
+	tx_packet.payload.rates_x = p_x_state->ang_rate.x;
+	tx_packet.payload.rates_y = p_x_state->ang_rate.y;
+	tx_packet.payload.rates_z = p_x_state->ang_rate.z;
+	tx_packet.payload.vel_x = p_x_state->vel.x;
+	tx_packet.payload.vel_y = p_x_state->vel.y;
+	tx_packet.payload.vel_z = p_x_state->vel.z;
+	tx_packet.payload.altitude = p_x_state->altitude;
+
+	// tx_packet.payload.cl = this.c
+	// tx_packet.payload.cov_norm = p_nav_out->cov_norm;
+	// tx_packet.payload.where_it_is[0] = p_nav_out->roll_state[0];
+	// tx_packet.payload.where_it_is[1] = p_nav_out->roll_state[1];
+	// tx_packet.payload.where_it_isnt[0] = p_cntl_in->xR[0];
+	// tx_packet.payload.where_it_isnt[1] = p_cntl_in->xR[1];
+
 	tx_packet.payload.footer[0] = HIL_FOOTER_CHAR;
 
 	uint8_t usb_status = CDC_Transmit_HS((uint8_t *)&tx_packet, (uint16_t)sizeof(tx_packet));
@@ -269,6 +364,26 @@ w_status_t hil_send_simulink_cmd(float64_t canard_cmd_rad) {
 	} else {
 		log_text(1, LOG_LVL_INFO, "hil", "sent tx usb %lf", tx_packet.payload.canard_cmd);
 	}
+
+	log_text(1,
+			 LOG_LVL_DEBUG,
+			 "HIL",
+			 "att %f, %f, %f, %f rates %f, %f, %f vel %f, %f, %f alt %f",
+			 tx_packet.payload.att_w,
+			 tx_packet.payload.att_x,
+			 tx_packet.payload.att_y,
+			 tx_packet.payload.att_z,
+			 tx_packet.payload.rates_x,
+			 tx_packet.payload.rates_y,
+			 tx_packet.payload.rates_z,
+			 tx_packet.payload.vel_x,
+			 tx_packet.payload.vel_y,
+			 tx_packet.payload.vel_z,
+			 tx_packet.payload.altitude);
+	// log_text(1, LOG_LVL_DEBUG, "HIL", "cov_norm %f where_it_is %f, %f where_it_isnt %f, %f",
+	// tx_packet.payload.cov_norm, tx_packet.payload.where_it_is[0],
+	// tx_packet.payload.where_it_is[1], tx_packet.payload.where_it_isnt[0],
+	// tx_packet.payload.where_it_isnt[1]);
 
 	return W_SUCCESS;
 }

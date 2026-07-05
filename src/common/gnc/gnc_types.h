@@ -105,10 +105,21 @@ typedef struct {
 	uint32_t timestamp_tenth_ms;
 } controller_output_t;
 
+typedef union {
+	float64_t arr[11];
+
+	struct {
+		quaternion_t q;
+		vector3d_t ang_rate;
+		vector3d_t vel;
+		float64_t altitude;
+	};
+} gnc_x_state_t;
+
 typedef struct {
 	gnc_navigator_bias_t bias;
 	gnc_navigator_sensor_filter_t sensor_filter;
-	float64_t x[11];
+	gnc_x_state_t x;
 	float64_t P[121];
 } gnc_navigator_ctx_t;
 

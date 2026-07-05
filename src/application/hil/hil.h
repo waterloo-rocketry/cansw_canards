@@ -24,11 +24,13 @@ void hil_parse_rx_bytes(uint8_t byte);
 /**
  * @brief Copy latest parsed HIL sensor packet into GNC sensor struct
  */
-w_status_t hil_get_latest_sensor_data(all_sensors_data_t *out);
+w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out);
 
 /**
  * @brief Build and send cmd+telem packet to simulink over USB CDC
  */
-w_status_t hil_send_simulink_cmd(float64_t canard_cmd_rad);
+w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
+								 gnc_x_state_t *p_x_state, controller_input_t *p_cntl_in,
+								 controller_output_t *p_cntl_out);
 
 #endif // HIL_H

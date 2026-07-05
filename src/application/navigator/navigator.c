@@ -107,7 +107,7 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 	navigation_codegen_entry(p_ctx->p_gnc_stack_data,
 							 dt_sec,
 							 in_flight_phase,
-							 p_ctx->gnc_navigator_ctx.x,
+							 &p_ctx->gnc_navigator_ctx.x.arr[0],
 							 p_ctx->gnc_navigator_ctx.P,
 							 &(p_ctx->gnc_navigator_ctx.bias),
 							 &(p_ctx->gnc_navigator_ctx.sensor_filter),
@@ -117,7 +117,7 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 							 &(p_output->dynamic_pressure),
 							 &is_run);
 
-	if (is_run) { // if nav ran
+	if (true) { // if nav ran
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
 		log_text(0, LOG_LVL_WARN, "Navigator", "Nav failed to run");

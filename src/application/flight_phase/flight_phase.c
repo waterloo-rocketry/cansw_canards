@@ -80,7 +80,7 @@ w_status_t flight_phase_init(void) {
 
 /**
  * Send a flight phase event to the state machine
- * Not ISR safe
+ * ISR safe
  */
 w_status_t flight_phase_send_event(flight_phase_event_t event) {
 	// Update event statistics
@@ -111,7 +111,8 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 			break;
 	}
 
-	if (xQueueSend(event_queue, &event, 0) != pdPASS) {
+	// Allow sending from ISR
+	if (xQueueSendFromISR(event_queue, &event, 0) != pdPASS) {
 		log_text(0,
 				 LOG_LVL_FATAL,
 				 "FlightPhase",
@@ -301,6 +302,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 	// Only count as a transition if the state actually changed
 	if (new_state != curr_state) {
+		log_text(
+			1, LOG_LVL_INFO, "FlightPhase", "State transition: %d -> %d", curr_state, new_state);
 		flight_phase_status.state_transitions++;
 	}
 

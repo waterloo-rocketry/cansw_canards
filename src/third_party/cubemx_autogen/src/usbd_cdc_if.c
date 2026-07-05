@@ -22,6 +22,10 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
+#include "application/hil/hil.h"
+
+#include "main.h"
+#include "stm32h7xx_hal.h"
 
 /* USER CODE END INCLUDE */
 
@@ -264,8 +268,16 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 11 */
-  USBD_CDC_SetRxBuffer(&hUsbDeviceHS, &Buf[0]);
-  USBD_CDC_ReceivePacket(&hUsbDeviceHS);
+  // process packet
+  HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET); // indicate packet received
+  for (uint32_t i = 0; i < *Len; i++) {
+      hil_parse_rx_bytes(Buf[i]);
+    }
+    
+    USBD_CDC_SetRxBuffer(&hUsbDeviceHS, &Buf[0]);
+    USBD_CDC_ReceivePacket(&hUsbDeviceHS);
+
+    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET); // indicate packet received
   return (USBD_OK);
   /* USER CODE END 11 */
 }

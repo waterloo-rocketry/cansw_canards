@@ -91,7 +91,7 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
 	status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
-	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
+	// status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= navigator_init();
@@ -102,9 +102,9 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	status |= adxl380_init();
+	// status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
+	// status |= adxrs649_init();
 	status |= iis2mdc_init();
 	// status |= ekf_init();
 
@@ -168,14 +168,16 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
-
+	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
+	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
+	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
 	// its blinky now
 	while (1) {
-		gpio_toggle(GPIO_PIN_RED_LED, 1);
+		// gpio_toggle(GPIO_PIN_RED_LED, 1);
 		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		// gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
-		gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+		// gpio_toggle(GPIO_PIN_BLUE_LED, 1);
 		vTaskDelay(500);
 	}
 }

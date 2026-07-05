@@ -11,6 +11,7 @@
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
+#include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
 #ifdef HIL
 #include "application/hil/hil.h"
@@ -112,6 +113,8 @@ fsm_state_t fsm_get_state() {
 
 void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 			  const all_sensors_data_t *p_sensor_data) {
+	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
+
 	// set the inputs
 	navigator_input_t navigator_input = {.fsm_state = p_ctx->curr_state};
 	controller_input_t controller_input = {.launch_timestamp_ms =
@@ -169,14 +172,6 @@ void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 					(float32_t)(controller_output.canard_command_angle_rad * DEG_PER_RAD);
 				ak45_send_position_cmd(motor_angle_deg);
 				/****************************************************************/
-#ifdef HIL
-				/******************************** HIL START ********************************/
-				if (hil_send_simulink_cmd(controller_output.canard_command_angle_rad) !=
-					W_SUCCESS) {
-					log_text(1, LOG_LVL_WARN, "HIL", "Failed to send cmd to simulink");
-				}
-				/******************************** HIL END ********************************/
-#endif
 			}
 			break;
 
@@ -188,10 +183,46 @@ void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 			// TODO: how to deal with the other cases
 			break;
 	}
+
+#ifdef HIL
+	/******************************** HIL START ********************************/
+	// send hil packet regardless of fsm state. In non-actuation states, we
+	// still want to send telem to simulink (canard cmd gets ignored)
+	w_status_t send_rc = hil_send_simulink_cmd(&navigator_input,
+											   &navigator_output,
+											   &p_ctx->p_navigator_context->gnc_navigator_ctx.x,
+											   &controller_input,
+											   &controller_output);
+	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+	if (send_rc != W_SUCCESS) {
+		log_text(1, LOG_LVL_WARN, "HIL", "Failed to send cmd to simulink: %d", send_rc);
+	} else {
+		log_text(1,
+				 LOG_LVL_DEBUG,
+				 "HIL",
+				 "Sent cmd to simulink %f, %f, %f",
+				 controller_output.canard_command_angle_rad,
+				 controller_output.ref_roll[0],
+				 controller_output.ref_roll[1]);
+	}
+	/******************************** HIL END ********************************/
+#endif
 }
 
 void fsm_task(void *args) {
 	(void)args;
+
+	// kickoff simulink by unblocking it with 1 msg. use dummy data to verify it started
+	navigator_input_t navigator_input = {0};
+	controller_input_t controller_input = {0};
+	navigator_output_t navigator_output = {0};
+	controller_output_t controller_output = {0};
+	gnc_x_state_t x_state = {0};
+	controller_input.canard_angle_rad = 123.456;
+	navigator_output.roll_state[0] = 567.567;
+
+	hil_send_simulink_cmd(
+		&navigator_input, &navigator_output, &x_state, &controller_input, &controller_output);
 
 	while (1) {
 		// Unblock once we receive the notification to unblock fsm
@@ -217,13 +248,17 @@ void fsm_task(void *args) {
 		sensor_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
 
 #ifdef HIL
+		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
 		/******************************** HIL START ********************************/
-		// override sensor data with simulink sensors in HIL mode
-		if (hil_get_latest_sensor_data(&sensor_data) != W_SUCCESS) {
+		// override sensor data with simulink sensors in HIL mode.
+		// expect first run of this loop to fail, as we havent unblocked hil 1st step yet.
+		// but fsm_exec() unconditionally sends cmd+telem to simulink, so next loop will have data
+		// ready.
+		if (hil_wait_for_simulink_data(&sensor_data) != W_SUCCESS) {
 			log_text(1, LOG_LVL_WARN, "HIL", "Failed to get latest sensor data");
 		}
 		/******************************** HIL END ********************************/
-
+		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
 #endif
 
 		flight_phase_gen_sync_events(
