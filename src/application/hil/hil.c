@@ -12,6 +12,10 @@
 #include "application/logger/log.h"
 #include "common/math/math.h"
 
+#ifdef HIL
+extern void unblock_fsm_hil();
+#endif
+
 // Packet framing bytes
 #define HIL_HEADER_SIZE_BYTES (4U)
 #define HIL_FOOTER_SIZE_BYTES (1U)
@@ -31,46 +35,56 @@ typedef enum {
 
 // payload from simulink + footer (excluding header)
 typedef struct __attribute__((packed)) {
+
+	float32_t motor_encoder;
+
 	float32_t board_accel_x;
 	float32_t board_accel_y;
 	float32_t board_accel_z;
+	float32_t board_accel_status;
 
 	float32_t board_gyro_x;
 	float32_t board_gyro_y;
 	float32_t board_gyro_z;
+	float32_t board_gyro_status;
 
 	float32_t board_mag_x;
 	float32_t board_mag_y;
 	float32_t board_mag_z;
+	float32_t board_mag_status;
 
 	float32_t board_baro;
+	float32_t board_baro_status;
 
 	float32_t mti_accel_x;
 	float32_t mti_accel_y;
 	float32_t mti_accel_z;
+	float32_t mti_accel_status;
 
 	float32_t mti_gyro_x;
 	float32_t mti_gyro_y;
 	float32_t mti_gyro_z;
+	float32_t mti_gyro_status;
 
 	float32_t mti_mag_x;
 	float32_t mti_mag_y;
 	float32_t mti_mag_z;
+	float32_t mti_mag_status;
 
 	float32_t mti_baro;
+	float32_t mti_baro_status;
 
 	float32_t ad_accel_x;
 	float32_t ad_accel_y;
 	float32_t ad_accel_z;
+	float32_t ad_accel_status;
 
-	float32_t ad_gyro;
+	float32_t ad_gyro_dummy_x;
 	// simulink is stuck giving xyz for gyro even though only the x-axis actually exists
 	float32_t ad_gyro_dummy_y;
-	float32_t ad_gyro_dummy_z;
+	float32_t ad_gyro;
+	float32_t ad_gyro_status;
 
-	float32_t motor_encoder;
-
-	float32_t can_msg_start_byte; // cuz tristan vibecoded it
 	float32_t can_msg; //
 	// bool pad_filter_can_msg;
 	// bool ignitor_can_msg;
@@ -192,17 +206,23 @@ void hil_parse_rx_bytes(uint8_t byte) {
 		// check if any fake CAN msgs triggered. If so, send the flight phase event directly.
 		// fake CAN bypasses CAN handler intentionally cuz that's tested in real CAN tests later
 		hil_rx_payload_t *ready_packet = (hil_rx_payload_t *)&hil_ctx.ready_rx_packet[0];
-		if (float_equal(ready_packet->can_msg, 1)) {
+		if (float_equal(ready_packet->can_msg, 3)) {
 			flight_phase_send_event(EVENT_PAD_FILTER);
 		}
 		if (float_equal(ready_packet->can_msg, 2)) {
 			flight_phase_send_event(EVENT_IGNITOR);
 		}
-		if (float_equal(ready_packet->can_msg, 3)) {
+		if (float_equal(ready_packet->can_msg, 1)) {
 			flight_phase_send_event(EVENT_INJ_OPEN);
 		}
+
+#ifdef HIL
+		unblock_fsm_hil();
+#endif
 	}
 }
+lsm6dsv32x_get_gyro_acc_data()
+w_status_t hil_lsm6dsv32x_get_gyro_acc_data
 
 w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	if (NULL == out) {
@@ -220,7 +240,7 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	// }
 
 	// blocking wait for data
-	uint32_t timeout_ms = 30000; // 30 second timeout
+	uint32_t timeout_ms = 0; // 30 second timeout
 	uint32_t start_time = xTaskGetTickCount();
 	while (!hil_ctx.is_reading_avail &&
 		   (xTaskGetTickCount() - start_time) < pdMS_TO_TICKS(timeout_ms)) {
@@ -237,41 +257,41 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	out->board_meas.board_imu.gyro.x = ready_packet->board_gyro_x;
 	out->board_meas.board_imu.gyro.y = ready_packet->board_gyro_y;
 	out->board_meas.board_imu.gyro.z = ready_packet->board_gyro_z;
-	out->board_meas.board_imu.is_new = true;
+	out->board_meas.board_imu.is_new = ready_packet->board_accel_status;
 
 	out->board_meas.board_baro.meas = ready_packet->board_baro;
-	out->board_meas.board_baro.is_new = true;
+	out->board_meas.board_baro.is_new = ready_packet->board_baro_status;
 
 	out->board_meas.board_mag.meas.x = ready_packet->board_mag_x;
 	out->board_meas.board_mag.meas.y = ready_packet->board_mag_y;
 	out->board_meas.board_mag.meas.z = ready_packet->board_mag_z;
-	out->board_meas.board_mag.is_new = true;
+	out->board_meas.board_mag.is_new = ready_packet->board_mag_status;
 
 	out->mti_meas.mti_accel.meas.x = ready_packet->mti_accel_x;
 	out->mti_meas.mti_accel.meas.y = ready_packet->mti_accel_y;
 	out->mti_meas.mti_accel.meas.z = ready_packet->mti_accel_z;
-	out->mti_meas.mti_accel.is_new = true;
+	out->mti_meas.mti_accel.is_new = ready_packet->mti_accel_status;
 
 	out->mti_meas.mti_gyro.meas.x = ready_packet->mti_gyro_x;
 	out->mti_meas.mti_gyro.meas.y = ready_packet->mti_gyro_y;
 	out->mti_meas.mti_gyro.meas.z = ready_packet->mti_gyro_z;
-	out->mti_meas.mti_gyro.is_new = true;
+	out->mti_meas.mti_gyro.is_new = ready_packet->mti_gyro_status;
 
 	out->mti_meas.mti_baro.meas = ready_packet->mti_baro;
-	out->mti_meas.mti_baro.is_new = true;
+	out->mti_meas.mti_baro.is_new = ready_packet->mti_baro_status;
 
 	out->mti_meas.mti_mag.meas.x = ready_packet->mti_mag_x;
 	out->mti_meas.mti_mag.meas.y = ready_packet->mti_mag_y;
 	out->mti_meas.mti_mag.meas.z = ready_packet->mti_mag_z;
-	out->mti_meas.mti_mag.is_new = true;
+	out->mti_meas.mti_mag.is_new = ready_packet->mti_mag_status;
 
 	out->ad_meas.ad_accel.meas.x = ready_packet->ad_accel_x;
 	out->ad_meas.ad_accel.meas.y = ready_packet->ad_accel_y;
 	out->ad_meas.ad_accel.meas.z = ready_packet->ad_accel_z;
-	out->ad_meas.ad_accel.is_new = true;
+	out->ad_meas.ad_accel.is_new = ready_packet->ad_accel_status;
 
 	out->ad_meas.ad_gyro.meas = ready_packet->ad_gyro;
-	out->ad_meas.ad_gyro.is_new = true;
+	out->ad_meas.ad_accel.is_new = ready_packet->ad_gyro_status;
 
 	out->motor_encoder_meas.meas = ready_packet->motor_encoder;
 	out->motor_encoder_meas.is_new = true;
@@ -323,11 +343,12 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	return W_SUCCESS;
 }
 
+static hil_tx_packet_t tx_packet = {0};
+
 w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
 								 gnc_x_state_t *p_x_state, controller_input_t *p_cntl_in,
 								 controller_output_t *p_cntl_out) {
 	log_text(1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", p_cntl_in->canard_angle_rad);
-	hil_tx_packet_t tx_packet = {0};
 	tx_packet.header[0] = HIL_HEADER_CHAR_0;
 	tx_packet.header[1] = HIL_HEADER_CHAR_1;
 	tx_packet.header[2] = HIL_HEADER_CHAR_2;
@@ -380,6 +401,8 @@ w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t
 			 tx_packet.payload.vel_y,
 			 tx_packet.payload.vel_z,
 			 tx_packet.payload.altitude);
+
+	vTaskDelay(10);
 	// log_text(1, LOG_LVL_DEBUG, "HIL", "cov_norm %f where_it_is %f, %f where_it_isnt %f, %f",
 	// tx_packet.payload.cov_norm, tx_packet.payload.where_it_is[0],
 	// tx_packet.payload.where_it_is[1], tx_packet.payload.where_it_isnt[0],

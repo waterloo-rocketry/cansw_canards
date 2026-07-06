@@ -118,11 +118,15 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 							 &(p_output->dynamic_pressure),
 							 &is_run);
 
+#ifdef HIL
+	p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
+#else
 	if (true) { // if nav ran
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
 		log_text(0, LOG_LVL_WARN, "Navigator", "Nav failed to run");
 	}
+#endif
 
 	return W_SUCCESS;
 }

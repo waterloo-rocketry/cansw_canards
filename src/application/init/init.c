@@ -40,7 +40,7 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
-static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1; // 10 seconds
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -110,7 +110,7 @@ static void system_init_task(void *arg) {
 	status |= lsm6dsv32x_init();
 	// status |= adxrs649_init();
 	status |= ms5611_init();
-	status |= iis2mdc_init();
+	// status |= iis2mdc_init();
 	status |= power_handler_init();
 	// status |= ekf_init();
 

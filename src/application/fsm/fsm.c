@@ -27,7 +27,13 @@
 
 extern TaskHandle_t fsm_task_handle;
 
+#ifdef HIL
+static const uint16_t MAX_FSM_DELAY_MS = 10000;
+uint32_t hil_timestamp_tenth_ms = 0;
+#else
 static const uint8_t MAX_FSM_DELAY_MS = 4;
+#endif
+
 static const uint32_t MS_TO_TENTH_MS = 10;
 
 // global
@@ -57,6 +63,12 @@ static void unblock_fsm_loop(TIM_HandleTypeDef *htim) {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+#ifdef HIL
+void unblock_fsm_hil() {
+	unblock_fsm_loop(&htim5);
+}
+#endif
+
 w_status_t fsm_init() {
 	// init estimator context
 	// initialize ctx timestamp to current time
@@ -82,7 +94,7 @@ w_status_t fsm_init() {
 
 	// initialize fsm state
 	g_ctx.curr_state = STATE_IDLE;
-
+#ifndef HIL
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, &unblock_fsm_loop);
 
 	// start tim
@@ -90,7 +102,7 @@ w_status_t fsm_init() {
 		return W_FAILURE;
 	}
 
-#ifdef HIL
+#else
 	// init hil here to keep all hil changes in fsm.c
 	if (hil_init() != W_SUCCESS) {
 		log_text(1, LOG_LVL_WARN, "HIL", "init fail");
@@ -105,8 +117,7 @@ fsm_state_t fsm_get_state() {
 	return g_ctx.curr_state;
 }
 
-void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
-			  const all_sensors_data_t *p_sensor_data) {
+void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx) {
 	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
 
 	// set the inputs
@@ -133,6 +144,7 @@ void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 			// Nav enters flight filter
 			/* fall through */
 		case STATE_BOOST:
+			gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_LOW, 0);
 			navigator_step(&navigator_input,
 						   timestamp_tenth_ms,
 						   p_ctx->p_navigator_context,
@@ -143,6 +155,9 @@ void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 			// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
+			if (timestamp_tenth_ms % 50 == 0) {
+				gpio_toggle(GPIO_PIN_GREEN_LED, 0);
+			}
 			navigator_step(&navigator_input,
 						   timestamp_tenth_ms,
 						   p_ctx->p_navigator_context,
@@ -207,6 +222,7 @@ void fsm_exec(const uint32_t timestamp_tenth_ms, const fsm_ctx_t *p_ctx,
 void fsm_task(void *args) {
 	(void)args;
 
+#ifdef HIL
 	// kickoff simulink by unblocking it with 1 msg. use dummy data to verify it started
 	navigator_input_t navigator_input = {0};
 	controller_input_t controller_input = {0};
@@ -219,17 +235,31 @@ void fsm_task(void *args) {
 	hil_send_simulink_cmd(
 		&navigator_input, &navigator_output, &x_state, &controller_input, &controller_output);
 
+
+	timer_get_tenth_ms(&hil_timestamp_tenth_ms);
+#endif
+
 	while (1) {
 		// Unblock once we receive the notification to unblock fsm
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS)) == 0) {
 			log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
 		}
 
+#ifndef HIL
 		uint32_t timestamp_tenth_ms = 0;
 
 		if (W_SUCCESS != timer_get_tenth_ms(&timestamp_tenth_ms)) {
 			// TODO: error handling
 		}
+#else 
+		uint32_t timestamp_tenth_ms = hil_timestamp_tenth_ms;
+
+		uint32_t actual_timestamp_ms = 0;
+
+		if (W_SUCCESS != timer_get_ms(&actual_timestamp_ms)) {
+			// TODO: error handling
+		}
+#endif
 
 		uint32_t timestamp_ms = timestamp_tenth_ms / MS_TO_TENTH_MS;
 
@@ -242,22 +272,27 @@ void fsm_task(void *args) {
 		// - etc (probably more later)
 		sensor_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
 
-#ifdef HIL
-		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
-		/******************************** HIL START ********************************/
-		// override sensor data with simulink sensors in HIL mode.
-		// expect first run of this loop to fail, as we havent unblocked hil 1st step yet.
-		// but fsm_exec() unconditionally sends cmd+telem to simulink, so next loop will have data
-		// ready.
-		if (hil_wait_for_simulink_data(&sensor_data) != W_SUCCESS) {
-			log_text(1, LOG_LVL_WARN, "HIL", "Failed to get latest sensor data");
-		}
-		/******************************** HIL END ********************************/
-		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
-#endif
+		#ifdef HIL
+			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
+			/******************************** HIL START ********************************/
+			// override sensor data with simulink sensors in HIL mode.
+			// expect first run of this loop to fail, as we havent unblocked hil 1st step yet.
+			// but fsm_exec() unconditionally sends cmd+telem to simulink, so next loop will have data
+			// ready.
+			if (hil_wait_for_simulink_data(&sensor_data) != W_SUCCESS) {
+				log_text(1, LOG_LVL_WARN, "HIL", "Failed to get latest sensor data");
+			}
+			/******************************** HIL END ********************************/
+			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
+		#endif
 
+#ifdef HIL
+		flight_phase_gen_sync_events(
+			g_ctx.p_flight_phase_context, g_ctx.curr_state, actual_timestamp_ms, &sensor_data);
+#else
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, timestamp_ms, &sensor_data);
+#endif
 
 		// run 1 cycle of state transition
 		flight_phase_event_t next_event = flight_phase_get_next_event();
@@ -268,5 +303,8 @@ void fsm_task(void *args) {
 		// run actions based on new curr state
 		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
 		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
+#ifdef HIL
+		hil_timestamp_tenth_ms += 25;
+#endif
 	}
 }

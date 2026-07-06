@@ -510,7 +510,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 		return W_FAILURE; // since without a timestamp the system will be unable to correctly judge
 						  // any of the data therefore the results for all sensors are data
 	}
-
+	
 	// Read from all IMUs and sensors
 	w_status_t board_status =
 		read_board_meas(ctx, &(imu_output->board_meas), &raw_board_meas, current_time_ms);

@@ -125,11 +125,11 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 
 	// Allow sending from ISR
 	if (xQueueSendFromISR(event_queue, &event, 0) != pdPASS) {
-		log_text(0,
-				 LOG_LVL_FATAL,
-				 "FlightPhase",
-				 "Failed to send event %d to queue. Queue full?",
-				 event);
+		// log_text(0,
+		// 		 LOG_LVL_FATAL,
+		// 		 "FlightPhase",
+		// 		 "Failed to send event %d to queue. Queue full?",
+		// 		 event);
 		flight_phase_status.event_queue_full_count++;
 		return W_FAILURE;
 	}

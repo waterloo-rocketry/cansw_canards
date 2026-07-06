@@ -11,6 +11,10 @@
 // #warning "HIL mode enabled! Comment out this line while working on HIL then uncomment when done."
 #endif
 
+#ifdef HIL
+extern void unblock_fsm_hil(void);
+#endif
+
 /**
  * @brief Initialize HIL module context.
  */
