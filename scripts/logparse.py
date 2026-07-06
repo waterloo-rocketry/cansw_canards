@@ -31,10 +31,10 @@ format quick reference:
 FORMATS = {
     0x44414548: Spec("header", "<LL", ["version", "index"]),
     M(0x01): Spec("test", "<f", ["test_val"]),  
-    M(0x02): Spec("navigator_pt1", "<fffffff",
+    
+    M(0x02): Spec("navigator_pt1", "<ffff",
     [
         "orient_w", "orient_x", "orient_y", "orient_z",
-        "angular_velocity_x", "angular_velocity_y", "angular_velocity_z",
     ]),
     M(0x03): Spec("navigator_pt2", "<ffffL",
     [
@@ -42,53 +42,69 @@ FORMATS = {
         "altitude",
         "variance_norm",
     ]),
+    M(0x04): Spec("navigator_pt3", "<fff",
+    [
+        "angular_velocity_x", "angular_velocity_y", "angular_velocity_z",
+    ]),
 
-    M(0x04): Spec("controller", "<fff",
+    M(0x05): Spec("controller", "<fff",
     [
         "command", "roll_target", "canard_coeff",
     ]),
 
-    M(0x05): Spec("st_imu", "<ffffff",
+    M(0x06): Spec("st_imu_pt1", "<fff",
     [
         "accelerometer_x", "accelerometer_y", "accelerometer_z",
+    ]),
+    M(0x07): Spec("st_imu_pt2", "<fff",
+    [
         "gyroscope_x", "gyroscope_y", "gyroscope_z",
     ]),
 
-    M(0x06): Spec("barometer", "<Ll", ["barometer", "thermometer"]),
+    M(0x08): Spec("barometer", "<Ll", ["barometer", "thermometer"]),
 
-    M(0x07): Spec("compass", "<ffffff",
+    M(0x09): Spec("compass_pt1", "<fff",
     [
         "accelerometer_x", "accelerometer_y", "accelerometer_z",
+    ]),
+    M(0x0A): Spec("compass_pt2", "<fff",
+    [
         "magnetometer_x", "magnetometer_y", "magnetometer_z",
     ]),
 
-    M(0x08): Spec("movella_pt1", "<ffffff",
+    M(0x0B): Spec("movella_pt1", "<fff",
     [
         "accelerometer_x", "accelerometer_y", "accelerometer_z",
+    ]),
+    M(0x0C): Spec("movella_pt2", "<fff",
+    [
         "gyroscope_x", "gyroscope_y", "gyroscope_z",
     ]),
-    M(0x09): Spec("movella_pt2", "<fffL",
+    M(0x0D): Spec("movella_pt3", "<fffL",
     [
         "magnetometer_x", "magnetometer_y", "magnetometer_z",
         "barometer",
     ]),
-    M(0x0A): Spec("movella_pt3", "<ffff",
+    M(0x0E): Spec("movella_pt4", "<ffff",
     [
         "orient_w", "orient_x", "orient_y", "orient_z",
     ]),
-    M(0x0B): Spec("movella_pt4", "<ffffff",
+    M(0x0F): Spec("movella_pt5", "<fff",
     [
-        "angular_velocity_x", "angular_velocity_y", "angular_velocity_z",
+        "velocity_x", "velocity_y", "velocity_z",
+    ]),
+    M(0x10): Spec("movella_pt6", "<fff",
+    [
         "velocity_x", "velocity_y", "velocity_z",
     ]),
 
-    M(0x0C): Spec("ad_accel", "<fff",
+    M(0x11): Spec("ad_accel", "<fff",
     [
         "accelerometer_x", "accelerometer_y", "accelerometer_z",
     ]),
-    M(0x0D): Spec("ad_gyro", "<l", ["gyroscope"]),
+    M(0x12): Spec("ad_gyro", "<l", ["gyroscope"]),
 
-    M(0x0E): Spec("encoder", "<lll",
+    M(0x13): Spec("encoder", "<lll",
     [
         "motor_angle", "motor_current", "motor_temperature",
     ]),

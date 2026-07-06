@@ -77,24 +77,29 @@ typedef enum {
 
 	LOG_TYPE_NAVIGATOR_PT1 = M(0x02),
 	LOG_TYPE_NAVIGATOR_PT2 = M(0x03),
+	LOG_TYPE_NAVIGATOR_PT3 = M(0x04),
 
-	LOG_TYPE_CONTROLLER = M(0x04),
+	LOG_TYPE_CONTROLLER = M(0x05),
 
-	LOG_TYPE_ST_IMU = M(0x05),
+	LOG_TYPE_ST_IMU_PT1 = M(0x06),
+	LOG_TYPE_STU_IMU_PT2 = M(0x07),
 
-	LOG_TYPE_BAROMETER = M(0x06),
+	LOG_TYPE_BAROMETER = M(0x08),
 
-	LOG_TYPE_COMPASS = M(0x07),
+	LOG_TYPE_COMPASS_PT1 = M(0x09),
+	LOG_TYPE_COMPASS_PT2 = M(0x0A),
 
-	LOG_TYPE_MOVELLA_PT1 = M(0x08),
-	LOG_TYPE_MOVELLA_PT2 = M(0x09),
-	LOG_TYPE_MOVELLA_PT3 = M(0x0A),
-	LOG_TYPE_MOVELLA_PT4 = M(0x0B),
+	LOG_TYPE_MOVELLA_PT1 = M(0x0B),
+	LOG_TYPE_MOVELLA_PT2 = M(0x0C),
+	LOG_TYPE_MOVELLA_PT3 = M(0x0D),
+	LOG_TYPE_MOVELLA_PT4 = M(0x0E),
+	LOG_TYPE_MOVELLA_PT5 = M(0x0F),
+	LOG_TYPE_MOVELLA_PT6 = M(0x10),
 
-	LOG_TYPE_AD_ACCEL = M(0x0C),
-	LOG_TYPE_AD_GYRO = M(0x0D),
+	LOG_TYPE_AD_ACCEL = M(0x11),
+	LOG_TYPE_AD_GYRO = M(0x12),
 
-	LOG_TYPE_ENCODER = M(0x0E)
+	LOG_TYPE_ENCODER = M(0x13)
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -145,9 +150,6 @@ typedef union __attribute__((packed)) {
 		float orient_x;
 		float orient_y;
 		float orient_z;
-
-		vector3d_f32_packed_t angular_velocity; // rad/sec
-
 	} navigator_pt1;
 
 	struct __attribute__((packed)) {
@@ -155,6 +157,10 @@ typedef union __attribute__((packed)) {
 		float altitude; // m
 		uint32_t variance_norm;
 	} navigator_pt2;
+
+	struct __attribute__((packed)) {
+		vector3d_f32_packed_t angular_velocity; // rad/sec
+	} navigator_pt3;
 
 	// LOG_TYPE_CONTROLLER:
 	struct __attribute__((packed)) {
@@ -167,8 +173,11 @@ typedef union __attribute__((packed)) {
 	// LOG_TYPE_ST_IMU:
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
+	} st_imu_pt1;
+
+	struct __attribute__((packed)) {
 		vector3d_f32_packed_t gyroscope; // rad/s
-	} st_imu;
+	} st_imu_pt2;
 
 	// LOG_TYPE_BAROMETER:
 	struct __attribute__((packed)) {
@@ -179,32 +188,41 @@ typedef union __attribute__((packed)) {
 	// LOG_TYPE_COMPASS:
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
+	} compass_pt1;
+
+	struct __attribute__((packed)) {
 		vector3d_f32_packed_t magnetometer; // Gauss
-	} compass;
+	} compass_pt2;
 
 	// LOG_TYPE_MOVELLA
 	// note: dont use the all_imus_input_t struct here because packing isn't recursive
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
-		vector3d_f32_packed_t gyroscope; // rad/s
 	} movella_pt1;
+
+	struct __attribute__((packed)) {
+		vector3d_f32_packed_t gyroscope; // rad/s
+	} movella_pt2;
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t magnetometer; // Gauss
 		uint32_t barometer; // Pa
-	} movella_pt2;
+	} movella_pt3;
 
 	struct __attribute__((packed)) {
 		float orient_w;
 		float orient_x;
 		float orient_y;
 		float orient_z;
-	} movella_pt3;
+	} movella_pt4;
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t angular_velocity; // rad/sec
+	} movella_pt5;
+
+	struct __attribute__((packed)) {
 		vector3d_f32_packed_t velocity; // m/s
-	} movella_pt4;
+	} movella_pt6;
 
 	// LOG_TYPE_AD_ACCEL:
 	struct __attribute__((packed)) {
@@ -224,6 +242,10 @@ typedef union __attribute__((packed)) {
 	} encoder;
 
 } log_data_container_t;
+
+// MAX_DATA_MSG_LENGTH includes type, timestamp, and newline (9 bytes)
+STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 9,
+			  "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
 
 /**
  * A collection of status variables describing the current health of the logger module.
