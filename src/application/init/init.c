@@ -37,8 +37,10 @@ extern I2C_HandleTypeDef hi2c2;
 extern I2C_HandleTypeDef hi2c4;
 
 
-extern uint64_t write_dma_count;
-extern uint64_t read_dma_count;
+extern volatile uint64_t write_dma_count;
+extern volatile uint64_t read_dma_count;
+extern volatile uint64_t total_bytes;
+extern volatile uint32_t num_writes;
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -80,6 +82,10 @@ static void system_init_task(void *arg) {
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
 	vTaskDelay(1000);
+
+	HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
 
 	// initialize timer first to make sure other modules can use it
 	if (W_SUCCESS != timer_init()) {
@@ -198,7 +204,7 @@ static void system_init_task(void *arg) {
 	}
 	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
 
-	vTaskDelay(5000);
+	vTaskDelay(500);
 	// its blinky now
 	uint16_t i = 0;
 	// gpio_toggle(GPIO_PIN_BLUE_LED, 0);
@@ -209,7 +215,10 @@ static void system_init_task(void *arg) {
 			i = 0;
 		}
 		vTaskDelay(1);
-		log_text(10, LOG_LVL_DEBUG, "SystemInit", "WRITE: %ld READ %ld.", write_dma_count, read_dma_count);
+
+		for (int i = 0 ; i < 20; i ++){
+			log_text(10, LOG_LVL_DEBUG, "SystemInit", "WRITE: %lu READ %lu, TOTAL: %lu, #: %lu", write_dma_count, read_dma_count, total_bytes, num_writes);
+		}
 	}
 }
 

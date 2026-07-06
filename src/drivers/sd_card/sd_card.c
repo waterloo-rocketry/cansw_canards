@@ -9,6 +9,9 @@
 
 #include "application/logger/log.h"
 
+volatile uint64_t total_bytes = 0;
+volatile uint32_t num_writes = 0;
+
 lfs_t g_fs_obj;
 
 extern SD_HandleTypeDef hsd2;
@@ -159,6 +162,9 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 	}
 	*bytes_written = (uint32_t)res;
 
+	total_bytes +=  (uint32_t)res;
+	num_writes++;
+
 	/* Close the file and release the mutex. */
 	lfs_file_close(&g_fs_obj, &file);
 	xSemaphoreGive(sd_mutex);
@@ -195,6 +201,10 @@ w_status_t sd_card_file_create(const char *file_name) {
 	xSemaphoreGive(sd_mutex);
 	sd_card_health.file_create_count++;
 	return W_SUCCESS;
+}
+
+w_status_t sd_card_file_log_open(sd_card_lfs_file_t *file, ){
+	
 }
 
 w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {

@@ -13,8 +13,8 @@
 #define CACHE_SIZE 512
 #define LOOKAHEAD_SIZE 512
 
-uint64_t write_dma_count = 0;
-uint64_t read_dma_count = 0;
+volatile uint64_t write_dma_count = 0;
+volatile uint64_t read_dma_count = 0;
 
 static SD_HandleTypeDef *sd_bus_handle = &hsd2;
 
@@ -115,10 +115,6 @@ static int lfsshim_sd_read(const struct lfs_config *c, lfs_block_t block, lfs_of
 		return -1;
 	}
 
-	if (HAL_SD_GetCardState(lfsshim_sd_hsd) != HAL_SD_CARD_TRANSFER) {
-		return -1;
-	}
-
 	return 0; // success
 }
 
@@ -161,9 +157,9 @@ static int lfsshim_sd_write(const struct lfs_config *c, lfs_block_t block, lfs_o
 		return -1;
 	}
 
-	if (HAL_SD_GetCardState(lfsshim_sd_hsd) != HAL_SD_CARD_TRANSFER) {
-		return -1;
-	}
+	// if (HAL_SD_GetCardState(lfsshim_sd_hsd) != HAL_SD_CARD_TRANSFER) {
+	// 	return -1;
+	// }
 
 	return 0; // success
 }

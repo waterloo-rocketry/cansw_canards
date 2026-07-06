@@ -453,12 +453,15 @@ void log_task(void *argument) {
 			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
 				gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
 
+				log_text(0, LOG_LVL_DEBUG, "SD", "START WRITE LOG");
 				if (sd_card_file_write(
 						filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
 					W_SUCCESS) {
+					log_text(0, LOG_LVL_DEBUG, "SD", "END WRITE LOG");
 					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
 					break; // Successfully wrote the buffer
 				} else {
+					log_text(0, LOG_LVL_DEBUG, "SD", "ERROR WRITE LOG");
 					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
 				}
 				if ((LOG_WRITE_TRY_COUNT - 1) == i) {
@@ -472,6 +475,7 @@ void log_task(void *argument) {
 
 			// Reinitialize buffer for reuse
 			log_reset_buffer(buffer_to_print);
+			log_text(0, LOG_LVL_DEBUG, "SD", "END FULL LOG");
 		} else {
 			logger_health.no_full_buf_moments++;
 		}

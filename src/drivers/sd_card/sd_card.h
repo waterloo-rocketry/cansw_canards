@@ -22,6 +22,13 @@ typedef struct {
 } sd_card_health_t;
 
 /**
+ * @brief a lfs file that will be used for continuous log
+ */
+typedef struct {
+	lfs_file_t *file;
+} sd_card_lfs_file_t;
+
+/**
  * @brief Initialize the SD card hardware and create the mutex for thread safety.
  * @pre Must be called after scheduler starts. The HAL sd init inside this uses hal_delay
  * in it, so it will hang forever if the timer interrupt is masked (freertos masks interrupts
