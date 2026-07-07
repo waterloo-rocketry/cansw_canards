@@ -7,17 +7,18 @@
 #include "task.h"
 #include "usart.h"
 
+#include "GNC_codegen.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
-#include "application/estimator/ekf.h"
-#include "application/estimator/estimator.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/navigator/navigator.h"
+#include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -26,6 +27,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
@@ -47,6 +49,7 @@ TaskHandle_t can_handler_handle_tx = NULL;
 TaskHandle_t can_handler_handle_rx = NULL;
 TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
+TaskHandle_t ms5611_task_handle = NULL;
 TaskHandle_t ad_breakout_task_handle = NULL;
 
 // Task priorities
@@ -59,6 +62,7 @@ const uint32_t can_handler_rx_priority = 45;
 const uint32_t can_handler_tx_priority = 40;
 // TODO: update when sure (based on old imu handler priority)
 const uint32_t movella_task_priority = 20;
+const uint32_t ms5611_task_priority = 18;
 const uint32_t ad_breakout_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
@@ -89,11 +93,12 @@ static void system_init_task(void *arg) {
 	// INIT REQUIRED MODULES
 	status |= gpio_init();
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
+	status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
-	status |= estimator_init();
+	status |= navigator_init();
 	status |= health_check_init();
 	status |= movella_init();
 	status |= flight_phase_init();
@@ -104,7 +109,9 @@ static void system_init_task(void *arg) {
 	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
 	status |= adxrs649_init();
+	status |= ms5611_init();
 	status |= iis2mdc_init();
+	status |= power_handler_init();
 	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
@@ -148,6 +155,13 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(
 		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+
+	task_status &= xTaskCreate(ms5611_task,
+							   "ms5611",
+							   512,
+							   NULL,
+							   ms5611_task_priority,
+							   &ms5611_task_handle); // TODO: set the correct size
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 

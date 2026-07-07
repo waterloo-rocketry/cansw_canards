@@ -3,16 +3,15 @@
 #include <string.h>
 
 #include "application/can_handler/can_handler.h"
-#include "application/estimator/estimator_types.h"
 #include "application/logger/log.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "canlib.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/ak45_driver/ak45_driver.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
@@ -36,16 +35,15 @@ static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 5;
 // static const uint32_t IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
 // static const uint32_t IMU_HANDLER_CAN_TX_RATE =
 // 	(IMU_HANDLER_CAN_TX_PERIOD_MS / ST_IMU_FRESHNESS_TIMEOUT_MS);
-
-// TODO: add calibration matrix for this year
 static const matrix3d_t g_mti_correction_matrix = {
-	.array = {{0, 0, 1.000000000}, {1.0000000, 0, 0}, {0, 1.0000000000, 0}}};
+	.array = {{0, 0, 1.0}, {1.0, 0, 0}, {0, 1.0, 0}}};
 static const matrix3d_t g_board_imu_correction_matrix = {
-	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+	.array = {{0, 0, -1.0}, {1.0, 0, 0}, {0, -1.0, 0}}};
+// TODO: Must be confirmed on July 11th
 static const matrix3d_t g_board_mag_correction_matrix = {
-	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+	.array = {{0, 0, -1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 static const matrix3d_t g_ad_accel_correction_matrix = {
-	.array = {{0, 0, -1.00000000}, {-1.00000000000, 0, 0}, {0, 1.00000000000, 0}}};
+	.array = {{0, 0, 1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
@@ -176,7 +174,6 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 	}
 
 	// get baro
-	// TODO: once baro implemented
 	uint32_t baro_timestamp_ms = 0;
 
 	sensor_status = ms5611_get_raw_pressure(&(raw_data->raw_board_baro), &baro_timestamp_ms);
@@ -461,8 +458,6 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
  * @return Status of initialization
  */
 w_status_t sensor_handler_init(void) {
-	// TODO: poll all imus to make sure theyre initialized alr or smth
-
 	// Set initialized flag directly here instead of calling initialize_all_imus()
 	sensor_handler_state.initialized = true;
 

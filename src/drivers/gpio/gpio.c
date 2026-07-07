@@ -12,6 +12,8 @@
 #include "semphr.h"
 
 #include "drivers/gpio/gpio.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 
 // Private --------------------------------------------------------------------
 
@@ -59,7 +61,14 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 	[GPIO_PIN_ADXL380_INT0] = {.port = ADXL_INT_GPIO_Port,
 							   .pin = ADXL_INT_Pin,
 							   .access_mutex = NULL},
-
+	[GPIO_PIN_PG_EXT_5V] = {.port = PG_EXT_5V_GPIO_Port,
+							.pin = PG_EXT_5V_Pin,
+							.access_mutex = NULL},
+	[GPIO_PIN_BAT_FLT1] = {.port = BAT_FLT1_GPIO_Port, .pin = BAT_FLT1_Pin, .access_mutex = NULL},
+	[GPIO_PIN_BAT_FLT2] = {.port = BAT_FLT2_GPIO_Port, .pin = BAT_FLT2_Pin, .access_mutex = NULL},
+	[GPIO_PIN_CHG_MUX_EN] = {.port = CHG_MUX_EN_GPIO_Port,
+							 .pin = CHG_MUX_EN_Pin,
+							 .access_mutex = NULL},
 };
 
 // Public ---------------------------------------------------------------------
@@ -183,4 +192,15 @@ health_status_t gpio_get_status(void) {
 	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_GPIO, .error_bitfield = 0};
 
 	return status;
+}
+
+/**
+ * @brief HAL interrupt callback for GPIO pins.
+ */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	if (IMU_INT1_Pin == GPIO_Pin) {
+		lsm6dsv32x_int1_isr_handler();
+	} else if (INT_MAG_Pin == GPIO_Pin) {
+		iis2mdc_handle_drdy_irq();
+	}
 }

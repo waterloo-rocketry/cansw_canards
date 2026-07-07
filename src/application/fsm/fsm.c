@@ -3,34 +3,34 @@
 #include "task.h"
 #include "tim.h"
 
+#include "GNC_codegen.h"
+#include "GNC_codegen_types.h"
 #include "application/controller/controller.h"
-#include "application/estimator/estimator.h"
-#include "application/estimator/estimator_module.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/timer/timer.h"
+
+// TODO: remove after motor_handler implemented
+/****************************************************************/
+#include "common/math/math.h"
+#include "drivers/ak45_driver/ak45_driver.h"
+/****************************************************************/
 #include "rocketlib/include/common.h"
 
 extern TaskHandle_t fsm_task_handle;
 
 static const uint8_t MAX_FSM_DELAY_MS = 4;
-
-typedef struct {
-	estimator_module_ctx_t *estimator_context; // global instance of estimator
-	controller_ctx_t *p_controller_context; // global instance of controller
-	uint32_t timestamp_ms; // curr timestamp
-	fsm_state_t curr_state;
-	flight_phase_ctx_t *p_flight_phase_context; // global instance of flight phase
-	sensor_handler_ctx_t *p_imu_context; // global instance of flight phase
-} fsm_ctx_t;
+static const uint32_t MS_TO_TENTH_MS = 10;
 
 // global
 static fsm_ctx_t g_ctx = {0};
 
 // create all of the global instances
-static estimator_module_ctx_t g_estimator_context = {0};
+static navigator_ctx_t g_navigator_context = {0};
 
 // make sure controller_output_t is initalized to 0 and valid to read to match original design
 static controller_ctx_t g_controller_context = {0};
@@ -38,6 +38,10 @@ static controller_ctx_t g_controller_context = {0};
 static flight_phase_ctx_t g_flight_phase_context = {.launch_timestamp_ms = UINT32_MAX,
 													.act_allowed_timestamp_ms = UINT32_MAX};
 static sensor_handler_ctx_t g_imu_context = {0};
+
+// gnc context
+static GNC_codegenPersistentData g_gnc_code_persistent = {0};
+static GNC_codegenStackData g_gnc_codegen_data = {.pd = &g_gnc_code_persistent};
 
 static void unblock_fsm_loop(TIM_HandleTypeDef *htim) {
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -57,14 +61,17 @@ w_status_t fsm_init() {
 		// TODO how to deal with error
 		return W_FAILURE;
 	}
-	g_estimator_context.t_sec =
-		((float64_t)init_time_tenth_ms) / 10000.0; // convert 0.1ms to seconds
-	g_estimator_context.x.attitude = (quaternion_t){.w = 1.0, .x = 0.0, .y = 0.0, .z = 0.0};
-	g_estimator_context.x.altitude = 420;
-	g_estimator_context.x.CL = 3;
+
+	// initialize gnc
+	GNC_codegen_initialize(&g_gnc_codegen_data);
+
+	// init the stack data
+	g_ctx.p_codegen_stack_data = &g_gnc_codegen_data;
+	g_navigator_context.p_gnc_stack_data = &g_gnc_codegen_data;
+	g_controller_context.p_gnc_stack_data = &g_gnc_codegen_data;
 
 	// init rest of input
-	g_ctx.estimator_context = &g_estimator_context;
+	g_ctx.p_navigator_context = &g_navigator_context;
 	g_ctx.p_controller_context = &g_controller_context;
 	g_ctx.p_flight_phase_context = &g_flight_phase_context;
 	g_ctx.p_imu_context = &g_imu_context;
@@ -75,51 +82,78 @@ w_status_t fsm_init() {
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, &unblock_fsm_loop);
 
 	// start tim
-	if (HAL_OK != HAL_TIM_Base_Start_IT(&htim5)) {
+	if (HAL_TIM_Base_Start_IT(&htim5) != HAL_OK) {
 		return W_FAILURE;
 	}
 
 	return W_SUCCESS;
 }
 
-void fsm_exec(const fsm_ctx_t *p_ctx, const all_sensors_data_t *p_sensor_data) {
-	(void)p_sensor_data;
-	// can't init to {0} as don't have any fields
-	// TODO: either init to {0} or with some value once implemented
-	navigator_input_t navigator_input = {};
-	navigator_output_t navigator_output = {};
-	controller_input_t controller_input = {0};
+fsm_state_t fsm_get_state() {
+	return g_ctx.curr_state;
+}
+
+void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
+			  const fsm_ctx_t *p_ctx) {
+	// set the inputs
+	navigator_input_t navigator_input = {.sensor_data = p_fsm_input->p_sensor_data,
+										 .fsm_state = p_ctx->curr_state};
+	controller_input_t controller_input = {.launch_timestamp_ms =
+											   p_ctx->p_flight_phase_context->launch_timestamp_ms};
+
+	// initialize the outputs
+	navigator_output_t navigator_output = {0};
 	controller_output_t controller_output = {0};
 
-	// TODO: convert fsm_inputs into the nav/cntl inputs
-
+	// TODO: ask tristan how to get behaviour of first cycle
 	switch (p_ctx->curr_state) {
 		case STATE_IDLE:
-			// do stuff
+			p_ctx->p_navigator_context->last_run_tenth_ms = timestamp_tenth_ms;
 			break;
 
 			// both Pad filter and boost will only run estimator step
 		case STATE_PAD_FILTER:
-			// TODO: how to tell estimator it needs to pad filter
+			// Nav enters pad filter
 			/* fall through */
 		case STATE_PAD_NAV:
-			// TODO: enter into flight filter
+			// Nav enters flight filter
 			/* fall through */
 		case STATE_BOOST:
-			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
+			navigator_step(&navigator_input,
+						   timestamp_tenth_ms,
+						   p_ctx->p_navigator_context,
+						   &navigator_output);
+			p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
 			break;
 
 			// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
-			estimator_step(p_ctx->estimator_context, &navigator_input, &navigator_output);
+			navigator_step(&navigator_input,
+						   timestamp_tenth_ms,
+						   p_ctx->p_navigator_context,
+						   &navigator_output);
 
-			controller_step(p_ctx->p_controller_context,
-							&controller_input,
-							&controller_output,
-							p_ctx->p_flight_phase_context->act_allowed_timestamp_ms,
-							p_ctx->timestamp_ms);
-			// TODO: motor
+			// input the navigator outputs into controller
+			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(controller_input.xR));
+			controller_input.dynamic_pressure = navigator_output.dynamic_pressure;
+
+			controller_input.canard_angle_rad = p_fsm_input->p_sensor_data->motor_encoder_meas.meas;
+			/****************************************************************/
+
+			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new) {
+				controller_step(&controller_input,
+								timestamp_tenth_ms,
+								p_ctx->p_controller_context,
+								&controller_output);
+
+				// TODO: switch to motor handler once exists
+				/****************************************************************/
+				float32_t motor_angle_deg =
+					(float32_t)(controller_output.canard_command_angle_rad * DEG_PER_RAD);
+				ak45_send_position_cmd(motor_angle_deg);
+				/****************************************************************/
+			}
 			break;
 
 			// etc for more cases...
@@ -141,9 +175,13 @@ void fsm_task(void *args) {
 			log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
 		}
 
-		if (W_SUCCESS != timer_get_ms(&(g_ctx.timestamp_ms))) {
+		uint32_t timestamp_tenth_ms = 0;
+
+		if (W_SUCCESS != timer_get_tenth_ms(&timestamp_tenth_ms)) {
 			// TODO: error handling
 		}
+
+		uint32_t timestamp_ms = timestamp_tenth_ms / MS_TO_TENTH_MS;
 
 		all_sensors_data_t sensor_data = {0};
 
@@ -155,7 +193,7 @@ void fsm_task(void *args) {
 		sensor_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
 
 		flight_phase_gen_sync_events(
-			g_ctx.p_flight_phase_context, g_ctx.curr_state, g_ctx.timestamp_ms, &sensor_data);
+			g_ctx.p_flight_phase_context, g_ctx.curr_state, timestamp_ms, &sensor_data);
 
 		// run 1 cycle of state transition
 		flight_phase_event_t next_event = flight_phase_get_next_event();
@@ -164,6 +202,7 @@ void fsm_task(void *args) {
 		g_ctx.curr_state = new_state;
 
 		// run actions based on new curr state
-		fsm_exec(&g_ctx, &sensor_data);
+		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
+		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
 	}
 }

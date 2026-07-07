@@ -112,6 +112,18 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 }
 
 /**
+ * @brief i2c dma error handler
+ */
+static void lsm6dsv32x_dma_error_handle(I2C_HandleTypeDef *hi2c) {
+	if (hi2c != lsm6dsv32x_ctx.hi2c) {
+		return;
+	}
+
+	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
+	lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
+}
+
+/**
  * @brief Initializes the bit registers for
  * @note Must be called after bit registers are configured, called before flight!!!
  * @return Status of the operation
@@ -128,13 +140,13 @@ w_status_t lsm6dsv32x_init() {
 
 	// LSM6DSV32X: https://www.st.com/resource/en/datasheet/lsm6dsv32x.pdf
 
-	// Accel ODR: 960 Hz
+	// Accel ODR: 480 Hz
 	// Accel mode: high performance
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL1_XL, 0x09);
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL1_XL, 0x08);
 
-	// Gyro ODR: 960 Hz
+	// Gyro ODR: 480 Hz
 	// Gyro mode: high performance
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL2_G, 0x09);
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL2_G, 0x08);
 
 	// turn off all FIFO commands
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL1, 0x00);
@@ -173,12 +185,20 @@ w_status_t lsm6dsv32x_init() {
 
 	lsm6dsv32x_ctx.switched_callback = true;
 
+	HAL_StatusTypeDef i2c_register_status = HAL_OK;
 	// register the I2C callback for the end of the DMA read to call the dma complete handler
 	// function
-	HAL_I2C_RegisterCallback(
+	i2c_register_status |= HAL_I2C_RegisterCallback(
 		lsm6dsv32x_ctx.hi2c, HAL_I2C_MEM_RX_COMPLETE_CB_ID, lsm6dsv32x_dma_complete_handle);
+	i2c_register_status |= HAL_I2C_RegisterCallback(
+		lsm6dsv32x_ctx.hi2c, HAL_I2C_ERROR_CB_ID, lsm6dsv32x_dma_error_handle);
 
 	// AFTER THIS POINT NEVER USE OLD I2C OR VERY BAD ERRORS
+
+	if (HAL_OK != i2c_register_status) {
+		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "Failed to reregister I2C callbacks");
+		return W_FAILURE;
+	}
 
 	if (status != W_SUCCESS) {
 		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "initfail");
@@ -196,16 +216,11 @@ w_status_t lsm6dsv32x_init() {
  */
 w_status_t lsm6dsv32x_int1_isr_handler() {
 	if (!lsm6dsv32x_ctx.switched_callback) {
-		log_text(1,
-				 LOG_LVL_FATAL,
-				 "LSM6DSV32X",
-				 "Attempting to complete DMA callback before new callback.");
 		return W_FAILURE;
 	}
 
 	// store the timestamp when the data is received
 	if (timer_get_ms(&lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER]) != W_SUCCESS) {
-		log_text(1, LOG_LVL_WARN, "LSM6DSV32X", "Failed to get time through timer.");
 		return W_FAILURE;
 	}
 
@@ -230,17 +245,6 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	}
 
 	return lsm6dsv32x_ctx.latest_status;
-}
-
-// TODO: make below function into a separate module, interrupts or gpio or dma
-/**
- * @brief interrupt handler for the int1 pin
- */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if ((IMU_INT1_Pin == GPIO_Pin) && (LSM6DSV32X_BUS_FREE == lsm6dsv32x_ctx.bus_status) &&
-		lsm6dsv32x_ctx.switched_callback) {
-		lsm6dsv32x_int1_isr_handler();
-	}
 }
 
 /**

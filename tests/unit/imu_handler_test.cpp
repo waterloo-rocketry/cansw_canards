@@ -10,7 +10,7 @@
 extern "C" {
 #include "application/can_handler/can_handler.h"
 #include "FreeRTOS.h"
-#include "application/estimator/estimator_types.h"
+
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/logger/log.h"
 #include "canlib.h"
@@ -22,7 +22,7 @@ extern "C" {
 #include "task.h"
 #include "third_party/rocketlib/include/common.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/ak45_driver/ak45_driver.h"
