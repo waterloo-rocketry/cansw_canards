@@ -1,7 +1,9 @@
 #include "fff.h"
+#include <algorithm>
 #include <chrono>
 #include <gtest/gtest.h>
 #include <thread>
+#include <vector>
 
 extern "C" {
 #include "FreeRTOS.h"
@@ -412,9 +414,11 @@ TEST_F(I2CTest, DeinitSucceeds) {
 		HAL_I2C_MASTER_TX_COMPLETE_CB_ID,
 		HAL_I2C_ERROR_CB_ID};
 
-	std::vector<HAL_I2C_CallbackIDTypeDef> unregistered_callbacks = {
+	EXPECT_EQ(HAL_I2C_UnRegisterCallback_fake.call_count, callbacks_to_unregister_count);
+	
+	std::vector<HAL_I2C_CallbackIDTypeDef> unregistered_callbacks(
 		HAL_I2C_UnRegisterCallback_fake.arg1_history,
-		HAL_I2C_UnRegisterCallback_fake.arg1_history + callbacks_to_unregister_count};
+		HAL_I2C_UnRegisterCallback_fake.arg1_history + callbacks_to_unregister_count);
 
 	for (int i = 0; i < callbacks_to_unregister_count; i++) {
 		EXPECT_TRUE(std::find(unregistered_callbacks.begin(),
@@ -422,7 +426,7 @@ TEST_F(I2CTest, DeinitSucceeds) {
 							  callbacks_to_unregister[i]) != unregistered_callbacks.end());
 	}
 
-	// Ensure read/writefunction calls fail
+	// Ensure read/write function calls fail
 	uint8_t data[4] = {0xAA};
 	EXPECT_EQ(i2c_read_reg(I2C_BUS_2, 0x50, 0x10, data, sizeof(data)), W_FAILURE);
 	EXPECT_EQ(i2c_write_reg(I2C_BUS_2, 0x50, 0x10, data, sizeof(data)), W_FAILURE);

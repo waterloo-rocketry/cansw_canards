@@ -100,12 +100,12 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *data, uint8_t len);
 
 /**
- * @brief turn off i2c module for this specific bus
+ * @brief Turn off the I2C module for this specific bus
  * @param[in] bus Bus to turn off
- * @retval W_SUCCESS Deinitilization completed successfully
+ * @retval W_SUCCESS Deinitialization completed successfully
  * @retval W_INVALID_PARAM Invalid parameters
  * @retval W_FAILURE Bus not initialized
- * @retval W_IO_TIMEOUT Unobtainable mutex
+ * @retval W_IO_TIMEOUT Unable to obtain mutex
  */
 w_status_t i2c_deinit_module(i2c_bus_t bus);
 

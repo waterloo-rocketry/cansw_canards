@@ -338,7 +338,7 @@ w_status_t i2c_deinit_module(i2c_bus_t bus) {
 	// Acquire bus mutex with timeout
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
 		i2c_error_stats[bus].timeouts++;
-		log_text(10, "i2c", "ERROR: unable to obtain mutex");
+		log_text(10, LOG_LVL_WARN, "i2c", "ERROR: unable to obtain mutex");
 		return W_IO_TIMEOUT;
 	}
 
@@ -348,14 +348,16 @@ w_status_t i2c_deinit_module(i2c_bus_t bus) {
 		HAL_I2C_UnRegisterCallback(handle->hal_handle, HAL_I2C_MEM_TX_COMPLETE_CB_ID);
 	unregister_status |=
 		HAL_I2C_UnRegisterCallback(handle->hal_handle, HAL_I2C_MEM_RX_COMPLETE_CB_ID);
-	// Register HAL callbacks for Master TX complete events
+	// Unregister HAL callbacks for Master TX complete events
 	unregister_status |=
 		HAL_I2C_UnRegisterCallback(handle->hal_handle, HAL_I2C_MASTER_TX_COMPLETE_CB_ID);
-	// Register separate error callback to handle errors using HAL_I2C_GetError
+	// Unregister error callback used with HAL_I2C_GetError
 	unregister_status |= HAL_I2C_UnRegisterCallback(handle->hal_handle, HAL_I2C_ERROR_CB_ID);
 
+	w_status_t w_status = W_SUCCESS;
 	if (HAL_OK != unregister_status) {
-		log_text(10, "i2c", "ERROR: some callbacks not unregistered");
+		log_text(10, LOG_LVL_WARN, "i2c", "ERROR: some callbacks not unregistered");
+		w_status = W_FAILURE;
 	}
 
 	handle->initialized = false;
@@ -369,7 +371,7 @@ w_status_t i2c_deinit_module(i2c_bus_t bus) {
 	handle->mutex = NULL;
 	handle->transfer_sem = NULL;
 
-	return W_SUCCESS;
+	return w_status;
 }
 
 // Test-only reset function: Always compiled, but intended only for testing.
