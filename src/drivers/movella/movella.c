@@ -100,7 +100,7 @@ static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtd
 					break;
 			}
 		} else {
-			log_text(0, "MTI", "ERROR: Unable to get timestamp");
+			log_text(0, LOG_LVL_WARN, "MTI", "Unable to get timestamp");
 		}
 
 		xSemaphoreGive(s_movella.data_mutex);
