@@ -20,3 +20,6 @@
 	path = src/third_party/closedrocket
 	url = https://github.com/waterloo-rocketry/closedrocket.git
     shallow = true
+[submodule "src/third_party/littlefs"]
+	path = src/third_party/littlefs
+	url = https://github.com/littlefs-project/littlefs.git

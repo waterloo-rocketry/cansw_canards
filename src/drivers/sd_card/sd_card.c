@@ -1,35 +1,76 @@
-#include "drivers/sd_card/sd_card.h"
 #include "FreeRTOS.h"
-#include "application/logger/log.h"
 #include "canlib.h"
-#include "fatfs.h"
+#include "littlefs/lfs.h"
+#include "rocketlib/include/stm32/littlefs_sd_shim.h"
 #include "semphr.h"
+#include "stm32h7xx_hal.h"
 
-FATFS g_fs_obj;
+#include "drivers/sd_card/sd_card.h"
+
+#include "application/logger/log.h"
+
+lfs_t g_fs_obj;
+
+extern SD_HandleTypeDef hsd2;
+
+extern const struct lfs_config cfg;
 
 sd_card_health_t sd_card_health = {0};
 
 // Only 1 SD card mutex is needed because only 1 sd card exists
 SemaphoreHandle_t sd_mutex = NULL;
 
+// Static 32-byte aligned file buffer for lfs_file_opencfg.
+// Prevents LittleFS from heap-allocating an unaligned per-file cache which
+// causes SDMMC IDMA to fault when it targets a non-DMA-accessible address.
+// Safe to share: the mutex guarantees only one file is open at a time.
+static uint8_t __attribute__((aligned(32))) sd_file_buf[512];
+static const struct lfs_file_config sd_file_cfg = {.buffer = sd_file_buf};
+
 w_status_t sd_card_init(void) {
 	// attempting to init the module >1 time is fine
 	if (sd_card_health.is_init) {
 		return W_SUCCESS;
 	}
-	/*
-	 * Mount the filesystem.
-	 * The f_mount() function links the FATFS file system object (SDFatFS) with the logical drive.
-	 * The second parameter (an empty string "") indicates the default drive.
-	 * The third parameter (1) forces the mount. Decided to force mount here so this init
-	 * function can check if the volume mount actually worked or not.
-	 */
-	// NOTE: f_mount internally calls a HAL sd init, which uses HAL_Delay(), which
-	// depends on the systick timer, which is disabled if all interrupts are masked.
-	// Freertos masks all interrupts before scheduler starts. Thus this function
-	// must only be called AFTER scheduler starts.
-	if (f_mount(&g_fs_obj, "", 1) != FR_OK) {
-		return W_FAILURE;
+
+	// HAL_SD_InitCard(&hsd2);
+
+	// // Get card geometry so lfs_format knows the block count
+	// HAL_SD_CardInfoTypeDef card_info;
+	// if (HAL_SD_GetCardInfo(&hsd2, &card_info) != HAL_OK) {
+	//     printf("Could not get SD card info\n");
+	//     return W_FAILURE;
+	// }
+
+	// Try to mount directly at block offset 0 (no MBR)
+	// NOTE: must be called AFTER scheduler starts; HAL SD uses HAL_Delay() which
+	// depends on systick, which FreeRTOS masks before the scheduler starts.
+	if (lfsshim_sd_mount(&g_fs_obj, &hsd2, 0) != W_SUCCESS) {
+		printf("Mount failed, formatting SD card\n");
+
+		// Get card geometry so lfs_format knows the block count
+		HAL_SD_CardInfoTypeDef card_info;
+		if (HAL_SD_GetCardInfo(&hsd2, &card_info) != HAL_OK) {
+			printf("Could not get SD card info\n");
+			return W_FAILURE;
+		}
+
+		// lfs_format requires block_count != 0; supply it via a local config copy
+		struct lfs_config format_cfg = cfg;
+		format_cfg.block_count = card_info.BlockNbr;
+
+		if (lfs_format(&g_fs_obj, &format_cfg) != 0) {
+			printf("Could not format SD card\n");
+			return W_FAILURE;
+		}
+
+		printf("Formatted SD card\n");
+
+		if (lfsshim_sd_mount(&g_fs_obj, &hsd2, 0) != W_SUCCESS) {
+			printf("Remount after format failed\n");
+			return W_FAILURE;
+		}
+		// return W_FAILURE;
 	}
 
 	/*
@@ -39,7 +80,7 @@ w_status_t sd_card_init(void) {
 	 */
 	sd_mutex = xSemaphoreCreateMutex();
 	if (NULL == sd_mutex) {
-		f_mount(NULL, "", 0); // Unmount
+		lfs_unmount(&g_fs_obj);
 		return W_FAILURE;
 	}
 
@@ -61,28 +102,31 @@ w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t bytes
 		return W_FAILURE;
 	}
 
-	FIL file;
-	FRESULT res;
+	lfs_file_t file;
+	int res;
 
 	/* Open the file in read mode. */
-	res = f_open(&file, file_name, FA_READ);
-	if (res != FR_OK) {
+	res = lfs_file_opencfg(&g_fs_obj, &file, file_name, LFS_O_RDONLY, &sd_file_cfg);
+	if (res != 0) {
+		printf("lfs_file_open failed with error code: %d\n", res);
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
 		return W_FAILURE;
 	}
 
 	// read into provided buffer
-	res = f_read(&file, buffer, bytes_to_read, (UINT *)bytes_read);
-	if (res != FR_OK) {
-		f_close(&file);
+	res = lfs_file_read(&g_fs_obj, &file, buffer, bytes_to_read);
+	if (res < 0) {
+		*bytes_read = 0;
+		lfs_file_close(&g_fs_obj, &file);
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
 		return W_FAILURE;
 	}
+	*bytes_read = (uint32_t)res;
 
 	/* Close the file and release the mutex. */
-	f_close(&file);
+	lfs_file_close(&g_fs_obj, &file);
 	xSemaphoreGive(sd_mutex);
 	sd_card_health.read_count++;
 	return W_SUCCESS;
@@ -101,26 +145,28 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 		return W_FAILURE;
 	}
 
-	FIL file;
-	FRESULT res;
+	lfs_file_t file;
+	int res;
 
 	/* Open the file in write mode.
-	 * Use FA_WRITE | FA_OPEN_APPEND to open always for safety in case file wasn't created
+	 * Use LFS_O_WRONLY | LFS_O_APPEND to open always for safety in case file wasn't created
 	 * successfully for some reason. This is a failsafe
 	 */
-	res = f_open(&file, file_name, FA_WRITE | FA_OPEN_APPEND);
-	if (res != FR_OK) {
-		f_mount(NULL, "", 0); // unmount then remount
-		f_mount(&g_fs_obj, "", 1);
+	int flags = LFS_O_WRONLY | LFS_O_CREAT | (append ? LFS_O_APPEND : 0);
+	res = lfs_file_opencfg(&g_fs_obj, &file, file_name, flags, &sd_file_cfg);
+	if (res != 0) {
+		// lfs_unmount(&g_fs_obj);
+		// lfsshim_sd_mount(&g_fs_obj, &hsd2, 0);
+		// lfs_file_close(&g_fs_obj, &file);
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
 		return W_FAILURE;
 	}
 
-	// must deliberately move r/w ptr to start of file if not appending
-	if (false == append) {
-		if (f_lseek(&file, 0) != FR_OK) {
-			f_close(&file);
+	// when not appending, truncate to zero so the write fully replaces the file contents
+	if (!append) {
+		if (lfs_file_truncate(&g_fs_obj, &file, 0) < 0) {
+			lfs_file_close(&g_fs_obj, &file);
 			xSemaphoreGive(sd_mutex);
 			sd_card_health.err_count++;
 			return W_FAILURE;
@@ -128,16 +174,18 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 	}
 
 	/* Write data from buffer to file. */
-	res = f_write(&file, buffer, bytes_to_write, (UINT *)bytes_written);
-	if (res != FR_OK) {
-		f_close(&file);
+	res = lfs_file_write(&g_fs_obj, &file, buffer, bytes_to_write);
+	if (res < 0) {
+		*bytes_written = 0;
+		lfs_file_close(&g_fs_obj, &file);
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
 		return W_FAILURE;
 	}
+	*bytes_written = (uint32_t)res;
 
 	/* Close the file and release the mutex. */
-	f_close(&file);
+	lfs_file_close(&g_fs_obj, &file);
 	xSemaphoreGive(sd_mutex);
 	sd_card_health.write_count++;
 	return W_SUCCESS;
@@ -154,28 +202,45 @@ w_status_t sd_card_file_create(const char *file_name) {
 		return W_FAILURE;
 	}
 
-	FIL file;
-	FRESULT res;
+	lfs_file_t file;
+	int res;
 
-	/* Create a new file. The FA_CREATE_NEW flag causes the function to fail if the file already
+	/* Create a new file. The LFS_O_CREAT flag causes the function to fail if the file already
 	 * exists. */
-	res = f_open(&file, file_name, FA_WRITE | FA_CREATE_NEW);
-	if (res != FR_OK) {
+	res = lfs_file_opencfg(
+		&g_fs_obj, &file, file_name, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_EXCL, &sd_file_cfg);
+	if (res != 0) {
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
 		return W_FAILURE;
 	}
 
 	/* Close the file immediately since we just want to create it. */
-	f_close(&file);
+	lfs_file_close(&g_fs_obj, &file);
 	xSemaphoreGive(sd_mutex);
 	sd_card_health.file_create_count++;
 	return W_SUCCESS;
 }
 
+// commenting this out to prevent accidentally deleting files somehow
+// w_status_t sd_card_file_delete(char *file_name) {
+//     /* Acquire the mutex. */
+//     if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+//         return W_FAILURE;
+//     }
+//
+//     int res = lfs_remove(&g_fs_obj, file_name);
+//     xSemaphoreGive(sd_mutex);
+//
+//     if (res != 0) {
+//         return W_FAILURE;
+//     }
+//     return W_SUCCESS;
+// }
+
 w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 	/*
-	 * It uses HAL_SD_GetCardState() on the SD handle (&hsd1) to check if the card is in the
+	 * It uses HAL_SD_GetCardState() on the SD handle (&hsd2) to check if the card is in the
 	 * transfer state (HAL_SD_CARD_TRANSFER). If the card is not ready—due to being busy,
 	 * ejected, or in an error state—the function returns W_FAILURE; otherwise, it returns
 	 * W_SUCCESS.

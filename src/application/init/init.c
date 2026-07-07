@@ -34,6 +34,9 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
+extern I2C_HandleTypeDef hi2c2;
+extern I2C_HandleTypeDef hi2c4;
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -69,6 +72,9 @@ const uint32_t log_task_priority = 15;
 const uint32_t health_checks_task_priority = 10;
 
 static void system_init_task(void *arg) {
+	// DEBUG ONLY: disable write buffer to convert imprecise bus faults to precise ones
+	SCnSCB->ACTLR |= 2;
+
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
