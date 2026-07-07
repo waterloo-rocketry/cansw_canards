@@ -6,7 +6,6 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 
-#include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "common/gnc/gnc_types.h"
 #include "rocketlib/include/common.h"
@@ -28,7 +27,9 @@ typedef enum {
 typedef struct {
 	uint32_t launch_timestamp_ms;
 	uint32_t act_allowed_timestamp_ms;
-	uint8_t num_consec_detections;
+	uint8_t num_consec_movella; // number of consecutive times movella detects launch accel
+	uint8_t num_consec_board; // number of consecutive times board IMU detects launch accel
+	uint8_t num_consec_ad; // number of consecutive times AD detects launch accel
 } flight_phase_ctx_t;
 
 /**

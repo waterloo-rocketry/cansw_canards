@@ -10,7 +10,7 @@
 extern "C" {
 #include "application/can_handler/can_handler.h"
 #include "FreeRTOS.h"
-#include "application/estimator/estimator_types.h"
+
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/logger/log.h"
 #include "canlib.h"

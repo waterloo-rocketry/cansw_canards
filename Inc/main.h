@@ -167,10 +167,6 @@ void Error_Handler(void);
 #define SERVO2_TX_GPIO_Port GPIOA
 #define SERVO2_RX_Pin GPIO_PIN_10
 #define SERVO2_RX_GPIO_Port GPIOA
-#define USB_D__Pin GPIO_PIN_11
-#define USB_D__GPIO_Port GPIOA
-#define USB_D_A12_Pin GPIO_PIN_12
-#define USB_D_A12_GPIO_Port GPIOA
 #define DEBUG_SWDIO_Pin GPIO_PIN_13
 #define DEBUG_SWDIO_GPIO_Port GPIOA
 #define DEBUG_SWCLK_Pin GPIO_PIN_14
