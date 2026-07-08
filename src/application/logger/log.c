@@ -471,7 +471,7 @@ health_status_t logger_get_status(void) {
 
 	if (!logger_health.is_init) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_LOGGER_NOT_INIT;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
 
 	log_text(10,
