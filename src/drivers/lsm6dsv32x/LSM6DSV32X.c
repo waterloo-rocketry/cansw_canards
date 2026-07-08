@@ -39,6 +39,23 @@ typedef struct {
 
 } lsm6dsv32x_ctx_t;
 
+/**
+ * health check information
+ */
+typedef struct {
+	bool is_init;
+	uint32_t init_failed_write;
+	uint32_t init_failed_register_callback;
+	uint32_t is_insane;
+	uint32_t post_init_sanity_checks;
+	uint32_t dma_handle_wrong_i2c;
+	uint32_t dma_data_transfer_unswitched_callback;
+	uint32_t dma_data_transfer_failed_timer;
+	uint32_t dma_data_transfer_failed_mem_read;
+	uint32_t get_gyro_acc_data_unswitched_callback;
+	uint32_t get_gyro_acc_data_lastest_status_failure;
+} lsm6dsv32x_health_t;
+
 // device addresses and configuration
 static const uint16_t LSM6DSV32X_ADDR = 0x6A; // addr sel pin LOW
 
@@ -209,7 +226,7 @@ w_status_t lsm6dsv32x_init() {
 	if (status == W_SUCCESS) {
 		lsm6dsv32x_health.is_init = 1;
 	} else {
-		lsm6dsv32x_health.init_failed++;
+		lsm6dsv32x_health.init_failed_write++;
 		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "initfail");
 	}
 
@@ -329,20 +346,19 @@ health_status_t lsm6dsv32x_get_status(void) {
 
 	// Failed initialization on critical component
 	if (!lsm6dsv32x_health.is_init) {
-		status.severity = HEALTH_FATAL;
+		status.severity = HEALTH_ERROR;
 		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "LSM6DSV32X",
-			 "init=%d, init_failed=%d, init_failed_register_cb=%d, is_insane=%d, sanity_checks=%d, bus_status=%d",
+			 "init=%d, init_failed_write=%d, init_failed_register_cb=%d, is_insane=%d, sanity_checks=%d",
 			 lsm6dsv32x_health.is_init,
-			 lsm6dsv32x_health.init_failed,
+			 lsm6dsv32x_health.init_failed_write,
 			 lsm6dsv32x_health.init_failed_register_callback,
 			 lsm6dsv32x_health.is_insane,
-			 lsm6dsv32x_health.post_init_sanity_checks,
-			 lsm6dsv32x_ctx.bus_status);
+			 lsm6dsv32x_health.post_init_sanity_checks);
 
 	// expect the unswitched callback count to be high but most importantly constant. it is called
 	// about 10000 times before initialization completes
@@ -358,10 +374,11 @@ health_status_t lsm6dsv32x_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "LSM6DSV32X",
-			 "get_data_unswitched_cb=%d, get_data_status_fail=%d, latest_status=%d",
+			 "get_data_unswitched_cb=%d, get_data_status_fail=%d, latest_status=%d, bus_status=%d",
 			 lsm6dsv32x_health.get_gyro_acc_data_unswitched_callback,
 			 lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure,
-			 lsm6dsv32x_ctx.latest_status);
+			 lsm6dsv32x_ctx.latest_status,
+			 lsm6dsv32x_ctx.bus_status);
 
 	return status;
 }
