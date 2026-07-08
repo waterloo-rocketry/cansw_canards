@@ -21,12 +21,12 @@ typedef struct {
 	uint32_t err_count;
 } sd_card_health_t;
 
-/**
- * @brief a lfs file that will be used for continuous log
- */
-typedef struct {
-	lfs_file_t *file;
-} sd_card_lfs_file_t;
+// /**
+//  * @brief a lfs file that will be used for continuous log
+//  */
+// typedef struct {
+// 	lfs_file_t *file;
+// } sd_card_lfs_file_t;
 
 /**
  * @brief Initialize the SD card hardware and create the mutex for thread safety.

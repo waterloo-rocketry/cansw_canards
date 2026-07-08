@@ -92,7 +92,7 @@ static int lfsshim_sd_read(const struct lfs_config *c, lfs_block_t block, lfs_of
 
 	sd_dma_state = SD_DMA_READ_BUSY;
 	read_dma_count++;
-	HAL_StatusTypeDef hal = HAL_SD_ReadBlocks_IT(
+	HAL_StatusTypeDef hal = HAL_SD_ReadBlocks_DMA(
 		lfsshim_sd_hsd, (uint8_t *)buffer, block_addr, num_blocks);
 	if (hal != HAL_OK) {
 		sd_dma_state = SD_DMA_FREE;
@@ -134,7 +134,7 @@ static int lfsshim_sd_write(const struct lfs_config *c, lfs_block_t block, lfs_o
 
 	sd_dma_state = SD_DMA_WRITE_BUSY;
 	write_dma_count++;
-	HAL_StatusTypeDef hal = HAL_SD_WriteBlocks_IT(
+	HAL_StatusTypeDef hal = HAL_SD_WriteBlocks_DMA(
 		lfsshim_sd_hsd, (uint8_t *)buffer, block_addr, num_blocks);
 	if (hal != HAL_OK) {
 		sd_dma_state = SD_DMA_FREE;
@@ -172,9 +172,9 @@ static int lfsshim_sd_sync(const struct lfs_config *c) {
 	return 0;
 }
 
-static uint8_t read_buffer[CACHE_SIZE] = {0};
-static uint8_t prog_buffer[CACHE_SIZE] = {0};
-static uint8_t lookahead_buffer[CACHE_SIZE] = {0};
+static uint8_t read_buffer[CACHE_SIZE] __attribute__((section(".sram4"))) = {0};
+static uint8_t prog_buffer[CACHE_SIZE] __attribute__((section(".sram4"))) = {0};
+static uint8_t lookahead_buffer[CACHE_SIZE] __attribute__((section(".sram4"))) = {0};
 
 // configuration of the filesystem is provided by this struct
 const struct lfs_config cfg = {

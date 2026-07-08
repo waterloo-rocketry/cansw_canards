@@ -203,10 +203,6 @@ w_status_t sd_card_file_create(const char *file_name) {
 	return W_SUCCESS;
 }
 
-w_status_t sd_card_file_log_open(sd_card_lfs_file_t *file, ){
-	
-}
-
 w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 	/*
 	 * It uses HAL_SD_GetCardState() on the SD handle (&hsd2) to check if the card is in the

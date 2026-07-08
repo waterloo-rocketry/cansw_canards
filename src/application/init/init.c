@@ -216,7 +216,7 @@ static void system_init_task(void *arg) {
 		}
 		vTaskDelay(1);
 
-		for (int i = 0 ; i < 20; i ++){
+		for (int j = 0 ; j < 20; j ++){
 			log_text(10, LOG_LVL_DEBUG, "SystemInit", "WRITE: %lu READ %lu, TOTAL: %lu, #: %lu", write_dma_count, read_dma_count, total_bytes, num_writes);
 		}
 	}
