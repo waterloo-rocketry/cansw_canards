@@ -76,6 +76,8 @@ const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
+static char buf[32768/2] = {'a'}; // sd card test buf
+
 static void system_init_task(void *arg) {
 
 	// hotfix: allow time for .... stuff ?? ... before init.
@@ -83,9 +85,9 @@ static void system_init_task(void *arg) {
 	// probably because movella triggers before its ready
 	vTaskDelay(1000);
 
-	HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);
 
 	// initialize timer first to make sure other modules can use it
 	if (W_SUCCESS != timer_init()) {
@@ -207,18 +209,23 @@ static void system_init_task(void *arg) {
 	vTaskDelay(500);
 	// its blinky now
 	uint16_t i = 0;
-	// gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 	while (1) {
-		if (++i == 1000) {
-			// gpio_toggle(GPIO_PIN_RED_LED, 0);
-			gpio_toggle(GPIO_PIN_GREEN_LED, 0);
-			i = 0;
-		}
+        gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+        
 		vTaskDelay(1);
 
-		for (int j = 0 ; j < 20; j ++){
-			log_text(10, LOG_LVL_DEBUG, "SystemInit", "WRITE: %lu READ %lu, TOTAL: %lu, #: %lu", write_dma_count, read_dma_count, total_bytes, num_writes);
-		}
+        uint32_t total_bytes = 0;
+        uint32_t now_ms = 0;
+        uint32_t done_ms = 0;
+
+        timer_get_ms(&now_ms);
+        
+        sd_card_file_write("test.txt", buf, sizeof(buf), true, &total_bytes);
+        
+        timer_get_ms(&done_ms);
+        
+        volatile uint32_t elapsed_ms = done_ms - now_ms;
+        log_text(10, LOG_LVL_INFO, "SystemInit", "Wrote %lu B in %lu ms", total_bytes, elapsed_ms);
 	}
 }
 

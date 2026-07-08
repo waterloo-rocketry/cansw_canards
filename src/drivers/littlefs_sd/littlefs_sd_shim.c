@@ -199,9 +199,9 @@ const struct lfs_config cfg = {
 	.metadata_max = 0,
 	.inline_max = -1,
 
-	.read_buffer = read_buffer,
-	.prog_buffer = prog_buffer,
-	.lookahead_buffer = lookahead_buffer
+	.read_buffer = (void*)read_buffer,
+	.prog_buffer = (void*)prog_buffer,
+	.lookahead_buffer = (void*)lookahead_buffer
 };
 
 w_status_t lfsshim_sd_mount(lfs_t *lfs, SD_HandleTypeDef *hsd, uint32_t first_block_offset) {
