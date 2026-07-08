@@ -76,7 +76,7 @@ static lsm6dsv32x_ctx_t lsm6dsv32x_ctx = {.switched_callback = false};
 
 static const uint8_t CTX_BUFFER_SIZE = sizeof(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER]);
 
-lsm6dsv32x_health_t lsm6dsv32x_health = {0};
+static lsm6dsv32x_health_t lsm6dsv32x_health = {0};
 
 // Helper function for writing config (passing value as literal)
 static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
