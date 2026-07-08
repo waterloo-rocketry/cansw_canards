@@ -223,7 +223,7 @@ w_status_t lsm6dsv32x_init() {
 		return W_FAILURE;
 	}
 
-	if (status == W_SUCCESS) {
+	if (W_SUCCESS == status) {
 		lsm6dsv32x_health.is_init = 1;
 	} else {
 		lsm6dsv32x_health.init_failed_write++;
@@ -326,13 +326,13 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		acc_data->x = ((float64_t)((int16_t)raw_acc->x)) * ACC_FS;
 		acc_data->y = ((float64_t)((int16_t)raw_acc->y)) * ACC_FS;
 		acc_data->z = ((float64_t)((int16_t)raw_acc->z)) * ACC_FS;
+
+		if (W_FAILURE == status) {
+			lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure++;
+		}
 	} else {
 		status = W_FAILURE;
 		lsm6dsv32x_health.get_gyro_acc_data_unswitched_callback++;
-	}
-
-	if (status == W_FAILURE) {
-		lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure++;
 	}
 
 	return status;
@@ -343,7 +343,7 @@ health_status_t lsm6dsv32x_get_status(void) {
 		.severity = HEALTH_OK, .module_id = MODULE_LSM6DSV32X, .error_bitfield = 0};
 
 	// I2C errors
-	if (lsm6dsv32x_ctx.latest_status == W_IO_ERROR) {
+	if (W_IO_ERROR == lsm6dsv32x_ctx.latest_status) {
 		status.severity = HEALTH_ERROR;
 		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
 	}
