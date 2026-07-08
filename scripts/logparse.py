@@ -52,22 +52,22 @@ FORMATS = {
         "command", "roll_target", "canard_coeff",
     ]),
 
-    M(0x06): Spec("st_imu_pt1", "<fff",
+    M(0x06): Spec("board_imu_pt1", "<fff",
     [
         "accelerometer_x", "accelerometer_y", "accelerometer_z",
     ]),
-    M(0x07): Spec("st_imu_pt2", "<fff",
+    M(0x07): Spec("board_imu_pt2", "<fff",
     [
         "gyroscope_x", "gyroscope_y", "gyroscope_z",
     ]),
 
-    M(0x08): Spec("barometer", "<Ll", ["barometer", "thermometer"]),
+    M(0x08): Spec("board_barometer", "<Ll", ["barometer", "thermometer"]),
 
-    M(0x09): Spec("compass_pt1", "<fff",
+    M(0x09): Spec("board_mag_pt1", "<fff",
     [
         "accelerometer_x", "accelerometer_y", "accelerometer_z",
     ]),
-    M(0x0A): Spec("compass_pt2", "<fff",
+    M(0x0A): Spec("board_mag_pt2", "<fff",
     [
         "magnetometer_x", "magnetometer_y", "magnetometer_z",
     ]),
@@ -104,7 +104,7 @@ FORMATS = {
     ]),
     M(0x12): Spec("ad_gyro", "<l", ["gyroscope"]),
 
-    M(0x13): Spec("encoder", "<lll",
+    M(0x13): Spec("servo_motor", "<lll",
     [
         "motor_angle", "motor_current", "motor_temperature",
     ]),

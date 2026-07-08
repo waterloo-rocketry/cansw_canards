@@ -81,13 +81,13 @@ typedef enum {
 
 	LOG_TYPE_CONTROLLER = M(0x05),
 
-	LOG_TYPE_ST_IMU_PT1 = M(0x06),
-	LOG_TYPE_STU_IMU_PT2 = M(0x07),
+	LOG_TYPE_BOARD_IMU_PT1 = M(0x06),
+	LOG_TYPE_BOARD_IMU_PT2 = M(0x07),
 
-	LOG_TYPE_BAROMETER = M(0x08),
+	LOG_TYPE_BOARD_BAROMETER = M(0x08),
 
-	LOG_TYPE_COMPASS_PT1 = M(0x09),
-	LOG_TYPE_COMPASS_PT2 = M(0x0A),
+	LOG_TYPE_BOARD_MAG_PT1 = M(0x09),
+	LOG_TYPE_BOARD_MAG_PT2 = M(0x0A),
 
 	LOG_TYPE_MOVELLA_PT1 = M(0x0B),
 	LOG_TYPE_MOVELLA_PT2 = M(0x0C),
@@ -99,7 +99,7 @@ typedef enum {
 	LOG_TYPE_AD_ACCEL = M(0x11),
 	LOG_TYPE_AD_GYRO = M(0x12),
 
-	LOG_TYPE_ENCODER = M(0x13)
+	LOG_TYPE_SERVO_MOTOR = M(0x13)
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -170,29 +170,29 @@ typedef union __attribute__((packed)) {
 		float canard_coeff;
 	} controller;
 
-	// LOG_TYPE_ST_IMU:
+	// LOG_TYPE_BOARD_IMU:
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
-	} st_imu_pt1;
+	} board_imu_pt1;
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t gyroscope; // rad/s
-	} st_imu_pt2;
+	} board_imu_pt2;
 
-	// LOG_TYPE_BAROMETER:
+	// LOG_TYPE_BOARD_BAROMETER:
 	struct __attribute__((packed)) {
 		uint32_t barometer; // Pa
 		int32_t thermometer; // C
-	} barometer;
+	} board_barometer;
 
-	// LOG_TYPE_COMPASS:
+	// LOG_TYPE_BOARD_MAG:
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
-	} compass_pt1;
+	} board_mag_pt1;
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t magnetometer; // Gauss
-	} compass_pt2;
+	} board_mag_pt2;
 
 	// LOG_TYPE_MOVELLA
 	// note: dont use the all_imus_input_t struct here because packing isn't recursive
@@ -234,17 +234,17 @@ typedef union __attribute__((packed)) {
 		int32_t gyroscope; // rad/s
 	} ad_gyro;
 
-	// LOG_TYPE_ENCODER:
+	// LOG_TYPE_SERVO_MOTOR:
 	struct __attribute__((packed)) {
 		int32_t motor_angle; // deg
 		int32_t motor_current; // mA
 		int32_t motor_temperature; // C
-	} encoder;
+	} servo_motor;
 
 } log_data_container_t;
 
-// MAX_DATA_MSG_LENGTH includes type, timestamp, and newline (9 bytes)
-STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 9,
+// MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
+STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
 			  "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
 
 /**
