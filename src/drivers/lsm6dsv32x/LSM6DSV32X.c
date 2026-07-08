@@ -241,6 +241,10 @@ w_status_t lsm6dsv32x_init() {
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_int1_isr_handler() {
+	if (!lsm6dsv32x_health.is_init) {
+		return W_SUCCESS;
+	}
+
 	if (!lsm6dsv32x_ctx.switched_callback) {
 		lsm6dsv32x_health.dma_data_transfer_unswitched_callback++;
 		return W_FAILURE;
@@ -350,15 +354,16 @@ health_status_t lsm6dsv32x_get_status(void) {
 		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "LSM6DSV32X",
-			 "init=%d, init_failed_write=%d, init_failed_register_cb=%d, is_insane=%d, sanity_checks=%d",
-			 lsm6dsv32x_health.is_init,
-			 lsm6dsv32x_health.init_failed_write,
-			 lsm6dsv32x_health.init_failed_register_callback,
-			 lsm6dsv32x_health.is_insane,
-			 lsm6dsv32x_health.post_init_sanity_checks);
+	log_text(
+		10,
+		LOG_LVL_INFO,
+		"LSM6DSV32X",
+		"init=%d, init_failed_write=%d, init_failed_register_cb=%d, is_insane=%d, sanity_checks=%d",
+		lsm6dsv32x_health.is_init,
+		lsm6dsv32x_health.init_failed_write,
+		lsm6dsv32x_health.init_failed_register_callback,
+		lsm6dsv32x_health.is_insane,
+		lsm6dsv32x_health.post_init_sanity_checks);
 
 	// expect the unswitched callback count to be high but most importantly constant. it is called
 	// about 10000 times before initialization completes
