@@ -29,7 +29,7 @@ typedef enum {
 
 	SCALE_CTRL_CMD,
 	SCALE_CTRL_COEF_OF_ROLL_CTRL,
-	SCALE_CTRL_PLACE_HOLDER, // Finn: work in progress, some number will be there
+	SCALE_CTRL_ROLL_TARGET,
 
 	SCALE_MTI_ACCEL,
 	SCALE_MTI_GYRO,
@@ -39,7 +39,6 @@ typedef enum {
 	SCALE_MTI_EST_QUATERNION,
 	SCALE_MTI_EST_ANGULAR_VELOCITY,
 	SCALE_MTI_EST_VELOCITY,
-	SCALE_MTI_EST_ALTITUDE,
 
 	SCALE_SERVO_ANGLE,
 	SCALE_SERVO_CURRENT,
@@ -62,7 +61,7 @@ static const can_scale_data_t can_scale_factor[SCALE_COUNT] = {
 
 	[SCALE_CTRL_CMD] = {.type = TYPE_INT16, .scale = 1000},
 	[SCALE_CTRL_COEF_OF_ROLL_CTRL] = {.type = TYPE_INT16, .scale = 100},
-	// [SCALE_CTRL_PLACE_HOLDER] = {.type = TYPE_INT16, .scale = ??},
+	[SCALE_CTRL_ROLL_TARGET] = {.type = TYPE_INT16, .scale = 100},
 
 	[SCALE_MTI_ACCEL] = {.type = TYPE_INT16, .scale = 100},
 	[SCALE_MTI_GYRO] = {.type = TYPE_INT16, .scale = 100},
@@ -72,7 +71,6 @@ static const can_scale_data_t can_scale_factor[SCALE_COUNT] = {
 	[SCALE_MTI_EST_QUATERNION] = {.type = TYPE_INT16, .scale = 10000},
 	[SCALE_MTI_EST_ANGULAR_VELOCITY] = {.type = TYPE_INT16, .scale = 10},
 	[SCALE_MTI_EST_VELOCITY] = {.type = TYPE_INT16, .scale = 10},
-	[SCALE_MTI_EST_ALTITUDE] = {.type = TYPE_UINT16, .scale = 1},
 
 	[SCALE_SERVO_ANGLE] = {.type = TYPE_INT16, .scale = 1000},
 	[SCALE_SERVO_CURRENT] = {.type = TYPE_UINT16, .scale = 1},
