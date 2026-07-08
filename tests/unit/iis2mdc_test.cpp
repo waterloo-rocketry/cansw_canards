@@ -4,7 +4,7 @@
 extern "C" {
 #include "FreeRTOS.h"
 #include "task.h"
-#include "drivers/IIS2MDC/IIS2MDC.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/i2c/i2c.h"
 #include "application/logger/log.h"
 #include "drivers/timer/timer.h"
@@ -12,7 +12,7 @@ extern "C" {
 // Mock definitions
 FAKE_VALUE_FUNC(w_status_t, i2c_write_reg, i2c_bus_t, uint8_t, uint8_t, const uint8_t *, uint8_t)
 FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *, uint8_t)
-FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, const char *, const char *, ...)
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...)
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *)
 }
 

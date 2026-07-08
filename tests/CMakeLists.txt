@@ -310,5 +310,5 @@ add_test_group(test_iis2mdc
     # test file(s)
     ${UNIT_TESTS_DIR}/iis2mdc_test.cpp
     # src file(s)
-    ${PROC_SRC_DIR}/drivers/IIS2MDC/IIS2MDC.c
+    ${PROC_SRC_DIR}/drivers/iis2mdc/IIS2MDC.c
 )
