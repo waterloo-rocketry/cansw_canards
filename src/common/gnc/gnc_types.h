@@ -1,5 +1,3 @@
-// TODO: this file should be cleaned up during gnc impl this year
-
 /**
  * Navigator and controller types used by the whole gnc system
  */
@@ -9,9 +7,25 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "application/controller/gain_table.h"
+#include "GNC_codegen_types.h"
 #include "common/math/math.h"
 #include "third_party/rocketlib/include/common.h"
+
+// ---------- FSM STATE ----------
+
+/**
+ * Enum representing phase of flight (state machine state)
+ */
+typedef enum {
+	STATE_IDLE,
+	STATE_PAD_FILTER,
+	STATE_PAD_NAV,
+	STATE_BOOST,
+	STATE_ACT_ALLOWED,
+	STATE_RECOVERY,
+	STATE_SLEEPY,
+	STATE_ERROR
+} fsm_state_t;
 
 // ---------- SENSOR TYPES ----------
 
@@ -67,43 +81,52 @@ typedef struct {
 	navigator_1d_meas_t motor_encoder_meas;
 } all_sensors_data_t;
 
+// Codegen Type Rename
+typedef struct1_T gnc_navigator_bias_t;
+typedef struct2_T gnc_navigator_sensor_filter_t;
+typedef struct3_T gnc_navigator_sensor_input_t;
+
+typedef struct4_T gnc_navigator_sensor_3D_t;
+typedef struct5_T gnc_navigator_sensor_1D_t;
+
 // ---------- NAVIGATOR TYPES ----------
 typedef struct {
-	// TODO
+	all_sensors_data_t *sensor_data;
+	fsm_state_t fsm_state;
 } navigator_input_t;
 
 typedef struct {
-	// TODO
+	uint32_t timestamp_tenth_ms;
+	double cov_norm;
+	double roll_state[2];
+	double dynamic_pressure; // dynamic pressure
 } navigator_output_t;
 
 // ---------- CONTROLLER TYPES ----------
-#define FEEDBACK_GAIN_NUM (GAIN_NUM - 1) // subtract 1 for the pre-gain
-#define ROLL_STATE_NUM (FEEDBACK_GAIN_NUM)
-#define MIN_COOR_BOUND 0
-
-typedef union {
-	double roll_state_arr[ROLL_STATE_NUM];
-
-	struct {
-		double roll_angle;
-		double roll_rate;
-		double canard_angle;
-	};
-} roll_state_t;
 
 // output from navigator aka input to controller
 typedef struct {
-	// Roll state
-	roll_state_t roll_state;
-	// Scheduling variables (flight condition)
-	double pressure_dynamic;
-	double canard_coeff;
+	float64_t canard_angle_rad; /// delta
+	float64_t xR[2];
+	float64_t dynamic_pressure;
+	uint32_t launch_timestamp_ms;
 } controller_input_t;
 
 // Output of controller: latest commanded canard angle
 typedef struct {
-	double commanded_angle; // radians
-	uint32_t timestamp; // ms
+	float64_t canard_command_angle_rad; // radians
+	float64_t ref_roll[2]; // {roll angle (rad), roll rate (rad/s)}
+	uint32_t timestamp_tenth_ms;
 } controller_output_t;
+
+typedef struct {
+	gnc_navigator_bias_t bias;
+	gnc_navigator_sensor_filter_t sensor_filter;
+	float64_t x[11];
+	float64_t P[121];
+} gnc_navigator_ctx_t;
+
+// codegen controller
+typedef struct0_T gnc_controller_ctx_t;
 
 #endif

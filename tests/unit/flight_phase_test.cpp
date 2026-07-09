@@ -7,7 +7,7 @@ extern "C" {
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/flight_phase/flight_phase.h"
-#include "application/fsm/fsm.h"
+#include "common/gnc/gnc_types.h"
 #include "application/logger/log.h"
 #include "canlib.h"
 #include "queue.h"
@@ -29,6 +29,7 @@ FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_
 
 // w_status_t get_cmd_actuator_state(const can_msg_t *msg, can_actuator_state_t *cmd_actuator_state);
 FAKE_VALUE_FUNC(w_status_t, get_cmd_actuator_state, const can_msg_t *, can_actuator_state_t *)
+FAKE_VALUE_FUNC(double, math_vector3d_norm, const vector3d_t *);
 
 BaseType_t
 xQueuePeek_state_pad(QueueHandle_t xQueue, void *const pvBuffer, TickType_t xTicksToWait) {
@@ -59,6 +60,7 @@ protected:
         RESET_FAKE(get_actuator_id);
         RESET_FAKE(get_cmd_actuator_state);
         RESET_FAKE(timer_get_ms);
+        RESET_FAKE(math_vector3d_norm);
         FFF_RESET_HISTORY();
         queue_send_event = EVENT_NONE;
     }
@@ -446,7 +448,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventIdle) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 0,
         .act_allowed_timestamp_ms = 0,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_IDLE;
@@ -461,7 +465,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventIdle) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 0);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 0);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -473,7 +479,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventPadFilter) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 0,
         .act_allowed_timestamp_ms = 0,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_PAD_FILTER;
@@ -488,7 +496,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventPadFilter) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 0);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 0);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -500,7 +510,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventPadNav) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 0,
         .act_allowed_timestamp_ms = 0,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_PAD_NAV;
@@ -515,7 +527,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventPadNav) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 0);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 0);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -525,7 +539,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventBoost) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = UINT32_MAX,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_BOOST;
@@ -540,7 +556,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventBoost) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, UINT32_MAX);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -550,7 +568,9 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventActDelayBoost) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = UINT32_MAX,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_BOOST;
@@ -567,7 +587,9 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventActDelayBoost) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, UINT32_MAX);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
     EXPECT_EQ(queue_send_event, EVENT_ACT_DELAY_ELAPSED);
@@ -577,7 +599,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventActAllowed) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = 17000,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_ACT_ALLOWED;
@@ -592,7 +616,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventActAllowed) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 17000);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -602,7 +628,9 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventRecoActAllowed) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = 17000,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_ACT_ALLOWED;
@@ -619,7 +647,9 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventRecoActAllowed) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 17000);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
     EXPECT_EQ(queue_send_event, EVENT_RECOVERY_START);
@@ -629,7 +659,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventRecov) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = 17000,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_RECOVERY;
@@ -644,7 +676,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventRecov) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 17000);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -654,7 +688,9 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventSleepyRecov) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = 17000,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_RECOVERY;
@@ -671,7 +707,9 @@ TEST_F(FlightPhaseTest, GenSyncTimerEventSleepyRecov) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 17000);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
     EXPECT_EQ(queue_send_event, EVENT_SLEEP_START);
@@ -681,7 +719,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventSleepy) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 0,
         .act_allowed_timestamp_ms = 0,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_SLEEPY;
@@ -696,7 +736,9 @@ TEST_F(FlightPhaseTest, GenSyncNoEventSleepy) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 0);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, 0);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
 
     // no events sent
     EXPECT_EQ(xQueueSend_fake.call_count, 0);
@@ -707,7 +749,9 @@ TEST_F(FlightPhaseTest, GenSyncFail) {
     flight_phase_ctx_t ctx = {
         .launch_timestamp_ms = 10000,
         .act_allowed_timestamp_ms = UINT32_MAX,
-        .num_consec_detections = 0
+        .num_consec_movella = 0,
+        .num_consec_board = 0,
+        .num_consec_ad = 0
     };
 
     fsm_state_t curr_state = STATE_BOOST;
@@ -724,5 +768,194 @@ TEST_F(FlightPhaseTest, GenSyncFail) {
     // no changes to ctx
     EXPECT_EQ(ctx.launch_timestamp_ms, 10000);
     EXPECT_EQ(ctx.act_allowed_timestamp_ms, UINT32_MAX);
-    EXPECT_EQ(ctx.num_consec_detections, 0);
+    EXPECT_EQ(ctx.num_consec_movella, 0);
+    EXPECT_EQ(ctx.num_consec_board, 0);
+    EXPECT_EQ(ctx.num_consec_ad, 0);
+}
+
+TEST_F(FlightPhaseTest, AllThreeImusTriggerLaunchDetection) {
+    // Arrange
+    flight_phase_ctx_t ctx = {0};
+    all_sensors_data_t sensor_data = {0};
+    flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
+
+    sensor_data.board_meas.board_imu.is_new = true;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
+
+    double norms[15] = {
+        25.0, 25.0, 50.0, 
+        25.0, 35.0, 45.0, 
+        25.0, 25.0, 35.0, 
+        25.0, 35.0, 25.0, 
+        25.0, 25.0, 35.0, 
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 15);
+
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    for (int i = 0; i < 4; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+
+    queue_send_event = EVENT_NONE;
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    EXPECT_EQ(queue_send_event, EVENT_LAUNCH_ACCEL);
+    EXPECT_EQ(math_vector3d_norm_fake.call_count, 15);
+}
+
+TEST_F(FlightPhaseTest, TwoImusTriggerLaunchDetection) {
+    // Arrange
+    flight_phase_ctx_t ctx = {0};
+    all_sensors_data_t sensor_data = {0};
+    flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
+
+    sensor_data.board_meas.board_imu.is_new = true;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
+
+    double norms[15] = {
+        25.0, 25.0, 15.0, 
+        25.0, 35.0, 15.0, 
+        25.0, 25.0, 15.0, 
+        25.0, 35.0, 15.0, 
+        25.0, 25.0, 15.0, 
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 15);
+
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    for (int i = 0; i < 4; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+    queue_send_event = EVENT_NONE;
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    EXPECT_EQ(queue_send_event, EVENT_LAUNCH_ACCEL);
+}
+
+TEST_F(FlightPhaseTest, ImusBelowThresholdDoesNotTriggerLaunchDetection) {
+    // Arrange
+    flight_phase_ctx_t ctx = {0};
+    all_sensors_data_t sensor_data = {0};
+    flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
+
+    sensor_data.board_meas.board_imu.is_new = true;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
+
+    double norms[15] = {
+        25.0, 25.0, 25.0, 
+        25.0, 25.0, 25.0, 
+        25.0, 25.0, 25.0, 
+        25.0, 25.0, 25.0, 
+        25.0, 5.0, 5.0, 
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 15);
+
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    for (int i = 0; i < 5; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE) << "Must not trigger before 5th reading, cycle " << i + 1;
+    }
+}
+
+TEST_F(FlightPhaseTest, OnlyOneImuAboveThresholdDoesNotTriggerLaunchDetection) {
+    // Arrange
+    all_sensors_data_t sensor_data = {0};
+    sensor_data.board_meas.board_imu.is_new = true;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
+
+    double norms[30] = {
+        25.0, 5.0, 5.0,
+        25.0, 5.0, 5.0,
+        25.0, 5.0, 5.0,
+        25.0, 5.0, 5.0,
+        25.0, 5.0, 5.0,
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 30);
+
+    flight_phase_ctx_t ctx = {0};
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+
+    for (int i = 0; i < 5; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+}
+
+TEST_F(FlightPhaseTest, BoardImuDeadTriggersLaunchDetection) {
+    // Arrange
+    all_sensors_data_t sensor_data = {0};
+    sensor_data.board_meas.board_imu.is_new = false;
+    sensor_data.mti_meas.mti_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = true;
+
+    double norms[10] = {
+        25.0, 25.0, 
+        25.0, 25.0, 
+        25.0, 25.0, 
+        25.0, 25.0, 
+        25.0, 25.0, 
+    };
+    SET_RETURN_SEQ(math_vector3d_norm, norms, 10);
+
+    flight_phase_ctx_t ctx = {0};
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    // Act + Assert
+    for (int i = 0; i < 4; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+
+    queue_send_event = EVENT_NONE;
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    EXPECT_EQ(queue_send_event, EVENT_LAUNCH_ACCEL);
+}
+
+TEST_F(FlightPhaseTest, TwoImusDeadDoesNotTriggerLaunchDetection) {
+    all_sensors_data_t sensor_data = {0};
+    sensor_data.board_meas.board_imu.is_new = false;
+    sensor_data.mti_meas.mti_accel.is_new = false;
+    sensor_data.ad_meas.ad_accel.is_new = true;
+
+    flight_phase_ctx_t ctx = {0};
+
+    queue_send_event = EVENT_NONE;
+    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
+
+    // Act + Assert
+    for (int i = 0; i < 5; i++) {
+        queue_send_event = EVENT_NONE;
+        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+        EXPECT_EQ(queue_send_event, EVENT_NONE);
+    }
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    
+    EXPECT_EQ(queue_send_event, EVENT_NONE);
+    EXPECT_EQ(math_vector3d_norm_fake.call_count, 6);
+}
+
+TEST_F(FlightPhaseTest, ThreeImusDeadDoesNotTriggerLaunchAccel) {
+    all_sensors_data_t sensor_data = {0};
+    sensor_data.board_meas.board_imu.is_new = false;
+    sensor_data.mti_meas.mti_accel.is_new = false;
+    sensor_data.ad_meas.ad_accel.is_new = false;
+
+    flight_phase_ctx_t ctx = {0};
+
+    queue_send_event = EVENT_NONE;
+    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
+    EXPECT_EQ(queue_send_event, EVENT_NONE);
+    EXPECT_EQ(math_vector3d_norm_fake.call_count, 0);
 }
