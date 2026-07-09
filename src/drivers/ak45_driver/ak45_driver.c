@@ -183,8 +183,6 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		ak45_stop_can();
 		return W_FAILURE;
 	}
-	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE << 8) | AK45_DRIVER_ID;
-
 	// make sure we recieved a can msg before we send one
 	uint32_t start_can_init_time_ms = 0;
 	if (timer_get_ms(&start_can_init_time_ms) != W_SUCCESS) {
@@ -216,8 +214,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	}
 
 	// set current position to 0
-	uint8_t zero_data[1] = {0};
-	if (ak45_can_transmit_ext(ext_id, zero_data, FDCAN_DLC_BYTES_1) != W_SUCCESS) {
+	if (ak45_send_set_origin() != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "failed to reset to 0");
 		ak45_stop_can();
 		return W_FAILURE;
@@ -234,6 +231,12 @@ w_status_t ak45_send_disable_cmd(void) {
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT << 8) | AK45_DRIVER_ID;
 	uint8_t data[4] = {0, 0, 0, 0};
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
+}
+
+w_status_t ak45_send_set_origin(void) {
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE << 8) | AK45_DRIVER_ID;
+	uint8_t zero_data[1] = {0};
+	return ak45_can_transmit_ext(ext_id, zero_data, FDCAN_DLC_BYTES_1);
 }
 
 w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
