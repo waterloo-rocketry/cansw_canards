@@ -36,9 +36,8 @@
 extern I2C_HandleTypeDef hi2c2;
 extern I2C_HandleTypeDef hi2c4;
 
-
-extern volatile uint64_t write_dma_count;
-extern volatile uint64_t read_dma_count;
+extern volatile uint64_t write_dma_sum_count;
+extern volatile uint64_t read_dma_sum_count;
 extern volatile uint64_t total_bytes;
 extern volatile uint32_t num_writes;
 
@@ -77,7 +76,6 @@ const uint32_t log_task_priority = 15;
 const uint32_t health_checks_task_priority = 10;
 
 static void system_init_task(void *arg) {
-
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
@@ -93,9 +91,9 @@ static void system_init_task(void *arg) {
 	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status = 
+	w_status_t non_crit_status =
 		// W_SUCCESS;
-	sd_card_init();
+		sd_card_init();
 	if (non_crit_status != W_SUCCESS) {
 		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 	}
@@ -216,8 +214,15 @@ static void system_init_task(void *arg) {
 		}
 		vTaskDelay(1);
 
-		for (int i = 0 ; i < 20; i ++){
-			log_text(10, LOG_LVL_DEBUG, "SystemInit", "WRITE: %lu READ %lu, TOTAL: %lu, #: %lu", write_dma_count, read_dma_count, total_bytes, num_writes);
+		for (int j = 0; j < 20; j++) {
+			log_text(10,
+					 LOG_LVL_DEBUG,
+					 "SystemInit",
+					 "WRITE: %lu READ %lu, TOTAL: %lu, #: %lu",
+					 write_dma_sum_count,
+					 read_dma_sum_count,
+					 total_bytes,
+					 num_writes);
 		}
 	}
 }

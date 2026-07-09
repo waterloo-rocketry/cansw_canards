@@ -173,6 +173,13 @@ SECTIONS
     . = ALIGN(4);
   } >RAM_D3 AT>FLASH
 
+  .sdmmc2_ram :
+  {
+    . = ALIGN(4);
+    *(.sdmmc2_ram)
+    . = ALIGN(4);
+  } >RAM_D2 AT>FLASH
+
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {

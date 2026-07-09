@@ -42,9 +42,8 @@ w_status_t sd_card_init(void) {
 	// NOTE: must be called AFTER scheduler starts; HAL SD uses HAL_Delay() which
 	// depends on systick, which FreeRTOS masks before the scheduler starts.
 
-    // attempt with partition first, if not use mount from 0
+	// attempt with partition first, if not use mount from 0
 	if (lfsshim_sd_mount(&g_fs_obj, &hsd2, 0) != W_SUCCESS) {
-
 		// // Get card geometry so lfs_format knows the block count
 		// HAL_SD_CardInfoTypeDef card_info;
 		// if (HAL_SD_GetCardInfo(&hsd2, &card_info) != HAL_OK) {
@@ -162,7 +161,7 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 	}
 	*bytes_written = (uint32_t)res;
 
-	total_bytes +=  (uint32_t)res;
+	total_bytes += (uint32_t)res;
 	num_writes++;
 
 	/* Close the file and release the mutex. */
@@ -201,10 +200,6 @@ w_status_t sd_card_file_create(const char *file_name) {
 	xSemaphoreGive(sd_mutex);
 	sd_card_health.file_create_count++;
 	return W_SUCCESS;
-}
-
-w_status_t sd_card_file_log_open(sd_card_lfs_file_t *file, ){
-	
 }
 
 w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
