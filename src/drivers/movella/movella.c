@@ -35,6 +35,16 @@ typedef struct {
 	bool configured;
 } movella_state_t;
 
+typedef struct {
+	uint32_t init_double_init;
+	uint32_t init_null_mutex;
+	uint32_t dead_data_count;
+	uint32_t get_data_null_out_param;
+	uint32_t get_data_not_init;
+	uint32_t get_data_failed_take_mutex;
+	uint32_t event_callback_timer_fail;
+} movella_health_t;
+
 static movella_state_t s_movella = {0};
 
 static movella_health_t movella_health = {0};
@@ -116,7 +126,7 @@ static void movella_uart_send(uint8_t *data, uint16_t length) {
 
 w_status_t movella_init(void) {
 	if (s_movella.initialized) {
-		movella_health.double_init++;
+		movella_health.init_double_init++;
 		return W_SUCCESS;
 	}
 
@@ -243,6 +253,7 @@ void movella_task(void *parameters) {
 			s_movella.latest_data.is_dead = false;
 		} else {
 			s_movella.latest_data.is_dead = true;
+			movella_health.dead_data_count++;
 		}
 	}
 }
@@ -259,22 +270,27 @@ health_status_t movella_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "movella",
-			 "init=%d, dead_latest_data=%d, double_init=%d, init_null_mutex=%d, "
-			 "event_callback_timer_fail=%d",
+			 "init=%d, configured=%d, dead_data=%d, dead_data_count=%d",
 			 s_movella.initialized,
 			 s_movella.configured,
 			 s_movella.latest_data.is_dead,
-			 movella_health.double_init,
-			 movella_health.init_null_mutex,
-			 movella_health.event_callback_timer_fail);
+			 movella_health.dead_data_count);
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "movella",
-			 "get_data_null_out_param=%d, get_data_not_init=%d, get_data_failed_take_mutex=%d",
+			 "init_double_init=%d, init_null_mutex=%d, get_data_not_init=%d",
+			 movella_health.init_double_init,
+			 movella_health.init_null_mutex,
+			 movella_health.get_data_not_init);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "get_data_null_out=%d, get_data_failed_take_mutex=%d, cb_timer_fail=%d",
 			 movella_health.get_data_null_out_param,
-			 movella_health.get_data_not_init,
-			 movella_health.get_data_failed_take_mutex);
+			 movella_health.get_data_failed_take_mutex,
+			 movella_health.event_callback_timer_fail);
 
 	return status;
 }
