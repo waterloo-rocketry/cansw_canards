@@ -99,9 +99,6 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 	memcpy(msg_dest + chars_written, data, size);
 	chars_written += size;
 
-	// Remaining bytes have already been zeroed by log_reset_buffer
-	// Set the last char of the message buffer to a newline
-
 	if (trunc) {
 		// TODO: mark the message as truncated
 		logger_health.trunc_msgs++;

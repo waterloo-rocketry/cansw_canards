@@ -77,29 +77,24 @@ typedef enum {
 
 	LOG_TYPE_NAVIGATOR_PT1 = M(0x02),
 	LOG_TYPE_NAVIGATOR_PT2 = M(0x03),
-	LOG_TYPE_NAVIGATOR_PT3 = M(0x04),
 
-	LOG_TYPE_CONTROLLER = M(0x05),
+	LOG_TYPE_CONTROLLER = M(0x04),
 
-	LOG_TYPE_BOARD_IMU_PT1 = M(0x06),
-	LOG_TYPE_BOARD_IMU_PT2 = M(0x07),
+	LOG_TYPE_BOARD_IMU = M(0x05),
 
-	LOG_TYPE_BOARD_BAROMETER = M(0x08),
+	LOG_TYPE_BOARD_BAROMETER = M(0x06),
 
-	LOG_TYPE_BOARD_MAG_PT1 = M(0x09),
-	LOG_TYPE_BOARD_MAG_PT2 = M(0x0A),
+	LOG_TYPE_BOARD_MAG = M(0x07),
 
-	LOG_TYPE_MOVELLA_PT1 = M(0x0B),
-	LOG_TYPE_MOVELLA_PT2 = M(0x0C),
-	LOG_TYPE_MOVELLA_PT3 = M(0x0D),
-	LOG_TYPE_MOVELLA_PT4 = M(0x0E),
-	LOG_TYPE_MOVELLA_PT5 = M(0x0F),
-	LOG_TYPE_MOVELLA_PT6 = M(0x10),
+	LOG_TYPE_MOVELLA_PT1 = M(0x08),
+	LOG_TYPE_MOVELLA_PT2 = M(0x09),
+	LOG_TYPE_MOVELLA_PT3 = M(0x0A),
+	LOG_TYPE_MOVELLA_PT4 = M(0x0B),
 
-	LOG_TYPE_AD_ACCEL = M(0x11),
-	LOG_TYPE_AD_GYRO = M(0x12),
+	LOG_TYPE_AD_ACCEL = M(0x0C),
+	LOG_TYPE_AD_GYRO = M(0x0D),
 
-	LOG_TYPE_SERVO_MOTOR = M(0x13)
+	LOG_TYPE_SERVO_MOTOR = M(0x0E)
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -150,17 +145,14 @@ typedef union __attribute__((packed)) {
 		float orient_x;
 		float orient_y;
 		float orient_z;
+		float altitude; // m
+		uint32_t variance_norm;
 	} navigator_pt1;
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t velocity; // m/s
-		float altitude; // m
-		uint32_t variance_norm;
-	} navigator_pt2;
-
-	struct __attribute__((packed)) {
 		vector3d_f32_packed_t angular_velocity; // rad/sec
-	} navigator_pt3;
+	} navigator_pt2;
 
 	// LOG_TYPE_CONTROLLER:
 	struct __attribute__((packed)) {
@@ -173,11 +165,8 @@ typedef union __attribute__((packed)) {
 	// LOG_TYPE_BOARD_IMU:
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
-	} board_imu_pt1;
-
-	struct __attribute__((packed)) {
 		vector3d_f32_packed_t gyroscope; // rad/s
-	} board_imu_pt2;
+	} board_imu;
 
 	// LOG_TYPE_BOARD_BAROMETER:
 	struct __attribute__((packed)) {
@@ -188,41 +177,32 @@ typedef union __attribute__((packed)) {
 	// LOG_TYPE_BOARD_MAG:
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
-	} board_mag_pt1;
-
-	struct __attribute__((packed)) {
 		vector3d_f32_packed_t magnetometer; // Gauss
-	} board_mag_pt2;
+	} board_mag;
 
 	// LOG_TYPE_MOVELLA
 	// note: dont use the all_imus_input_t struct here because packing isn't recursive
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
-	} movella_pt1;
-
-	struct __attribute__((packed)) {
 		vector3d_f32_packed_t gyroscope; // rad/s
-	} movella_pt2;
+	} movella_pt1;
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t magnetometer; // Gauss
 		uint32_t barometer; // Pa
-	} movella_pt3;
+	} movella_pt2;
 
 	struct __attribute__((packed)) {
 		float orient_w;
 		float orient_x;
 		float orient_y;
 		float orient_z;
-	} movella_pt4;
+	} movella_pt3;
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t angular_velocity; // rad/sec
-	} movella_pt5;
-
-	struct __attribute__((packed)) {
 		vector3d_f32_packed_t velocity; // m/s
-	} movella_pt6;
+	} movella_pt4;
 
 	// LOG_TYPE_AD_ACCEL:
 	struct __attribute__((packed)) {
