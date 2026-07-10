@@ -74,8 +74,8 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 	uint32_t type_int = (uint32_t)type;
 	size_t size = sizeof(type_int);
 	// Truncate if write would extend beyond message region excluding last char for newline
-	if (MAX_DATA_MSG_LENGTH - 1 - chars_written < size) {
-		size = MAX_DATA_MSG_LENGTH - 1 - chars_written;
+	if (MAX_DATA_MSG_LENGTH - chars_written < size) {
+		size = MAX_DATA_MSG_LENGTH - chars_written;
 		trunc = true;
 	}
 	memcpy(msg_dest + chars_written, &type_int, size);
@@ -83,8 +83,8 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 
 	// Write log message timestamp
 	size = sizeof(timestamp);
-	if (MAX_DATA_MSG_LENGTH - 1 - chars_written < size) {
-		size = MAX_DATA_MSG_LENGTH - 1 - chars_written;
+	if (MAX_DATA_MSG_LENGTH - chars_written < size) {
+		size = MAX_DATA_MSG_LENGTH - chars_written;
 		trunc = true;
 	}
 	memcpy(msg_dest + chars_written, &timestamp, size);
@@ -92,16 +92,12 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 
 	// Write log message data
 	size = sizeof(*data);
-	if (MAX_DATA_MSG_LENGTH - 1 - chars_written < size) {
-		size = MAX_DATA_MSG_LENGTH - 1 - chars_written;
+	if (MAX_DATA_MSG_LENGTH - chars_written < size) {
+		size = MAX_DATA_MSG_LENGTH - chars_written;
 		trunc = true;
 	}
 	memcpy(msg_dest + chars_written, data, size);
 	chars_written += size;
-
-	// Remaining bytes have already been zeroed by log_reset_buffer
-	// Set the last char of the message buffer to a newline
-	msg_dest[MAX_DATA_MSG_LENGTH - 1] = '\n';
 
 	if (trunc) {
 		// TODO: mark the message as truncated
