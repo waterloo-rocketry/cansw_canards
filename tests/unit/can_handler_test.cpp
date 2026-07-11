@@ -123,14 +123,14 @@ TEST_F(CanHandlerTest, EncodeSentinelSignedInt16) {
 
 TEST_F(CanHandlerTest, EncodeSentinelSignedInt24) {
     // SCALE_NAV_VELOCITY is a signed TYPE_INT24 field.
-    constexpr int32_t kMax = INT24_MAX;
+    constexpr int32_t kMax  = (1 << 23) - 1;
     int32_t out = 0;
 
     EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_VELOCITY, INFINITY, &out), W_SUCCESS);
     EXPECT_EQ(out, kMax - SENTINEL_POS_INF);
 
     EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_VELOCITY, -INFINITY, &out), W_SUCCESS);
-    EXPECT_EQ(out, kMax - static_cast<int32_t>(SENTINEL_NEG_INF));
+    EXPECT_EQ(out, kMax - SENTINEL_NEG_INF);
 }
 
 TEST_F(CanHandlerTest, EncodeSentinelUnsignedUint16) {
