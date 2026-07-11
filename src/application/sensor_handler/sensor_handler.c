@@ -78,12 +78,18 @@ typedef struct {
 
 static sensor_handler_state_t sensor_handler_state = {0};
 
-// Scale one float into the 16-bit builder argument via can_encode_scaled_float. The encoder
-// writes the native scaled integer into the temporary; reading it back and casting recovers
-// the value for the canlib builder (which owns the big-endian packing). Only valid for
-// 16-bit target tags (INT16/UINT16), which write exactly 2 bytes. On failure the status is
-// recorded into *acc (so the caller can log once) and 0 is returned.
-static uint16_t scale_to_u16(can_scaling_types_t sensor, float32_t value, w_status_t *acc) {
+// int 16 helper
+static int16_t scale_to_int16(can_scaling_types_t sensor, float32_t value, w_status_t *acc) {
+	int16_t tmp = 0;
+	w_status_t status = can_encode_scaled_float(sensor, value, &tmp);
+	if (W_SUCCESS != status) {
+		*acc = status;
+	}
+	return tmp;
+}
+
+// uint 16 helper
+static uint16_t scale_to_uint16(can_scaling_types_t sensor, float32_t value, w_status_t *acc) {
 	uint16_t tmp = 0;
 	w_status_t status = can_encode_scaled_float(sensor, value, &tmp);
 	if (W_SUCCESS != status) {
@@ -92,9 +98,8 @@ static uint16_t scale_to_u16(can_scaling_types_t sensor, float32_t value, w_stat
 	return tmp;
 }
 
-// Scale one float into the 32-bit builder argument (see scale_to_u16). Only valid for 32-bit
-// target tags (INT32/UINT32), which write exactly 4 bytes.
-static uint32_t scale_to_u32(can_scaling_types_t sensor, float32_t value, w_status_t *acc) {
+// uint32 helper
+static uint32_t scale_to_uint32(can_scaling_types_t sensor, float32_t value, w_status_t *acc) {
 	uint32_t tmp = 0;
 	w_status_t status = can_encode_scaled_float(sensor, value, &tmp);
 	if (W_SUCCESS != status) {
@@ -108,9 +113,6 @@ static uint32_t scale_to_u32(can_scaling_types_t sensor, float32_t value, w_stat
  * Each value is scaled via the can_telemetry_scaling table and packed into the
  * corresponding canlib canard telemetry message. Sends are gated on the per-sensor is_new
  * flags so stale data is not retransmitted.
- * @note MTI_EST (orientation/angular-velocity/velocity) is NOT broadcast: the Movella euler
- * estimate is not plumbed into all_sensors_data_t and the driver exposes no velocity. Board
- * (LSM6/IIS2MDC/ADXL380) and AD sensors are likewise not wired here yet.
  */
 static w_status_t send_sensor_telemetry(const all_sensors_data_t *data) {
 	uint32_t timestamp_ms = 0;
@@ -127,9 +129,9 @@ static w_status_t send_sensor_telemetry(const all_sensors_data_t *data) {
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 										 ts,
 										 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
-										 scale_to_u16(SCALE_MTI_ACCEL, v->x, &enc),
-										 scale_to_u16(SCALE_MTI_ACCEL, v->y, &enc),
-										 scale_to_u16(SCALE_MTI_ACCEL, v->z, &enc),
+										 scale_to_int16(SCALE_MTI_ACCEL, v->x, &enc),
+										 scale_to_int16(SCALE_MTI_ACCEL, v->y, &enc),
+										 scale_to_int16(SCALE_MTI_ACCEL, v->z, &enc),
 										 &msg);
 		tx |= can_handler_transmit(&msg);
 	}
@@ -138,9 +140,9 @@ static w_status_t send_sensor_telemetry(const all_sensors_data_t *data) {
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 										 ts,
 										 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
-										 scale_to_u16(SCALE_MTI_GYRO, v->x, &enc),
-										 scale_to_u16(SCALE_MTI_GYRO, v->y, &enc),
-										 scale_to_u16(SCALE_MTI_GYRO, v->z, &enc),
+										 scale_to_int16(SCALE_MTI_GYRO, v->x, &enc),
+										 scale_to_int16(SCALE_MTI_GYRO, v->y, &enc),
+										 scale_to_int16(SCALE_MTI_GYRO, v->z, &enc),
 										 &msg);
 		tx |= can_handler_transmit(&msg);
 	}
@@ -149,41 +151,39 @@ static w_status_t send_sensor_telemetry(const all_sensors_data_t *data) {
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 										 ts,
 										 DEM_3D_SENSOR_CANARD_MTI630_MAG,
-										 scale_to_u16(SCALE_MTI_MAG, v->x, &enc),
-										 scale_to_u16(SCALE_MTI_MAG, v->y, &enc),
-										 scale_to_u16(SCALE_MTI_MAG, v->z, &enc),
+										 scale_to_int16(SCALE_MTI_MAG, v->x, &enc),
+										 scale_to_int16(SCALE_MTI_MAG, v->y, &enc),
+										 scale_to_int16(SCALE_MTI_MAG, v->z, &enc),
 										 &msg);
 		tx |= can_handler_transmit(&msg);
 	}
 
 	// MTI barometric pressure (uint32)
 	if (data->mti_meas.mti_baro.is_new) {
-		build_analog_sensor_32bit_msg(PRIO_LOW,
-									  ts,
-									  SENSOR_CANARD_MTI630_BARO_0,
-									  scale_to_u32(SCALE_MTI_PRESSURE,
-												   (float32_t)data->mti_meas.mti_baro.meas,
-												   &enc),
-									  &msg);
+		build_analog_sensor_32bit_msg(
+			PRIO_LOW,
+			ts,
+			SENSOR_CANARD_MTI630_BARO_0,
+			scale_to_uint32(SCALE_MTI_PRESSURE, (float32_t)data->mti_meas.mti_baro.meas, &enc),
+			&msg);
 		tx |= can_handler_transmit(&msg);
 	}
 
 	// Servo angle / current / temperature (int16 / uint16)
 	if (data->motor_encoder_meas.is_new) {
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  ts,
-									  SENSOR_CANARD_SERVO_ANGLE,
-									  scale_to_u16(SCALE_SERVO_ANGLE,
-												   (float32_t)data->motor_encoder_meas.meas,
-												   &enc),
-									  &msg);
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW,
+			ts,
+			SENSOR_CANARD_SERVO_ANGLE,
+			scale_to_int16(SCALE_SERVO_ANGLE, (float32_t)data->motor_encoder_meas.meas, &enc),
+			&msg);
 		tx |= can_handler_transmit(&msg);
 
 		build_analog_sensor_16bit_msg(
 			PRIO_LOW,
 			ts,
 			SENSOR_CANARD_SERVO_CURR,
-			scale_to_u16(SCALE_SERVO_CURRENT, sensor_handler_state.last_motor_current_a, &enc),
+			scale_to_uint16(SCALE_SERVO_CURRENT, sensor_handler_state.last_motor_current_a, &enc),
 			&msg);
 		tx |= can_handler_transmit(&msg);
 
@@ -191,7 +191,8 @@ static w_status_t send_sensor_telemetry(const all_sensors_data_t *data) {
 			PRIO_LOW,
 			ts,
 			SENSOR_CANARD_SERVO_TEMP,
-			scale_to_u16(SCALE_SERVO_TEMP, (float32_t)sensor_handler_state.last_motor_temp_c, &enc),
+			scale_to_int16(
+				SCALE_SERVO_TEMP, (float32_t)sensor_handler_state.last_motor_temp_c, &enc),
 			&msg);
 		tx |= can_handler_transmit(&msg);
 	}
@@ -636,7 +637,9 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	// TODO: add logging for board meas
 
 	// scale and broadcast the raw MTI + servo telemetry over CAN
-	(void)send_sensor_telemetry(imu_output);
+	if (W_SUCCESS != send_sensor_telemetry(imu_output)) {
+		log_text(1, LOG_LVL_WARN, "SensorHandler", "Failed to send sensor telemetry.");
+	}
 
 	// update queue with current IMU data for flight phase to read
 	// now this is done by the updated output data

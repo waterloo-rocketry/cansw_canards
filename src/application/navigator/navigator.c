@@ -124,15 +124,33 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 		log_text(0, LOG_LVL_WARN, "Navigator", "Nav failed to run");
 	}
 
-	// TODO(telemetry): broadcast NAV state estimate via the scaling table + canlib DEM
-	// messages (SCALE_NAV_ORIENTATION/ALTITUDE/VARIANCE_NORM ->
-	// DEM_3D_SENSOR_CANARD_NAV_ORIENTATION_QUAT_*; SCALE_NAV_VELOCITY/ANGULAR_VELOCITY ->
-	// DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_*). Blocked: the attitude quaternion, altitude,
-	// velocity, and rates live in the opaque codegen state vector (gnc_navigator_ctx.x[11]);
-	// navigator_output_t only exposes cov_norm/roll_state/dynamic_pressure. Exposing those
-	// state fields (extend navigator_output_t + the navigation_codegen_entry outputs, with the
-	// x[] index layout confirmed) is a prerequisite. Only cov_norm (SCALE_NAV_VARIANCE_NORM) is
-	// available today, but its message (QW_ALT_VARNORM) also needs qw + altitude to be well-formed.
+	// TODO(telemetry): broadcast NAV state estimate via the scaling table + canlib DEM messages
+	// SCALE_NAV_ORIENTATION -> DEM_3D_SENSOR_CANARD_NAV_ORIENTATION_QUAT_QX_QY_QZ*;
+	// ALTITUDE -> DEM_1D_SENSOR_CANARD_NAV_ALTITUDE_*
+
+	// SCALE_NAV_VELOCITY/ANGULAR_VELOCITY ->
+	// DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_*;
+
+	// Blocked: the orientation quaternion, altitude, velocity, and augular velocity live in the
+	// opaque codegen state vector (gnc_navigator_ctx.x[11])? navigator_output_t only exposes
+	// cov_norm/roll_state/dynamic_pressure.
+
+	// Only cov_norm (SCALE_NAV_VARIANCE_NORM) is
+	// available today, why is it 3d in canlib?
+
+	// uint16_t cov_norm_scaled = 0;
+	// w_status_t enc = can_encode_scaled_float(
+	// 	SCALE_NAV_VARIANCE_NORM, (float32_t)p_output->cov_norm, &cov_norm_scaled);
+	// can_msg_t msg = {0};
+	// get_3d_analog_sensor_data_16bit(PRIO_LOW,
+	// 								(uint16_t)(timestamp_tenth_ms * TENTH_MS_TO_SEC * 1000.0),
+	// 								DEM_3D_SENSOR_CANARD_NAV_ORIENTATION_QUAT_QW_ALT_VARNORM,
+	// 								cov_norm_scaled,
+	// 								&msg);
+	// if ((W_SUCCESS != enc) || (W_SUCCESS != can_handler_transmit(&msg))) {
+	// 	estimator_error_stats.can_log_fails++;
+	// 	log_text(0, LOG_LVL_WARN, "Navigator", "Failed to send NAV variance norm CAN message");
+	// }
 
 	return W_SUCCESS;
 }
