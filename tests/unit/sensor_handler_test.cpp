@@ -10,7 +10,7 @@
 extern "C" {
 #include "application/can_handler/can_handler.h"
 #include "FreeRTOS.h"
-#include "application/estimator/estimator_types.h"
+
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/logger/log.h"
 #include "canlib.h"
@@ -237,7 +237,7 @@ protected:
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.euler_timestamp_ms = 999;
+	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
 	g_mti_get_return_val.data.mag_timestamp_ms = 999;
 	g_mti_get_return_val.data.pres_timestamp_ms = 999;
 	g_mti_get_return_val.data.temp_timestamp_ms = 999;
@@ -679,7 +679,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.euler_timestamp_ms = 999;
+	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
 	g_mti_get_return_val.data.mag_timestamp_ms = 999;
 	g_mti_get_return_val.data.pres_timestamp_ms = 999;
 	g_mti_get_return_val.data.temp_timestamp_ms = 999;
@@ -741,7 +741,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewAccelMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 997;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.euler_timestamp_ms = 999;
+	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
 	g_mti_get_return_val.data.mag_timestamp_ms = 999;
 	g_mti_get_return_val.data.pres_timestamp_ms = 999;
 	g_mti_get_return_val.data.temp_timestamp_ms = 999;
@@ -804,7 +804,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewGyroMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 997;
-	g_mti_get_return_val.data.euler_timestamp_ms = 999;
+	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
 	g_mti_get_return_val.data.mag_timestamp_ms = 999;
 	g_mti_get_return_val.data.pres_timestamp_ms = 999;
 	g_mti_get_return_val.data.temp_timestamp_ms = 999;
@@ -867,7 +867,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaroMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.euler_timestamp_ms = 999;
+	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
 	g_mti_get_return_val.data.mag_timestamp_ms = 999;
 	g_mti_get_return_val.data.pres_timestamp_ms = 997;
 	g_mti_get_return_val.data.temp_timestamp_ms = 999;
@@ -930,7 +930,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMagMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.euler_timestamp_ms = 999;
+	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
 	g_mti_get_return_val.data.mag_timestamp_ms = 997;
 	g_mti_get_return_val.data.pres_timestamp_ms = 999;
 	g_mti_get_return_val.data.temp_timestamp_ms = 999;
@@ -993,7 +993,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewOtherMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.euler_timestamp_ms = 0;
+	g_mti_get_return_val.data.quaternion_timestamp_ms = 0;
 	g_mti_get_return_val.data.mag_timestamp_ms = 999;
 	g_mti_get_return_val.data.pres_timestamp_ms = 999;
 	g_mti_get_return_val.data.temp_timestamp_ms = 0;
@@ -1056,7 +1056,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasGetFailMTI) {
 
 	g_mti_get_return_val.data.acc_timestamp_ms = 999;
 	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.euler_timestamp_ms = 999;
+	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
 	g_mti_get_return_val.data.mag_timestamp_ms = 999;
 	g_mti_get_return_val.data.pres_timestamp_ms = 999;
 	g_mti_get_return_val.data.temp_timestamp_ms = 999;

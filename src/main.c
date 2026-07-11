@@ -33,7 +33,7 @@
 #include "sdmmc.h"
 #include "tim.h"
 #include "usart.h"
-#include "usb_otg.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -119,7 +119,6 @@ int main(void) {
 	MX_I2C4_Init();
 	MX_I2C5_Init();
 	MX_SDMMC2_SD_Init();
-	MX_USB_OTG_HS_PCD_Init();
 	MX_FDCAN1_Init();
 	MX_OCTOSPI1_Init();
 	MX_I2C2_Init();
