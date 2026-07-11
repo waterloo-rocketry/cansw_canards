@@ -5,11 +5,10 @@
 void ak45_test_reset(void) {
 	g_ak45_hfdcan = NULL;
 	g_feedback_queue = NULL;
-	g_tx_errors = 0;
-	is_init = false;
+	ak45_health = (ak45_health_t){0};
 	received_can_msg = false;
 }
 
 void ak45_set_tx_errors(uint32_t count) {
-	g_tx_errors = count;
+	ak45_health.tx_errors = count;
 }

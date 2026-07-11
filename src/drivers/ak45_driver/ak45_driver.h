@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
+
 // Servo fault codes
 typedef enum {
 	AK45_FAULT_NONE = 0,
@@ -29,6 +31,27 @@ typedef struct {
 	ak45_fault_code_t fault_code;
 	uint32_t timestamp_ms; // Time of last received feedback
 } ak45_feedback_t;
+
+/**
+ * Status variables describing the health of the AK45 driver module
+ */
+typedef struct {
+	bool is_init;
+	bool failed_calibration; // TODO: implement calibration step and add this check
+	uint32_t rx_errors; // FDCAN RX-callback failures
+	uint32_t tx_errors; // FDCAN transmit FIFO add failures
+	uint32_t invalid_args; // nullptr/ out of range arguments to functions
+	uint32_t out_of_memory; // failure to allocate memory for queue creation
+	uint32_t not_initialized; // calls to get_feedback when driver is not initialized
+	uint32_t feedback_queue_empty; // calls for latest feedback when queue empty
+	uint32_t reinit_attempts; // count of init attempts after first successful init
+	uint32_t fdcan_stop_fails; // count of failures to stop FDCAN bus
+	uint32_t init_fdcan_timeout; // count of timeouts to receive response from the motor during init
+	uint32_t init_fdcan_notification_fails; // Count of failures to activate FDCAN notification
+											// during init
+	uint32_t init_fdcan_start_fails; // count of failures to start FDCAN bus
+	uint32_t init_fdcan_filter_cfg_fails; // count of failures to configure FDCAN filter during init
+} ak45_health_t;
 
 /**
  * @brief Initialize the servo driver
@@ -70,5 +93,14 @@ w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb);
  * @return Number of transmission failures
  */
 uint32_t ak45_get_tx_errors(void);
+
+/**
+ * @brief Get and report the AK45 motor driver status for the health check system
+ *
+ * Follows the module_get_status naming convention used by health_checks.
+ *
+ * @return CAN board status bitfield
+ */
+health_status_t ak45_get_status(void);
 
 #endif // AK45_DRIVER_H
