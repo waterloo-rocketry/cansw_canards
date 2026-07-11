@@ -187,8 +187,8 @@ static w_status_t can_store_signed(can_types_t type, int32_t value, void *out) {
 	}
 }
 
-// Store the reserved sentinel code for a non-finite float into the target type.
-// offset is one ofSENTINEL_POS_INF / SENTINEL_NEG_INF and selects
+// Store the sentinel code for a non-finite float into the target type.
+// offset is one of SENTINEL_POS_INF / SENTINEL_NEG_INF and selects
 // a code at the top of the type's range (type_max - offset).
 static w_status_t can_store_sentinel(can_types_t type, bool is_unsigned, uint32_t offset,
 									 void *out) {
@@ -317,7 +317,7 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 		return W_MATH_ERROR;
 	}
 
-	// handle +/-Inf with reserved sentinel codes at the top of the target type
+	// handle +/-Inf with sentinel codes (not reserved) at the top of the target type
 	if (!isfinite(input)) {
 		uint32_t offset = signbit(input) ? SENTINEL_NEG_INF : SENTINEL_POS_INF;
 
@@ -348,6 +348,7 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 
 		return can_store_signed(target_type, (int32_t)scaled, out);
 	}
+
 	return W_SUCCESS;
 }
 
