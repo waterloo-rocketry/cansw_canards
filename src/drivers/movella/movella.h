@@ -9,12 +9,12 @@
 typedef struct {
 	vector3d_t acc; // (x, y, z) m/s^2
 	vector3d_t gyr; // (x, y, z) rad/s
-	vector3d_t euler; // (x, y, z) deg
+	quaternion_f32_t quaternion; // (w, x, y, z)
 	vector3d_t mag; // (x, y, z) "arbitrary units" - estimator doesnt need conversion so leave this
 
 	uint32_t acc_timestamp_ms;
 	uint32_t gyr_timestamp_ms;
-	uint32_t euler_timestamp_ms;
+	uint32_t quaternion_timestamp_ms;
 	uint32_t mag_timestamp_ms;
 	uint32_t pres_timestamp_ms;
 	uint32_t temp_timestamp_ms;
