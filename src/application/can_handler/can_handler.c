@@ -314,7 +314,9 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 	bool is_unsigned = can_type_is_unsigned(target_type);
 
 	if (isnan(input)) {
-		return W_MATH_ERROR;
+		uint32_t offset = SENTINEL_NAN;
+		w_status_t store_status = can_store_sentinel(target_type, is_unsigned, offset, out);
+		return store_status;
 	}
 
 	// handle +/-Inf with sentinel codes (not reserved) at the top of the target type

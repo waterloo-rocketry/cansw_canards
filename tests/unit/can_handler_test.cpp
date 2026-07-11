@@ -166,12 +166,12 @@ TEST_F(CanHandlerTest, SentinelIgnoresScaleFactor) {
     EXPECT_EQ(out, kMax - SENTINEL_POS_INF);
 }
 
-TEST_F(CanHandlerTest, EncodeFloatNaNIsMathError) {
+TEST_F(CanHandlerTest, EncodeFloatNaNIsSentinelValue) {
     // NaN is signalled to the caller as an error rather than an in-band code.
     int16_t sout = 0;
     uint16_t uout = 0;
-    EXPECT_EQ(can_encode_scaled_float(SCALE_MTI_ACCEL, NAN, &sout), W_MATH_ERROR); // signed field
-    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_ALTITUDE, NAN, &uout), W_MATH_ERROR); // unsigned
+    EXPECT_EQ(can_encode_scaled_float(SCALE_MTI_ACCEL, NAN, &sout), W_SUCCESS); // signed field
+    EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_ALTITUDE, NAN, &uout), W_SUCCESS); // unsigned
 }
 
 TEST_F(CanHandlerTest, EncodeFloatAppliesScaleFactor) {

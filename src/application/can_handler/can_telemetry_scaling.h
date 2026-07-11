@@ -10,6 +10,7 @@
 
 #define SENTINEL_POS_INF 0U // type_max - 1
 #define SENTINEL_NEG_INF 1U // type_max - 2
+#define SENTINEL_NAN 2U      // type_max - 3
 
 typedef enum {
 	TYPE_INT16,
