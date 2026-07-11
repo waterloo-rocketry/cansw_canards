@@ -42,7 +42,7 @@ typedef enum {
 	SCALE_MTI_EST_QUATERNION,
 	SCALE_MTI_EST_ANGULAR_VELOCITY,
 	// NOT BROADCAST: a canlib ID exists (DEM_3D_SENSOR_CANARD_MTI630_EST_VEL) but the
-	// Movella driver exposes no velocity estimate, so there is no source value to send.
+	// Movella driver exposes no velocity estimate, so there is no source value to send??
 	SCALE_MTI_EST_VELOCITY,
 
 	SCALE_SERVO_ANGLE,

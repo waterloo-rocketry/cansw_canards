@@ -70,45 +70,141 @@ typedef struct {
 	sensor_health_state_t mti_mag_stats;
 	sensor_health_state_t mti_baro_stats;
 	sensor_health_state_t motor_encoder_stats;
+
+	// latest motor feedback auxiliaries, kept for servo current/temp telemetry
+	float32_t last_motor_current_a;
+	int8_t last_motor_temp_c;
 } sensor_handler_state_t;
 
 static sensor_handler_state_t sensor_handler_state = {0};
 
-// static w_status_t log_raw_to_can(raw_pololu_data_t *raw_data) {
-// 	// Log raw data to CAN
-// 	can_msg_t msg;
-// 	uint32_t timestamp = 0;
-// 	timer_get_ms(&timestamp);
-// 	w_status_t encode_status = W_SUCCESS;
-// 	w_status_t can_tx_status = W_SUCCESS;
+// Scale one float into the 16-bit builder argument via can_encode_scaled_float. The encoder
+// writes the native scaled integer into the temporary; reading it back and casting recovers
+// the value for the canlib builder (which owns the big-endian packing). Only valid for
+// 16-bit target tags (INT16/UINT16), which write exactly 2 bytes. On failure the status is
+// recorded into *acc (so the caller can log once) and 0 is returned.
+static uint16_t scale_to_u16(can_scaling_types_t sensor, float32_t value, w_status_t *acc) {
+	uint16_t tmp = 0;
+	w_status_t status = can_encode_scaled_float(sensor, value, &tmp);
+	if (W_SUCCESS != status) {
+		*acc = status;
+	}
+	return tmp;
+}
 
-// 	// TODO: Currently using incorrect sensor for testing
-// 	// Encode messages
-// 	int16_t acc_x = 0, acc_y = 0, acc_z = 0;
-// 	int16_t gyro_x = 0, gyro_y = 0, gyro_z = 0;
-// 	int32_t mag_x = 0, mag_y = 0, mag_z = 0;
+// Scale one float into the 32-bit builder argument (see scale_to_u16). Only valid for 32-bit
+// target tags (INT32/UINT32), which write exactly 4 bytes.
+static uint32_t scale_to_u32(can_scaling_types_t sensor, float32_t value, w_status_t *acc) {
+	uint32_t tmp = 0;
+	w_status_t status = can_encode_scaled_float(sensor, value, &tmp);
+	if (W_SUCCESS != status) {
+		*acc = status;
+	}
+	return tmp;
+}
 
-// 	// TODO: do CAN scaling and sending
+/**
+ * @brief Scale and broadcast the raw MTI + servo telemetry over CAN.
+ * Each value is scaled via the can_telemetry_scaling table and packed into the
+ * corresponding canlib canard telemetry message. Sends are gated on the per-sensor is_new
+ * flags so stale data is not retransmitted.
+ * @note MTI_EST (orientation/angular-velocity/velocity) is NOT broadcast: the Movella euler
+ * estimate is not plumbed into all_sensors_data_t and the driver exposes no velocity. Board
+ * (LSM6/IIS2MDC/ADXL380) and AD sensors are likewise not wired here yet.
+ */
+static w_status_t send_sensor_telemetry(const all_sensors_data_t *data) {
+	uint32_t timestamp_ms = 0;
+	(void)timer_get_ms(&timestamp_ms);
+	uint16_t ts = (uint16_t)timestamp_ms;
 
-// 	can_tx_status |= can_handler_transmit(&msg);
+	can_msg_t msg = {0};
+	w_status_t enc = W_SUCCESS;
+	w_status_t tx = W_SUCCESS;
 
-// 	// Error handling
-// 	if (encode_status == W_MATH_ERROR) {
-// 		log_text(0, "SensorHandler", "IMU raw msg encode math error (NaN or Inf)");
-// 	} else if (encode_status != W_SUCCESS) {
-// 		log_text(0, "SensorHandler", "IMU raw msg scale / encode failed");
-// 	}
+	// MTI raw accel / gyro / mag (3D int16)
+	if (data->mti_meas.mti_accel.is_new) {
+		const vector3d_t *v = &data->mti_meas.mti_accel.meas;
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 ts,
+										 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
+										 scale_to_u16(SCALE_MTI_ACCEL, v->x, &enc),
+										 scale_to_u16(SCALE_MTI_ACCEL, v->y, &enc),
+										 scale_to_u16(SCALE_MTI_ACCEL, v->z, &enc),
+										 &msg);
+		tx |= can_handler_transmit(&msg);
+	}
+	if (data->mti_meas.mti_gyro.is_new) {
+		const vector3d_t *v = &data->mti_meas.mti_gyro.meas;
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 ts,
+										 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
+										 scale_to_u16(SCALE_MTI_GYRO, v->x, &enc),
+										 scale_to_u16(SCALE_MTI_GYRO, v->y, &enc),
+										 scale_to_u16(SCALE_MTI_GYRO, v->z, &enc),
+										 &msg);
+		tx |= can_handler_transmit(&msg);
+	}
+	if (data->mti_meas.mti_mag.is_new) {
+		const vector3d_t *v = &data->mti_meas.mti_mag.meas;
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 ts,
+										 DEM_3D_SENSOR_CANARD_MTI630_MAG,
+										 scale_to_u16(SCALE_MTI_MAG, v->x, &enc),
+										 scale_to_u16(SCALE_MTI_MAG, v->y, &enc),
+										 scale_to_u16(SCALE_MTI_MAG, v->z, &enc),
+										 &msg);
+		tx |= can_handler_transmit(&msg);
+	}
 
-// 	if (can_tx_status != W_SUCCESS) {
-// 		log_text(0, "SensorHandler", "IMU raw msg tx failed");
-// 	}
+	// MTI barometric pressure (uint32)
+	if (data->mti_meas.mti_baro.is_new) {
+		build_analog_sensor_32bit_msg(PRIO_LOW,
+									  ts,
+									  SENSOR_CANARD_MTI630_BARO_0,
+									  scale_to_u32(SCALE_MTI_PRESSURE,
+												   (float32_t)data->mti_meas.mti_baro.meas,
+												   &enc),
+									  &msg);
+		tx |= can_handler_transmit(&msg);
+	}
 
-// 	if ((can_tx_status != W_SUCCESS) || (encode_status != W_SUCCESS)) {
-// 		imu_handler_state.error_count++;
-// 		return W_FAILURE;
-// 	}
-// 	return W_SUCCESS;
-// }
+	// Servo angle / current / temperature (int16 / uint16)
+	if (data->motor_encoder_meas.is_new) {
+		build_analog_sensor_16bit_msg(PRIO_LOW,
+									  ts,
+									  SENSOR_CANARD_SERVO_ANGLE,
+									  scale_to_u16(SCALE_SERVO_ANGLE,
+												   (float32_t)data->motor_encoder_meas.meas,
+												   &enc),
+									  &msg);
+		tx |= can_handler_transmit(&msg);
+
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW,
+			ts,
+			SENSOR_CANARD_SERVO_CURR,
+			scale_to_u16(SCALE_SERVO_CURRENT, sensor_handler_state.last_motor_current_a, &enc),
+			&msg);
+		tx |= can_handler_transmit(&msg);
+
+		build_analog_sensor_16bit_msg(
+			PRIO_LOW,
+			ts,
+			SENSOR_CANARD_SERVO_TEMP,
+			scale_to_u16(SCALE_SERVO_TEMP, (float32_t)sensor_handler_state.last_motor_temp_c, &enc),
+			&msg);
+		tx |= can_handler_transmit(&msg);
+	}
+
+	if (W_SUCCESS != enc) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "telemetry scale/encode failed: %d", enc);
+	}
+	if (W_SUCCESS != tx) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "telemetry tx failed");
+		sensor_handler_state.error_count++;
+	}
+	return ((W_SUCCESS == enc) && (W_SUCCESS == tx)) ? W_SUCCESS : W_FAILURE;
+}
 
 /**
  * @brief Read data from the board
@@ -445,6 +541,10 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 
 	encoder_data->meas = (motor_feedback.position_deg) * RAD_PER_DEG;
 
+	// stash current/temperature for servo telemetry (not part of the 1D encoder meas)
+	sensor_handler_state.last_motor_current_a = motor_feedback.current_a;
+	sensor_handler_state.last_motor_temp_c = motor_feedback.temperature_c;
+
 	// success is if at least one of the sensors updated
 	if ((!encoder_data->is_new)) {
 		return W_FAILURE;
@@ -534,6 +634,9 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	}
 
 	// TODO: add logging for board meas
+
+	// scale and broadcast the raw MTI + servo telemetry over CAN
+	(void)send_sensor_telemetry(imu_output);
 
 	// update queue with current IMU data for flight phase to read
 	// now this is done by the updated output data

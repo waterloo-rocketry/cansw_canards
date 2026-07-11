@@ -4,9 +4,11 @@
 #include "task.h"
 
 #include "GNC_codegen.h"
+#include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "canlib.h"
 #include "common/gnc/gnc_types.h"
 
 #define DATA_WAIT_MS 10
@@ -65,6 +67,24 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 		// update new timestamp
 		p_output->timestamp_tenth_ms = timestamp_tenth_ms;
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
+
+		// scale and broadcast the commanded canard angle over CAN. can_encode_scaled_float
+		// writes the native scaled int16 into cmd_scaled; the builder repacks it big-endian.
+		int16_t cmd_scaled = 0;
+		w_status_t enc = can_encode_scaled_float(
+			SCALE_CTRL_CMD, (float32_t)p_output->canard_command_angle_rad, &cmd_scaled);
+		can_msg_t msg = {0};
+		build_analog_sensor_16bit_msg(PRIO_LOW,
+									  (uint16_t)(timestamp_tenth_ms * TENTH_MS_TO_MS),
+									  SENSOR_CANARD_CTRL_CMD_ANGLE,
+									  (uint16_t)cmd_scaled,
+									  &msg);
+		if ((W_SUCCESS != enc) || (W_SUCCESS != can_handler_transmit(&msg))) {
+			controller_error_stats.can_send_errors++;
+		}
+		// TODO(telemetry): SCALE_CTRL_COEF_OF_ROLL_CTRL (coeff of lift / CL) is not broadcast
+		// -- CL is an estimator state-vector output, not exposed in controller_output_t.
+		// SCALE_CTRL_ROLL_TARGET has no canlib canard telemetry ID (see can_telemetry_scaling.h).
 	} else {
 		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
 	}
