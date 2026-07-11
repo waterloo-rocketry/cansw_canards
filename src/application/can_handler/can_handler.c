@@ -18,9 +18,9 @@
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
 
-#define UINT24_MAX (1U << 24) - 1U
-#define INT24_MIN -(1 << 23)
-#define INT24_MAX (1 << 23) - 1
+#define UINT24_MAX (1U << 24) - 1U // maximum value for a 24-bit unsigned integer
+#define INT24_MIN -(1 << 23) // minimum value for a 24-bit signed integer
+#define INT24_MAX (1 << 23) - 1 // maximum value for a 24-bit signed integer
 
 /**
  * @brief Structure to track CAN handler stats, errors and status
