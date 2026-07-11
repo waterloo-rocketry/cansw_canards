@@ -146,7 +146,7 @@ typedef union __attribute__((packed)) {
 		float orient_y;
 		float orient_z;
 		float altitude; // m
-		uint32_t variance_norm;
+		float variance_norm;
 	} navigator_pt1;
 
 	struct __attribute__((packed)) {
@@ -170,8 +170,8 @@ typedef union __attribute__((packed)) {
 
 	// LOG_TYPE_BOARD_BAROMETER:
 	struct __attribute__((packed)) {
-		uint32_t barometer; // Pa
-		int32_t thermometer; // C
+		float barometer; // Pa
+		float thermometer; // C
 	} board_barometer;
 
 	// LOG_TYPE_BOARD_MAG:
@@ -189,7 +189,7 @@ typedef union __attribute__((packed)) {
 
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t magnetometer; // Gauss
-		uint32_t barometer; // Pa
+		float barometer; // Pa
 	} movella_pt2;
 
 	struct __attribute__((packed)) {
@@ -199,11 +199,6 @@ typedef union __attribute__((packed)) {
 		float orient_z;
 	} movella_pt3;
 
-	struct __attribute__((packed)) {
-		vector3d_f32_packed_t angular_velocity; // rad/sec
-		vector3d_f32_packed_t velocity; // m/s
-	} movella_pt4;
-
 	// LOG_TYPE_AD_ACCEL:
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
@@ -211,14 +206,14 @@ typedef union __attribute__((packed)) {
 
 	// LOG_TYPE_AD_GYRO:
 	struct __attribute__((packed)) {
-		int32_t gyroscope; // rad/s
+		float gyroscope; // rad/s
 	} ad_gyro;
 
 	// LOG_TYPE_SERVO_MOTOR:
 	struct __attribute__((packed)) {
-		int32_t motor_angle; // deg
-		int32_t motor_current; // mA
-		int32_t motor_temperature; // C
+		float motor_angle; // deg
+		float motor_current; // mA
+		float motor_temperature; // C
 	} servo_motor;
 
 } log_data_container_t;
