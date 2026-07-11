@@ -121,9 +121,9 @@ TEST_F(CanHandlerTest, EncodeSentinelSignedInt16) {
     EXPECT_EQ(out, kMax - SENTINEL_NEG_INF);
 }
 
-TEST_F(CanHandlerTest, EncodeSentinelSignedInt32) {
-    // SCALE_NAV_VELOCITY is a signed TYPE_INT32 field.
-    constexpr int32_t kMax = std::numeric_limits<int32_t>::max();
+TEST_F(CanHandlerTest, EncodeSentinelSignedInt24) {
+    // SCALE_NAV_VELOCITY is a signed TYPE_INT24 field.
+    constexpr int32_t kMax = INT24_MAX;
     int32_t out = 0;
 
     EXPECT_EQ(can_encode_scaled_float(SCALE_NAV_VELOCITY, INFINITY, &out), W_SUCCESS);
