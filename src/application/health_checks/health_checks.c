@@ -243,7 +243,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 	static bool can_initialized = false;
 	// safe state - loop here forever and send CAN err msg repeatedly
 	while (1) {
-		can_initialized = can_initialized || stm32h7_can_init(&hfdcan3, can_handle_rx_message);
+		can_initialized = can_initialized || stm32h7_can_init(&hfdcan3, &can_handler_rx_message);
 		__disable_irq();
 
 		// let CAN still work
