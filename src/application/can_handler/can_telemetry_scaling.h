@@ -29,6 +29,9 @@ typedef enum {
 
 	SCALE_CTRL_CMD,
 	SCALE_CTRL_COEF_OF_ROLL_CTRL,
+	// NOT BROADCAST: no canlib canard telemetry ID exists for a roll target (canlib only
+	// has SENSOR_CANARD_CTRL_CMD_ANGLE and SENSOR_CANARD_CTRL_COEFF_LIFT), so this scale
+	// factor is currently unused for sending sensor values.
 	SCALE_CTRL_ROLL_TARGET,
 
 	SCALE_MTI_ACCEL,
@@ -38,6 +41,8 @@ typedef enum {
 
 	SCALE_MTI_EST_QUATERNION,
 	SCALE_MTI_EST_ANGULAR_VELOCITY,
+	// NOT BROADCAST: a canlib ID exists (DEM_3D_SENSOR_CANARD_MTI630_EST_VEL) but the
+	// Movella driver exposes no velocity estimate, so there is no source value to send.
 	SCALE_MTI_EST_VELOCITY,
 
 	SCALE_SERVO_ANGLE,
@@ -54,16 +59,15 @@ typedef struct {
 
 static const can_scale_data_t can_scale_factor[SCALE_COUNT] = {
 	[SCALE_NAV_ORIENTATION] = {.type = TYPE_INT16, .scale = 10000},
-	// TODO: check with Tristan whether INT24 is necessary here. Using INT32 for now
-	// because can_store_signed() stores INT24 as a full 4-byte int32 anyway (the 3-byte
-	// packing isn't implemented), so INT24 would overflow a real 24-bit field 
-	[SCALE_NAV_ANGULAR_VELOCITY] = {.type = TYPE_INT32, .scale = 1000}, // was TYPE_INT24
-	[SCALE_NAV_VELOCITY] = {.type = TYPE_INT32, .scale = 1000},
+
+	[SCALE_NAV_ANGULAR_VELOCITY] = {.type = TYPE_INT24, .scale = 1000},
+	[SCALE_NAV_VELOCITY] = {.type = TYPE_INT24, .scale = 1000},
 	[SCALE_NAV_ALTITUDE] = {.type = TYPE_UINT16, .scale = 1},
 	[SCALE_NAV_VARIANCE_NORM] = {.type = TYPE_UINT16, .scale = 1},
 
 	[SCALE_CTRL_CMD] = {.type = TYPE_INT16, .scale = 1000},
 	[SCALE_CTRL_COEF_OF_ROLL_CTRL] = {.type = TYPE_INT16, .scale = 100},
+	// NOT BROADCAST: no canlib canard telemetry ID for a roll target (see enum note)
 	[SCALE_CTRL_ROLL_TARGET] = {.type = TYPE_INT16, .scale = 100},
 
 	[SCALE_MTI_ACCEL] = {.type = TYPE_INT16, .scale = 100},
@@ -73,6 +77,7 @@ static const can_scale_data_t can_scale_factor[SCALE_COUNT] = {
 
 	[SCALE_MTI_EST_QUATERNION] = {.type = TYPE_INT16, .scale = 10000},
 	[SCALE_MTI_EST_ANGULAR_VELOCITY] = {.type = TYPE_INT16, .scale = 10},
+	// NOT BROADCAST: no Movella velocity source available (see enum note)
 	[SCALE_MTI_EST_VELOCITY] = {.type = TYPE_INT16, .scale = 10},
 
 	[SCALE_SERVO_ANGLE] = {.type = TYPE_INT16, .scale = 1000},
