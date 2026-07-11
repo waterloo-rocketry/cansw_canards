@@ -226,7 +226,6 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 		(!board_data->board_baro.is_new)) {
 		return W_FAILURE;
 	}
-
 	return W_SUCCESS;
 }
 
@@ -534,6 +533,87 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	}
 
 	// TODO: add logging for board meas
+	log_data_container_t log_container = {0};
+
+	// Board IMU
+	log_container.board_imu.accelerometer.x = (float)imu_output->board_meas.board_imu.accel.x;
+	log_container.board_imu.accelerometer.y = (float)imu_output->board_meas.board_imu.accel.y;
+	log_container.board_imu.accelerometer.z = (float)imu_output->board_meas.board_imu.accel.z;
+
+	log_container.board_imu.gyroscope.x = (float)imu_output->board_meas.board_imu.gyro.x;
+	log_container.board_imu.gyroscope.y = (float)imu_output->board_meas.board_imu.gyro.y;
+	log_container.board_imu.gyroscope.z = (float)imu_output->board_meas.board_imu.gyro.z;
+
+	log_data(1, LOG_TYPE_BOARD_IMU, &log_container);
+
+	// Board magnetometer
+	log_container.board_mag.accelerometer.x = (float)imu_output->board_meas.board_imu.accel.x;
+	log_container.board_mag.accelerometer.y = (float)imu_output->board_meas.board_imu.accel.y;
+	log_container.board_mag.accelerometer.z = (float)imu_output->board_meas.board_imu.accel.z;
+
+	log_container.board_mag.magnetometer.x = (float)imu_output->board_meas.board_mag.meas.x;
+	log_container.board_mag.magnetometer.y = (float)imu_output->board_meas.board_mag.meas.y;
+	log_container.board_mag.magnetometer.z = (float)imu_output->board_meas.board_mag.meas.z;
+
+	log_data(1, LOG_TYPE_BOARD_MAG, &log_container);
+
+	// Board barometer
+	log_container.board_barometer.barometer = imu_output->board_meas.board_baro.meas;
+	log_container.board_barometer.thermometer = 0;
+
+	log_data(1, LOG_TYPE_BOARD_BAROMETER, &log_container);
+
+	// Movella IMU accelerometer + gyro
+	log_container.movella_pt1.accelerometer.x = (float)imu_output->mti_meas.mti_accel.meas.x;
+	log_container.movella_pt1.accelerometer.y = (float)imu_output->mti_meas.mti_accel.meas.y;
+	log_container.movella_pt1.accelerometer.z = (float)imu_output->mti_meas.mti_accel.meas.z;
+
+	log_container.movella_pt1.gyroscope.x = (float)imu_output->mti_meas.mti_gyro.meas.x;
+	log_container.movella_pt1.gyroscope.y = (float)imu_output->mti_meas.mti_gyro.meas.y;
+	log_container.movella_pt1.gyroscope.z = (float)imu_output->mti_meas.mti_gyro.meas.z;
+
+	log_data(1, LOG_TYPE_MOVELLA_PT1, &log_container);
+
+	// Movella magnetometer + barometer
+	log_container.movella_pt2.magnetometer.x = (float)imu_output->mti_meas.mti_mag.meas.x;
+	log_container.movella_pt2.magnetometer.y = (float)imu_output->mti_meas.mti_mag.meas.y;
+	log_container.movella_pt2.magnetometer.z = (float)imu_output->mti_meas.mti_mag.meas.z;
+
+	log_container.movella_pt2.barometer = imu_output->mti_meas.mti_baro.meas;
+
+	log_data(1, LOG_TYPE_MOVELLA_PT2, &log_container);
+
+	// Movella orientation
+	// log_container.movella_pt3.orient_w =
+	// 	(float)imu_output->mti_meas..w;
+	// log_container.movella_pt3.orient_x =
+	// 	(float)imu_output->mti_meas.orientation.x;
+	// log_container.movella_pt3.orient_y =
+	// 	(float)imu_output->mti_meas.orientation.y;
+	// log_container.movella_pt3.orient_z =
+	// 	(float)imu_output->mti_meas.orientation.z;
+
+	// log_data(1, LOG_TYPE_MOVELLA_PT3, &log_container);
+
+	// AD accelerometer
+	log_container.ad_accel.accelerometer.x = (float)imu_output->ad_meas.ad_accel.meas.x;
+	log_container.ad_accel.accelerometer.y = (float)imu_output->ad_meas.ad_accel.meas.y;
+	log_container.ad_accel.accelerometer.z = (float)imu_output->ad_meas.ad_accel.meas.z;
+
+	log_data(1, LOG_TYPE_AD_ACCEL, &log_container);
+
+	// AD gyro
+	log_container.ad_gyro.gyroscope = imu_output->ad_meas.ad_gyro.meas;
+
+	log_data(1, LOG_TYPE_AD_GYRO, &log_container);
+
+    log_text(1, LOG_LVL_INFO, "testinguwu", "%f", imu_output->ad_meas.ad_gyro.meas);
+	// Servo motor
+	log_container.servo_motor.motor_angle = imu_output->motor_encoder_meas.meas;
+	log_container.servo_motor.motor_current = 0;
+	log_container.servo_motor.motor_temperature = 0;
+
+	log_data(1, LOG_TYPE_SERVO_MOTOR, &log_container);
 
 	// update queue with current IMU data for flight phase to read
 	// now this is done by the updated output data

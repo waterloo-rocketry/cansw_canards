@@ -30,6 +30,9 @@
 
 #include <string.h>
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
@@ -219,6 +222,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
       timeout = HAL_GetTick();
       while((ReadStatus == 0) && ((HAL_GetTick() - timeout) < SD_TIMEOUT))
       {
+        vTaskDelay(1);
       }
       /* in case of a timeout return error */
       if (ReadStatus == 0)
@@ -232,6 +236,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
 
         while((HAL_GetTick() - timeout) < SD_TIMEOUT)
         {
+            vTaskDelay(1);
           if (BSP_SD_GetCardState() == SD_TRANSFER_OK)
           {
             res = RES_OK;
@@ -350,6 +355,7 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
       timeout = HAL_GetTick();
       while((WriteStatus == 0) && ((HAL_GetTick() - timeout) < SD_TIMEOUT))
       {
+        vTaskDelay(1);
       }
       /* in case of a timeout return error */
       if (WriteStatus == 0)
@@ -363,6 +369,7 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
 
         while((HAL_GetTick() - timeout) < SD_TIMEOUT)
         {
+            vTaskDelay(1);
           if (BSP_SD_GetCardState() == SD_TRANSFER_OK)
           {
             res = RES_OK;

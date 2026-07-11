@@ -24,7 +24,7 @@ static const uint8_t ADS1219_CONFIG_SETTINGS =
 static const float64_t ADXRS649_GYRO_RANGE_DPS = 20000.0;
 
 // conversion factors
-static const float64_t MV_TO_DPS = 0.1; // from datasheet
+static const float64_t MV_TO_DPS = 1.0; // from datasheet
 static const float64_t NULL_BIAS_mV = 0.0 * 1000;
 
 // self-test constants
