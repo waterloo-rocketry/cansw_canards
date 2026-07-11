@@ -74,8 +74,8 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 	uint32_t type_int = (uint32_t)type;
 	size_t size = sizeof(type_int);
 	// Truncate if write would extend beyond message region excluding last char for newline
-	if (MAX_DATA_MSG_LENGTH - 1 - chars_written < size) {
-		size = MAX_DATA_MSG_LENGTH - 1 - chars_written;
+	if (MAX_DATA_MSG_LENGTH - chars_written < size) {
+		size = MAX_DATA_MSG_LENGTH - chars_written;
 		trunc = true;
 	}
 	memcpy(msg_dest + chars_written, &type_int, size);
@@ -83,8 +83,8 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 
 	// Write log message timestamp
 	size = sizeof(timestamp);
-	if (MAX_DATA_MSG_LENGTH - 1 - chars_written < size) {
-		size = MAX_DATA_MSG_LENGTH - 1 - chars_written;
+	if (MAX_DATA_MSG_LENGTH - chars_written < size) {
+		size = MAX_DATA_MSG_LENGTH - chars_written;
 		trunc = true;
 	}
 	memcpy(msg_dest + chars_written, &timestamp, size);
@@ -92,16 +92,12 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 
 	// Write log message data
 	size = sizeof(*data);
-	if (MAX_DATA_MSG_LENGTH - 1 - chars_written < size) {
-		size = MAX_DATA_MSG_LENGTH - 1 - chars_written;
+	if (MAX_DATA_MSG_LENGTH - chars_written < size) {
+		size = MAX_DATA_MSG_LENGTH - chars_written;
 		trunc = true;
 	}
 	memcpy(msg_dest + chars_written, data, size);
 	chars_written += size;
-
-	// Remaining bytes have already been zeroed by log_reset_buffer
-	// Set the last char of the message buffer to a newline
-	msg_dest[MAX_DATA_MSG_LENGTH - 1] = '\n';
 
 	if (trunc) {
 		// TODO: mark the message as truncated
@@ -439,15 +435,13 @@ void log_task(void *argument) {
 			// try several times to buffer to SD card
 			uint32_t size = 0;
 			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
-				gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
-
 				if (sd_card_file_write(
 						filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
 					W_SUCCESS) {
-					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
 					break; // Successfully wrote the buffer
 				} else {
-					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+					// TODO: log err
+					gpio_toggle(GPIO_PIN_RED_LED, 0);
 				}
 				if ((LOG_WRITE_TRY_COUNT - 1) == i) {
 					logger_health.buffer_flush_fails++;

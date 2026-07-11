@@ -3,6 +3,7 @@ import argparse
 import sys
 import struct
 from collections import namedtuple
+import csv
 
 """
 Special values from src/application/logger/log.h
@@ -31,64 +32,56 @@ format quick reference:
 FORMATS = {
     0x44414548: Spec("header", "<LL", ["version", "index"]),
     M(0x01): Spec("test", "<f", ["test_val"]),  
-    M(0x02): Spec("canard_cmd", "<ff", ["cmd_angle", "ref_signal"]),
-    M(0x03): Spec("controller_input", "<fffff", ["roll_angle", "roll_rate", "canard_angle", "p_dyn", "canard_coeff"]),
-    M(0x06): Spec("encoder", "<f?", ["angle", "is_dead"]),
-    M(0x10): Spec("movella_pt1", "<fff",
-    [
-        "movella_acc_x", "movella_acc_y", "movella_acc_z",
-    ]),
-    M(0x11): Spec("movella_pt2", "<fff",
-    [
-        "movella_gyr_x", "movella_gyr_y", "movella_gyr_z",
-    ]),
-    M(0x12): Spec("movella_pt3", "<ffffL?",
-    [
-        "movella_mag_x", "movella_mag_y", "movella_mag_z",
-        "movella_bar",
-        "movella_time",
-        "movella_is_dead",
-    ]),
-    M(0x13): Spec("ekf_ctx_pt1", "<fffff",
-    [
-        "attitude_w", "attitude_x", "attitude_y", "attitude_z",
-        "altitude",
-    ]),
-    M(0x14): Spec("ekf_ctx_pt2", "<fffff",
-    [
-        "rates_x", "rates_y", "rates_z",
-        "CL", "delta", 
-    ]),
-    M(0x15): Spec("ekf_ctx_pt3", "<fffL",
-    [
-        "velocity_x", "velocity_y", "velocity_z",
-         "t"
-    ]),
     
-    M(0x16): Spec("pololu_pt1", "<fff",
+    M(0x02): Spec("navigator_pt1", "<ffffff",
     [
-        "pololu_acc_x", "pololu_acc_y", "pololu_acc_z",
+        "q_w", "q_x", "q_y", "q_z", "altitude", "norm",
     ]),
-    M(0x17): Spec("pololu_pt2", "<fff",
+    M(0x03): Spec("navigator_pt2", "<ffffff",
     [
-        "pololu_gyr_x", "pololu_gyr_y", "pololu_gyr_z",
+        "vel_x", "vel_y", "vel_z",
+        "rate_x", "rate_y", "rate_z",
     ]),
-    M(0x18): Spec("pololu_pt3", "<ffffL?",
+    M(0x04): Spec("controller", "<fff",
     [
-        "pololu_mag_x", "pololu_mag_y", "pololu_mag_z",
-        "pololu_bar",
-        "pololu_time",
-        "pololu_is_dead",
+        "command", "roll_target", "canard_coeff",
     ]),
-    M(0x19): Spec("raw_pololu_pt1", "<hhhhhh",
+
+    M(0x05): Spec("board_imu", "<ffffff",
     [
-        "acc_x", "acc_y", "acc_z",
+        "accel_x", "accel_y", "accel_z",
         "gyro_x", "gyro_y", "gyro_z",
     ]),
-    M(0x1A): Spec("raw_pololu_pt2", "<hhhih",
+    M(0x06): Spec("board_baro", "<ff", ["baro", "thermometer"]),
+
+    M(0x07): Spec("board_mag", "<ffffff",
+    [
+        "accel_x", "accel_y", "accel_z",
+        "mag_x", "mag_y", "mag_z",
+    ]),
+    M(0x08): Spec("movella_pt1", "<ffffff",
+    [
+        "accel_x", "accel_y", "accel_z",
+        "gyro_x", "gyro_y", "gyro_z",
+    ]),
+    M(0x09): Spec("movella_pt2", "<ffff",
     [
         "mag_x", "mag_y", "mag_z",
-        "baro_pres", "baro_temp"
+        "baro",
+    ]),
+    M(0x0A): Spec("movella_pt3", "<ffff",
+    [
+        "q_w", "q_x", "q_y", "q_z",
+    ]),
+    M(0x0C): Spec("ad_accel", "<fff",
+    [
+        "accel_x", "accel_y", "accel_z",
+    ]),
+    M(0x0D): Spec("ad_gyro", "<f", ["gyro"]),
+
+    M(0x0E): Spec("servo_motor", "<fff",
+    [
+        "angle", "curr", "temp",
     ]),
 
     # Insert new types above this line in the format:
@@ -104,23 +97,63 @@ def main(argv=None):
     args = parse_argv(argv or sys.argv)
     with open(args.infile, "rb") as f:
         data = f.read()
-    # Loop through message regions
-    for pos in range(0, len(data), MAX_MSG_DATA_LENGTH):
-        type_int, timestamp = struct.unpack_from("<LL", data, pos)
-        print(f"[{timestamp}] ", end="")
-        try:
-            spec = FORMATS[type_int]
-            print(f"{spec.name} (type ", end="")
-            if spec.name != "header":
-                print(type_int >> 16, end="")
-            else:
-                print("\"HEAD\"", end="")
-            print(") with")
-            values = struct.unpack_from(spec.format, data, pos + 8)
-            for field, value in zip(spec.fields, values):
-                print(f"    {field}: {value}")
-        except KeyError:
-            print(f"unknown type 0x{type_int:08x} with\n    unknown data:", data[pos + 8:pos + MAX_MSG_DATA_LENGTH])
+
+    txt_filename = args.infile + "-parsed.txt"
+    csv_filename = args.infile + "-parsed.csv"
+
+    # Collect all CSV columns
+    csv_columns = ["timestamp"]
+    for spec in FORMATS.values():
+        if spec.name == "header":
+            continue
+        for field in spec.fields:
+            name = f"{spec.name}.{field}"
+            if name not in csv_columns:
+                csv_columns.append(name)
+
+    csv_rows = []
+
+    with open(txt_filename, "w") as txt_file:
+        # Loop through message regions
+        for pos in range(0, len(data), MAX_MSG_DATA_LENGTH):
+            type_int, timestamp = struct.unpack_from("<LL", data, pos)
+
+            row = {col: "" for col in csv_columns}
+            # convert tenth_ms to ms
+            row["timestamp"] = timestamp / 10.0
+
+            print(f"[{timestamp}] ", end="", file=txt_file)
+
+            try:
+                spec = FORMATS[type_int]
+
+                print(f"{spec.name} (type ", end="", file=txt_file)
+                if spec.name != "header":
+                    print(type_int >> 16, end="", file=txt_file)
+                else:
+                    print("\"HEAD\"", end="", file=txt_file)
+                print(") with", file=txt_file)
+
+                values = struct.unpack_from(spec.format, data, pos + 8)
+
+                for field, value in zip(spec.fields, values):
+                    print(f"    {field}: {value}", file=txt_file)
+
+                    if spec.name != "header":
+                        row[f"{spec.name}.{field}"] = value
+
+            except KeyError:
+                print(
+                    f"unknown type 0x{type_int:08x} with\n    unknown data: {data[pos + 8:pos + MAX_MSG_DATA_LENGTH]}",
+                    file=txt_file,
+                )
+
+            csv_rows.append(row)
+
+    with open(csv_filename, "w", newline="") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=csv_columns)
+        writer.writeheader()
+        writer.writerows(csv_rows)
 
 if __name__ == "__main__":
     main()
