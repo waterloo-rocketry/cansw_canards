@@ -31,64 +31,61 @@ format quick reference:
 FORMATS = {
     0x44414548: Spec("header", "<LL", ["version", "index"]),
     M(0x01): Spec("test", "<f", ["test_val"]),  
-    M(0x02): Spec("canard_cmd", "<ff", ["cmd_angle", "ref_signal"]),
-    M(0x03): Spec("controller_input", "<fffff", ["roll_angle", "roll_rate", "canard_angle", "p_dyn", "canard_coeff"]),
-    M(0x06): Spec("encoder", "<f?", ["angle", "is_dead"]),
-    M(0x10): Spec("movella_pt1", "<fff",
+    
+    M(0x02): Spec("navigator_pt1", "<fffffL",
     [
-        "movella_acc_x", "movella_acc_y", "movella_acc_z",
+        "orient_w", "orient_x", "orient_y", "orient_z", "altitude", "variance_norm",
     ]),
-    M(0x11): Spec("movella_pt2", "<fff",
-    [
-        "movella_gyr_x", "movella_gyr_y", "movella_gyr_z",
-    ]),
-    M(0x12): Spec("movella_pt3", "<ffffL?",
-    [
-        "movella_mag_x", "movella_mag_y", "movella_mag_z",
-        "movella_bar",
-        "movella_time",
-        "movella_is_dead",
-    ]),
-    M(0x13): Spec("ekf_ctx_pt1", "<fffff",
-    [
-        "attitude_w", "attitude_x", "attitude_y", "attitude_z",
-        "altitude",
-    ]),
-    M(0x14): Spec("ekf_ctx_pt2", "<fffff",
-    [
-        "rates_x", "rates_y", "rates_z",
-        "CL", "delta", 
-    ]),
-    M(0x15): Spec("ekf_ctx_pt3", "<fffL",
+    M(0x03): Spec("navigator_pt2", "<ffffff",
     [
         "velocity_x", "velocity_y", "velocity_z",
-         "t"
+        "angular_velocity_x", "angular_velocity_y", "angular_velocity_z",
     ]),
-    
-    M(0x16): Spec("pololu_pt1", "<fff",
+    M(0x04): Spec("controller", "<fff",
     [
-        "pololu_acc_x", "pololu_acc_y", "pololu_acc_z",
+        "command", "roll_target", "canard_coeff",
     ]),
-    M(0x17): Spec("pololu_pt2", "<fff",
+
+    M(0x05): Spec("board_imu", "<ffffff",
     [
-        "pololu_gyr_x", "pololu_gyr_y", "pololu_gyr_z",
+        "accelerometer_x", "accelerometer_y", "accelerometer_z",
+        "gyroscope_x", "gyroscope_y", "gyroscope_z",
     ]),
-    M(0x18): Spec("pololu_pt3", "<ffffL?",
+    M(0x06): Spec("board_barometer", "<Ll", ["barometer", "thermometer"]),
+
+    M(0x07): Spec("board_mag", "<ffffff",
     [
-        "pololu_mag_x", "pololu_mag_y", "pololu_mag_z",
-        "pololu_bar",
-        "pololu_time",
-        "pololu_is_dead",
+        "accelerometer_x", "accelerometer_y", "accelerometer_z",
+        "magnetometer_x", "magnetometer_y", "magnetometer_z",
     ]),
-    M(0x19): Spec("raw_pololu_pt1", "<hhhhhh",
+    M(0x08): Spec("movella_pt1", "<ffffff",
     [
-        "acc_x", "acc_y", "acc_z",
-        "gyro_x", "gyro_y", "gyro_z",
+        "accelerometer_x", "accelerometer_y", "accelerometer_z",
+        "gyroscope_x", "gyroscope_y", "gyroscope_z",
     ]),
-    M(0x1A): Spec("raw_pololu_pt2", "<hhhih",
+    M(0x09): Spec("movella_pt2", "<fffL",
     [
-        "mag_x", "mag_y", "mag_z",
-        "baro_pres", "baro_temp"
+        "magnetometer_x", "magnetometer_y", "magnetometer_z",
+        "barometer",
+    ]),
+    M(0x0A): Spec("movella_pt3", "<ffff",
+    [
+        "orient_w", "orient_x", "orient_y", "orient_z",
+    ]),
+    M(0x0B): Spec("movella_pt4", "<ffffff",
+    [
+        "angular_velocity_x", "angular_velocity_y", "angular_velocity_z",
+        "velocity_x", "velocity_y", "velocity_z",
+    ]),
+    M(0x0C): Spec("ad_accel", "<fff",
+    [
+        "accelerometer_x", "accelerometer_y", "accelerometer_z",
+    ]),
+    M(0x0D): Spec("ad_gyro", "<l", ["gyroscope"]),
+
+    M(0x0E): Spec("servo_motor", "<lll",
+    [
+        "motor_angle", "motor_current", "motor_temperature",
     ]),
 
     # Insert new types above this line in the format:

@@ -284,7 +284,7 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 			sensor_handler_state.board_baro_stats.failure_count++;
 		}
 
-		ctx->last_mag_timestamp_ms = baro_timestamp_ms;
+		ctx->last_baro_timestamp_ms = baro_timestamp_ms;
 	} else {
 		log_text(1, LOG_LVL_WARN, "SensorHandler", "Board Baro failed. CODE: %d", sensor_status);
 		board_data->board_baro.is_new = false;
