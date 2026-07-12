@@ -294,7 +294,7 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	out->ad_meas.ad_accel.is_new = ready_packet->ad_accel_status;
 
 	out->ad_meas.ad_gyro.meas = ready_packet->ad_gyro;
-	out->ad_meas.ad_accel.is_new = ready_packet->ad_gyro_status;
+	out->ad_meas.ad_gyro.is_new = ready_packet->ad_gyro_status;
 
 	out->motor_encoder_meas.meas = ready_packet->motor_encoder;
 	out->motor_encoder_meas.is_new = true;
