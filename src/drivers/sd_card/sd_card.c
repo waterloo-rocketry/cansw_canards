@@ -9,8 +9,13 @@
 
 #include "application/logger/log.h"
 
-volatile uint64_t total_bytes = 0;
-volatile uint32_t num_writes = 0;
+static uint32_t total_bytes = 0;
+static uint32_t num_writes = 0;
+extern volatile uint32_t write_dma_sum_count;
+extern volatile uint32_t read_dma_sum_count;
+extern volatile uint32_t error_dma_count;
+extern volatile uint32_t error_timeout_count;
+extern volatile uint32_t error_other_count;
 
 lfs_t g_fs_obj;
 
@@ -23,7 +28,7 @@ sd_card_health_t sd_card_health = {0};
 // Only 1 SD card mutex is needed because only 1 sd card exists
 SemaphoreHandle_t sd_mutex = NULL;
 
-#define SD_FILE_BUFFER_SIZE 512
+#define SD_FILE_BUFFER_SIZE 2048
 
 // Static 32-byte aligned file buffer for lfs_file_opencfg.
 // Prevents LittleFS from heap-allocating an unaligned per-file cache which
@@ -203,8 +208,71 @@ w_status_t sd_card_file_create(const char *file_name) {
 	return W_SUCCESS;
 }
 
-w_status_t sd_card_file_log_open(sd_card_lfs_file_t *file, ){
-	
+
+w_status_t sd_card_log_open(sd_lfs_file_t *lfs_file,
+							  bool is_append) {
+	// validate args
+	if ((!sd_card_health.is_init) || (NULL == lfs_file)) {
+		return W_INVALID_PARAM;
+	}
+	if ((lfs_file->state) != SD_FILE_NOT_INIT) {
+		return W_FAILURE;
+	}
+
+	/* Acquire the mutex */
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+
+	/* Open the file in write mode.
+	 * Use LFS_O_WRONLY | LFS_O_APPEND to open always for safety in case file wasn't created
+	 * successfully for some reason. This is a failsafe
+	 */
+	int flags = LFS_O_WRONLY | LFS_O_CREAT | (is_append ? LFS_O_APPEND : LFS_O_TRUNC);
+	int res = lfs_file_opencfg(&g_fs_obj, &(lfs_file->file), lfs_file->filename, flags, &(lfs_file->sd_file_cfg));
+	if (res != 0) {
+		xSemaphoreGive(sd_mutex);
+		lfs_file->state = SD_FILE_ERROR;
+		sd_card_health.err_count++;
+		return W_FAILURE;
+	}
+
+	lfs_file->state = (is_append? SD_FILE_WRITE_APPEND: SD_FILE_WRITE_TRUNC);
+	xSemaphoreGive(sd_mutex);
+	return W_SUCCESS;
+}
+
+
+w_status_t sd_card_log_write(sd_lfs_file_t *lfs_file, const char *buffer, uint32_t bytes_to_write,
+							  bool is_append, uint32_t *bytes_written) {
+	// validate args
+	if ((!sd_card_health.is_init) || (NULL == lfs_file)) {
+		return W_INVALID_PARAM;
+	}
+	if ((lfs_file->state) != (is_append? SD_FILE_WRITE_APPEND: SD_FILE_WRITE_TRUNC)) {
+		return W_FAILURE;
+	}
+
+	/* Acquire the mutex */
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+	/* Write data from buffer to file. */
+	int res = lfs_file_write(&g_fs_obj, &(lfs_file->file), buffer, bytes_to_write);
+	if (res < 0) {
+		sd_card_health.err_count++;
+		lfs_file->state = SD_FILE_ERROR;
+		return W_FAILURE;
+	}
+	*bytes_written = (uint32_t)res;
+
+	total_bytes +=  (uint32_t)res;
+	num_writes++;
+	xSemaphoreGive(sd_mutex);
+	sd_card_health.write_count++;
+	return W_SUCCESS;
 }
 
 w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
@@ -244,5 +312,7 @@ health_status_t sd_card_get_status(void) {
 			 sd_card_health.read_count,
 			 sd_card_health.write_count);
 
+	log_text(10, LOG_LVL_INFO, "sd_card", 
+		"ERR DMA %" PRIu32 ", ERR TIME %" PRIu32 ", ERR OTHER %" PRIu32 , error_dma_count, error_timeout_count, error_other_count);
 	return status;
 }

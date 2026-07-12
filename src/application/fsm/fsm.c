@@ -105,30 +105,30 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 	navigator_output_t navigator_output = {0};
 	controller_output_t controller_output = {0};
 
-	// TODO: ask tristan how to get behaviour of first cycle
-	switch (p_ctx->curr_state) {
-		case STATE_IDLE:
-			p_ctx->p_navigator_context->last_run_tenth_ms = timestamp_tenth_ms;
-			break;
+	// // TODO: ask tristan how to get behaviour of first cycle
+	// switch (p_ctx->curr_state) {
+	// 	case STATE_IDLE:
+	// 		p_ctx->p_navigator_context->last_run_tenth_ms = timestamp_tenth_ms;
+	// 		break;
 
-			// both Pad filter and boost will only run estimator step
-		case STATE_PAD_FILTER:
-			// Nav enters pad filter
-			/* fall through */
-		case STATE_PAD_NAV:
-			// Nav enters flight filter
-			/* fall through */
-		case STATE_BOOST:
-			navigator_step(&navigator_input,
-						   timestamp_tenth_ms,
-						   p_ctx->p_navigator_context,
-						   &navigator_output);
-			p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
-			break;
+	// 		// both Pad filter and boost will only run estimator step
+	// 	case STATE_PAD_FILTER:
+	// 		// Nav enters pad filter
+	// 		/* fall through */
+	// 	case STATE_PAD_NAV:
+	// 		// Nav enters flight filter
+	// 		/* fall through */
+	// 	case STATE_BOOST:
+	// 		navigator_step(&navigator_input,
+	// 					   timestamp_tenth_ms,
+	// 					   p_ctx->p_navigator_context,
+	// 					   &navigator_output);
+	// 		p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
+	// 		break;
 
-			// both act allowed and recovery will only run estimator and controller step
-		case STATE_ACT_ALLOWED:
-		case STATE_RECOVERY:
+	// 		// both act allowed and recovery will only run estimator and controller step
+	// 	case STATE_ACT_ALLOWED:
+	// 	case STATE_RECOVERY:
 			navigator_step(&navigator_input,
 						   timestamp_tenth_ms,
 						   p_ctx->p_navigator_context,
@@ -141,7 +141,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			controller_input.canard_angle_rad = p_fsm_input->p_sensor_data->motor_encoder_meas.meas;
 			/****************************************************************/
 
-			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new) {
+			// if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new) {
 				controller_step(&controller_input,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
@@ -153,17 +153,17 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 					(float32_t)(controller_output.canard_command_angle_rad * DEG_PER_RAD);
 				ak45_send_position_cmd(motor_angle_deg);
 				/****************************************************************/
-			}
-			break;
+			// }
+	// 		break;
 
-			// etc for more cases...
-		case STATE_SLEEPY:
-			break;
+	// 		// etc for more cases...
+	// 	case STATE_SLEEPY:
+	// 		break;
 
-		default:
-			// TODO: how to deal with the other cases
-			break;
-	}
+	// 	default:
+	// 		// TODO: how to deal with the other cases
+	// 		break;
+	// }
 }
 
 void fsm_task(void *args) {

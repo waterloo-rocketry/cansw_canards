@@ -71,8 +71,6 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 	handle->write_mutex = xSemaphoreCreateMutex();
 	handle->transfer_complete = xSemaphoreCreateBinary();
 	if ((NULL == handle->transfer_complete) || (NULL == handle->write_mutex)) {
-		vSemaphoreDelete(handle->write_mutex);
-		vSemaphoreDelete(handle->transfer_complete);
 		log_text(10, LOG_LVL_FATAL, "uart", "initmtxfail %d", channel);
 		return W_FAILURE;
 	}

@@ -10,7 +10,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 
 /* Size of a single buffer (bytes) */
-#define LOG_BUFFER_SIZE 32768
+#define LOG_BUFFER_SIZE 36864
 /* Size of each message region in text buffers (bytes) */
 #define MAX_TEXT_MSG_LENGTH 128
 /**

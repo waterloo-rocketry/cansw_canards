@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "littlefs/lfs.h"
+#include "rocketlib/include/stm32/littlefs_sd_shim.h"
 
 #include "application/health_checks/health_checks.h"
 
@@ -21,12 +23,20 @@ typedef struct {
 	uint32_t err_count;
 } sd_card_health_t;
 
-/**
- * @brief a lfs file that will be used for continuous log
- */
+typedef enum {
+	SD_FILE_NOT_INIT,
+	SD_FILE_WRITE_APPEND,
+	SD_FILE_WRITE_TRUNC,
+	SD_FILE_ERROR
+} sd_lfs_state_t;
+
+
 typedef struct {
-	lfs_file_t *file;
-} sd_card_lfs_file_t;
+	const struct lfs_file_config sd_file_cfg;
+	char filename[8 + 1 + 3 + 1];
+	lfs_file_t file;
+ 	sd_lfs_state_t state;
+} sd_lfs_file_t;
 
 /**
  * @brief Initialize the SD card hardware and create the mutex for thread safety.
@@ -99,6 +109,12 @@ w_status_t sd_card_file_create(const char *file_name);
  * @return w_status_t - W_SUCCESS if the SD card is in READY state, W_FAILURE otherwise.
  */
 w_status_t sd_card_is_writable(SD_HandleTypeDef *p_sd_handle);
+
+
+w_status_t sd_card_log_open(sd_lfs_file_t *lfs_file, bool is_append);
+
+w_status_t sd_card_log_write(sd_lfs_file_t *lfs_file, const char *buffer, uint32_t bytes_to_write,
+							  bool is_append, uint32_t *bytes_written);
 
 /**
  * @brief Report SD card module health status

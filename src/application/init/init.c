@@ -34,14 +34,11 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
+
+#include <inttypes.h>
+
 extern I2C_HandleTypeDef hi2c2;
 extern I2C_HandleTypeDef hi2c4;
-
-
-extern volatile uint64_t write_dma_count;
-extern volatile uint64_t read_dma_count;
-extern volatile uint64_t total_bytes;
-extern volatile uint32_t num_writes;
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -50,6 +47,7 @@ extern volatile uint32_t num_writes;
 #define INIT_RETRY_DELAY_MS 1000
 
 static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1; // 10 seconds
+static const uint32_t LOG_HEART_BEAT_MS = 1000; // this occurs just before updating status
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -94,19 +92,13 @@ static void system_init_task(void *arg) {
 	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status = 
-		// W_SUCCESS;
-	sd_card_init();
-	if (non_crit_status != W_SUCCESS) {
-		HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
-	}
+	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
 	// non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
-	// HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
-		HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
+		HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
 	}
 
 	w_status_t status = W_SUCCESS;
@@ -127,9 +119,9 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	status |= adxl380_init();
+	// status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
+	// status |= adxrs649_init();
 	status |= ms5611_init();
 	status |= iis2mdc_init();
 	status |= power_handler_init();
@@ -149,52 +141,52 @@ static void system_init_task(void *arg) {
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	// task_status &= xTaskCreate(fsm_task,
-	// 						   "fsm",
-	// 						   8192, // TODO: set the correct size
-	// 						   NULL,
-	// 						   fsm_task_priority,
-	// 						   &fsm_task_handle);
+	task_status &= xTaskCreate(fsm_task,
+							   "fsm",
+							   6144, // TODO: double check before flight
+							   NULL,
+							   fsm_task_priority,
+							   &fsm_task_handle);
 
-	// task_status &= xTaskCreate(health_check_task,
-	// 						   "health",
-	// 						   512,
-	// 						   NULL,
-	// 						   health_checks_task_priority,
-	// 						   &health_checks_task_handle);
+	task_status &= xTaskCreate(health_check_task,
+							   "health",
+							   512,
+							   NULL,
+							   health_checks_task_priority,
+							   &health_checks_task_handle);
 
-	// task_status &= xTaskCreate(can_handler_task_rx,
-	// 						   "can handler rx",
-	// 						   256,
-	// 						   NULL,
-	// 						   can_handler_rx_priority,
-	// 						   &can_handler_handle_rx);
+	task_status &= xTaskCreate(can_handler_task_rx,
+							   "can handler rx",
+							   256,
+							   NULL,
+							   can_handler_rx_priority,
+							   &can_handler_handle_rx);
 
-	// task_status &= xTaskCreate(can_handler_task_tx,
-	// 						   "can handler tx",
-	// 						   256,
-	// 						   NULL,
-	// 						   can_handler_tx_priority,
-	// 						   &can_handler_handle_tx);
+	task_status &= xTaskCreate(can_handler_task_tx,
+							   "can handler tx",
+							   256,
+							   NULL,
+							   can_handler_tx_priority,
+							   &can_handler_handle_tx);
 
-	// task_status &= xTaskCreate(
-	// 	movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+	task_status &= xTaskCreate(
+		movella_task, "movella", 512, NULL, movella_task_priority, &movella_task_handle);
 
-	// task_status &= xTaskCreate(ms5611_task,
-	// 						   "ms5611",
-	// 						   512,
-	// 						   NULL,
-	// 						   ms5611_task_priority,
-	// 						   &ms5611_task_handle); // TODO: set the correct size
+	task_status &= xTaskCreate(ms5611_task,
+							   "ms5611",
+							   256,
+							   NULL,
+							   ms5611_task_priority,
+							   &ms5611_task_handle); // TODO: set the correct size
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
-	// task_status &= xTaskCreate(ad_breakout_board_task,
-	// 						   "ad board task",
-	// 						   2560, // TODO: set when sure of size
-	// 						   NULL,
-	// 						   ad_breakout_task_priority,
-	// 						   &ad_breakout_task_handle);
+	task_status &= xTaskCreate(ad_breakout_board_task,
+							   "ad board task",
+							   256, // TODO: set when sure of size
+							   NULL,
+							   ad_breakout_task_priority,
+							   &ad_breakout_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -206,20 +198,16 @@ static void system_init_task(void *arg) {
 	}
 	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
 
-	vTaskDelay(500);
-	// its blinky now
-	uint16_t i = 0;
-	// gpio_toggle(GPIO_PIN_BLUE_LED, 0);
-	while (1) {
-		if (++i == 1000) {
-			// gpio_toggle(GPIO_PIN_RED_LED, 0);
-			gpio_toggle(GPIO_PIN_GREEN_LED, 0);
-			i = 0;
-		}
-		vTaskDelay(1);
 
-		for (int i = 0 ; i < 20; i ++){
-			log_text(10, LOG_LVL_DEBUG, "SystemInit", "WRITE: %lu READ %lu, TOTAL: %lu, #: %lu", write_dma_count, read_dma_count, total_bytes, num_writes);
+	// its blinky now
+	while (1) {
+		gpio_toggle(GPIO_PIN_RED_LED, 1);
+		vTaskDelay(500);
+		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		vTaskDelay(500);
+		for (int i = 0; i < 50; i ++) {
+			log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
+
 		}
 	}
 }

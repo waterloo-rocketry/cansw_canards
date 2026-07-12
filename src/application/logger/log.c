@@ -15,8 +15,13 @@
 #include "semphr.h"
 #include "third_party/printf/printf.h"
 
+
+#include "gpio.h"
+
 // number of times to try writing a log message in case fails once
 #define LOG_WRITE_TRY_COUNT 2
+
+bool write_success = true;
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
@@ -27,13 +32,15 @@ static char data_log_filename[8 + 1 + 3 + 1] = "XXXXXXXX.BIN";
 extern lfs_t g_fs_obj;
 struct lfs_info info;
 
-// int err = LFSSTAT(&lfs, LOG_RUN_COUNT_FILENAME, &info);
+static uint64_t g_msg_num = 0;
 
-// if (err == LFS_ERR_NOENT) {
-// 	lfs_file_t file;
-// 	lfs_file_open(&lfs, &file,LOG_RUN_COUNT_FILENAME, LFS_O_WRONLY | LFS_O_CREAT);
-// 	lfs_file_close(&lfs, &file);
-// }
+#define SD_FILE_BUFFER_SIZE 2048
+
+static uint8_t text_file_buf[SD_FILE_BUFFER_SIZE] = {0};
+static uint8_t data_file_buf[SD_FILE_BUFFER_SIZE] = {0};
+
+static sd_lfs_file_t text_log_file = {.sd_file_cfg = {.buffer = text_file_buf}};
+static sd_lfs_file_t data_log_file = {.sd_file_cfg = {.buffer = data_file_buf}};
 
 typedef struct {
 	bool is_text;
@@ -222,7 +229,8 @@ w_status_t log_init(void) {
 	uint32_t size = 0;
 	w_status_t status =
 		sd_card_file_read(LOG_RUN_COUNT_FILENAME, run_count_buf, sizeof(run_count_buf), &size);
-	// Get new run count
+
+		// Get new run count
 	uint32_t run_count = 0;
 	if ((W_SUCCESS == status) && (sizeof(run_count_buf) >= size)) {
 		memcpy(&run_count, run_count_buf, sizeof(run_count));
@@ -243,12 +251,21 @@ w_status_t log_init(void) {
 		LOG_RUN_COUNT_FILENAME, run_count_buf, sizeof(run_count_buf), false, &size);
 
 	// Form log filenames using the run count
-	snprintf_(text_log_filename, sizeof(text_log_filename), "%08" PRIx32 ".TXT", run_count);
-	snprintf_(data_log_filename, sizeof(data_log_filename), "%08" PRIx32 ".BIN", run_count);
+	snprintf_((text_log_file.filename), sizeof(text_log_file.filename), "%08" PRIx32 ".TXT", run_count);
+	snprintf_((data_log_file.filename), sizeof(data_log_file.filename), "%08" PRIx32 ".BIN", run_count);
 
 	// Create log files
-	status |= sd_card_file_create(text_log_filename);
-	status |= sd_card_file_create(data_log_filename);
+	status |= sd_card_file_create(text_log_file.filename);
+	status |= sd_card_file_create(data_log_file.filename);
+
+	status |= sd_card_log_open(&text_log_file, true);
+	status |= sd_card_log_open(&data_log_file, true);
+
+	
+	if (status != W_SUCCESS) {
+		// Log non-critical initialization failure
+		HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
+	}
 
 	if (W_SUCCESS == status) {
 		logger_health.is_init = true;
@@ -264,6 +281,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	// inherently critically affect the ability to write the log message
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
+	g_msg_num++;
 
 	// Validate arguments
 	if ((!logger_health.is_init) || (NULL == source) || (NULL == format)) {
@@ -333,8 +351,8 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	// Write log message header to region
 	chars_written += snprintf_(msg_dest + chars_written,
 							   MAX_TEXT_MSG_LENGTH - chars_written,
-							   "[%" PRIu32 "] %s; %s; ",
-							   timestamp,
+							   "[%" PRIu32 "] [%" PRIu64 "] %s; %s; ",
+							   timestamp, g_msg_num,
 							   level_string,
 							   source);
 	// If truncated, set first char to '!'
@@ -434,10 +452,12 @@ void log_task(void *argument) {
 			// Retrieve number of completed log messages in the received buffer
 			uint32_t msgs_done = 0;
 			uint32_t max_msgs = TEXT_MSGS_PER_BUFFER;
-			char *filename = text_log_filename;
+			// char *filename = text_log_filename;
+			sd_lfs_file_t * lfs_file = &text_log_file;
 			if (!buffer_to_print->is_text) {
 				max_msgs = DATA_MSGS_PER_BUFFER;
-				filename = data_log_filename;
+				// filename = data_log_filename;
+				lfs_file = &data_log_file;
 			}
 			while (msgs_done < max_msgs) {
 				if (xSemaphoreTake(buffer_to_print->msgs_done_semaphore, 10) == pdPASS) {
@@ -451,19 +471,27 @@ void log_task(void *argument) {
 			// try several times to buffer to SD card
 			uint32_t size = 0;
 			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
-				gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
 
-				log_text(0, LOG_LVL_DEBUG, "SD", "START WRITE LOG");
-				if (sd_card_file_write(
-						filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
+				if (sd_card_log_write(
+						lfs_file, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
 					W_SUCCESS) {
-					log_text(0, LOG_LVL_DEBUG, "SD", "END WRITE LOG");
-					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+					write_success = true;
 					break; // Successfully wrote the buffer
 				} else {
-					log_text(0, LOG_LVL_DEBUG, "SD", "ERROR WRITE LOG");
+					write_success = false;
 					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
 				}
+
+				if (sd_card_log_write(
+						&data_log_file, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
+					W_SUCCESS) {
+					write_success = true;
+					break; // Successfully wrote the buffer
+				} else {
+					write_success = false;
+					gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+				}
+
 				if ((LOG_WRITE_TRY_COUNT - 1) == i) {
 					logger_health.buffer_flush_fails++;
 					break; // Failed to write after all attempts
@@ -513,6 +541,14 @@ health_status_t logger_get_status(void) {
 			 logger_health.no_full_buf_moments,
 			 logger_health.buffer_flush_fails,
 			 logger_health.unsafe_buffer_flushes);
+
+	// use health checks to determine led state
+	if (write_success) {
+		gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_LOW, 0);
+	} else {
+		gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
+	}
+	write_success = false;
 
 	return status;
 }
