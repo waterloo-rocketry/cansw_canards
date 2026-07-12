@@ -30,7 +30,8 @@ w_status_t telemetry_init(void);
 /**
  * @brief Register a new telemetry source
  * @param config Pointer to the telemetry source configuration
- * @note Initializes the config with name, log_function, flight_phase_state, and period_ms with specified values. Initializes last_logged_ms and due_date_ms to 0.
+ * @note Initializes the config with name, log_function, flight_phase_state, and period_ms with
+ * specified values. Initializes last_logged_ms and due_date_ms to 0.
  * @return Status of registration
  */
 w_status_t telemetry_register(const telemetry_source_config_t *config);
