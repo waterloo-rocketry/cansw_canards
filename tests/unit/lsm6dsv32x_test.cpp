@@ -144,6 +144,10 @@ TEST_F(Lsm6dsv32xTest, GetGyroAccDataDataReady) {
     EXPECT_EQ(status, W_SUCCESS);
 }
 
+TEST_F(Lsm6dsv32xTest, InteruptSuccessOnNotInit) {
+    EXPECT_EQ(lsm6dsv32x_int1_isr_handler(), W_SUCCESS);
+}
+
 // TODO: figure out how to test convertion
 // TEST_F(Lsm6dsv32xTest, GetGyroAccDataConvertsFakeFIFOData) {
 //     // Arrange
