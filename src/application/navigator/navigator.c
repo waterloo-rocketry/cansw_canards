@@ -113,7 +113,7 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
     container.navigator_pt1.altitude = p_ctx->gnc_navigator_ctx.x.altitude;
     container.navigator_pt1.variance_norm = p_output->cov_norm;
 
-    log_data(1, LOG_TYPE_NAVIGATOR_PT1, (log_data_container_t *)&codegen_sensor_input);
+    log_data(1, LOG_TYPE_NAVIGATOR_PT1, (log_data_container_t *)&container);
 
     container.navigator_pt2.velocity.x = p_ctx->gnc_navigator_ctx.x.vel.x;
     container.navigator_pt2.velocity.y = p_ctx->gnc_navigator_ctx.x.vel.y;
@@ -122,7 +122,7 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
     container.navigator_pt2.angular_velocity.y = p_ctx->gnc_navigator_ctx.x.ang_rate.y;
     container.navigator_pt2.angular_velocity.z = p_ctx->gnc_navigator_ctx.x.ang_rate.z;
 
-    log_data(1, LOG_TYPE_NAVIGATOR_PT2, (log_data_container_t *)&codegen_sensor_input);
+    log_data(1, LOG_TYPE_NAVIGATOR_PT2, (log_data_container_t *)&container);
 
     log_text(1, LOG_LVL_INFO, "padfilter", "board_baro bias %f, mti_baro %f",
         p_ctx->gnc_navigator_ctx.bias.board_baro, p_ctx->gnc_navigator_ctx.bias.mti_baro);
