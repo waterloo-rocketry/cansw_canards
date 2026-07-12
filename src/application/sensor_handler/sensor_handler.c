@@ -294,6 +294,13 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 	// convert gyro from dps to rad/sec
 	ad_data->ad_gyro.meas = (ad_data->ad_gyro.meas) * RAD_PER_DEG;
 
+    // AD gyro raw mV for calibration
+	log_data_container_t log_container = {0};
+    log_container.ad_gyro.gyroscope = ad_data->ad_gyro.meas;
+
+	log_data(1, LOG_TYPE_AD_GYRO, &log_container);
+
+
 	// convert accel from g to m/s^2
 	ad_data->ad_accel.meas.x = (ad_data->ad_accel.meas.x) * M_S2_PER_G;
 	ad_data->ad_accel.meas.y = (ad_data->ad_accel.meas.y) * M_S2_PER_G;
@@ -602,12 +609,8 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 
 	log_data(1, LOG_TYPE_AD_ACCEL, &log_container);
 
-	// AD gyro
-	log_container.ad_gyro.gyroscope = imu_output->ad_meas.ad_gyro.meas;
+    // do not log AD Gyro here, log it in the raw read so we get raw mV for calibration
 
-	log_data(1, LOG_TYPE_AD_GYRO, &log_container);
-
-    log_text(1, LOG_LVL_INFO, "testinguwu", "%f", imu_output->ad_meas.ad_gyro.meas);
 	// Servo motor
 	log_container.servo_motor.motor_angle = imu_output->motor_encoder_meas.meas;
 	log_container.servo_motor.motor_current = 0;
