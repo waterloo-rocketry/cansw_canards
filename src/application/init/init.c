@@ -68,6 +68,8 @@ const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
+bool done_sys_init = false;
+
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -80,8 +82,7 @@ static void system_init_task(void *arg) {
 	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status = sd_card_init();
-	non_crit_status |= log_init();
+	w_status_t non_crit_status =  log_init();
 	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
@@ -120,6 +121,8 @@ static void system_init_task(void *arg) {
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}
+
+	done_sys_init = true;
 
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;

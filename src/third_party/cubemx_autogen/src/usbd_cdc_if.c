@@ -250,6 +250,8 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   /* USER CODE END 10 */
 }
 
+extern bool done_sys_init;
+
 /**
   * @brief Data received over USB OUT endpoint are sent over CDC interface
   *         through this function.
@@ -268,11 +270,16 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 11 */
-  // process packet
   HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET); // indicate packet received
-  for (uint32_t i = 0; i < *Len; i++) {
-      hil_parse_rx_bytes(Buf[i]);
-    }
+  if (false) {
+    // log_text(1, LOG_LVL_WARN, "hil", "CDC_Receive_HS called before sys init done");
+    // return (USBD_OK);
+  } else {
+    // process packet
+    for (uint32_t i = 0; i < *Len; i++) {
+        hil_parse_rx_bytes(Buf[i]);
+      }
+  }
     
     USBD_CDC_SetRxBuffer(&hUsbDeviceHS, &Buf[0]);
     USBD_CDC_ReceivePacket(&hUsbDeviceHS);
