@@ -2,14 +2,14 @@
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
 
-static const uint16_t TELEMETRY_MAX_SOURCES = 32; // TODO: find out real value for this
-static const uint16_t TELEMETRY_TASK_PERIOD_MS = 1; // 1000hz
+#define TELEMETRY_MAX_SOURCES 32 // TODO: find out real value for this
+#define TELEMETRY_TASK_PERIOD_MS 1 // 1000hz
 
 // struct to keep track of registered telemetry sources
 typedef struct {
+	uint32_t num_sources; // number of sources currently registered
 	telemetry_source_config_t
 		sources[TELEMETRY_MAX_SOURCES]; // array of registered telemetry sources
-	uint32_t num_sources; // number of sources currently registered
 } telemetry_registry_t;
 
 // struct to keep track of telemetry statistics
@@ -44,10 +44,10 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
  * @return health check handle for telem error
  */
 health_status_t telemetry_get_status(void) {
-	// health_status_t status = {
-	// 	.error_bitfield = 0, .module_id = MODULE_TELEMETRY, .severity = HEALTH_OK};
+	health_status_t status = {
+		.error_bitfield = 0, .module_id = MODULE_TELEMETRY, .severity = HEALTH_OK};
 
-	// return status;
+	return status;
 }
 
 /*

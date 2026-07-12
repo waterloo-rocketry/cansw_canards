@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "rocketlib/include/common.h"
 
