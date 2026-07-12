@@ -272,6 +272,86 @@ void fsm_task(void *args) {
 			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
 		#endif
 
+        // TODO: add logging for board meas
+	log_data_container_t log_container = {0};
+
+	// Board IMU
+	log_container.board_imu.accelerometer.x = (float)sensor_data.board_meas.board_imu.accel.x;
+	log_container.board_imu.accelerometer.y = (float)sensor_data.board_meas.board_imu.accel.y;
+	log_container.board_imu.accelerometer.z = (float)sensor_data.board_meas.board_imu.accel.z;
+
+	log_container.board_imu.gyroscope.x = (float)sensor_data.board_meas.board_imu.gyro.x;
+	log_container.board_imu.gyroscope.y = (float)sensor_data.board_meas.board_imu.gyro.y;
+	log_container.board_imu.gyroscope.z = (float)sensor_data.board_meas.board_imu.gyro.z;
+
+	log_data(1, LOG_TYPE_BOARD_IMU, &log_container);
+
+	// Board magnetometer
+	log_container.board_mag.accelerometer.x = (float)sensor_data.board_meas.board_imu.accel.x;
+	log_container.board_mag.accelerometer.y = (float)sensor_data.board_meas.board_imu.accel.y;
+	log_container.board_mag.accelerometer.z = (float)sensor_data.board_meas.board_imu.accel.z;
+
+	log_container.board_mag.magnetometer.x = (float)sensor_data.board_meas.board_mag.meas.x;
+	log_container.board_mag.magnetometer.y = (float)sensor_data.board_meas.board_mag.meas.y;
+	log_container.board_mag.magnetometer.z = (float)sensor_data.board_meas.board_mag.meas.z;
+
+	log_data(1, LOG_TYPE_BOARD_MAG, &log_container);
+
+	// Board barometer
+	log_container.board_barometer.barometer = sensor_data.board_meas.board_baro.meas;
+	log_container.board_barometer.thermometer = 0;
+
+	log_data(1, LOG_TYPE_BOARD_BAROMETER, &log_container);
+
+	// Movella IMU accelerometer + gyro
+	log_container.movella_pt1.accelerometer.x = (float)sensor_data.mti_meas.mti_accel.meas.x;
+	log_container.movella_pt1.accelerometer.y = (float)sensor_data.mti_meas.mti_accel.meas.y;
+	log_container.movella_pt1.accelerometer.z = (float)sensor_data.mti_meas.mti_accel.meas.z;
+
+	log_container.movella_pt1.gyroscope.x = (float)sensor_data.mti_meas.mti_gyro.meas.x;
+	log_container.movella_pt1.gyroscope.y = (float)sensor_data.mti_meas.mti_gyro.meas.y;
+	log_container.movella_pt1.gyroscope.z = (float)sensor_data.mti_meas.mti_gyro.meas.z;
+
+	log_data(1, LOG_TYPE_MOVELLA_PT1, &log_container);
+
+	// Movella magnetometer + barometer
+	log_container.movella_pt2.magnetometer.x = (float)sensor_data.mti_meas.mti_mag.meas.x;
+	log_container.movella_pt2.magnetometer.y = (float)sensor_data.mti_meas.mti_mag.meas.y;
+	log_container.movella_pt2.magnetometer.z = (float)sensor_data.mti_meas.mti_mag.meas.z;
+
+	log_container.movella_pt2.barometer = sensor_data.mti_meas.mti_baro.meas;
+
+	log_data(1, LOG_TYPE_MOVELLA_PT2, &log_container);
+
+	// Movella orientation
+	// log_container.movella_pt3.orient_w =
+	// 	(float)sensor_data.mti_meas..w;
+	// log_container.movella_pt3.orient_x =
+	// 	(float)sensor_data.mti_meas.orientation.x;
+	// log_container.movella_pt3.orient_y =
+	// 	(float)sensor_data.mti_meas.orientation.y;
+	// log_container.movella_pt3.orient_z =
+	// 	(float)sensor_data.mti_meas.orientation.z;
+
+	// log_data(1, LOG_TYPE_MOVELLA_PT3, &log_container);
+
+	// AD accelerometer
+	log_container.ad_accel.accelerometer.x = (float)sensor_data.ad_meas.ad_accel.meas.x;
+	log_container.ad_accel.accelerometer.y = (float)sensor_data.ad_meas.ad_accel.meas.y;
+	log_container.ad_accel.accelerometer.z = (float)sensor_data.ad_meas.ad_accel.meas.z;
+
+	log_data(1, LOG_TYPE_AD_ACCEL, &log_container);
+
+    // do not log AD Gyro here, log it in the raw read so we get raw mV for calibration
+
+	// Servo motor
+	log_container.servo_motor.motor_angle = sensor_data.motor_encoder_meas.meas;
+	log_container.servo_motor.motor_current = 0;
+	log_container.servo_motor.motor_temperature = 0;
+
+	log_data(1, LOG_TYPE_SERVO_MOTOR, &log_container);
+
+
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, timestamp_ms, &sensor_data);
 
