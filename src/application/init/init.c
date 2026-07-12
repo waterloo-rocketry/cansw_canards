@@ -112,7 +112,6 @@ static void system_init_task(void *arg) {
 	status |= ms5611_init();
 	// status |= iis2mdc_init();
 	status |= power_handler_init();
-	// status |= ekf_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -186,11 +185,7 @@ static void system_init_task(void *arg) {
 	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
 	// its blinky now
 	while (1) {
-		// gpio_toggle(GPIO_PIN_RED_LED, 1);
-		vTaskDelay(500);
-		// gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
-		// gpio_toggle(GPIO_PIN_BLUE_LED, 1);
+		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
 	}
 }
