@@ -4,17 +4,17 @@
 #include "application/health_checks/health_checks.h"
 #include "application/logging/logging.h"
 
-#define TELEMETRY_MAX_SOURCES 32 // TODO: find out real value for this
-#define TELEMETRY_TASK_FREQUENCY_HZ 1000 // run telemetry task at 1000hz
-#define TELEMETRY_TASK_PERIOD_MS (1 / TELEMETRY_TASK_FREQUENCY_HZ) * 1000 // period in ms for 1000hz
+static const uint16_t TELEMETRY_MAX_SOURCES = 32; // TODO: find out real value for this
+static const uint16_t TELEMETRY_TASK_PERIOD_MS = 1; // 1000hz
 
 // struct to keep track of registered telemetry sources
 typedef struct {
 	telemetry_source_config_t
 		sources[TELEMETRY_MAX_SOURCES]; // array of registered telemetry sources
-	uint32_t num_sources;
+	uint32_t num_sources; // number of sources currently registered
 } telemetry_registry_t;
 
+// struct to keep track of telemetry statistics
 typedef struct {
 	bool initialized;
 	uint16_t failed_transmissions;
