@@ -23,6 +23,8 @@ volatile uint32_t read_dma_sum_count = 0;
 volatile uint32_t error_dma_count = 0;
 volatile uint32_t error_timeout_count = 0;
 volatile uint32_t error_other_count = 0;
+volatile uint32_t total_sd_write_time = 0;
+volatile uint32_t total_num_sd_write = 0;
 
 static SD_HandleTypeDef *sd_bus_handle = &hsd2;
 
@@ -90,10 +92,10 @@ static int lfsshim_sd_read(const struct lfs_config *c, lfs_block_t block, lfs_of
 		return LFS_ERR_IO;
 	}
 
-	uint32_t block_addr = ((block) * LFS_BLK_SIZE / SD_SECTOR_SIZE)  + lfsshim_sd_first_block_offset;
+	uint32_t block_addr = ((block) * LFS_BLK_SIZE / SD_SECTOR_SIZE)  + lfsshim_sd_first_block_offset + (off / c->read_size);
 
 	w_assert((size % c->prog_size) == 0);
-	w_assert(off == 0);
+	w_assert((off % c->prog_size) == 0);
 
 	uint32_t num_blocks = size / c->prog_size;
 
@@ -147,10 +149,10 @@ static int lfsshim_sd_write(const struct lfs_config *c, lfs_block_t block, lfs_o
 		return LFS_ERR_IO;
 	}
 
-	uint32_t block_addr = ((block) * LFS_BLK_SIZE / SD_SECTOR_SIZE)  + lfsshim_sd_first_block_offset;
+	uint32_t block_addr = ((block) * LFS_BLK_SIZE / SD_SECTOR_SIZE)  + lfsshim_sd_first_block_offset + (off / c->read_size);
 
 	w_assert((size % c->read_size) == 0);
-	w_assert(off == 0);
+	w_assert((off % c->read_size) == 0);
 
 	uint32_t num_blocks = size / c->read_size;
 
@@ -184,6 +186,9 @@ static int lfsshim_sd_write(const struct lfs_config *c, lfs_block_t block, lfs_o
 		}
 		vTaskDelay(pdMS_TO_TICKS(1));
 	}
+
+	total_sd_write_time += (HAL_GetTick() - start);
+	total_num_sd_write++;
 
 	// allow for bus to still be used however do return a fault
 	if (SD_DMA_ERROR == sd_dma_state) {

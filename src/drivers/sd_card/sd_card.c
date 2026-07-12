@@ -16,6 +16,8 @@ extern volatile uint32_t read_dma_sum_count;
 extern volatile uint32_t error_dma_count;
 extern volatile uint32_t error_timeout_count;
 extern volatile uint32_t error_other_count;
+extern volatile uint32_t total_sd_write_time;
+extern volatile uint32_t total_num_sd_write;
 
 lfs_t g_fs_obj;
 
@@ -270,6 +272,12 @@ w_status_t sd_card_log_write(sd_lfs_file_t *lfs_file, const char *buffer, uint32
 
 	total_bytes +=  (uint32_t)res;
 	num_writes++;
+	res = lfs_file_sync(&g_fs_obj, &(lfs_file->file));
+	if (res < 0) {
+		sd_card_health.err_count++;
+		lfs_file->state = SD_FILE_ERROR;
+		return W_FAILURE;
+	}
 	xSemaphoreGive(sd_mutex);
 	sd_card_health.write_count++;
 	return W_SUCCESS;
@@ -306,13 +314,18 @@ health_status_t sd_card_get_status(void) {
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "sd_card",
-			 "%s files_created=%lu, reads=%lu, writes=%lu",
+			 "%s files_created=%lu, reads=%lu, writes=%lu, error=%lu",
 			 sd_card_health.is_init ? "init" : "not init",
 			 sd_card_health.file_create_count,
 			 sd_card_health.read_count,
-			 sd_card_health.write_count);
+			 sd_card_health.write_count,
+			sd_card_health.err_count);
 
 	log_text(10, LOG_LVL_INFO, "sd_card", 
 		"ERR DMA %" PRIu32 ", ERR TIME %" PRIu32 ", ERR OTHER %" PRIu32 , error_dma_count, error_timeout_count, error_other_count);
+
+	log_text(10, LOG_LVL_INFO, "sd_card", 
+		 "SD WRITE TIME %" PRIu32 ", NUM WRITE %" PRIu32 ", AVE WRITE %lf", total_sd_write_time, total_num_sd_write, ((float64_t)total_num_sd_write/(float64_t)total_sd_write_time));
+
 	return status;
 }
