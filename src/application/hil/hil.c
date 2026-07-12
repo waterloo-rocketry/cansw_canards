@@ -151,6 +151,9 @@ typedef struct {
 // static module context
 static hil_ctx_t hil_ctx;
 
+// HIL timestamp
+volatile uint32_t hil_timestamp_tenth_ms = 0;
+
 w_status_t hil_init(void) {
 	// parser starts idle with no pending packet
 	hil_ctx.is_reading_avail = false;
@@ -216,13 +219,13 @@ void hil_parse_rx_bytes(uint8_t byte) {
 			flight_phase_send_event(EVENT_INJ_OPEN);
 		}
 
-#ifdef HIL
+        // also increment timestamp as we use HIL as the timebase for timer_get_ms()
+        hil_timestamp_tenth_ms += 25; // hil gives packets at 400 hz (2.5 ms per packet)
+
+        // also unblock fsm (since tim5 is not used as the timebase in HIL)
 		unblock_fsm_hil();
-#endif
 	}
 }
-lsm6dsv32x_get_gyro_acc_data()
-w_status_t hil_lsm6dsv32x_get_gyro_acc_data
 
 w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	if (NULL == out) {
@@ -402,7 +405,7 @@ w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t
 			 tx_packet.payload.vel_z,
 			 tx_packet.payload.altitude);
 
-	vTaskDelay(10);
+	// vTaskDelay(10);
 	// log_text(1, LOG_LVL_DEBUG, "HIL", "cov_norm %f where_it_is %f, %f where_it_isnt %f, %f",
 	// tx_packet.payload.cov_norm, tx_packet.payload.where_it_is[0],
 	// tx_packet.payload.where_it_is[1], tx_packet.payload.where_it_isnt[0],

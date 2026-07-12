@@ -9,11 +9,10 @@
 #ifdef HIL
 // This is to prevent unintentionally building in HIL mode. Devs must explicitly allow HIL!
 // #warning "HIL mode enabled! Comment out this line while working on HIL then uncomment when done."
-#endif
 
-#ifdef HIL
+extern volatile uint32_t hil_timestamp_tenth_ms; // HIL timestamp in 0.1 ms units
+
 extern void unblock_fsm_hil(void);
-#endif
 
 /**
  * @brief Initialize HIL module context.
@@ -36,5 +35,7 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out);
 w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
 								 gnc_x_state_t *p_x_state, controller_input_t *p_cntl_in,
 								 controller_output_t *p_cntl_out);
+
+#endif // HIL
 
 #endif // HIL_H

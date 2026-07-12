@@ -28,8 +28,7 @@
 extern TaskHandle_t fsm_task_handle;
 
 #ifdef HIL
-static const uint16_t MAX_FSM_DELAY_MS = 10000;
-uint32_t hil_timestamp_tenth_ms = 0;
+static const uint16_t MAX_FSM_DELAY_MS = 15000;
 #else
 static const uint8_t MAX_FSM_DELAY_MS = 4;
 #endif
@@ -234,9 +233,6 @@ void fsm_task(void *args) {
 
 	hil_send_simulink_cmd(
 		&navigator_input, &navigator_output, &x_state, &controller_input, &controller_output);
-
-
-	timer_get_tenth_ms(&hil_timestamp_tenth_ms);
 #endif
 
 	while (1) {
@@ -245,21 +241,11 @@ void fsm_task(void *args) {
 			log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
 		}
 
-#ifndef HIL
 		uint32_t timestamp_tenth_ms = 0;
 
 		if (W_SUCCESS != timer_get_tenth_ms(&timestamp_tenth_ms)) {
 			// TODO: error handling
 		}
-#else 
-		uint32_t timestamp_tenth_ms = hil_timestamp_tenth_ms;
-
-		uint32_t actual_timestamp_ms = 0;
-
-		if (W_SUCCESS != timer_get_ms(&actual_timestamp_ms)) {
-			// TODO: error handling
-		}
-#endif
 
 		uint32_t timestamp_ms = timestamp_tenth_ms / MS_TO_TENTH_MS;
 
@@ -286,13 +272,8 @@ void fsm_task(void *args) {
 			gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
 		#endif
 
-#ifdef HIL
-		flight_phase_gen_sync_events(
-			g_ctx.p_flight_phase_context, g_ctx.curr_state, actual_timestamp_ms, &sensor_data);
-#else
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, timestamp_ms, &sensor_data);
-#endif
 
 		// run 1 cycle of state transition
 		flight_phase_event_t next_event = flight_phase_get_next_event();
@@ -303,8 +284,5 @@ void fsm_task(void *args) {
 		// run actions based on new curr state
 		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
 		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
-#ifdef HIL
-		hil_timestamp_tenth_ms += 25;
-#endif
 	}
 }
