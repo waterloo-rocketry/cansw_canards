@@ -2,7 +2,9 @@
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
-#include "application/logging/logging.h"
+#include "application/logger/log.h"
+#include "drivers/timer/timer.h"
+#include "task.h"
 
 #define TELEMETRY_MAX_SOURCES 32 // TODO: find out real value for this
 #define TELEMETRY_TASK_PERIOD_MS 1 // 1000hz
@@ -19,33 +21,42 @@ typedef struct {
 	bool initialized;
 	uint16_t failed_transmissions;
 	uint16_t successful_transmissions;
+	uint16_t overdue_count;
 } telemetry_stats_t;
 
-// global struct to track registry and stats
-static telemetry_registry_t g_telemetry_registry = {0};
-static telemetry_stats_t g_telemetry_stats = {0};
+// global struct to track registry and stats (static storage is zero-initialized)
+static telemetry_registry_t g_telemetry_registry;
+static telemetry_stats_t g_telemetry_stats;
 
-static void 
+/**
+ * @brief initialize telemetry module
+ * @return status of init - double init returns failure
+ */
 w_status_t telemetry_init(void) {
-	if(g_telemetry_stats.initialized) {
-		log_text(1, LOG_LEVEL_WARN, "telemetry module", "Telemetry module already initialized");
+	if (g_telemetry_stats.initialized) {
+		log_text(1, LOG_LVL_WARN, "telemetry module", "Telemetry module already initialized");
 		return W_FAILURE;
 	}
 
+	// zero init telemetry stats
 	g_telemetry_stats.failed_transmissions = 0;
 	g_telemetry_stats.successful_transmissions = 0;
+	g_telemetry_stats.overdue_count = 0;
 
-	for(uint32_t i = 0; i < TELEMETRY_MAX_SOURCES; i++) {
+	// zero init telemetry registry source array
+	for (uint32_t i = 0; i < TELEMETRY_MAX_SOURCES; i++) {
 		g_telemetry_registry.sources[i].name = NULL;
 		g_telemetry_registry.sources[i].log_fn = NULL;
-		g_telemetry_registry.sources[i].desired_frequency_hz = 0;
 		g_telemetry_registry.sources[i].flight_phase_state = STATE_ERROR;
 		g_telemetry_registry.sources[i].period_ms = 0;
 		g_telemetry_registry.sources[i].last_logged_ms = 0;
 		g_telemetry_registry.sources[i].due_date_ms = 0;
 	}
 
+	// zero init telemetry registry number of sources
 	g_telemetry_registry.num_sources = 0;
+
+	// successful init
 	g_telemetry_stats.initialized = true;
 
 	return W_SUCCESS;
@@ -56,24 +67,38 @@ w_status_t telemetry_init(void) {
  * @return status of registering
  */
 w_status_t telemetry_register(const telemetry_source_config_t *config) {
-	if(!g_telemetry_stats.initialized) {
-		log_text(1, LOG_LEVEL_ERROR, "telemetry module", "Telemetry module not initialized");
-		return W_FAILURE;
-	}
-	
-	if (g_telemetry_registry.num_sources >= TELEMETRY_MAX_SOURCES) {
-		log_text(1, LOG_LEVEL_ERROR, "telemetry module", "Maximum number of telemetry sources reached");
+	if (!g_telemetry_stats.initialized) {
+		log_text(1, LOG_LVL_WARN, "telemetry module", "Telemetry module not initialized");
 		return W_FAILURE;
 	}
 
-	if(config->name == NULL || config->log_fn == NULL || config->desired_frequency_hz == 0) {
-		log_text(1, LOG_LEVEL_ERROR, "telemetry module", "Invalid telemetry source configuration");
+	if (g_telemetry_registry.num_sources >= TELEMETRY_MAX_SOURCES) {
+		log_text(
+			1, LOG_LVL_WARN, "telemetry module", "Maximum number of telemetry sources reached");
+		return W_FAILURE;
+	}
+
+	if ((config->name == NULL) || (config->log_fn == NULL)|| (config->period_ms == 0)) {
+		log_text(1, LOG_LVL_WARN, "telemetry module", "Invalid telemetry source configuration");
 		return W_INVALID_PARAM;
 	}
 
-	config->period_ms = 1000 / config->desired_frequency_hz; // todo: add a static function to conv hz to ms
+	if ((config->last_logged_ms != 0) || (config->due_date_ms != 0)) {
+		log_text(
+			1,
+			LOG_LVL_WARN,
+			"telemetry module",
+			"Wrong init with the config handler, should init last_logged_ms and due_date_ms to "
+			"zero.");
+	}
 
-	g_telemetry_registry.sources[g_telemetry_registry.num_sources] = *config;
+	// Copy into the registry slot, then initialize the internally-managed scheduling fields on the
+	// copy (avoids mutating the caller's const struct).
+	telemetry_source_config_t *slot =
+		&g_telemetry_registry.sources[g_telemetry_registry.num_sources];
+	*slot = *config;
+	slot->last_logged_ms = 0;
+
 	g_telemetry_registry.num_sources++;
 
 	return W_SUCCESS;
@@ -87,6 +112,12 @@ health_status_t telemetry_get_status(void) {
 	health_status_t status = {
 		.error_bitfield = 0, .module_id = MODULE_TELEMETRY, .severity = HEALTH_OK};
 
+	if (g_telemetry_stats.failed_transmissions > 0 || g_telemetry_stats.overdue_count > 0) {
+		status.severity = HEALTH_ERROR;
+		// status.error_bitfield = (1) << MODULE_ERR_TELEMETRY_NOT_INIT;
+		//  status.error_bitfield = (1) << MODULE_ERR_TELEMETRY_FAILED_TX;
+	}
+
 	return status;
 }
 
@@ -94,12 +125,55 @@ health_status_t telemetry_get_status(void) {
  * @brief telem task function
  */
 void telemetry_task(void *argument) {
+	(void)argument;
 	TickType_t lastWakeTime = xTaskGetTickCount();
+	uint32_t curr_time;
+	w_status_t time_status = timer_get_ms(&curr_time);
 
-	while (1) {
-		
-		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TELEMETRY_TASK_PERIOD_MS));
+	// set due date once telemetry starts
+	for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
+		telemetry_source_config_t *curr = &g_telemetry_registry.sources[i];
+		curr->due_date_ms = curr->period_ms + curr_time; // first log is due one period after t=0
 	}
 
-	return;
+	while (1) {
+		fsm_state_t phase = fsm_get_state();
+
+		uint32_t curr_time;
+		w_status_t time_status = timer_get_ms(&curr_time);
+
+		// loop through the array of registered sources and log if it's the correct flight phase
+		// and it's due/overdue
+		if (time_status == W_SUCCESS) {
+			for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
+				telemetry_source_config_t *source = &g_telemetry_registry.sources[i];
+
+				if (phase != source->flight_phase_state) {
+					continue;
+				}
+
+				// signed-difference compare so this survives the 32-bit ms counter wrapping around
+				int32_t overdue_by = (int32_t)(curr_time - source->due_date_ms);
+				if (overdue_by < 0) {
+					continue; // not due yet
+				}
+
+				if (overdue_by > 0) {
+					// TODO: report to health check with module name
+					g_telemetry_stats.overdue_count++;
+				}
+
+				if (source->log_fn() == W_SUCCESS) {
+					g_telemetry_stats.successful_transmissions++;
+				} else {
+					g_telemetry_stats.failed_transmissions++;
+				}
+
+				source->last_logged_ms = curr_time;
+				source->due_date_ms = curr_time + source->period_ms;
+			}
+		}
+
+		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TELEMETRY_TASK_PERIOD_MS));
+	}
 }
