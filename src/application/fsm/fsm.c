@@ -228,8 +228,6 @@ void fsm_task(void *args) {
 	navigator_output_t navigator_output = {0};
 	controller_output_t controller_output = {0};
 	gnc_x_state_t x_state = {0};
-	controller_input.canard_angle_rad = 123.456;
-	navigator_output.roll_state[0] = 567.567;
 
 	hil_send_simulink_cmd(
 		&navigator_input, &navigator_output, &x_state, &controller_input, &controller_output);
