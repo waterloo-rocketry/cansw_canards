@@ -209,10 +209,6 @@ void hil_parse_rx_bytes(uint8_t byte) {
 		// check if any fake CAN msgs triggered. If so, send the flight phase event directly.
 		// fake CAN bypasses CAN handler intentionally cuz that's tested in real CAN tests later
 		hil_rx_payload_t *ready_packet = (hil_rx_payload_t *)&hil_ctx.ready_rx_packet[0];
-        if (ready_packet->can_msg > 0.0) {
-            log_text(1, LOG_LVL_INFO, "HIL", "fake CAN msg %f detected, sending flight phase event",
-                     ready_packet->can_msg);
-        }
 
 		if (float_equal(ready_packet->can_msg, 3.0)) {
 			flight_phase_send_event(EVENT_PAD_FILTER);

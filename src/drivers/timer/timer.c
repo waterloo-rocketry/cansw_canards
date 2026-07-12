@@ -42,18 +42,16 @@ w_status_t timer_init() {
 #ifdef HIL
 
 // wait until hil connection is established!!!
-    while (hil_timestamp_tenth_ms == 0) {
-        // kickoff simulink by unblocking it with 1 msg. use dummy data to verify it started
-        navigator_input_t navigator_input = {0};
-        controller_input_t controller_input = {0};
-        navigator_output_t navigator_output = {0};
-        controller_output_t controller_output = {0};
-        gnc_x_state_t x_state = {0};
-        controller_input.canard_angle_rad = 123.456;
-        navigator_output.roll_state[0] = 567.567;
-
-        hil_send_simulink_cmd(
-            &navigator_input, &navigator_output, &x_state, &controller_input, &controller_output);
+	while (hil_timestamp_tenth_ms == 0) {
+		// kickoff simulink by unblocking it with 1 msg. use dummy data to verify it started
+		navigator_input_t navigator_input = {0};
+		controller_input_t controller_input = {0};
+		navigator_output_t navigator_output = {0};
+		controller_output_t controller_output = {0};
+		gnc_x_state_t x_state = {0};
+	
+		hil_send_simulink_cmd(
+			&navigator_input, &navigator_output, &x_state, &controller_input, &controller_output);
         // wait for hil to send first packet. Timestamp increment must mean a packet was recvd
     }
 #endif

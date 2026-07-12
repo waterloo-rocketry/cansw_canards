@@ -94,7 +94,7 @@ void ad_breakout_board_task(void *argument) {
 		} else {
 			update_gyro_data = true;
 			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-			log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read gyro drdy.");
+			// log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read gyro drdy.");
 		}
 
 		// if new gyro data update the timestamp
