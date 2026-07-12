@@ -119,8 +119,7 @@ def main(argv=None):
             type_int, timestamp = struct.unpack_from("<LL", data, pos)
 
             row = {col: "" for col in csv_columns}
-            # convert tenth_ms to ms
-            row["timestamp"] = timestamp / 10.0
+            row["timestamp"] = timestamp
 
             print(f"[{timestamp}] ", end="", file=txt_file)
 
