@@ -312,3 +312,4 @@ add_test_group(test_iis2mdc
     # src file(s)
     ${PROC_SRC_DIR}/drivers/iis2mdc/IIS2MDC.c
 )
+# TODO: add fsm unit tes once get a good version of codegen
