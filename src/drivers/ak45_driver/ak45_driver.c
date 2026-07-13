@@ -8,8 +8,6 @@
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/timer/timer.h"
 
-// TODO: add health checks for motor
-
 // Motor CAN driver ID
 static const uint16_t AK45_DRIVER_ID = 0x45;
 static const uint16_t LOG_WAIT_MS = 1;
@@ -129,8 +127,6 @@ w_status_t ak45_send_position_cmd(float32_t angle_deg) {
 }
 
 w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms) {
-	// TODO: REPORT TO HEALTH CHECKS IF DRIVER FAILED TO INIT
-
 	// check if the driver has inited
 	if (ak45_health.is_init) {
 		ak45_health.reinit_attempts++;
@@ -314,32 +310,33 @@ health_status_t ak45_get_status(void) {
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
 			 "ak45",
-			 "is_init=%d, failed_calibration=%d, rx_errors=%lu, tx_errors=%lu, invalid_args=%lu",
+			 "is_init=%d, hard_stop_calibrated=%d, hard_stop_cal_failed=%d, rx_errors=%lu, tx_errors=%lu",
 			 ak45_health.is_init,
-			 ak45_health.failed_calibration,
+			 ak45_health.hard_stop_calibrated,
+			 ak45_health.hard_stop_cal_failed,
 			 ak45_health.rx_errors,
-			 ak45_health.tx_errors,
-			 ak45_health.invalid_args);
+			 ak45_health.tx_errors);
 
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
 			 "ak45",
 			 "out_of_memory=%lu, not_initialized=%lu, feedback_queue_empty=%lu, "
-			 "reinit_attempts=%lu, fdcan_stop_fails=%lu",
+			 "reinit_attempts=%lu, invalid_args=%lu",
 			 ak45_health.out_of_memory,
 			 ak45_health.not_initialized,
 			 ak45_health.feedback_queue_empty,
 			 ak45_health.reinit_attempts,
-			 ak45_health.fdcan_stop_fails);
+			 ak45_health.invalid_args);
 
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
 			 "ak45",
-			 "init_timeout=%lu, init_notif_fails=%lu, init_start_fails=%lu, init_filter_fails=%lu",
+			 "init_timeout=%lu, init_notif_fails=%lu, init_start_fails=%lu, init_filter_fails=%lu, fdcan_stop_fails=%lu",
 			 ak45_health.init_fdcan_timeout,
 			 ak45_health.init_fdcan_notification_fails,
 			 ak45_health.init_fdcan_start_fails,
-			 ak45_health.init_fdcan_filter_cfg_fails);
+			 ak45_health.init_fdcan_filter_cfg_fails,
+			 ak45_health.fdcan_stop_fails);
 
 	return status;
 }

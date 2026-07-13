@@ -36,11 +36,13 @@ typedef struct {
  * Status variables describing the health of the AK45 driver module
  */
 typedef struct {
+	// TODO: implement calibration step and add the two checks
 	bool is_init;
-	bool failed_calibration; // TODO: implement calibration step and add this check
+	bool hard_stop_calibrated; // false until hard stop calibration succeeds
+	bool hard_stop_cal_failed; // set true on failed attempt, clear on success
 	uint32_t rx_errors; // FDCAN RX-callback failures
 	uint32_t tx_errors; // FDCAN transmit FIFO add failures
-	uint32_t invalid_args; // nullptr/ out of range arguments to functions
+	uint32_t invalid_args; // NULL or out of range arguments to functions
 	uint32_t out_of_memory; // failure to allocate memory for queue creation
 	uint32_t not_initialized; // calls to get_feedback when driver is not initialized
 	uint32_t feedback_queue_empty; // calls for latest feedback when queue empty
