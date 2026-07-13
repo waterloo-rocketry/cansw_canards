@@ -302,9 +302,14 @@ health_status_t ak45_get_status(void) {
 	}
 
 	// TODO: implement calibration logic and add this check to it
-	if (ak45_health.failed_calibration) {
+	if (ak45_health.hard_stop_cal_failed) {
 		status.severity = HEALTH_ERROR;
 		status.error_bitfield |= 1 << MODULE_ERR_AK45_FAILED_CALIBRATION;
+	}
+
+	if (!ak45_health.hard_stop_calibrated) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_AK45_NOT_CALIBRATED;
 	}
 
 	log_text(LOG_WAIT_MS,
