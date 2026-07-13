@@ -8,11 +8,11 @@
 #include "third_party/rocketlib/include/common.h"
 #include "third_party/rocketlib/include/mbr.h"
 
-#define SD_RW_TIMEOUT_MS 500
+#define SD_RW_TIMEOUT_MS 2000
 
 #define SD_SECTOR_SIZE 512 
-#define LFS_BLK_SIZE 2048
-#define LOOKAHEAD_SIZE (LFS_BLK_SIZE/8) // this returns the numbers of blocks that cache size determines
+#define LFS_BLK_SIZE 512
+#define LOOKAHEAD_SIZE 2048 // this returns the numbers of blocks that cache size determines
 
 static uint8_t read_buffer[LFS_BLK_SIZE] __attribute__((section(".sdmmc2_ram"))) = {0};
 static uint8_t prog_buffer[LFS_BLK_SIZE] __attribute__((section(".sdmmc2_ram"))) = {0};
@@ -25,6 +25,12 @@ volatile uint32_t error_timeout_count = 0;
 volatile uint32_t error_other_count = 0;
 volatile uint32_t total_sd_write_time = 0;
 volatile uint32_t total_num_sd_write = 0;
+volatile uint32_t max_write_time = 0;
+volatile uint32_t sd_total_data_written = 0;
+volatile uint32_t total_sd_read_time = 0;
+volatile uint32_t total_num_sd_read = 0;
+volatile uint32_t max_read_time = 0;
+volatile uint32_t sd_total_data_read = 0;
 
 static SD_HandleTypeDef *sd_bus_handle = &hsd2;
 
@@ -138,6 +144,15 @@ static int lfsshim_sd_read(const struct lfs_config *c, lfs_block_t block, lfs_of
 		return LFS_ERR_IO;
 	}
 
+	uint32_t read_time = (HAL_GetTick() - start);
+	total_sd_read_time += read_time;
+	total_num_sd_read++;
+	sd_total_data_read += size;
+
+	if (read_time > max_read_time) {
+		max_read_time = read_time;
+	}
+
 	return 0; // success
 }
 
@@ -187,8 +202,14 @@ static int lfsshim_sd_write(const struct lfs_config *c, lfs_block_t block, lfs_o
 		vTaskDelay(pdMS_TO_TICKS(1));
 	}
 
-	total_sd_write_time += (HAL_GetTick() - start);
+	uint32_t write_time = (HAL_GetTick() - start);
+	total_sd_write_time += write_time;
 	total_num_sd_write++;
+	sd_total_data_written += size;
+
+	if (write_time > max_write_time) {
+		max_write_time = write_time;
+	}
 
 	// allow for bus to still be used however do return a fault
 	if (SD_DMA_ERROR == sd_dma_state) {

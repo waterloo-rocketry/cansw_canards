@@ -18,7 +18,12 @@ extern volatile uint32_t error_timeout_count;
 extern volatile uint32_t error_other_count;
 extern volatile uint32_t total_sd_write_time;
 extern volatile uint32_t total_num_sd_write;
-
+extern volatile uint32_t max_write_time;
+extern volatile uint32_t sd_total_data_written;
+extern volatile uint32_t total_sd_read_time;
+extern volatile uint32_t total_num_sd_read;
+extern volatile uint32_t max_read_time;
+extern volatile uint32_t sd_total_data_read;
 lfs_t g_fs_obj;
 
 extern SD_HandleTypeDef hsd2;
@@ -274,6 +279,7 @@ w_status_t sd_card_log_write(sd_lfs_file_t *lfs_file, const char *buffer, uint32
 	num_writes++;
 	res = lfs_file_sync(&g_fs_obj, &(lfs_file->file));
 	if (res < 0) {
+		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
 		lfs_file->state = SD_FILE_ERROR;
 		return W_FAILURE;
@@ -325,7 +331,10 @@ health_status_t sd_card_get_status(void) {
 		"ERR DMA %" PRIu32 ", ERR TIME %" PRIu32 ", ERR OTHER %" PRIu32 , error_dma_count, error_timeout_count, error_other_count);
 
 	log_text(10, LOG_LVL_INFO, "sd_card", 
-		 "SD WRITE TIME %" PRIu32 ", NUM WRITE %" PRIu32 ", AVE WRITE %lf", total_sd_write_time, total_num_sd_write, ((float64_t)total_num_sd_write/(float64_t)total_sd_write_time));
+		 "WR TIME %" PRIu32 ", # WR %" PRIu32 ", WR BYTE %"PRIu32" AVE WR %lf, MAX: %" PRIu32, total_sd_write_time, total_num_sd_write, sd_total_data_written, ((float64_t)sd_total_data_written/(float64_t)total_sd_write_time), max_write_time);
+
+	log_text(10, LOG_LVL_INFO, "sd_card", 
+		 "RD TIME %" PRIu32 ", # RD %" PRIu32 ", RD BYTE %"PRIu32" AVE RD %lf, MAX: %" PRIu32, total_sd_read_time, total_num_sd_read, sd_total_data_read, ((float64_t)sd_total_data_read/(float64_t)total_sd_read_time), max_read_time);
 
 	return status;
 }
