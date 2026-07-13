@@ -14,6 +14,10 @@ FAKE_VALUE_FUNC(w_status_t, i2c_write_reg, i2c_bus_t, uint8_t, uint8_t, const ui
 FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *, uint8_t)
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...)
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *)
+DEFINE_FAKE_VALUE_FUNC(GPIO_PinState, HAL_GPIO_ReadPin, GPIO_TypeDef*, uint16_t)
+DEFINE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_I2C_Mem_Read_DMA, I2C_HandleTypeDef*, uint16_t, uint16_t, uint16_t, uint8_t*, uint16_t)
+DEFINE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_I2C_RegisterCallback, I2C_HandleTypeDef*, HAL_I2C_CallbackIDTypeDef, pI2C_CallbackTypeDef)
+I2C_HandleTypeDef hi2c4;
 }
 
 
@@ -96,6 +100,9 @@ protected:
         RESET_FAKE(i2c_read_reg);
         RESET_FAKE(log_text);
         RESET_FAKE(timer_get_ms);
+        RESET_FAKE(HAL_GPIO_ReadPin);
+        RESET_FAKE(HAL_I2C_Mem_Read_DMA);
+        RESET_FAKE(HAL_I2C_RegisterCallback);
 
         
         self_test_enabled = false;
@@ -105,6 +112,7 @@ protected:
         timer_get_ms_fake.custom_fake = timer_get_ms_custom;
         i2c_write_reg_fake.custom_fake = i2c_write_reg_custom;
         i2c_read_reg_fake.custom_fake = i2c_read_reg_custom;
+        HAL_GPIO_ReadPin_fake.return_val = GPIO_PIN_SET;
     }
 };
 
