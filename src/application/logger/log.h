@@ -237,6 +237,7 @@ typedef struct {
 	uint32_t no_full_buf_moments;
 	uint32_t buffer_flush_fails;
 	uint32_t unsafe_buffer_flushes;
+	bool buffer_is_full;
 } logger_health_t;
 
 /**

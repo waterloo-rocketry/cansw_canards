@@ -268,6 +268,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 		xSemaphoreGive(log_text_write_mutex);
 		logger_health.full_buffer_moments++;
 		logger_health.dropped_txt_msgs++;
+		logger_health.buffer_is_full = true;
 		return W_FAILURE;
 	}
 
@@ -382,6 +383,7 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 		xSemaphoreGive(log_data_write_mutex);
 		logger_health.full_buffer_moments++;
 		logger_health.dropped_data_msgs++;
+		logger_health.buffer_is_full = true;
 		return W_FAILURE;
 	}
 
@@ -469,6 +471,16 @@ health_status_t logger_get_status(void) {
 		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
 
+	if (logger_health.buffer_is_full) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= (1 << MODULE_ERR_OVERFLOW);
+	}
+
+	if ((logger_health.crit_errs > 0) || (logger_health.unsafe_buffer_flushes > 0)) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_CRITICAL;
+	}
+
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "logger",
@@ -491,6 +503,9 @@ health_status_t logger_get_status(void) {
 			 logger_health.no_full_buf_moments,
 			 logger_health.buffer_flush_fails,
 			 logger_health.unsafe_buffer_flushes);
+
+	// reset error flag
+	logger_health.buffer_is_full = false;
 
 	return status;
 }
