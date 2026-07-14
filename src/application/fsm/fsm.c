@@ -61,6 +61,7 @@ w_status_t fsm_init() {
 	uint32_t init_time_tenth_ms = 0;
 	if (timer_get_tenth_ms(&init_time_tenth_ms) != W_SUCCESS) {
 		// TODO how to deal with error
+		fsm_health.init_timer_failures++;
 		return W_FAILURE;
 	}
 
@@ -85,8 +86,11 @@ w_status_t fsm_init() {
 
 	// start tim
 	if (HAL_TIM_Base_Start_IT(&htim5) != HAL_OK) {
+		fsm_health.init_timer_start_failures++;
 		return W_FAILURE;
 	}
+
+	fsm_health.is_init = true;
 
 	return W_SUCCESS;
 }
@@ -164,6 +168,8 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 		default:
 			// TODO: how to deal with the other cases
+			fsm_health.unknown_state_errors++;
+			fsm_health.is_in_unknown_state = true;
 			break;
 	}
 }
@@ -175,12 +181,15 @@ void fsm_task(void *args) {
 		// Unblock once we receive the notification to unblock fsm
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS)) == 0) {
 			log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
+			fsm_health.loop_timeouts++;
+			fsm_health.is_timed_out = true;
 		}
 
 		uint32_t timestamp_tenth_ms = 0;
 
 		if (W_SUCCESS != timer_get_tenth_ms(&timestamp_tenth_ms)) {
-			// TODO: error handling
+			fsm_health.loop_timer_failures++;
+			fsm_health.loop_timer_failed = true;
 		}
 
 		uint32_t timestamp_ms = timestamp_tenth_ms / MS_TO_TENTH_MS;
@@ -216,6 +225,30 @@ health_status_t fsm_get_status(void) {
 		status.severity = HEALTH_FATAL;
 		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
+
+	if ((fsm_health.is_timed_out) || (fsm_health.loop_timer_failed)) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_TIMEOUT;
+	}
+
+	if (fsm_health.is_in_unknown_state) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_UNKNOWN_STATE;
+	}
+
+	// clear flags
+	fsm_health.is_timed_out = false;
+	fsm_health.loop_timer_failed = false;
+	fsm_health.is_in_unknown_state = false;
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "fsm",
+			 "init=%d, loop_timeouts=%d, loop_timer_failures=%d, unknown_state_errors=%d",
+			 fsm_health.is_init,
+			 fsm_health.loop_timeouts,
+			 fsm_health.loop_timer_failures,
+			 fsm_health.unknown_state_errors);
 
 	return status;
 }
