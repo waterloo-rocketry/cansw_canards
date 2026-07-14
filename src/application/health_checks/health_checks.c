@@ -3,10 +3,12 @@
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
+#include "application/telemetry/telemetry.h"
 #include "can.h"
 #include "drivers/adc/adc.h"
 #include "drivers/altimu-10/altimu-10.h"
@@ -54,6 +56,8 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 	[MODULE_LOGGER] = logger_get_status,
 	[MODULE_POWER_HANDLER] = power_handler_get_status,
 	[MODULE_LSM6DSV32X] = lsm6dsv32x_get_status,
+	[MODULE_TELEMETRY] = telemetry_get_status,
+	[MODULE_FSM] = fsm_get_status,
 };
 
 w_status_t health_check_init(void) {

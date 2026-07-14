@@ -53,6 +53,8 @@ static void unblock_fsm_loop(TIM_HandleTypeDef *htim) {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+static fsm_health_t fsm_health = {0};
+
 w_status_t fsm_init() {
 	// init estimator context
 	// initialize ctx timestamp to current time
@@ -205,4 +207,15 @@ void fsm_task(void *args) {
 		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
 		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
 	}
+}
+
+health_status_t fsm_get_status(void) {
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_FSM, .error_bitfield = 0};
+
+	if (!fsm_health.is_init) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
+
+	return status;
 }

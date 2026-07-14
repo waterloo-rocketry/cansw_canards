@@ -32,7 +32,8 @@ typedef enum {
 	MODULE_POWER_HANDLER = 12,
 	MODULE_LSM6DSV32X = 13,
 	MODULE_TELEMETRY = 14,
-	MODULE_COUNT = 15, // number of modules
+	MODULE_FSM = 15,
+	MODULE_COUNT = 16, // number of modules
 	MODULE_MAX = 31
 } module_id_t;
 

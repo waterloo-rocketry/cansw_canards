@@ -21,6 +21,15 @@ typedef struct {
 	all_sensors_data_t *p_sensor_data;
 } fsm_input_t;
 
+typedef struct {
+	bool is_init;
+	uint32_t init_timer_failures;
+	uint32_t init_timer_start_failures;
+	uint32_t loop_timeouts;
+	uint32_t loop_timer_failures;
+	uint32_t unknown_state_errors;
+} fsm_health_t;
+
 /**
  * @brief init fsm
  */
@@ -31,6 +40,16 @@ w_status_t fsm_init();
  * @return the current fsm state
  */
 fsm_state_t fsm_get_state();
+
+/**
+ * @brief Report FSM module health status
+ *
+ * Retrieves and reports FSM error statistics and initialization status
+ * through log messages.
+ *
+ * @return CAN board specific health status
+ */
+health_status_t fsm_get_status(void);
 
 /**
  * run in 500 hz freertos task
