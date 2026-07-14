@@ -180,6 +180,10 @@ static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, 
  *       pipeline is active.
  */
 static w_status_t self_test_wait_data_ready(void) {
+	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
+		iis2mdc_health.i2c_after_callback_switch++;
+		return W_FAILURE;
+	}
 	uint32_t start_ms = 0;
 	if (W_SUCCESS != timer_get_ms(&start_ms)) {
 		return W_FAILURE;
