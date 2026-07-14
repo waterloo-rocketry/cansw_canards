@@ -83,14 +83,14 @@ static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtd
 
 				case XSENS_EVT_QUATERNION:
 					if (mtdata->type == XSENS_EVT_TYPE_FLOAT4) {
-						float euler_rad[3] = {0};
 						// xsens_quaternion_to_euler(mtdata->data.f4x4, euler_rad);
 						// TODO: add quaternion function once implemented
-						s_movella.latest_data.euler_timestamp_ms = curr_timestamp_ms;
+						s_movella.latest_data.quaternion_timestamp_ms = curr_timestamp_ms;
 
-						s_movella.latest_data.euler.x = euler_rad[0] * DEG_PER_RAD;
-						s_movella.latest_data.euler.y = euler_rad[1] * DEG_PER_RAD;
-						s_movella.latest_data.euler.z = euler_rad[2] * DEG_PER_RAD;
+						s_movella.latest_data.quaternion.w = mtdata->data.f4x4[0];
+						s_movella.latest_data.quaternion.x = mtdata->data.f4x4[1];
+						s_movella.latest_data.quaternion.y = mtdata->data.f4x4[2];
+						s_movella.latest_data.quaternion.z = mtdata->data.f4x4[3];
 					}
 					break;
 
