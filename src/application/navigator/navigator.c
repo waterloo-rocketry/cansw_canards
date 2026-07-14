@@ -163,6 +163,15 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 // }
 
 health_status_t navigator_get_status(void) {
+	
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_ESTIMATOR, .error_bitfield = 0};
+
+	if (!estimator_error_stats.is_init) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
+	
 	// Log all error statistics
 	log_text(0,
 			 LOG_LVL_INFO,
@@ -178,9 +187,6 @@ health_status_t navigator_get_status(void) {
 			 estimator_error_stats.pad_filter_fails,
 			 estimator_error_stats.can_log_fails,
 			 estimator_error_stats.invalid_phase_errors);
-
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_ESTIMATOR, .error_bitfield = 0};
 
 	return status;
 }
