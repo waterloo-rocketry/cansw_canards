@@ -82,8 +82,9 @@ static void system_init_task(void *arg) {
 	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status =  log_init();
-	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
+	w_status_t non_crit_status =  sd_card_init();
+	non_crit_status |=  log_init();
+	// non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
@@ -188,7 +189,7 @@ static void system_init_task(void *arg) {
 	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
 	// its blinky now
 	while (1) {
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		gpio_toggle(GPIO_PIN_RED_LED, 1);
 		vTaskDelay(500);
 	}
 }
