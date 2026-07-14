@@ -139,7 +139,7 @@ health_status_t timer_get_status(void) {
 			 timer_health.is_init);
 
 	// Log error statistics if any errors occurred
-uint32_t total_errors = timer_health.invalid_param + timer_health.timer_invalid_handle +
+	uint32_t total_errors = timer_health.invalid_param + timer_health.timer_invalid_handle +
 							timer_health.timer_uninitialized + timer_health.timer_start_fails;
 	if (total_errors > 0) {
 		log_text(0, LOG_LVL_WARN, "timer", "Total errors: %lu", total_errors);
