@@ -73,6 +73,15 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 }
 
 health_status_t controller_get_status(void) {
+	
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_CONTROLLER, .error_bitfield = 0};
+
+	if (controller_error_stats.is_init == false) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
+
 	// Log all error statistics
 	log_text(0,
 			 LOG_LVL_INFO,
@@ -94,9 +103,6 @@ health_status_t controller_get_status(void) {
 			 controller_error_stats.is_init ? "true" : "false",
 			 controller_state.can_send_errors,
 			 controller_state.data_miss_counter);
-
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_CONTROLLER, .error_bitfield = 0};
 
 	return status;
 }
