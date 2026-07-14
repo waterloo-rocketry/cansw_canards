@@ -16,6 +16,7 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#include "drivers\ad_breakout_board\ad_breakout_board.h"
 #include "fdcan.h"
 #include "message_types.h"
 #include "printf.h"
@@ -54,7 +55,7 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 	[MODULE_LOGGER] = logger_get_status,
 	[MODULE_POWER_HANDLER] = power_handler_get_status,
 	[MODULE_LSM6DSV32X] = lsm6dsv32x_get_status,
-};
+	[MODULE_AD_BREAKOUT_BOARD] = ad_breakout_board_get_status};
 
 w_status_t health_check_init(void) {
 	num_watchdog_tasks = 0;

@@ -29,4 +29,10 @@ w_status_t ad_breakout_board_get_accel_data(vector3d_t *p_accel_data, uint32_t *
  */
 w_status_t ad_breakout_board_get_gyro_data(float64_t *p_gyro_data, uint32_t *timestamp_ms);
 
+/**
+ * @brief gets the health status of the board and logs info
+ * @return the health status of the board
+ */
+health_status_t ad_breakout_board_get_status(void);
+
 #endif
