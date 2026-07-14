@@ -68,10 +68,9 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
 
 	// Initialize error tracking
 	adc_error_stats.is_init = true;
-	adc_error_stats.conversion_timeouts = 0;
 	adc_error_stats.invalid_channels = 0;
 	adc_error_stats.overflow_errors = 0;
-
+	adc_error_stats.is_overflow = 0;
 	return W_SUCCESS;
 }
 
@@ -98,6 +97,7 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
 
 	if (*output > adc_desc->max_counts) {
 		adc_error_stats.overflow_errors++;
+		adc_error_stats.is_overflow = true;
 		return W_OVERFLOW;
 	}
 
@@ -145,16 +145,23 @@ health_status_t adc_get_status(void) {
 		status.error_bitfield |= (1 << MODULE_ERR_NOT_INIT);
 	}
 
+	if (true == adc_error_stats.is_overflow) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= (1 << MODULE_ERR_OVERFLOW);
+	}
+
 	// Log error statistics
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "adc",
-			 "%s conv_timeouts=%lu, invalid_channels=%lu, "
+			 "adc init: %s, invalid_channels=%lu, "
 			 "overflows=%lu",
 			 adc_error_stats.is_init ? "true" : "false",
-			 adc_error_stats.conversion_timeouts,
 			 adc_error_stats.invalid_channels,
 			 adc_error_stats.overflow_errors);
+
+	// reset overflow flag
+	adc_error_stats.is_overflow = false;
 
 	return status;
 }
