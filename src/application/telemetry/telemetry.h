@@ -28,7 +28,7 @@ typedef struct {
 	uint32_t due_date_ms; // the next ms timestamp when this source should be logged
 } telemetry_source_config_t;
 
-/*
+/**
  * @brief Initialize the telemetry module
  * @return Status of initialization
  */
@@ -48,6 +48,11 @@ w_status_t telemetry_register(const telemetry_source_config_t *config);
  * @brief RTOS task for handling telemetry logging
  */
 void telemetry_task(void *argument);
+
+/**
+ * @brief run telemtry once, calling all registered function due at call time
+ */
+void telemetry_run_once(void);
 
 /**
  * @brief Reports the current status of the telemetry module

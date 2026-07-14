@@ -26,17 +26,12 @@ typedef struct {
 
 // global struct to track registry and stats (static storage is zero-initialized)
 static telemetry_registry_t g_telemetry_registry;
-static telemetry_stats_t g_telemetry_stats;
+static telemetry_stats_t g_telemetry_stats = {.initialized = false};
 
 /**
- * @brief initialize telemetry module
- * @return status of init - double init returns failure
+ * @brief clears registry + stats
  */
-w_status_t telemetry_init(void) {
-	if (g_telemetry_stats.initialized) {
-		log_text(1, LOG_LVL_WARN, "telemetry module", "Telemetry module already initialized");
-		return W_FAILURE;
-	}
+static void telemetry_clear_all_data(void) {
 
 	// zero init telemetry stats
 	g_telemetry_stats.failed_transmissions = 0;
@@ -53,13 +48,105 @@ w_status_t telemetry_init(void) {
 		g_telemetry_registry.sources[i].due_date_ms = 0;
 	}
 
-	// zero init telemetry registry number of sources
 	g_telemetry_registry.num_sources = 0;
+}
+
+/**
+ * @brief seed the due date of every registered source relative to curr_time
+ * @param curr_time current time in ms (start of telemetry task)
+ */
+static void telemetry_init_due_dates(uint32_t curr_time) {
+	// set due date to every registered function once telemetry starts
+	for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
+		telemetry_source_config_t *curr = &g_telemetry_registry.sources[i];
+		curr->due_date_ms = curr->period_ms + curr_time; // first log is due one period after t=0
+	}
+}
+
+/**
+ * @brief initialize telemetry module
+ * @return status of init - double init returns failure
+ */
+w_status_t telemetry_init(void) {
+	if (g_telemetry_stats.initialized) {
+		log_text(1, LOG_LVL_WARN, "telemetry module", "Telemetry module already initialized");
+		return W_FAILURE;
+	}
+
+	// clears registry + stats
+	telemetry_clear_all_data();
 
 	// successful init
 	g_telemetry_stats.initialized = true;
 
 	return W_SUCCESS;
+}
+
+/**
+ * @brief run a single telemetry scheduling iteration
+ * @note logs each registered source whose flight phase matches the current fsm
+ * state and whose due date has passed, updating stats. Excludes the RTOS delay. For unit testing!
+ */
+void telemetry_run_once(void) {
+	fsm_state_t phase = fsm_get_state();
+
+	uint32_t curr_time;
+	w_status_t time_status = timer_get_ms(&curr_time);
+
+	// loop through the array of registered sources and log if it's the correct flight phase
+	// and it's due/overdue
+	if (W_SUCCESS == time_status) {
+		for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
+			telemetry_source_config_t *source = &g_telemetry_registry.sources[i];
+
+			if (phase != source->flight_phase_state) {
+				continue;
+			}
+
+			// signed-difference compare so this survives the 32-bit ms counter wrapping around
+			int32_t overdue_by = (int32_t)(curr_time - source->due_date_ms);
+			if (overdue_by < 0) {
+				continue; // not due yet
+			}
+
+			if (overdue_by > 0) {
+				// TODO: report to health check with module name
+				g_telemetry_stats.overdue_count++;
+			}
+
+			// call the function and check execution status
+			if (W_SUCCESS == source->log_fn()) {
+				g_telemetry_stats.successful_transmissions++;
+			} else {
+				g_telemetry_stats.failed_transmissions++;
+			}
+
+			source->last_logged_ms = curr_time;
+			source->due_date_ms = curr_time + source->period_ms;
+		}
+	}
+}
+
+/**
+ * @brief telem task function
+ */
+void telemetry_task(void *argument) {
+	(void)argument;
+	TickType_t lastWakeTime = xTaskGetTickCount();
+	uint32_t curr_time = 0;
+	w_status_t time_status = timer_get_ms(&curr_time);
+	
+	if (W_SUCCESS != time_status){
+		log_text(1, LOG_LVL_WARN, "telemetry module", "Failed to get current time for updating registered function due dates! Using 0 as curr time.");
+	}
+	
+	telemetry_init_due_dates(curr_time);
+
+	while (1) {
+		telemetry_run_once(); // abstracted for unit testing
+
+		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TELEMETRY_TASK_PERIOD_MS));
+	}
 }
 
 /**
@@ -73,31 +160,33 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
 	}
 
 	if (g_telemetry_registry.num_sources >= TELEMETRY_MAX_SOURCES) {
-		log_text(
-			1, LOG_LVL_WARN, "telemetry module", "Maximum number of telemetry sources reached");
-		return W_FAILURE;
+	log_text(
+		1, LOG_LVL_WARN, "telemetry module", "Maximum number of telemetry sources reached");
+	return W_FAILURE;
 	}
 
 	if ((config->name == NULL) || (config->log_fn == NULL)|| (config->period_ms == 0)) {
-		log_text(1, LOG_LVL_WARN, "telemetry module", "Invalid telemetry source configuration");
-		return W_INVALID_PARAM;
+	log_text(1, LOG_LVL_WARN, "telemetry module", "Invalid telemetry source configuration");
+	return W_INVALID_PARAM;
 	}
+
+	for()
 
 	if ((config->last_logged_ms != 0) || (config->due_date_ms != 0)) {
-		log_text(
-			1,
-			LOG_LVL_WARN,
-			"telemetry module",
-			"Wrong init with the config handler, should init last_logged_ms and due_date_ms to "
-			"zero.");
+	log_text(
+		1,
+		LOG_LVL_WARN,
+		"telemetry module",
+		"Wrong init with the config handler, should init last_logged_ms and due_date_ms to "
+		"zero.");
 	}
 
-	// Copy into the registry slot, then initialize the internally-managed scheduling fields on the
-	// copy (avoids mutating the caller's const struct).
+	// Copy into the registry slot, then initialize the internally-managed scheduling fields on the copy (avoids mutating the caller's const struct).
 	telemetry_source_config_t *slot =
-		&g_telemetry_registry.sources[g_telemetry_registry.num_sources];
+	&g_telemetry_registry.sources[g_telemetry_registry.num_sources];
 	*slot = *config;
 	slot->last_logged_ms = 0;
+	slot->due_date_ms = 0;
 
 	g_telemetry_registry.num_sources++;
 
@@ -119,61 +208,4 @@ health_status_t telemetry_get_status(void) {
 	}
 
 	return status;
-}
-
-/**
- * @brief telem task function
- */
-void telemetry_task(void *argument) {
-	(void)argument;
-	TickType_t lastWakeTime = xTaskGetTickCount();
-	uint32_t curr_time;
-	w_status_t time_status = timer_get_ms(&curr_time);
-
-	// set due date once telemetry starts
-	for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
-		telemetry_source_config_t *curr = &g_telemetry_registry.sources[i];
-		curr->due_date_ms = curr->period_ms + curr_time; // first log is due one period after t=0
-	}
-
-	while (1) {
-		fsm_state_t phase = fsm_get_state();
-
-		uint32_t curr_time;
-		w_status_t time_status = timer_get_ms(&curr_time);
-
-		// loop through the array of registered sources and log if it's the correct flight phase
-		// and it's due/overdue
-		if (time_status == W_SUCCESS) {
-			for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
-				telemetry_source_config_t *source = &g_telemetry_registry.sources[i];
-
-				if (phase != source->flight_phase_state) {
-					continue;
-				}
-
-				// signed-difference compare so this survives the 32-bit ms counter wrapping around
-				int32_t overdue_by = (int32_t)(curr_time - source->due_date_ms);
-				if (overdue_by < 0) {
-					continue; // not due yet
-				}
-
-				if (overdue_by > 0) {
-					// TODO: report to health check with module name
-					g_telemetry_stats.overdue_count++;
-				}
-
-				if (source->log_fn() == W_SUCCESS) {
-					g_telemetry_stats.successful_transmissions++;
-				} else {
-					g_telemetry_stats.failed_transmissions++;
-				}
-
-				source->last_logged_ms = curr_time;
-				source->due_date_ms = curr_time + source->period_ms;
-			}
-		}
-
-		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TELEMETRY_TASK_PERIOD_MS));
-	}
 }
