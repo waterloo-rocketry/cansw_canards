@@ -18,18 +18,6 @@ typedef struct {
 } iis2mdc_raw_data_t;
 
 /**
- * Status variables describing the current health of the magnetometer module.
- */
-typedef struct {
-	uint32_t failed_init; // init aborted at some point
-	uint32_t invalid_state; // functions being called from an invalid state for that function
-	uint32_t dma_read_fails;
-	uint32_t i2c_handle_mismatch;
-	uint32_t timestamp_fails; // timer_get_ms failed in the DMA-complete callback
-	uint32_t get_data_fails; // get_data failed for any reason
-} iis2mdc_health_t;
-
-/**
  * @brief Runs in interrupt context on the IIS2MDC DRDY pin.
  * @note starts a non-blocking DMA read of the six output registers, the DMA-completion callback
  *       converts and publishes the result. Disabled while the module isn't in ready state
