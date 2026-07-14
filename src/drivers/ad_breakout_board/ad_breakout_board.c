@@ -44,9 +44,9 @@ typedef struct {
 } ad_task_ctx_t;
 
 typedef struct {
-	uint32_t gyro_data_read_fails;
+	uint32_t recent_gyro_data_read_fails;
 	uint32_t adxrs649_data_check_fails;
-	uint32_t accel_data_read_fails;
+	uint32_t recent_accel_data_read_fails;
 	uint32_t adxl380_data_check_fails;
 	uint32_t ad_breakout_board_data_logging_fails;
 } ad_breakout_board_health_t;
@@ -97,7 +97,7 @@ void ad_breakout_board_task(void *argument) {
 				if (adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas),
 										   &raw_gyro) != W_SUCCESS) {
 					g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-					ad_breakout_board_health.gyro_data_read_fails++;
+					ad_breakout_board_health.recent_gyro_data_read_fails++;
 					log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read gyro.");
 				}
 			}
@@ -124,7 +124,7 @@ void ad_breakout_board_task(void *argument) {
 				if (adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
 										   &raw_accel) != W_SUCCESS) {
 					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-					ad_breakout_board_health.accel_data_read_fails++;
+					ad_breakout_board_health.recent_accel_data_read_fails++;
 					log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read accel.");
 				}
 			}
@@ -220,23 +220,12 @@ health_status_t ad_breakout_board_get_status(void) {
 	bool adxl380_is_init = W_FAILURE == adxl380_is_data_ready(NULL);
 	bool adxrs649_is_init = W_FAILURE == adxrs649_is_data_ready(NULL);
 
-	if (!adxl380_is_init || !adxrs649_is_init) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
-	}
-
-	if ((W_IO_ERROR == g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER].latest_status) ||
-		(W_IO_ERROR == g_task_ctx.accel_dual_buffer[AD_READ_BUFFER].latest_status)) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
-	}
-
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "AD BREAKBOARD TASK",
 			 "adxrs649_init=%d, adxrs649_read_fails=%lu, adxrs649_ready_check_fails=%lu",
 			 adxrs649_is_init,
-			 ad_breakout_board_health.gyro_data_read_fails,
+			 ad_breakout_board_health.recent_gyro_data_read_fails,
 			 ad_breakout_board_health.adxrs649_data_check_fails);
 
 	log_text(10,
@@ -244,7 +233,7 @@ health_status_t ad_breakout_board_get_status(void) {
 			 "AD BREAKBOARD TASK",
 			 "adxl380_init=%d, adxl380_read_fails=%lu, adxl380_ready_check_fails=%lu",
 			 adxl380_is_init,
-			 ad_breakout_board_health.accel_data_read_fails,
+			 ad_breakout_board_health.recent_accel_data_read_fails,
 			 ad_breakout_board_health.adxl380_data_check_fails);
 
 	log_text(10,
@@ -254,6 +243,19 @@ health_status_t ad_breakout_board_get_status(void) {
 			 ad_breakout_board_health.ad_breakout_board_data_logging_fails,
 			 g_task_ctx.gyro_dual_buffer[AD_READ_BUFFER].latest_status,
 			 g_task_ctx.accel_dual_buffer[AD_READ_BUFFER].latest_status);
+
+	if (!adxl380_is_init || !adxrs649_is_init) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
+
+	if (ad_breakout_board_health.recent_accel_data_read_fails ||
+		ad_breakout_board_health.recent_gyro_data_read_fails) {
+		ad_breakout_board_health.recent_accel_data_read_fails = 0;
+		ad_breakout_board_health.recent_gyro_data_read_fails = 0;
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
+	}
 
 	return status;
 }
