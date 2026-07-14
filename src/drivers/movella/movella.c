@@ -262,17 +262,6 @@ health_status_t movella_get_status(void) {
 	health_status_t status = {
 		.severity = HEALTH_OK, .module_id = MODULE_MOVELLA, .error_bitfield = 0};
 
-	if (movella_health.recent_dead_data_count) {
-		movella_health.recent_dead_data_count = 0;
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_PERIPHERAL_COMM_FAIL;
-	}
-
-	if (!s_movella.initialized) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
-	}
-
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "movella",
@@ -297,6 +286,17 @@ health_status_t movella_get_status(void) {
 			 movella_health.get_data_null_out_param,
 			 movella_health.get_data_failed_take_mutex,
 			 movella_health.event_callback_timer_fail);
+
+	if (movella_health.recent_dead_data_count) {
+		movella_health.recent_dead_data_count = 0;
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_PERIPHERAL_COMM_FAIL;
+	}
+
+	if (!s_movella.initialized) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
 
 	return status;
 }
