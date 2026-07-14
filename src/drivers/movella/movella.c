@@ -38,7 +38,7 @@ typedef struct {
 typedef struct {
 	uint32_t init_double_init;
 	uint32_t init_null_mutex;
-	uint32_t dead_data_count;
+	uint32_t recent_dead_data_count;
 	uint32_t get_data_null_out_param;
 	uint32_t get_data_not_init;
 	uint32_t get_data_failed_take_mutex;
@@ -253,7 +253,7 @@ void movella_task(void *parameters) {
 			s_movella.latest_data.is_dead = false;
 		} else {
 			s_movella.latest_data.is_dead = true;
-			movella_health.dead_data_count++;
+			movella_health.recent_dead_data_count++;
 		}
 	}
 }
@@ -261,6 +261,12 @@ void movella_task(void *parameters) {
 health_status_t movella_get_status(void) {
 	health_status_t status = {
 		.severity = HEALTH_OK, .module_id = MODULE_MOVELLA, .error_bitfield = 0};
+
+	if (movella_health.recent_dead_data_count) {
+		movella_health.recent_dead_data_count = 0;
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_PERIPHERAL_COMM_FAIL;
+	}
 
 	if (!s_movella.initialized) {
 		status.severity = HEALTH_ERROR;
@@ -270,11 +276,11 @@ health_status_t movella_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "movella",
-			 "init=%d, configured=%d, dead_data=%d, dead_data_count=%d",
+			 "init=%d, configured=%d, dead_data=%d, recent_dead_data_count=%d",
 			 s_movella.initialized,
 			 s_movella.configured,
 			 s_movella.latest_data.is_dead,
-			 movella_health.dead_data_count);
+			 movella_health.recent_dead_data_count);
 
 	log_text(10,
 			 LOG_LVL_INFO,
