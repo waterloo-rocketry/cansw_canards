@@ -195,5 +195,3 @@ w_status_t ad_breakout_board_get_gyro_data(float64_t *p_gyro_data, uint32_t *tim
 
 	return return_status;
 }
-
-w_status_t  get
