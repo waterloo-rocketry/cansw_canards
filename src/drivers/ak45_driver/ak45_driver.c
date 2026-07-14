@@ -315,7 +315,8 @@ health_status_t ak45_get_status(void) {
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
 			 "ak45",
-			 "is_init=%d, hard_stop_calibrated=%d, hard_stop_cal_failed=%d, rx_errors=%lu, tx_errors=%lu",
+			 "is_init=%d, hard_stop_calibrated=%d, hard_stop_cal_failed=%d, rx_errors=%lu, "
+			 "tx_errors=%lu",
 			 ak45_health.is_init,
 			 ak45_health.hard_stop_calibrated,
 			 ak45_health.hard_stop_cal_failed,
@@ -336,7 +337,8 @@ health_status_t ak45_get_status(void) {
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
 			 "ak45",
-			 "init_timeout=%lu, init_notif_fails=%lu, init_start_fails=%lu, init_filter_fails=%lu, fdcan_stop_fails=%lu",
+			 "init_timeout=%lu, init_notif_fails=%lu, init_start_fails=%lu, init_filter_fails=%lu, "
+			 "fdcan_stop_fails=%lu",
 			 ak45_health.init_fdcan_timeout,
 			 ak45_health.init_fdcan_notification_fails,
 			 ak45_health.init_fdcan_start_fails,
