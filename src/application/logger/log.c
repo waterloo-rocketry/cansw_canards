@@ -257,6 +257,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	// Attempt to acquire mutex to safely access current_text_buf_num
 	if (xSemaphoreTake(log_text_write_mutex, pdMS_TO_TICKS(timeout)) != pdPASS) {
 		logger_health.log_write_timeouts++;
+		logger_health.timeout_occurred = true;
 		logger_health.dropped_txt_msgs++;
 		return W_FAILURE;
 	}
@@ -372,6 +373,7 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	// Attempt to acquire mutex to safely access current_data_buf_num
 	if (xSemaphoreTake(log_data_write_mutex, pdMS_TO_TICKS(timeout)) != pdPASS) {
 		logger_health.log_write_timeouts++;
+		logger_health.timeout_occurred = true;
 		logger_health.dropped_data_msgs++;
 		return W_FAILURE;
 	}
@@ -476,10 +478,19 @@ health_status_t logger_get_status(void) {
 		status.error_bitfield |= (1 << MODULE_ERR_OVERFLOW);
 	}
 
+	if (logger_health.timeout_occurred) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= (1 << MODULE_ERR_TIMEOUT);
+	}
+
 	if ((logger_health.crit_errs > 0) || (logger_health.unsafe_buffer_flushes > 0)) {
 		status.severity = HEALTH_ERROR;
 		status.error_bitfield |= 1 << MODULE_ERR_CRITICAL;
 	}
+
+	// reset error flags
+	logger_health.buffer_is_full = false;
+	logger_health.timeout_occurred = false;
 
 	log_text(10,
 			 LOG_LVL_INFO,
@@ -503,9 +514,6 @@ health_status_t logger_get_status(void) {
 			 logger_health.no_full_buf_moments,
 			 logger_health.buffer_flush_fails,
 			 logger_health.unsafe_buffer_flushes);
-
-	// reset error flag
-	logger_health.buffer_is_full = false;
 
 	return status;
 }

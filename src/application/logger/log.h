@@ -237,7 +237,8 @@ typedef struct {
 	uint32_t no_full_buf_moments;
 	uint32_t buffer_flush_fails;
 	uint32_t unsafe_buffer_flushes;
-	bool buffer_is_full;
+	bool buffer_is_full; // flag for full buffer since last health check
+	bool timeout_occurred; // flag for timeout since last health check
 } logger_health_t;
 
 /**
