@@ -3,6 +3,7 @@
 
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/health_checks/health_checks.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
