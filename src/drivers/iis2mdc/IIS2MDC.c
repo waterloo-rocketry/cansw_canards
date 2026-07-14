@@ -137,6 +137,10 @@ static iis2mdc_health_t iis2mdc_health = {0};
  */
 static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: I2C register read attempted after async pipeline active");
 		iis2mdc_health.i2c_after_callback_switch++;
 		return W_FAILURE;
 	}
@@ -152,6 +156,10 @@ static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
  */
 static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: I2C register write attempted after async pipeline active");
 		iis2mdc_health.i2c_after_callback_switch++;
 		return W_FAILURE;
 	}
@@ -181,6 +189,10 @@ static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, 
  */
 static w_status_t self_test_wait_data_ready(void) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: wait_data_ready called after async DMA pipeline active");
 		iis2mdc_health.i2c_after_callback_switch++;
 		return W_FAILURE;
 	}
@@ -263,18 +275,24 @@ static w_status_t iis2mdc_self_test(void) {
 	vector3d_t avg_off, avg_on;
 
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: self test attempted after async pipeline active");
 		iis2mdc_health.i2c_after_callback_switch++;
 		return W_FAILURE;
 	}
 
 	// discard the first sample, then average with self-test disabled
 	if (W_SUCCESS != self_test_collect_average(&avg_off)) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test baseline read failed");
 		return W_FAILURE;
 	}
 
 	// enable self-test and wait 60ms for field to settle (specified in AN 5080)
 	if (W_SUCCESS !=
 		iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C | IIS2MDC_CFG_C_SELF_TEST)) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to enable self-test");
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_SETTLE_MS));
@@ -283,9 +301,11 @@ static w_status_t iis2mdc_self_test(void) {
 
 	// restore normal config regardless of the read outcome
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to restore configs after self test");
 		return W_FAILURE;
 	}
 	if (W_SUCCESS != read_status) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test read failed");
 		return W_FAILURE;
 	}
 
@@ -297,6 +317,7 @@ static w_status_t iis2mdc_self_test(void) {
 	if ((dx < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dx > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
 		(dy < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dy > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
 		(dz < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dz > IIS2MDC_SELF_TEST_MAX_GAUSS)) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test out of range: x=%f y=%f z=%f", dx, dy, dz);
 		iis2mdc_health.self_test_out_of_range++;
 		return W_FAILURE;
 	}
@@ -313,6 +334,11 @@ static w_status_t iis2mdc_sanity_check(void) {
 	// Checks to make sure sanity check is not already in progress or that async DMA is not already
 	// active.
 	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: sanity check called from invalid state %u",
+				 iis2mdc_state);
 		iis2mdc_health.sanity_check_invalid_state++;
 		return W_FAILURE;
 	}
@@ -322,11 +348,19 @@ static w_status_t iis2mdc_sanity_check(void) {
 	iis2mdc_state = IIS2MDC_STATE_CHECKING;
 
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "ERROR: failed to read WHO_AM_I");
 		status = W_FAILURE;
 	} else if (IIS2MDC_WHO_AM_I_VAL != id) {
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "WHO_AM_I mismatch: expected %u, got %u",
+				 IIS2MDC_WHO_AM_I_VAL,
+				 id);
 		iis2mdc_health.who_am_i_mismatch++;
 		status = W_FAILURE;
 	} else if (W_SUCCESS != iis2mdc_self_test()) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "ERROR: self-test failed");
 		status = W_FAILURE;
 	}
 
@@ -412,6 +446,11 @@ static void iis2mdc_dma_error(I2C_HandleTypeDef *hi2c) {
 w_status_t iis2mdc_init(void) {
 	// reject reinitialization
 	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
+		log_text(1,
+				 LOG_LVL_FATAL,
+				 "iis2mdc",
+				 "ERROR: init called from non-UNINIT state %u",
+				 iis2mdc_state);
 		iis2mdc_health.reinit_attempts++;
 		return W_FAILURE;
 	}
@@ -421,6 +460,7 @@ w_status_t iis2mdc_init(void) {
 
 	// soft reset clears config registers
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "soft reset failed");
 		return W_FAILURE;
 	}
 
@@ -430,10 +470,12 @@ w_status_t iis2mdc_init(void) {
 	if ((W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C))) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to write configuration registers");
 		return W_FAILURE;
 	}
 
 	if (W_SUCCESS != iis2mdc_sanity_check()) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "sanity check failed");
 		return W_FAILURE;
 	}
 
@@ -445,6 +487,7 @@ w_status_t iis2mdc_init(void) {
 	if ((HAL_OK !=
 		 HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) ||
 		(HAL_OK != HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_ERROR_CB_ID, iis2mdc_dma_error))) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to register I2C DMA callbacks");
 		iis2mdc_health.register_callback_fails++;
 		return W_FAILURE;
 	}
@@ -452,6 +495,7 @@ w_status_t iis2mdc_init(void) {
 	iis2mdc_state = IIS2MDC_STATE_ASYNC_DMA_ACTIVE;
 
 	if (W_SUCCESS != iis2mdc_handle_drdy_irq()) {
+		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to clear interrupt");
 		return W_FAILURE;
 	}
 
@@ -461,6 +505,10 @@ w_status_t iis2mdc_init(void) {
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 							uint32_t *timestamp_ms) {
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {
+		log_text(1,
+				 LOG_LVL_WARN,
+				 "iis2mdc",
+				 "NULL pointer cannot be used as input to get_data function");
 		iis2mdc_health.invalid_args++;
 		return W_FAILURE;
 	}
