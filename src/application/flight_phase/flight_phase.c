@@ -46,6 +46,11 @@ typedef struct {
 	uint32_t loop_run_errs;
 	uint32_t state_transitions;
 	uint32_t invalid_events;
+	uint32_t null_ctx_count;
+	bool is_in_error_state;
+	bool received_invalid_event;
+	bool is_in_unknown_state;
+	bool event_send_failed;
 
 	// Per-event counters
 	struct {
@@ -61,6 +66,7 @@ typedef struct {
 
 	// Queue statistics
 	uint32_t event_queue_full_count;
+	bool is_queue_full;
 } flight_phase_status_t;
 
 // static members
@@ -120,6 +126,8 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 			break;
 		default:
 			// Unexpected event type
+			log_text(1, LOG_LVL_WARN, "FlightPhase", "Unexpected event type %d", event);
+			flight_phase_status.invalid_events++;
 			break;
 	}
 
@@ -130,6 +138,7 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 				 "Failed to send event %d to queue. Queue full?",
 				 event);
 		flight_phase_status.event_queue_full_count++;
+		flight_phase_status.is_queue_full = true;
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
@@ -177,6 +186,7 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 									  flight_phase_ctx_t *p_ctx) {
 	if (NULL == p_ctx) {
 		log_text(5, LOG_LVL_FATAL, "FlightPhase", "Invalid ptrs in update states");
+		flight_phase_status.null_ctx_count++;
 		// just return the current state if invalid
 		return curr_state;
 	}
@@ -199,6 +209,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 						 "Unexpected event %d in state %d",
 						 event,
 						 curr_state);
+				flight_phase_status.invalid_events++;
+				flight_phase_status.received_invalid_event = true;
 			}
 			break;
 
@@ -219,6 +231,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 						 "Unexpected event %d in state %d",
 						 event,
 						 curr_state);
+				flight_phase_status.invalid_events++;
+				flight_phase_status.received_invalid_event = true;
 			}
 			break;
 
@@ -236,6 +250,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 						 "Unexpected event %d in state %d",
 						 event,
 						 curr_state);
+				flight_phase_status.invalid_events++;
+				flight_phase_status.received_invalid_event = true;
 			}
 			break;
 
@@ -258,6 +274,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 						 "Unexpected event %d in state %d",
 						 event,
 						 curr_state);
+				flight_phase_status.invalid_events++;
+				flight_phase_status.received_invalid_event = true;
 			}
 			break;
 
@@ -273,6 +291,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 						 "Unexpected event %d in state %d",
 						 event,
 						 curr_state);
+				flight_phase_status.invalid_events++;
+				flight_phase_status.received_invalid_event = true;
 			}
 			break;
 
@@ -287,6 +307,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 						 "Unexpected event %d in state %d",
 						 event,
 						 curr_state);
+				flight_phase_status.invalid_events++;
+				flight_phase_status.received_invalid_event = true;
 			}
 			break;
 
@@ -298,16 +320,21 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 					 "Unexpected event %d in state %d",
 					 event,
 					 curr_state);
+			flight_phase_status.invalid_events++;
+			flight_phase_status.received_invalid_event = true;
 			break;
 
 		// deprecate time?
 		case STATE_ERROR:
 			// Stay in error state, log repeated invalid event
 			log_text(1, LOG_LVL_FATAL, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
+			flight_phase_status.is_in_error_state = true;
 			break;
 		default:
 			log_text(10, LOG_LVL_FATAL, "FlightPhase", "Unhandled state %d", curr_state);
 			new_state = curr_state; // return thee same state
+			flight_phase_status.invalid_events++;
+			flight_phase_status.received_invalid_event = true;
 			break;
 	}
 
@@ -317,28 +344,6 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 	}
 
 	return new_state;
-}
-
-health_status_t flight_phase_get_status(void) {
-	uint32_t status_bitfield = 0;
-
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_FLIGHT_PHASE, .error_bitfield = 0};
-
-	if (!flight_phase_status.initialized) {
-		status.severity = HEALTH_FATAL;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
-	}
-
-	// Log initialization status and current state
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "flight_phase",
-			 "%s q full: %lu",
-			 flight_phase_status.initialized ? "INIT" : "NOT INIT",
-			 flight_phase_status.event_queue_full_count);
-
-	return status;
 }
 
 /**
@@ -492,6 +497,7 @@ w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_sta
 	if (EVENT_NONE != timer_event) {
 		if (flight_phase_send_event(timer_event) != W_SUCCESS) {
 			log_text(1, LOG_LVL_FATAL, "flight_phase", "timer send event failed.");
+			flight_phase_status.event_send_failed = true;
 			status = W_FAILURE;
 		}
 	}
@@ -503,9 +509,63 @@ w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_sta
 	if (EVENT_NONE != sensor_event) {
 		if (flight_phase_send_event(sensor_event) != W_SUCCESS) {
 			log_text(1, LOG_LVL_FATAL, "flight_phase", "sensor send event failed.");
+			flight_phase_status.event_send_failed = true;
 			status = W_FAILURE;
 		}
 	}
+
+	return status;
+}
+
+health_status_t flight_phase_get_status(void) {
+	uint32_t status_bitfield = 0;
+
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_FLIGHT_PHASE, .error_bitfield = 0};
+
+	if (!flight_phase_status.initialized) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
+
+	if (flight_phase_status.is_queue_full) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << MODULE_ERR_OVERFLOW;
+	}
+
+	if (flight_phase_status.received_invalid_event) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_FLIGHT_PHASE_INVALID_EVENT;
+	}
+
+	if (flight_phase_status.event_send_failed) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << MODULE_ERR_FLIGHT_PHASE_EVENT_SEND_FAILED;
+	}
+
+	if (flight_phase_status.is_in_error_state) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << MODULE_ERR_FLIGHT_PHASE_ERROR_STATE;
+	}
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "flight_phase",
+			 "init=%d, loop_run_errs=%d, state_transitions=%d, invalid_events=%d, "
+			 "null_ctx_count=%d, "
+			 "error_state=%d",
+			 flight_phase_status.initialized,
+			 flight_phase_status.loop_run_errs,
+			 flight_phase_status.state_transitions,
+			 flight_phase_status.invalid_events,
+			 flight_phase_status.null_ctx_count,
+			 flight_phase_status.is_in_error_state);
+
+	// reset flags
+	flight_phase_status.received_invalid_event = false;
+	flight_phase_status.event_send_failed = false;
+	flight_phase_status.is_queue_full = false;
+	flight_phase_status.is_in_error_state = false;
 
 	return status;
 }
