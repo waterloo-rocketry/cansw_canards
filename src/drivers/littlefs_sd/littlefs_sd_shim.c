@@ -12,7 +12,7 @@
 
 #define SD_SECTOR_SIZE 512 
 #define LFS_BLK_SIZE 512
-#define LOOKAHEAD_SIZE 2048 // this returns the numbers of blocks that cache size determines
+#define LOOKAHEAD_SIZE ((LOG_BUFFER_SIZE-1)/(SD_SECTOR_SIZE * 8)) + 1 // should be just over the size
 
 static uint8_t read_buffer[LFS_BLK_SIZE] __attribute__((section(".sdmmc2_ram"))) = {0};
 static uint8_t prog_buffer[LFS_BLK_SIZE] __attribute__((section(".sdmmc2_ram"))) = {0};
