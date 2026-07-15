@@ -9,6 +9,8 @@ FATFS g_fs_obj;
 
 sd_card_health_t sd_card_health = {0};
 
+static uint32_t bytes_total = 0;
+
 // Only 1 SD card mutex is needed because only 1 sd card exists
 SemaphoreHandle_t sd_mutex = NULL;
 
@@ -136,6 +138,8 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 		return W_FAILURE;
 	}
 
+	bytes_total+=*bytes_written;
+
 	/* Close the file and release the mutex. */
 	f_close(&file);
 	xSemaphoreGive(sd_mutex);
@@ -204,11 +208,11 @@ health_status_t sd_card_get_status(void) {
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "sd_card",
-			 "%s files_created=%lu, reads=%lu, writes=%lu",
+			 "%s files_created=%lu, reads=%lu, writes=%lu, WR Bytes=%lu",
 			 sd_card_health.is_init ? "init" : "not init",
 			 sd_card_health.file_create_count,
 			 sd_card_health.read_count,
-			 sd_card_health.write_count);
+			 sd_card_health.write_count, bytes_total);
 
 	return status;
 }

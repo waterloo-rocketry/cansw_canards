@@ -47,6 +47,8 @@ static uint32_t total_data_log_buffers = 0;
 
 static logger_health_t logger_health = {0};
 
+static uint32_t log_index = 0;
+
 /**
  * @brief Write a data log message's content to a specific region in a given buffer.
  * @note Not for external use.
@@ -249,6 +251,8 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
+	log_index++;
+
 	// Validate arguments
 	if ((!logger_health.is_init) || (NULL == source) || (NULL == format)) {
 		return W_INVALID_PARAM;
@@ -317,8 +321,8 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	// Write log message header to region
 	chars_written += snprintf_(msg_dest + chars_written,
 							   MAX_TEXT_MSG_LENGTH - chars_written,
-							   "[%" PRIu32 "] %s; %s; ",
-							   timestamp,
+							   "[%" PRIu32 "] [%" PRIu32 "] %s; %s; ",
+							   timestamp, log_index,
 							   level_string,
 							   source);
 	// If truncated, set first char to '!'
