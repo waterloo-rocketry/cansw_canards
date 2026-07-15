@@ -211,7 +211,11 @@ health_status_t sd_card_get_status(void) {
 		status.error_bitfield |= 1 << MODULE_ERR_CRITICAL;
 	}
 
+<<<<<<< HEAD
 	// Reset error flag
+=======
+	// Reset transient error flag
+>>>>>>> 364ca96f5ca47bae5564826dab67d83f1ef7daed
 	sd_card_health.error_occurred = false;
 
 	// Log operation statistics
