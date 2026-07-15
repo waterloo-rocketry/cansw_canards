@@ -28,6 +28,7 @@ typedef struct i2c_bus_handle {
 
 // Error statistics
 i2c_error_data i2c_error_stats[I2C_BUS_COUNT] = {0};
+static i2c_error_data last_i2c_error_stats[I2C_BUS_COUNT] = {0};
 
 // Initialize bus handles
 static i2c_bus_handle_t i2c_buses[I2C_BUS_COUNT] = {0};
@@ -380,8 +381,11 @@ void i2c_reset_all(void) {
 		if (i2c_buses[i].initialized && i2c_buses[i].hal_handle) {
 			HAL_I2C_DeInit(i2c_buses[i].hal_handle);
 			HAL_I2C_Init(i2c_buses[i].hal_handle); // Re-initialize after de-init
-			i2c_error_stats[i] = (i2c_error_data){0}; // Reset stats
 		}
+		i2c_error_stats[i] = (i2c_error_data){0}; // Reset stats
+		last_i2c_error_stats[i] = (i2c_error_data){0}; // Reset last stats
+		i2c_buses[i].initialized = false;
+		i2c_buses[i].hal_handle = NULL;
 	}
 }
 
@@ -400,6 +404,8 @@ health_status_t i2c_get_status(void) {
 			 "i2c",
 			 "all bus init: %s",
 			 (I2C_BUS_COUNT == num_bus_init) ? "true" : "false");
+
+	bool has_new_errors = false;
 
 	// Log per-bus status
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {
@@ -431,9 +437,26 @@ health_status_t i2c_get_status(void) {
 				 i2c_error_stats[i].timeouts,
 				 i2c_error_stats[i].nacks,
 				 i2c_error_stats[i].bus_errors);
+
+		if (i2c_error_stats[i].timeouts > last_i2c_error_stats[i].timeouts ||
+			i2c_error_stats[i].nacks > last_i2c_error_stats[i].nacks ||
+			i2c_error_stats[i].bus_errors > last_i2c_error_stats[i].bus_errors) {
+			has_new_errors = true;
+		}
+		last_i2c_error_stats[i] = i2c_error_stats[i];
 	}
 
 	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_I2C, .error_bitfield = 0};
+
+	if (num_bus_init < I2C_BUS_COUNT) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
+
+	if (has_new_errors) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
+	}
 
 	return status;
 }
