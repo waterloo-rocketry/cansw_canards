@@ -69,6 +69,7 @@ w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t bytes
 	if (res != FR_OK) {
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
+		sd_card_health.error_occurred = true;
 		return W_FAILURE;
 	}
 
@@ -78,6 +79,7 @@ w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t bytes
 		f_close(&file);
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
+		sd_card_health.error_occurred = true;
 		return W_FAILURE;
 	}
 
@@ -114,6 +116,7 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 		f_mount(&g_fs_obj, "", 1);
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
+		sd_card_health.error_occurred = true;
 		return W_FAILURE;
 	}
 
@@ -123,6 +126,7 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 			f_close(&file);
 			xSemaphoreGive(sd_mutex);
 			sd_card_health.err_count++;
+			sd_card_health.error_occurred = true;
 			return W_FAILURE;
 		}
 	}
@@ -133,6 +137,7 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 		f_close(&file);
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
+		sd_card_health.error_occurred = true;
 		return W_FAILURE;
 	}
 
@@ -163,6 +168,7 @@ w_status_t sd_card_file_create(const char *file_name) {
 	if (res != FR_OK) {
 		xSemaphoreGive(sd_mutex);
 		sd_card_health.err_count++;
+		sd_card_health.error_occurred = true;
 		return W_FAILURE;
 	}
 
@@ -199,6 +205,14 @@ health_status_t sd_card_get_status(void) {
 		status.severity = HEALTH_ERROR;
 		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
+
+	if (sd_card_health.error_occurred) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_CRITICAL;
+	}
+
+	// Reset transient error flag
+	sd_card_health.error_occurred = false;
 
 	// Log operation statistics
 	log_text(0,
