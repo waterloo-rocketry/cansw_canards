@@ -38,9 +38,20 @@ static const uint8_t INIT_DELAY_MS = 10;
 static float64_t V_EXTERNAL_REF_P_mV = 2048.0;
 static float64_t V_EXTERNAL_REF_N_mV = 0.0;
 
+typedef struct {
+	uint32_t self_test_fails;
+	uint32_t adc_sanity_check_fails;
+	uint32_t recent_data_ready_check_fails;
+	uint32_t recent_data_read_fails;
+	uint32_t recent_null_params;
+	uint32_t millivolt_conversion_fails;
+} adxrs649_health_t;
+
 // global adc handle
 static ads1219_handle_t g_ads_handle = {};
 static bool is_initialized = false;
+
+static adxrs649_health_t adxrs649_health = {0};
 
 /**
  * @brief perform the self-test on the ADXRS649
@@ -157,6 +168,7 @@ w_status_t adxrs649_init() {
 	// perform sanity check
 	if (ads1219_sanity_check(&g_ads_handle, ADS1219_CONFIG_SETTINGS) != W_SUCCESS) {
 		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed ADC sanity check.");
+		adxrs649_health.adc_sanity_check_fails++;
 		return W_FAILURE;
 	}
 
@@ -170,6 +182,7 @@ w_status_t adxrs649_init() {
 		}
 
 		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed gyro self-test.");
+		adxrs649_health.self_test_fails++;
 		return W_FAILURE;
 	}
 
@@ -196,6 +209,7 @@ w_status_t adxrs649_is_data_ready(bool *p_drdy) {
 	}
 	if ((NULL == p_drdy)) {
 		log_text(0, LOG_LVL_WARN, "ADXRS649", "Invalid return ptr.");
+		adxrs649_health.recent_null_params++;
 		return W_INVALID_PARAM;
 	}
 
@@ -208,6 +222,7 @@ w_status_t adxrs649_is_data_ready(bool *p_drdy) {
 	} else {
 		// use I2C to get value
 		if (ads1219_conversion_ready(&g_ads_handle, p_drdy) != W_SUCCESS) {
+			adxrs649_health.recent_data_ready_check_fails++;
 			return W_IO_ERROR;
 		}
 	}
@@ -230,19 +245,68 @@ w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 
 	if ((NULL == p_data) || (NULL == p_raw_data)) {
 		log_text(0, LOG_LVL_WARN, "ADXRS649", "Invalid return ptrs.");
+		adxrs649_health.recent_null_params++;
 		return W_INVALID_PARAM;
 	}
 
 	if (ads1219_read_value(&g_ads_handle, p_raw_data) != W_SUCCESS) {
+		adxrs649_health.recent_data_read_fails++;
 		return W_IO_ERROR;
 	}
 
 	float64_t data_mv = 0;
 	if (ads1219_millivolts(&g_ads_handle, (int32_t)*p_raw_data, &data_mv) != W_SUCCESS) {
+		adxrs649_health.millivolt_conversion_fails++;
 		return W_FAILURE;
 	}
 
 	*p_data = (data_mv - NULL_BIAS_mV) / MV_TO_DPS;
 
 	return W_SUCCESS;
+}
+
+/**
+ * @brief gets the health status of the ADXRS649 gyro and logs info
+ * @return the health status of the ADXRS649
+ */
+health_status_t adxrs649_get_status(void) {
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_ADXRS649, .error_bitfield = 0};
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "ADXRS649",
+			 "init=%d, st_fail=%lu, adc_sanity_fails=%lu, millivolt_conversion_fails=%lu",
+			 is_initialized,
+			 adxrs649_health.self_test_fails,
+			 adxrs649_health.adc_sanity_check_fails,
+			 adxrs649_health.millivolt_conversion_fails);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "ADXRS649",
+			 "drdy_fails=%lu, read_fails=%lu, null_param=%lu",
+			 adxrs649_health.recent_data_ready_check_fails,
+			 adxrs649_health.recent_data_read_fails,
+			 adxrs649_health.recent_null_params);
+
+	if (!is_initialized) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
+
+	if (adxrs649_health.recent_null_params) {
+		adxrs649_health.recent_null_params = 0;
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_INVALID_PARAM;
+	}
+
+	if (adxrs649_health.recent_data_read_fails || adxrs649_health.recent_data_ready_check_fails) {
+		adxrs649_health.recent_data_ready_check_fails = 0;
+		adxrs649_health.recent_data_read_fails = 0;
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
+	}
+
+	return status;
 }

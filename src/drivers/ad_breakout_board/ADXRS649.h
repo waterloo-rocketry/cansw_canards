@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
 #include "rocketlib/include/common.h"
 
@@ -28,4 +29,10 @@ w_status_t adxrs649_is_data_ready(bool *p_drdy);
  * W_IO_ERROR - occours when fialed to read I2C or GPIO messages
  */
 w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *v);
+
+/**
+ * @brief gets the health status of the ADXRS649 gyro and logs info
+ * @return the health status of the ADXRS649
+ */
+health_status_t adxrs649_get_status(void);
 #endif
