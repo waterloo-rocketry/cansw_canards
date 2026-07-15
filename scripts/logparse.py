@@ -33,7 +33,7 @@ FORMATS = {
     0x44414548: Spec("header", "<LL", ["version", "index"]),
     M(0x01): Spec("test", "<f", ["test_val"]),  
     
-    M(0x02): Spec("navigator_pt1", "<fffffL",
+    M(0x02): Spec("navigator_pt1", "<ffffff",
     [
         "q_w", "q_x", "q_y", "q_z", "altitude", "norm",
     ]),
@@ -52,7 +52,7 @@ FORMATS = {
         "accel_x", "accel_y", "accel_z",
         "gyro_x", "gyro_y", "gyro_z",
     ]),
-    M(0x06): Spec("board_baro", "<Ll", ["baro", "thermometer"]),
+    M(0x06): Spec("board_baro", "<ff", ["baro", "thermometer"]),
 
     M(0x07): Spec("board_mag", "<ffffff",
     [
@@ -64,7 +64,7 @@ FORMATS = {
         "accel_x", "accel_y", "accel_z",
         "gyro_x", "gyro_y", "gyro_z",
     ]),
-    M(0x09): Spec("movella_pt2", "<fffL",
+    M(0x09): Spec("movella_pt2", "<ffff",
     [
         "mag_x", "mag_y", "mag_z",
         "baro",
@@ -73,18 +73,13 @@ FORMATS = {
     [
         "q_w", "q_x", "q_y", "q_z",
     ]),
-    M(0x0B): Spec("movella_pt4", "<ffffff",
-    [
-        "rate_x", "rate_y", "rate_z",
-        "vel_x", "vel_y", "vel_z",
-    ]),
     M(0x0C): Spec("ad_accel", "<fff",
     [
         "accel_x", "accel_y", "accel_z",
     ]),
-    M(0x0D): Spec("ad_gyro", "<l", ["gyro"]),
+    M(0x0D): Spec("ad_gyro", "<f", ["gyro"]),
 
-    M(0x0E): Spec("servo_motor", "<lll",
+    M(0x0E): Spec("servo_motor", "<fff",
     [
         "angle", "curr", "temp",
     ]),
@@ -124,8 +119,7 @@ def main(argv=None):
             type_int, timestamp = struct.unpack_from("<LL", data, pos)
 
             row = {col: "" for col in csv_columns}
-            # convert tenth_ms to ms
-            row["timestamp"] = timestamp / 10.0
+            row["timestamp"] = timestamp
 
             print(f"[{timestamp}] ", end="", file=txt_file)
 
