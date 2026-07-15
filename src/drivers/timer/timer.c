@@ -16,6 +16,7 @@ extern TIM_HandleTypeDef htim2;
  */
 typedef struct {
 	bool is_init; /**< Whether the timer module has been initialized */
+	bool is_fatal_error; /**< Whether a fatal error has occurred */
 	uint32_t timer_start_fails; /**< Count of HAL_TIM_Base_Start failures */
 	uint32_t valid_calls; /**< Count of successful calls to timer_get_ms */
 	uint32_t invalid_param; /**< Count of calls with NULL parameter */
@@ -62,6 +63,7 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 	// check the timer handle pointer to ensure it is valid
 	if (htim2.Instance == NULL) {
 		timer_health.timer_invalid_handle++;
+		timer_health.is_fatal_error = true;
 		return W_FAILURE;
 	}
 	// check initialization
@@ -97,6 +99,7 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 	// check the timer handle pointer to ensure it is valid
 	if (htim2.Instance == NULL) {
 		timer_health.timer_invalid_handle++;
+		timer_health.is_fatal_error = true;
 		return W_FAILURE;
 	}
 	// check initialization
@@ -129,11 +132,16 @@ health_status_t timer_get_status(void) {
 		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
 	}
 
+	if (timer_health.is_fatal_error) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << MODULE_TIMER_HANDLE_INVALID;
+	}
+
 	// Log call statistics
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "timer",
-			 "Call statistics: total=%lu, successful=%lu, is_init=%lu",
+			 "Call statistics: total=%lu, successful=%lu, is_init=%d",
 			 total_calls,
 			 timer_health.valid_calls,
 			 timer_health.is_init);
