@@ -19,6 +19,7 @@ typedef struct {
 	uint32_t read_count;
 	uint32_t write_count;
 	uint32_t err_count;
+	bool error_occurred; /**< Flag indicating an error occurred since last health check */
 } sd_card_health_t;
 
 /**
