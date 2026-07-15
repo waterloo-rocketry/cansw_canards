@@ -24,12 +24,11 @@ typedef struct {
  */
 typedef struct {
 	bool is_init; /**< Initialization status flag */
-	uint32_t imu_data_timeouts; /**< Count of IMU data receive timeouts */
-	uint32_t encoder_data_fails; /**< Count of encoder data receive failures */
-	uint32_t controller_data_fails; /**< Count of controller output retrieval failures */
-	uint32_t pad_filter_fails; /**< Count of pad filter run failures */
-	uint32_t can_log_fails; /**< Count of CAN logging failures */
-	uint32_t invalid_phase_errors; /**< Count of invalid flight phase errors */
+	uint32_t null_ctx_count;
+	uint32_t nav_not_run_count;
+
+	bool ctx_is_null;
+	bool nav_not_run;
 } navigator_error_data_t;
 
 /**
