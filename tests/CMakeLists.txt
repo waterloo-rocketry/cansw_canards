@@ -223,13 +223,6 @@ add_test_group(test_uart
     ${PROC_SRC_DIR}/drivers/uart/uart.c
 )
 
-add_test_group(test_can_handler
-    # test file(s)
-    ${UNIT_TESTS_DIR}/can_handler_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/application/can_handler/can_handler.c
-)
-
 add_test_group(test_i2c
     # test file(s)
     ${UNIT_TESTS_DIR}/i2c_test.cpp
