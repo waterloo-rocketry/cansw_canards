@@ -119,20 +119,12 @@ TEST_F(TelemetryModuleTest, RegisterBeyondMaxSourcesFails) {
     EXPECT_EQ(telemetry_register(&cfg), W_FAILURE);
 }
 
-// ---------------------------------------------------------------------------
-// get_status
-// ---------------------------------------------------------------------------
-
 TEST_F(TelemetryModuleTest, StatusHealthyByDefault) {
     ASSERT_EQ(telemetry_init(), W_SUCCESS);
     health_status_t status = telemetry_get_status();
     EXPECT_EQ(status.severity, HEALTH_OK);
     EXPECT_EQ(status.module_id, MODULE_TELEMETRY);
 }
-
-// ---------------------------------------------------------------------------
-// scheduling: telemetry_run_once / telemetry_init_due_dates
-// ---------------------------------------------------------------------------
 
 TEST_F(TelemetryModuleTest, WrongPhaseDoesNotLog) {
     ASSERT_EQ(telemetry_init(), W_SUCCESS);

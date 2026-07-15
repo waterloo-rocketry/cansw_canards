@@ -6,14 +6,69 @@
 #include "drivers/timer/timer.h"
 #include "task.h"
 
-#define TELEMETRY_MAX_SOURCES 32 // TODO: find out real value for this
+#define TELEMETRY_MAX_SOURCES 100 // TODO: find out real value for this
+#define TELEMETRY_PER_MODULE_MAX_SOURCE 20 // TODO: find out real value for this
 #define TELEMETRY_TASK_PERIOD_MS 1 // 1000hz
+
+// struct to keep track of due dates and last logged time
+typedef struct {
+	telemetry_source_config_t public_config_handle;
+	uint32_t
+		last_logged_ms; // the last ms timestamp when this source was logged (for health checks)
+	uint32_t due_date_ms; // the next ms timestamp when this source should be logged
+} telemetry_timestamped_config_t;
 
 // struct to keep track of registered telemetry sources
 typedef struct {
-	uint32_t num_sources; // number of sources currently registered
-	telemetry_source_config_t
-		sources[TELEMETRY_MAX_SOURCES]; // array of registered telemetry sources
+	struct {
+		uint32_t num_sources;
+		telemetry_timestamped_config_t
+			registered_state_idle[TELEMETRY_MAX_SOURCES];
+	} state_idle;
+
+	struct {
+		uint32_t num_sources;
+		telemetry_timestamped_config_t
+			registered_state_pad_filter[TELEMETRY_MAX_SOURCES];
+	} state_pad_filter;
+
+	struct {
+		uint32_t num_sources;
+		telemetry_timestamped_config_t
+			registered_pad_nav[TELEMETRY_MAX_SOURCES];
+	} state_pad_nav;
+
+	struct {
+		uint32_t num_sources;
+		telemetry_timestamped_config_t
+			registered_state_boost[TELEMETRY_MAX_SOURCES];
+	} state_boost;
+
+	struct {
+		uint32_t num_sources;
+		telemetry_timestamped_config_t
+			registered_state_act_allowed[TELEMETRY_MAX_SOURCES];
+	} state_act_allowed;
+
+	struct {
+		uint32_t num_sources;
+		telemetry_timestamped_config_t
+			registered_state_recovery[TELEMETRY_MAX_SOURCES];
+	} state_recovery;
+
+	struct {
+		uint32_t num_sources;
+		telemetry_timestamped_config_t
+			registered_state_sleepy[TELEMETRY_MAX_SOURCES];
+	} state_sleepy;
+
+	struct {
+		uint32_t num_sources;
+		telemetry_timestamped_config_t
+			registered_state_error[TELEMETRY_MAX_SOURCES];
+	} state_error;
+
+	telemetry_user_stats_t user_register_stats[MODULE_MAX];
 } telemetry_registry_t;
 
 // struct to keep track of telemetry statistics
@@ -23,6 +78,12 @@ typedef struct {
 	uint16_t successful_transmissions;
 	uint16_t overdue_count;
 } telemetry_stats_t;
+
+ // for tracking - making sure one module does not register too much function calls
+typedef struct {
+	telemetry_module_name_t name;
+	uint32_t number_registered;
+} telemetry_user_stats_t;
 
 // global struct to track registry and stats (static storage is zero-initialized)
 static telemetry_registry_t g_telemetry_registry;
@@ -44,8 +105,6 @@ static void telemetry_clear_all_data(void) {
 		g_telemetry_registry.sources[i].log_fn = NULL;
 		g_telemetry_registry.sources[i].flight_phase_state = STATE_ERROR;
 		g_telemetry_registry.sources[i].period_ms = 0;
-		g_telemetry_registry.sources[i].last_logged_ms = 0;
-		g_telemetry_registry.sources[i].due_date_ms = 0;
 	}
 
 	g_telemetry_registry.num_sources = 0;
@@ -169,8 +228,6 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
 	log_text(1, LOG_LVL_WARN, "telemetry module", "Invalid telemetry source configuration");
 	return W_INVALID_PARAM;
 	}
-
-	for()
 
 	if ((config->last_logged_ms != 0) || (config->due_date_ms != 0)) {
 	log_text(
