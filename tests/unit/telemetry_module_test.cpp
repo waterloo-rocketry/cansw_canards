@@ -57,12 +57,10 @@ protected:
     static telemetry_source_config_t
     make_source(telemetry_log_fn_t log_fn, fsm_state_t phase, uint32_t period_ms) {
         telemetry_source_config_t cfg = {};
-        cfg.name = "test_source";
+        cfg.source_name = "test_source";
         cfg.log_fn = log_fn;
         cfg.flight_phase_state = phase;
         cfg.period_ms = period_ms;
-        cfg.last_logged_ms = 0;
-        cfg.due_date_ms = 0;
         return cfg;
     }
 };
@@ -82,7 +80,7 @@ TEST_F(TelemetryModuleTest, RegisterBeforeInitFails) {
 TEST_F(TelemetryModuleTest, RegisterNullNameIsInvalidParam) {
     ASSERT_EQ(telemetry_init(), W_SUCCESS);
     telemetry_source_config_t cfg = make_source(source_log_ok, STATE_ACT_ALLOWED, 100);
-    cfg.name = nullptr;
+    cfg.source_name = nullptr;
     EXPECT_EQ(telemetry_register(&cfg), W_INVALID_PARAM);
 }
 
@@ -98,20 +96,10 @@ TEST_F(TelemetryModuleTest, RegisterZeroPeriodIsInvalidParam) {
     EXPECT_EQ(telemetry_register(&cfg), W_INVALID_PARAM);
 }
 
-TEST_F(TelemetryModuleTest, RegisterWithPresetSchedulingFieldsWarnsButSucceeds) {
-    ASSERT_EQ(telemetry_init(), W_SUCCESS);
-    telemetry_source_config_t cfg = make_source(source_log_ok, STATE_ACT_ALLOWED, 100);
-    cfg.last_logged_ms = 42;
-    cfg.due_date_ms = 99;
-    EXPECT_EQ(telemetry_register(&cfg), W_SUCCESS);
-    // A warning must have been logged for the misused scheduling fields.
-    EXPECT_GE(log_text_fake.call_count, 1u);
-}
-
 TEST_F(TelemetryModuleTest, RegisterBeyondMaxSourcesFails) {
     ASSERT_EQ(telemetry_init(), W_SUCCESS);
-    // TELEMETRY_MAX_SOURCES is a private macro (32) in telemetry.c.
-    constexpr uint32_t kMaxSources = 32;
+    // TELEMETRY_MAX_SOURCES is a private macro (100) in telemetry.c.
+    constexpr uint32_t kMaxSources = 100;
     telemetry_source_config_t cfg = make_source(source_log_ok, STATE_ACT_ALLOWED, 100);
     for (uint32_t i = 0; i < kMaxSources; i++) {
         EXPECT_EQ(telemetry_register(&cfg), W_SUCCESS) << "at source " << i;

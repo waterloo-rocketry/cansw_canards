@@ -12,14 +12,9 @@
 // code)
 typedef w_status_t (*telemetry_log_fn_t)(void);
 
-typedef enum {
-	MODULE_MAX = 32 //TODO: find out correct module max
-} telemetry_module_name_t;
-
 // struct for telemetry source configuration
 typedef struct {
-	telemetry_module_name_t module_name; // for status/debug logging
-	const char* source_name;
+	const char *source_name;
 
 	telemetry_log_fn_t log_fn; // function to call periodically to log data
 	fsm_state_t flight_phase_state; // the flight phase state in which this source should be logged
@@ -50,8 +45,16 @@ void telemetry_task(void *argument);
 
 /**
  * @brief run telemtry once, calling all registered function due at call time
+ * @note normally called internally by telemetry_task; exposed for unit testing
  */
 void telemetry_run_once(void);
+
+/**
+ * @brief seed the due date of every registered source relative to curr_time
+ * @param curr_time current time in ms (start of telemetry task)
+ * @note normally called internally by telemetry_task; exposed for unit testing
+ */
+void telemetry_init_due_dates(uint32_t curr_time);
 
 /**
  * @brief Reports the current status of the telemetry module
