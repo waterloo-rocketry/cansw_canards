@@ -12,24 +12,16 @@
 
 /* Enums/Types */
 
-// main controller state using in task
-typedef struct {
-	uint32_t last_ms; // currently unused...
-	uint32_t can_send_errors;
-	uint32_t data_miss_counter;
-} controller_t;
-
 /**
  * @brief Structure to track controller errors and status
  */
 typedef struct {
 	bool is_init; /**< Initialization status flag */
-	uint32_t can_send_errors; /**< Number of CAN send failures */
-	uint32_t data_miss_counter; /**< Number of missed data updates from estimator */
-	uint32_t timestamp_errors; /**< Number of timer/timestamp retrieval failures */
-	uint32_t gain_interpolation_errors; /**< Number of gain interpolation failures */
-	uint32_t angle_calculation_errors; /**< Number of commanded angle calculation failures */
-	uint32_t log_errors; /**< Number of logging failures */
+	uint32_t null_ctx_count;
+	uint32_t controller_not_run_count;
+
+	bool ctx_is_null;
+	bool controller_not_run;
 } controller_error_data_t;
 
 /**
