@@ -275,10 +275,8 @@ static w_status_t iis2mdc_self_test(void) {
 	vector3d_t avg_off, avg_on;
 
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
-		log_text(1,
-				 LOG_LVL_FATAL,
-				 "iis2mdc",
-				 "ERROR: self test attempted after async pipeline active");
+		log_text(
+			1, LOG_LVL_FATAL, "iis2mdc", "ERROR: self test attempted after async pipeline active");
 		iis2mdc_health.i2c_after_callback_switch++;
 		return W_FAILURE;
 	}
