@@ -135,6 +135,8 @@ w_status_t adxrs649_init() {
 		log_text(0, LOG_LVL_WARN, "ADXRS649", "Reinitialization is not allowed.");
 		return W_FAILURE;
 	}
+	
+	is_initialized = true;
 
 	// reset both gpio pins to low to start
 
@@ -276,7 +278,7 @@ health_status_t adxrs649_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "ADXRS649",
-			 "init=%d, st_fail=%lu, adc_sanity_fails=%lu, millivolt_conversion_fails=%lu",
+			 "init=%d, st_fail=%u, adc_sanity_fails=%u, millivolt_conversion_fails=%u",
 			 is_initialized,
 			 adxrs649_health.self_test_fails,
 			 adxrs649_health.adc_sanity_check_fails,
@@ -285,7 +287,7 @@ health_status_t adxrs649_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "ADXRS649",
-			 "drdy_fails=%lu, read_fails=%lu, null_param=%lu",
+			 "data_read_check_fails=%u, data_read_fails=%u, null_param=%u",
 			 adxrs649_health.recent_data_ready_check_fails,
 			 adxrs649_health.recent_data_read_fails,
 			 adxrs649_health.recent_null_params);

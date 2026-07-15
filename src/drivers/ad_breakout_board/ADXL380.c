@@ -48,6 +48,7 @@ w_status_t adxl380_init() {
 		return W_FAILURE;
 	}
 
+	is_initialized = true;
 	// init the handle
 	g_adx380_handle.i2c_addr = ADXL_ADDRS;
 	g_adx380_handle.i2c_bus = I2C_BUS_2; // TODO: To be corrected
@@ -254,7 +255,7 @@ health_status_t adxl380_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "ADXL380",
-			 "init=%d, st_fail=%lu, st_incomplete=%lu, drdy_fails=%lu",
+			 "init=%u, st_fail=%u, st_incomplete=%u, data_ready_check_fails=%u",
 			 is_initialized,
 			 adxl380_health.self_test_fails,
 			 adxl380_health.self_test_incomplete,
@@ -263,7 +264,7 @@ health_status_t adxl380_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "ADXL380",
-			 "read_fails=%lu, raw_fails=%lu, null_param=%lu",
+			 "read_fails=%u, get_accel_fails=%u, null_param=%u",
 			 adxl380_health.recent_data_read_fails,
 			 adxl380_health.get_raw_accel_fails,
 			 adxl380_health.recent_null_params);
