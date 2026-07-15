@@ -135,7 +135,7 @@ w_status_t adxrs649_init() {
 		log_text(0, LOG_LVL_WARN, "ADXRS649", "Reinitialization is not allowed.");
 		return W_FAILURE;
 	}
-	
+
 	is_initialized = true;
 
 	// reset both gpio pins to low to start
