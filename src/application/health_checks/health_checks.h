@@ -46,32 +46,38 @@ typedef enum {
 // Any module can add more error codes
 typedef enum {
 	ERR_NONE = 0,
-	ERR_BAT1_FAULT = 1,
-    ERR_BAT2_FAULT = 2,
-    ERR_CRC_FAILED = 3,
-    ERR_CRITICAL = 4,
-    ERR_DROPPED_RX = 5,
-    ERR_DROPPED_TX = 6,
-    ERR_ERROR_STATE = 7,
-    ERR_EVENT_SEND_FAILED = 8,
-    ERR_FAILED_CALIBRATION = 9,
-    ERR_FUNC_REGISTER_FAILED = 10,
-    ERR_GPIO_FAIL = 11,
-    ERR_HANDLE_INVALID = 12,
-    ERR_INVALID_EVENT = 13,
-    ERR_INVALID_PARAM = 14,
-    ERR_LOW_POWER_MODE_WITH_EXT_5V_ON = 15,
-    ERR_NO_DATA = 16,
-    ERR_NOT_CALIBRATED = 17,
-    ERR_NOT_INIT = 18,
-    ERR_NOT_RUN = 19,
-    ERR_NULL_CTX = 20,
-    ERR_OVERFLOW = 21,
-    ERR_PERIPHERAL_COMM_FAIL = 22,
-    ERR_TIMEOUT = 23,
-    ERR_TX_FAILURE = 24,
-    ERR_TX_OVERDUE = 25,
-    ERR_UNKNOWN_STATE = 26,
+	/* --- Hardware & Power Faults --- */
+	ERR_BAT1_FAULT = 1, /**< Battery 1 fault */
+	ERR_BAT2_FAULT = 2, /**< Battery 2 fault */
+	ERR_DEVICE_FAULT = 3, /**< External device fault */
+	ERR_FILE_SYSTEM = 4, /**< SD card or flash storage mount, read, or write operation failed */
+	ERR_HARDWARE_FAIL = 5, /**< Hardware interface failed (GPIO, pin config, etc.) */
+	ERR_LOW_POWER_MODE_WITH_EXT_5V_ON = 6, /**< Low-power mode active while external 5V is on */
+
+	/* --- Communication & Data Bus Faults --- */
+	ERR_COMM_FAILURE = 7, /**< Communication protocol failure (I2C, SPI, UART, etc.) */
+	ERR_CRC_FAILED = 8, /**< Integrity check failed */
+	ERR_NO_DATA = 9, /**< Expected sensor data packet or control command frame is missing */
+	ERR_RX_FAILURE = 10, /**< Error occurred during data reception on physical bus transceivers */
+	ERR_TIMEOUT = 11, /**< Operation or sensor handshake exceeded its allocated time window */
+	ERR_TX_FAILURE = 12, /**< Transmit failure */
+
+	/* --- System Execution & Timing Faults --- */
+	ERR_ERROR_STATE = 13, /**< FSM transitioned into an unhandled, invalid, or corrupted state */
+	ERR_FAILED_CALIBRATION = 14, /**< Calibration routine executed but failed */
+	ERR_NOT_CALIBRATED = 15, /**< Calibration did not execute */
+	ERR_LOOP_TIMING = 16, /**< Control loop period did not meet timing requirements */
+	ERR_NOT_INIT = 17, /**< Module, task, or driver was accessed before being initialized */
+	ERR_OS = 18, /**< RTOS feature (queue, semaphore) failed */
+
+	/* --- Software & Logic Faults --- */
+	ERR_CODEGEN = 19, /**< Error occurred inside codegen */
+	ERR_UNEXPECTED_EVENT = 20, /**< Attempted to trigger an illegal state transition event */
+	ERR_INVALID_PARAM = 21, /**< Function argument passed with value outside of legal range */
+	ERR_MATH = 22, /**< Floating-point exception, division by zero, or NaN in control algorithms */
+	ERR_OUT_OF_BOUNDS = 23, /**< Data is out of range */
+	ERR_OVERFLOW = 24, /**< Buffer, queue, or integer arithmetic register overflow */
+	ERR_INTERNAL = 25, /**< General software assertion or unhandled catch-all logical exception */
 	ERR_MAX = 31
 } module_error_code_t;
 
