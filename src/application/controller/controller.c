@@ -14,8 +14,6 @@
 static const float64_t MS_TO_SEC = 0.001;
 static const float64_t TENTH_MS_TO_MS = 0.1;
 
-// these two are redundent but different health check structs, should we just have one instead???
-static controller_t controller_state = {0};
 static controller_error_data_t controller_error_stats = {0};
 
 /**
@@ -35,6 +33,8 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 						   controller_ctx_t *p_ctx, controller_output_t *p_output) {
 	if ((NULL == p_input) || (NULL == p_ctx) || (NULL == p_output)) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "controller", "Invalid context ptr.");
+		controller_error_stats.null_ctx_count++;
+		controller_error_stats.ctx_is_null = true;
 		return W_INVALID_PARAM;
 	}
 
@@ -67,37 +67,44 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
 		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
+		controller_error_stats.controller_not_run_count++;
+		controller_error_stats.controller_not_run = true;
 	}
 
 	return W_SUCCESS;
 }
 
 health_status_t controller_get_status(void) {
-	// Log all error statistics
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "controller",
-			 "can_send=%lu, data_misses=%lu, timestamp=%lu, gain_interp=%lu, "
-			 "angle_calc=%lu, log=%lu",
-			 controller_error_stats.can_send_errors,
-			 controller_error_stats.data_miss_counter,
-			 controller_error_stats.timestamp_errors,
-			 controller_error_stats.gain_interpolation_errors,
-			 controller_error_stats.angle_calculation_errors,
-			 controller_error_stats.log_errors);
-
-	// Also log the internal controller state error counters for comparison
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "controller",
-			 "%s can_send_errors=%lu, data_miss_counter=%lu",
-			 controller_error_stats.is_init ? "true" : "false",
-			 controller_state.can_send_errors,
-			 controller_state.data_miss_counter);
-
 	health_status_t status = {
 		.severity = HEALTH_OK, .module_id = MODULE_CONTROLLER, .error_bitfield = 0};
 
+	if (controller_error_stats.is_init == false) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
+
+	if (controller_error_stats.ctx_is_null) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_NULL_CTX;
+	}
+
+	if (controller_error_stats.controller_not_run) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_RUN;
+	}
+
+	// reset flags
+	controller_error_stats.ctx_is_null = false;
+	controller_error_stats.controller_not_run = false;
+
+	// Log all error statistics
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "controller",
+			 "init=%d, null_ctx=%d, not_run=%d",
+			 controller_error_stats.is_init,
+			 controller_error_stats.null_ctx_count,
+			 controller_error_stats.controller_not_run_count);
 	return status;
 }
 
