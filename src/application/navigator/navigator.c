@@ -26,13 +26,13 @@ static const float64_t TENTH_MS_TO_SEC = 0.0001;
 #define DATA_WAIT_MS 10
 
 // Error tracking
-static navigator_error_data_t estimator_error_stats = {0};
+static navigator_error_data_t navigator_error_stats = {0};
 
 // ---------- public functions ----------
 
 w_status_t navigator_init(void) {
 	// Initialize error tracking
-	estimator_error_stats = (navigator_error_data_t){.is_init = true};
+	navigator_error_stats = (navigator_error_data_t){.is_init = true};
 
 	return W_SUCCESS;
 }
@@ -41,6 +41,8 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 						  navigator_ctx_t *p_ctx, navigator_output_t *p_output) {
 	if ((NULL == p_input) || (NULL == p_ctx) || (NULL == p_output)) {
 		log_text(0, LOG_LVL_WARN, "navigator", "Invalid context ptr.");
+		navigator_error_stats.null_ctx_count++;
+		navigator_error_stats.ctx_is_null = true;
 		return W_INVALID_PARAM;
 	}
 	// calculate remainder navigator data
@@ -122,6 +124,8 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
 		log_text(0, LOG_LVL_WARN, "Navigator", "Nav failed to run");
+		navigator_error_stats.nav_not_run_count++;
+		navigator_error_stats.nav_not_run = true;
 	}
 
 	return W_SUCCESS;
@@ -163,24 +167,35 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 // }
 
 health_status_t navigator_get_status(void) {
-	// Log all error statistics
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "Navigator",
-			 "imu_timeouts=%lu, encoder_miss=%lu, controller_miss=%lu,",
-			 estimator_error_stats.imu_data_timeouts,
-			 estimator_error_stats.encoder_data_fails,
-			 estimator_error_stats.controller_data_fails);
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "Navigator",
-			 "pad_filter_fails=%lu, can_log_fails=%lu, invalid_phase=%lu",
-			 estimator_error_stats.pad_filter_fails,
-			 estimator_error_stats.can_log_fails,
-			 estimator_error_stats.invalid_phase_errors);
-
 	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_ESTIMATOR, .error_bitfield = 0};
+		.severity = HEALTH_OK, .module_id = MODULE_NAVIGATOR, .error_bitfield = 0};
 
+	if (!navigator_error_stats.is_init) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	}
+
+	if (navigator_error_stats.ctx_is_null) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_NULL_CTX;
+	}
+
+	if (navigator_error_stats.nav_not_run) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << MODULE_ERR_NOT_RUN;
+	}
+
+	// reset flags
+	navigator_error_stats.ctx_is_null = false;
+	navigator_error_stats.nav_not_run = false;
+
+	// Log all error statistics
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "navigator",
+			 "init=%d, null_ctx=%d, nav_not_run=%d",
+			 navigator_error_stats.is_init,
+			 navigator_error_stats.null_ctx_count,
+			 navigator_error_stats.nav_not_run_count);
 	return status;
 }
