@@ -28,11 +28,12 @@ typedef struct i2c_bus_handle {
 
 // Error statistics
 i2c_error_data i2c_error_stats[I2C_BUS_COUNT] = {0};
+
 typedef struct {
 	volatile bool nack_occurred;
 	volatile bool timeout_occurred;
 	volatile bool bus_error_occurred;
-} i2c_error_flags_t; //flags for each type of error
+} i2c_error_flags_t; // flags for each type of error
 
 static i2c_error_flags_t i2c_flags[I2C_BUS_COUNT] = {0};
 
@@ -399,7 +400,7 @@ void i2c_reset_all(void) {
 			HAL_I2C_Init(i2c_buses[i].hal_handle); // Re-initialize after de-init
 		}
 		i2c_error_stats[i] = (i2c_error_data){0}; // Reset stats
-		i2c_flags[i] = (i2c_error_flags_t){0};    // Reset flags
+		i2c_flags[i] = (i2c_error_flags_t){0}; // Reset flags
 		i2c_buses[i].initialized = false;
 		i2c_buses[i].hal_handle = NULL;
 	}
@@ -454,8 +455,7 @@ health_status_t i2c_get_status(void) {
 				 i2c_error_stats[i].nacks,
 				 i2c_error_stats[i].bus_errors);
 
-		if (i2c_flags[i].nack_occurred ||
-			i2c_flags[i].timeout_occurred ||
+		if (i2c_flags[i].nack_occurred || i2c_flags[i].timeout_occurred ||
 			i2c_flags[i].bus_error_occurred) {
 			has_new_errors = true;
 
