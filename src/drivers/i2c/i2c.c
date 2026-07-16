@@ -28,7 +28,13 @@ typedef struct i2c_bus_handle {
 
 // Error statistics
 i2c_error_data i2c_error_stats[I2C_BUS_COUNT] = {0};
-static i2c_error_data last_i2c_error_stats[I2C_BUS_COUNT] = {0};
+typedef struct {
+	volatile bool nack_occurred;
+	volatile bool timeout_occurred;
+	volatile bool bus_error_occurred;
+} i2c_error_flags_t; //flags for each type of error
+
+static i2c_error_flags_t i2c_flags[I2C_BUS_COUNT] = {0};
 
 // Initialize bus handles
 static i2c_bus_handle_t i2c_buses[I2C_BUS_COUNT] = {0};
@@ -76,8 +82,10 @@ void i2c_error_callback(I2C_HandleTypeDef *hi2c) {
 			// Check if error is due to a NACK (AF) or other bus error
 			if (error & HAL_I2C_ERROR_AF) {
 				i2c_error_stats[i].nacks++;
+				i2c_flags[i].nack_occurred = true;
 			} else {
 				i2c_error_stats[i].bus_errors++;
+				i2c_flags[i].bus_error_occurred = true;
 			}
 			// Log the specific error
 
@@ -99,6 +107,7 @@ static w_status_t wait_transfer_complete(i2c_bus_handle_t *handle, i2c_bus_t bus
 		HAL_I2C_Master_Abort_IT(handle->hal_handle, 0xFFFF);
 		handle->transfer_complete = true;
 		i2c_error_stats[bus].timeouts++;
+		i2c_flags[bus].timeout_occurred = true;
 		handle->transfer_status = W_IO_TIMEOUT;
 	}
 
@@ -203,6 +212,7 @@ w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t
 	// Acquire the bus mutex to ensure exclusive access during the transfer
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
 		i2c_error_stats[bus].timeouts++;
+		i2c_flags[bus].timeout_occurred = true;
 
 		return W_IO_TIMEOUT;
 	}
@@ -220,6 +230,7 @@ w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t
 	// Handle HAL-level errors
 	if (hal_status != HAL_OK) {
 		i2c_error_stats[bus].bus_errors++;
+		i2c_flags[bus].bus_error_occurred = true;
 		xSemaphoreGive(handle->mutex);
 		return W_IO_ERROR;
 	}
@@ -249,6 +260,7 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 	// Acquire bus mutex with timeout
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
 		i2c_error_stats[bus].timeouts++;
+		i2c_flags[bus].timeout_occurred = true;
 		return W_IO_TIMEOUT;
 	}
 
@@ -265,6 +277,7 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 	// Handle HAL-level errors
 	if (hal_status != HAL_OK) {
 		i2c_error_stats[bus].bus_errors++;
+		i2c_flags[bus].bus_error_occurred = true;
 		xSemaphoreGive(handle->mutex);
 		return W_IO_ERROR;
 	}
@@ -293,6 +306,7 @@ w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *dat
 	// Acquire bus mutex with timeout
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
 		i2c_error_stats[bus].timeouts++;
+		i2c_flags[bus].timeout_occurred = true;
 		return W_IO_TIMEOUT;
 	}
 
@@ -309,6 +323,7 @@ w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *dat
 	// Handle HAL-level errors
 	if (hal_status != HAL_OK) {
 		i2c_error_stats[bus].bus_errors++;
+		i2c_flags[bus].bus_error_occurred = true;
 		xSemaphoreGive(handle->mutex);
 		return W_IO_ERROR;
 	}
@@ -339,6 +354,7 @@ w_status_t i2c_deinit_module(i2c_bus_t bus) {
 	// Acquire bus mutex with timeout
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
 		i2c_error_stats[bus].timeouts++;
+		i2c_flags[bus].timeout_occurred = true;
 		log_text(10, LOG_LVL_WARN, "i2c", "ERROR: unable to obtain mutex");
 		return W_IO_TIMEOUT;
 	}
@@ -383,7 +399,7 @@ void i2c_reset_all(void) {
 			HAL_I2C_Init(i2c_buses[i].hal_handle); // Re-initialize after de-init
 		}
 		i2c_error_stats[i] = (i2c_error_data){0}; // Reset stats
-		last_i2c_error_stats[i] = (i2c_error_data){0}; // Reset last stats
+		i2c_flags[i] = (i2c_error_flags_t){0};    // Reset flags
 		i2c_buses[i].initialized = false;
 		i2c_buses[i].hal_handle = NULL;
 	}
@@ -438,12 +454,16 @@ health_status_t i2c_get_status(void) {
 				 i2c_error_stats[i].nacks,
 				 i2c_error_stats[i].bus_errors);
 
-		if (i2c_error_stats[i].timeouts > last_i2c_error_stats[i].timeouts ||
-			i2c_error_stats[i].nacks > last_i2c_error_stats[i].nacks ||
-			i2c_error_stats[i].bus_errors > last_i2c_error_stats[i].bus_errors) {
+		if (i2c_flags[i].nack_occurred ||
+			i2c_flags[i].timeout_occurred ||
+			i2c_flags[i].bus_error_occurred) {
 			has_new_errors = true;
+
+			// Reset the transient error flags
+			i2c_flags[i].nack_occurred = false;
+			i2c_flags[i].timeout_occurred = false;
+			i2c_flags[i].bus_error_occurred = false;
 		}
-		last_i2c_error_stats[i] = i2c_error_stats[i];
 	}
 
 	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_I2C, .error_bitfield = 0};
