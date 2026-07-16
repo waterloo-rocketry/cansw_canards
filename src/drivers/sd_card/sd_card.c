@@ -197,7 +197,7 @@ health_status_t sd_card_get_status(void) {
 
 	if (sd_card_health.is_init == false) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	// Log operation statistics
