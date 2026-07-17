@@ -182,14 +182,14 @@ void fsm_task(void *args) {
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS)) == 0) {
 			log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
 			fsm_health.loop_timeouts++;
-			fsm_health.is_timed_out = true;
+			fsm_health.loop_timer_failed = true;
 		}
 
 		uint32_t timestamp_tenth_ms = 0;
 
 		if (W_SUCCESS != timer_get_tenth_ms(&timestamp_tenth_ms)) {
-			fsm_health.loop_timer_failures++;
-			fsm_health.loop_timer_failed = true;
+			fsm_health.get_timer_failures++;
+			fsm_health.get_timer_failed = true;
 		}
 
 		uint32_t timestamp_ms = timestamp_tenth_ms / MS_TO_TENTH_MS;
@@ -221,24 +221,29 @@ void fsm_task(void *args) {
 health_status_t fsm_get_status(void) {
 	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_FSM, .error_bitfield = 0};
 
-	if (!fsm_health.is_init) {
-		status.severity = HEALTH_FATAL;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+	if (fsm_health.loop_timer_failed) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << ERR_LOOP_TIMING;
 	}
 
-	if ((fsm_health.is_timed_out) || (fsm_health.loop_timer_failed)) {
+	if (fsm_health.get_timer_failed) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_TIMEOUT;
+		status.error_bitfield |= 1 << ERR_INTERNAL;
 	}
 
 	if (fsm_health.is_in_unknown_state) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_UNKNOWN_STATE;
+		status.error_bitfield |= 1 << ERR_INVALID_PARAM;
+	}
+
+	if (!fsm_health.is_init) {
+		status.severity = HEALTH_FATAL;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	// clear flags
-	fsm_health.is_timed_out = false;
 	fsm_health.loop_timer_failed = false;
+	fsm_health.get_timer_failed = false;
 	fsm_health.is_in_unknown_state = false;
 
 	log_text(10,
@@ -247,7 +252,7 @@ health_status_t fsm_get_status(void) {
 			 "init=%d, loop_timeouts=%d, loop_timer_failures=%d, unknown_state_errors=%d",
 			 fsm_health.is_init,
 			 fsm_health.loop_timeouts,
-			 fsm_health.loop_timer_failures,
+			 fsm_health.get_timer_failures,
 			 fsm_health.unknown_state_errors);
 
 	return status;
