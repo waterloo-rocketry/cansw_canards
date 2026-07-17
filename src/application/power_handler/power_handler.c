@@ -191,6 +191,7 @@ static void transmit_curr_volt_status_can_msg() {
  * Called by health checks.
  */
 health_status_t power_handler_get_status(void) {
+	// TODO: Set appropriate error bits
 	uint32_t status_bitfield = 0;
 	w_status_t gpio_read_status = W_SUCCESS;
 	float adc_value = 0;
@@ -215,7 +216,7 @@ health_status_t power_handler_get_status(void) {
 	}
 
 	if (GPIO_LEVEL_LOW == flt1) {
-		status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT1_VOLT;
+		// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT1_VOLT;
 		power_handler_status.lipo_1_fault_count++;
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -225,7 +226,7 @@ health_status_t power_handler_get_status(void) {
 	}
 
 	if (GPIO_LEVEL_LOW == flt2) {
-		status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT2_VOLT;
+		// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT2_VOLT;
 		power_handler_status.lipo_2_fault_count++;
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -236,7 +237,7 @@ health_status_t power_handler_get_status(void) {
 
 	// Check external 5V output fault
 	if (GPIO_LEVEL_LOW == pg_ext_5v) {
-		status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_5V_EXT_OUTPUT;
+		// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_5V_EXT_OUTPUT;
 		power_handler_status.external_5v_fault_count++;
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -249,7 +250,7 @@ health_status_t power_handler_get_status(void) {
 	// trigger the fault
 	if (W_SUCCESS == adc_get_converted_val(ISENS_5V, &adc_value)) {
 		if (adc_value > I5V_MAX) {
-			status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_5V_CURR;
+			// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_5V_CURR;
 			power_handler_status.overcurrent_count++;
 			log_text(1,
 					 LOG_LVL_WARN,
@@ -261,7 +262,7 @@ health_status_t power_handler_get_status(void) {
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_3V3, &adc_value)) {
 		if (adc_value > I3V3_MAX) {
-			status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_3V3_CURR;
+			// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_3V3_CURR;
 			power_handler_status.overcurrent_count++;
 			log_text(1,
 					 LOG_LVL_WARN,
@@ -278,7 +279,7 @@ health_status_t power_handler_get_status(void) {
 		case POWER_INPUT_CHG:
 			if (W_SUCCESS == adc_get_converted_val(VSENS_CHG, &adc_value)) {
 				if ((adc_value < VCHG_MIN) || (adc_value > VCHG_MAX)) {
-					status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_CHG_VOLT;
+					// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_CHG_VOLT;
 				}
 			}
 
@@ -288,7 +289,7 @@ health_status_t power_handler_get_status(void) {
 		case POWER_INPUT_RKT:
 			if (W_SUCCESS == adc_get_converted_val(VSENS_RKT, &adc_value)) {
 				if ((adc_value < VRKT_MIN) || (adc_value > VRKT_MAX)) {
-					status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_RKT_VOLT;
+					// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_RKT_VOLT;
 				}
 			}
 
@@ -298,19 +299,19 @@ health_status_t power_handler_get_status(void) {
 		case POWER_INPUT_BAT:
 			if (W_SUCCESS == adc_get_converted_val(VSENS_BAT1, &adc_value)) {
 				if ((adc_value < VBAT_MIN) || (adc_value > VBAT_MAX)) {
-					status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT1_VOLT;
+					// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT1_VOLT;
 				}
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(VSENS_BAT2, &adc_value)) {
 				if ((adc_value < VBAT_MIN) || (adc_value > VBAT_MAX)) {
-					status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT2_VOLT;
+					// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT2_VOLT;
 				}
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT1, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
-					status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT1_CURR;
+					// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT1_CURR;
 					power_handler_status.overcurrent_count++;
 					log_text(1,
 							 LOG_LVL_WARN,
@@ -322,7 +323,7 @@ health_status_t power_handler_get_status(void) {
 
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT2, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
-					status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT2_CURR;
+					// status_bitfield |= (1) << MODULE_POWER_HANDLER_FAULT_BAT2_CURR;
 					power_handler_status.overcurrent_count++;
 					log_text(1,
 							 LOG_LVL_WARN,
