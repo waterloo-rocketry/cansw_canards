@@ -290,12 +290,12 @@ health_status_t movella_get_status(void) {
 	if (movella_health.recent_dead_data_count) {
 		movella_health.recent_dead_data_count = 0;
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_PERIPHERAL_COMM_FAIL;
+		status.error_bitfield |= 1 << ERR_COMM_FAILURE;
 	}
 
 	if (!s_movella.initialized) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	return status;
