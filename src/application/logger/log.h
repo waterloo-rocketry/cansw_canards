@@ -223,25 +223,6 @@ STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
 			  "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
 
 /**
- * A collection of status variables describing the current health of the logger module.
- */
-typedef struct {
-	bool is_init;
-	uint32_t dropped_txt_msgs;
-	uint32_t dropped_data_msgs;
-	uint32_t trunc_msgs;
-	uint32_t full_buffer_moments;
-	uint32_t log_write_timeouts;
-	uint32_t invalid_region_moments;
-	uint32_t crit_errs;
-	uint32_t no_full_buf_moments;
-	uint32_t buffer_flush_fails;
-	uint32_t unsafe_buffer_flushes;
-	bool buffer_is_full; // flag for full buffer since last health check
-	bool timeout_occurred; // flag for timeout since last health check
-} logger_health_t;
-
-/**
  * @brief Create log buffers and mutexes necessary for logger operation.
  * @pre must be run after scheduler start, and after sd_card module is init
  */
