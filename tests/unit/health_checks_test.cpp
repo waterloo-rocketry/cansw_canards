@@ -90,18 +90,18 @@ protected:
 		can_handler_transmit_fake.return_val = W_SUCCESS;
 
 		// Set default return values for module status functions
-		health_status_t i2c_ok = {HEALTH_OK, MODULE_I2C, MODULE_ERR_NONE};
-		health_status_t adc_ok = {HEALTH_OK, MODULE_ADC, MODULE_ERR_NONE};
-		health_status_t can_ok = {HEALTH_OK, MODULE_CAN_HANDLER, MODULE_ERR_NONE};
-		health_status_t est_ok = {HEALTH_OK, MODULE_ESTIMATOR, MODULE_ERR_NONE};
-		health_status_t ctrl_ok = {HEALTH_OK, MODULE_CONTROLLER, MODULE_ERR_NONE};
-		health_status_t sd_ok = {HEALTH_OK, MODULE_SD_CARD, MODULE_ERR_NONE};
-		health_status_t timer_ok = {HEALTH_OK, MODULE_TIMER, MODULE_ERR_NONE};
-		health_status_t logger_ok = {HEALTH_OK, MODULE_LOGGER, MODULE_ERR_NONE};
-		health_status_t gpio_ok = {HEALTH_OK, MODULE_GPIO, MODULE_ERR_NONE};
-		health_status_t fp_ok = {HEALTH_OK, MODULE_FLIGHT_PHASE, MODULE_ERR_NONE};
-		health_status_t sensor_ok = {HEALTH_OK, MODULE_SENSOR_HANDLER, MODULE_ERR_NONE};
-		health_status_t uart_ok = {HEALTH_OK, MODULE_UART, MODULE_ERR_NONE};
+		health_status_t i2c_ok = {HEALTH_OK, MODULE_I2C, ERR_NONE};
+		health_status_t adc_ok = {HEALTH_OK, MODULE_ADC, ERR_NONE};
+		health_status_t can_ok = {HEALTH_OK, MODULE_CAN_HANDLER, ERR_NONE};
+		health_status_t est_ok = {HEALTH_OK, MODULE_ESTIMATOR, ERR_NONE};
+		health_status_t ctrl_ok = {HEALTH_OK, MODULE_CONTROLLER, ERR_NONE};
+		health_status_t sd_ok = {HEALTH_OK, MODULE_SD_CARD, ERR_NONE};
+		health_status_t timer_ok = {HEALTH_OK, MODULE_TIMER, ERR_NONE};
+		health_status_t logger_ok = {HEALTH_OK, MODULE_LOGGER, ERR_NONE};
+		health_status_t gpio_ok = {HEALTH_OK, MODULE_GPIO, ERR_NONE};
+		health_status_t fp_ok = {HEALTH_OK, MODULE_FLIGHT_PHASE, ERR_NONE};
+		health_status_t sensor_ok = {HEALTH_OK, MODULE_SENSOR_HANDLER, ERR_NONE};
+		health_status_t uart_ok = {HEALTH_OK, MODULE_UART, ERR_NONE};
 
 		i2c_get_status_fake.return_val = i2c_ok;
 		adc_get_status_fake.return_val = adc_ok;
@@ -233,7 +233,7 @@ TEST_F(HealthChecksTest, WatchdogMaxTasksLimit) {
 
 TEST_F(HealthChecksTest, FatalErrorTriggersSnprintf) {
 	// Arrange: Set a module to FATAL
-	health_status_t fatal_i2c = {HEALTH_FATAL, MODULE_I2C, MODULE_ERR_I2C_NOT_INIT};
+	health_status_t fatal_i2c = {HEALTH_FATAL, MODULE_I2C, ERR_COMM_FAILURE};
 	i2c_get_status_fake.return_val = fatal_i2c;
 
 	// Act
