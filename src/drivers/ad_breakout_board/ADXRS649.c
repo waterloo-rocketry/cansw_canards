@@ -294,20 +294,20 @@ health_status_t adxrs649_get_status(void) {
 
 	if (!is_initialized) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	if (adxrs649_health.recent_null_params) {
 		adxrs649_health.recent_null_params = 0;
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_INVALID_PARAM;
+		status.error_bitfield |= 1 << ERR_INVALID_PARAM;
 	}
 
 	if (adxrs649_health.recent_data_read_fails || adxrs649_health.recent_data_ready_check_fails) {
 		adxrs649_health.recent_data_ready_check_fails = 0;
 		adxrs649_health.recent_data_read_fails = 0;
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
+		status.error_bitfield |= 1 << ERR_COMM_FAILURE;
 	}
 
 	return status;
