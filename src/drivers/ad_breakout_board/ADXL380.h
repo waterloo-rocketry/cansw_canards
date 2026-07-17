@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
 #include "rocketlib/include/common.h"
 
@@ -40,5 +41,11 @@ w_status_t adxl380_is_data_ready(bool *p_drdy);
  * @return the status of the function call
  */
 w_status_t adxl380_get_accel_data(vector3d_t *data, adxl380_raw_accel_data_t *p_raw_data);
+
+/**
+ * @brief gets the health status of the ADXL380 accelerometer and logs info
+ * @return the health status of the ADXL380
+ */
+health_status_t adxl380_get_status(void);
 
 #endif
