@@ -345,13 +345,13 @@ health_status_t lsm6dsv32x_get_status(void) {
 	// I2C errors
 	if (W_IO_ERROR == lsm6dsv32x_ctx.latest_status) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
+		status.error_bitfield |= 1 << ERR_COMM_FAILURE;
 	}
 
 	// Failed initialization on critical component
 	if (!lsm6dsv32x_health.is_init) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	log_text(
