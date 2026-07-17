@@ -36,10 +36,11 @@ static telemetry_registry_t g_telemetry_registry = {.num_sources = 0};
 static telemetry_stats_t g_telemetry_stats = {.initialized = false};
 
 /**
- * @brief clears registry + stats
+ * @brief clears registry + stats, including the initialized flag
  */
-static void telemetry_clear_all_data(void) {
+void telemetry_clear_all_data(void) {
 	// zero init telemetry stats
+	g_telemetry_stats.initialized = false;
 	g_telemetry_stats.failed_transmissions = 0;
 	g_telemetry_stats.successful_transmissions = 0;
 	g_telemetry_stats.overdue_count = 0;

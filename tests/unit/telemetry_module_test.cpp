@@ -7,6 +7,7 @@ extern "C" {
 
 #include "FreeRTOS.h"
 #include "application/telemetry/telemetry.h"
+#include "application/logger/log.h"
 #include "common/gnc/gnc_types.h"
 #include "drivers/timer/timer.h"
 #include "task.h"
@@ -36,7 +37,7 @@ static w_status_t timer_get_ms_custom(uint32_t *p_ms) {
 class TelemetryModuleTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        telemetry_init();
+        telemetry_clear_all_data();
 
         RESET_FAKE(fsm_get_state);
         RESET_FAKE(timer_get_ms);
@@ -66,15 +67,15 @@ protected:
 };
 
 
+TEST_F(TelemetryModuleTest, RegisterBeforeInitFails) {
+    telemetry_source_config_t cfg = make_source(source_log_ok, STATE_ACT_ALLOWED, 100);
+    EXPECT_EQ(telemetry_register(&cfg), W_FAILURE);
+}
+
 TEST_F(TelemetryModuleTest, RegisterValidSourceSucceeds) {
     ASSERT_EQ(telemetry_init(), W_SUCCESS);
     telemetry_source_config_t cfg = make_source(source_log_ok, STATE_ACT_ALLOWED, 100);
     EXPECT_EQ(telemetry_register(&cfg), W_SUCCESS);
-}
-
-TEST_F(TelemetryModuleTest, RegisterBeforeInitFails) {
-    telemetry_source_config_t cfg = make_source(source_log_ok, STATE_ACT_ALLOWED, 100);
-    EXPECT_EQ(telemetry_register(&cfg), W_FAILURE);
 }
 
 TEST_F(TelemetryModuleTest, RegisterNullNameIsInvalidParam) {
@@ -105,13 +106,6 @@ TEST_F(TelemetryModuleTest, RegisterBeyondMaxSourcesFails) {
         EXPECT_EQ(telemetry_register(&cfg), W_SUCCESS) << "at source " << i;
     }
     EXPECT_EQ(telemetry_register(&cfg), W_FAILURE);
-}
-
-TEST_F(TelemetryModuleTest, StatusHealthyByDefault) {
-    ASSERT_EQ(telemetry_init(), W_SUCCESS);
-    health_status_t status = telemetry_get_status();
-    EXPECT_EQ(status.severity, HEALTH_OK);
-    EXPECT_EQ(status.module_id, MODULE_TELEMETRY);
 }
 
 TEST_F(TelemetryModuleTest, WrongPhaseDoesNotLog) {

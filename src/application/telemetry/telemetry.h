@@ -57,6 +57,12 @@ void telemetry_run_once(void);
 void telemetry_init_due_dates(uint32_t curr_time);
 
 /**
+ * @brief clears registry + stats, including the initialized flag
+ * @note normally called internally by telemetry_init; exposed for unit testing
+ */
+void telemetry_clear_all_data(void);
+
+/**
  * @brief Reports the current status of the telemetry module
  * @return telemetry status bitfield
  */
