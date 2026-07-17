@@ -235,9 +235,12 @@ static uint32_t check_modules_status(void) {
 	for (int i = 0; i < MODULE_COUNT; i++) {
 		if (NULL != module_get_status_fns[i]) {
 			status |= process_module_status(module_get_status_fns[i]());
-		}
-		else {
-			log_text(1, LOG_LVL_WARN, "Health Checks", "Null element in module_get_status_fns array at index %d", i);
+		} else {
+			log_text(1,
+					 LOG_LVL_WARN,
+					 "Health Checks",
+					 "Null element in module_get_status_fns array at index %d",
+					 i);
 		}
 	}
 
