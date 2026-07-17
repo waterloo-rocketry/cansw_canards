@@ -35,7 +35,19 @@ typedef struct {
 	bool configured;
 } movella_state_t;
 
+typedef struct {
+	uint32_t init_double_init;
+	uint32_t init_null_mutex;
+	uint32_t recent_dead_data_count;
+	uint32_t get_data_null_out_param;
+	uint32_t get_data_not_init;
+	uint32_t get_data_failed_take_mutex;
+	uint32_t event_callback_timer_fail;
+} movella_health_t;
+
 static movella_state_t s_movella = {0};
+
+static movella_health_t movella_health = {0};
 
 static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtdata) {
 	if (xSemaphoreTake(s_movella.data_mutex, 0) == pdTRUE) {
@@ -100,6 +112,7 @@ static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtd
 					break;
 			}
 		} else {
+			movella_health.event_callback_timer_fail++;
 			log_text(0, LOG_LVL_WARN, "MTI", "Unable to get timestamp");
 		}
 
@@ -113,12 +126,14 @@ static void movella_uart_send(uint8_t *data, uint16_t length) {
 
 w_status_t movella_init(void) {
 	if (s_movella.initialized) {
+		movella_health.init_double_init++;
 		return W_SUCCESS;
 	}
 
 	s_movella.data_mutex = xSemaphoreCreateMutex();
 
 	if (s_movella.data_mutex == NULL) {
+		movella_health.init_null_mutex++;
 		return W_FAILURE;
 	}
 
@@ -131,10 +146,12 @@ w_status_t movella_init(void) {
 
 w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
 	if (NULL == out_data) {
+		movella_health.get_data_null_out_param++;
 		return W_INVALID_PARAM;
 	}
 
 	if (!s_movella.initialized) {
+		movella_health.get_data_not_init++;
 		return W_FAILURE;
 	}
 
@@ -188,6 +205,7 @@ w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
 		return W_SUCCESS;
 	}
 
+	movella_health.get_data_failed_take_mutex++;
 	return W_FAILURE;
 }
 
@@ -235,6 +253,50 @@ void movella_task(void *parameters) {
 			s_movella.latest_data.is_dead = false;
 		} else {
 			s_movella.latest_data.is_dead = true;
+			movella_health.recent_dead_data_count++;
 		}
 	}
+}
+
+health_status_t movella_get_status(void) {
+	health_status_t status = {
+		.severity = HEALTH_OK, .module_id = MODULE_MOVELLA, .error_bitfield = 0};
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "init=%d, configured=%d, dead_data=%d, recent_dead_data_count=%d",
+			 s_movella.initialized,
+			 s_movella.configured,
+			 s_movella.latest_data.is_dead,
+			 movella_health.recent_dead_data_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "init_double_init=%d, init_null_mutex=%d, get_data_not_init=%d",
+			 movella_health.init_double_init,
+			 movella_health.init_null_mutex,
+			 movella_health.get_data_not_init);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "get_data_null_out=%d, get_data_failed_take_mutex=%d, cb_timer_fail=%d",
+			 movella_health.get_data_null_out_param,
+			 movella_health.get_data_failed_take_mutex,
+			 movella_health.event_callback_timer_fail);
+
+	if (movella_health.recent_dead_data_count) {
+		movella_health.recent_dead_data_count = 0;
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << ERR_COMM_FAILURE;
+	}
+
+	if (!s_movella.initialized) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
+	}
+
+	return status;
 }

@@ -54,6 +54,7 @@ static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
 	[MODULE_UART] = uart_get_status,
 	[MODULE_LOGGER] = logger_get_status,
 	[MODULE_POWER_HANDLER] = power_handler_get_status,
+	[MODULE_MOVELLA] = movella_get_status,
 	[MODULE_LSM6DSV32X] = lsm6dsv32x_get_status,
 	[MODULE_TELEMETRY] = telemetry_get_status,
 };
