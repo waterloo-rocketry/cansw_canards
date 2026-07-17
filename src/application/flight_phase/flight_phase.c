@@ -51,6 +51,7 @@ typedef struct {
 	bool received_invalid_event;
 	bool is_in_unknown_state;
 	bool event_send_failed;
+	bool ctx_is_null;
 
 	// Per-event counters
 	struct {
@@ -187,6 +188,7 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 	if (NULL == p_ctx) {
 		log_text(5, LOG_LVL_FATAL, "FlightPhase", "Invalid ptrs in update states");
 		flight_phase_status.null_ctx_count++;
+		flight_phase_status.ctx_is_null = true;
 		// just return the current state if invalid
 		return curr_state;
 	}
@@ -523,29 +525,29 @@ health_status_t flight_phase_get_status(void) {
 	health_status_t status = {
 		.severity = HEALTH_OK, .module_id = MODULE_FLIGHT_PHASE, .error_bitfield = 0};
 
+	if (flight_phase_status.received_invalid_event || flight_phase_status.ctx_is_null) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << ERR_INVALID_PARAM;
+	}
+
 	if (!flight_phase_status.initialized) {
 		status.severity = HEALTH_FATAL;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	if (flight_phase_status.is_queue_full) {
 		status.severity = HEALTH_FATAL;
-		status.error_bitfield |= 1 << MODULE_ERR_OVERFLOW;
-	}
-
-	if (flight_phase_status.received_invalid_event) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_FLIGHT_PHASE_INVALID_EVENT;
+		status.error_bitfield |= 1 << ERR_OS;
 	}
 
 	if (flight_phase_status.event_send_failed) {
 		status.severity = HEALTH_FATAL;
-		status.error_bitfield |= 1 << MODULE_ERR_FLIGHT_PHASE_EVENT_SEND_FAILED;
+		status.error_bitfield |= 1 << ERR_TX_FAILURE;
 	}
 
 	if (flight_phase_status.is_in_error_state) {
 		status.severity = HEALTH_FATAL;
-		status.error_bitfield |= 1 << MODULE_ERR_FLIGHT_PHASE_ERROR_STATE;
+		status.error_bitfield |= 1 << ERR_INTERNAL;
 	}
 
 	log_text(10,
@@ -566,6 +568,7 @@ health_status_t flight_phase_get_status(void) {
 	flight_phase_status.event_send_failed = false;
 	flight_phase_status.is_queue_full = false;
 	flight_phase_status.is_in_error_state = false;
+	flight_phase_status.ctx_is_null = false;
 
 	return status;
 }
