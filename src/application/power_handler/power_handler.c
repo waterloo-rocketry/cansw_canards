@@ -32,6 +32,8 @@ typedef enum {
 	POWER_INPUT_NONE
 } power_input_source_t;
 
+static const float32_t mV_per_V = 1000;
+
 // LiPo Thresholds
 static const float VBAT_MIN = 22.2;
 static const float VBAT_MAX = 25.4;
@@ -129,44 +131,53 @@ static void transmit_curr_volt_status_can_msg() {
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(VSENS_BAT1, &adc_value)) {
-		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_VOLT_1, adc_value, &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW,
+									  (uint16_t)timestamp,
+									  SENSOR_RA_BATT_VOLT_1,
+									  (uint16_t)(adc_value * mV_per_V),
+									  &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(VSENS_BAT2, &adc_value)) {
-		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_VOLT_2, adc_value, &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW,
+									  (uint16_t)timestamp,
+									  SENSOR_RA_BATT_VOLT_2,
+									  (uint16_t)(adc_value * mV_per_V),
+									  &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_BAT1, &adc_value)) {
 		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_CURR_1, adc_value, &msg);
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_CURR_1, (uint16_t)(adc_value), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_BAT2, &adc_value)) {
 		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_CURR_2, adc_value, &msg);
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_CURR_2, (uint16_t)(adc_value), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_5V, &adc_value)) {
 		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_5V_CURR, adc_value, &msg);
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_5V_CURR, (uint16_t)(adc_value), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(VSENS_RKT, &adc_value)) {
 		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_12V_VOLT, adc_value, &msg);
+			PRIO_LOW, (uint16_t)timestamp, SENSOR_12V_VOLT, (uint16_t)(adc_value * mV_per_V), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(VSENS_CHG, &adc_value)) {
-		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_CHARGE_VOLT, adc_value, &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW,
+									  (uint16_t)timestamp,
+									  SENSOR_CHARGE_VOLT,
+									  (uint16_t)(adc_value * mV_per_V),
+									  &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
@@ -418,7 +429,7 @@ static w_status_t power_handler_set_low_power_mode(bool enabled) {
 		}
 
 		// Disable LiPo
-		gpio_status = gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_LOW, 5);
+		gpio_status = gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
 
 		if (W_SUCCESS != gpio_status) {
 			log_text(1,
@@ -432,7 +443,7 @@ static w_status_t power_handler_set_low_power_mode(bool enabled) {
 		log_text(1, LOG_LVL_INFO, "power_handler", "Low power mode enabled: LiPo disabled");
 	} else {
 		// Enable LiPo when exiting low power mode
-		gpio_status = gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
+		gpio_status = gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_LOW, 5);
 
 		if (W_SUCCESS != gpio_status) {
 			log_text(1,
@@ -558,7 +569,7 @@ w_status_t power_handler_init(void) {
 	// Default: CHG_MUX_EN HIGH, external 5V ON, LiPo ON
 	gpio_status |= gpio_write(GPIO_PIN_CHG_MUX_EN, GPIO_LEVEL_HIGH, 5);
 	gpio_status |= gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_HIGH, 5);
-	gpio_status |= gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
+	gpio_status |= gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_LOW, 5);
 
 	if (W_SUCCESS != gpio_status) {
 		log_text(5, LOG_LVL_WARN, "power_handler", "Failed with gpio write during init.");
