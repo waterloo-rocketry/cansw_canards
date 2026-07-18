@@ -45,6 +45,10 @@ static const matrix3d_t g_board_mag_correction_matrix = {
 static const matrix3d_t g_ad_accel_correction_matrix = {
 	.array = {{0, 0, 1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 
+static const vector3d_t hard_iron_bias = {.x = 0, .y = 0, .z = 0};
+static const matrix3d_t soft_iron_correction_matrix = {
+	.array = {{1.0, 0, 0}, {0, 1.0, 0}, {0, 0, 1.0}}};
+
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
 
@@ -220,6 +224,11 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 
 	board_data->board_mag.meas =
 		math_vector3d_rotate(&g_board_mag_correction_matrix, &(board_data->board_mag.meas));
+
+	// hard iron and soft iron correction for mag
+	board_data->board_mag.meas = math_vector3d_subt(&(board_data->board_mag.meas), &hard_iron_bias);
+	board_data->board_mag.meas =
+		math_vector3d_rotate(&soft_iron_correction_matrix, &(board_data->board_mag.meas));
 
 	// success is if at least one of the sensors updated
 	if ((!board_data->board_mag.is_new) && (!board_data->board_imu.is_new) &&
