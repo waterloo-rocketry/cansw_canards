@@ -45,6 +45,11 @@ static const matrix3d_t g_board_mag_correction_matrix = {
 static const matrix3d_t g_ad_accel_correction_matrix = {
 	.array = {{0, 0, 1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 
+// ad accel null bias offsets
+static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.61;
+static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.65;
+static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.15;
+
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
 
@@ -303,6 +308,11 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 	// Apply orientation correction
 	ad_data->ad_accel.meas =
 		math_vector3d_rotate(&g_ad_accel_correction_matrix, &(ad_data->ad_accel.meas));
+
+	// ad null bias offset
+	ad_data->ad_accel.meas.x -= AD_ACCEL_X_NULL_BIAS_OFFSET;
+	ad_data->ad_accel.meas.y -= AD_ACCEL_Y_NULL_BIAS_OFFSET;
+	ad_data->ad_accel.meas.z -= AD_ACCEL_Z_NULL_BIAS_OFFSET;
 
 	// success is if at least one of the sensors updated
 	if ((!ad_data->ad_gyro.is_new) && (!ad_data->ad_accel.is_new)) {

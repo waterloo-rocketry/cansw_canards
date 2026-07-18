@@ -191,6 +191,12 @@ void fsm_task(void *args) {
 		// - imu data
 		// - etc (probably more later)
 		sensor_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
+		
+		//log sensor data
+		log_text(0, LOG_LVL_DEBUG, "FSM", "Sensor data: accel=%f, gyro=%f, baro=%f, mag=%f",
+				 sensor_data.board_meas.board_imu.accel.array[0],
+				 sensor_data.board_meas.board_imu.gyro.array[0],
+				 sensor_data.board_meas.board_mag.meas.array[0]);
 
 		flight_phase_gen_sync_events(
 			g_ctx.p_flight_phase_context, g_ctx.curr_state, timestamp_ms, &sensor_data);
