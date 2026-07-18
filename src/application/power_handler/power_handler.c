@@ -565,7 +565,9 @@ w_status_t power_handler_init(void) {
 	}
 
 	// Register callbacks
-	cb_status |= can_handler_register_callback(MSG_ACTUATOR_CMD, power_actuator_callback);
+	can_actuator_id_t actuator_types[2] = {ACTUATOR_CANARD_5V_OUTPUT, ACTUATOR_CANARD_LIPO_ON};
+	cb_status |= can_handler_act_cmd_register_callback(
+		actuator_types, sizeof(actuator_types), power_actuator_callback);
 	cb_status |= can_handler_register_callback(MSG_RESET_CMD, power_reset_callback);
 
 	if (W_SUCCESS != cb_status) {

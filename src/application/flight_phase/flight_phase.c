@@ -78,8 +78,12 @@ w_status_t flight_phase_init(void) {
 	// larger size in case of burst events like multiple inj valve opens
 	event_queue = xQueueCreate(3, sizeof(flight_phase_event_t));
 
+	can_actuator_id_t actuator_types[3] = {
+		ACTUATOR_OX_INJECTOR_VALVE, ACTUATOR_IGNITION, ACTUATOR_CANARD_PAD_FILTER};
+
 	if ((NULL == event_queue) ||
-		(W_SUCCESS != can_handler_register_callback(MSG_ACTUATOR_CMD, act_cmd_callback))) {
+		(W_SUCCESS != can_handler_act_cmd_register_callback(
+						  actuator_types, sizeof(actuator_types), act_cmd_callback))) {
 		log_text(
 			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
 		return W_FAILURE;
