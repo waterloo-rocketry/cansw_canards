@@ -6,7 +6,7 @@
 
 w_status_t MX25L25645G_init();
 
-w_status_t MX25L25645G_lfs_mount(lfs_t *lfs, OSPI_HandleTypeDef *hospi,
+w_status_t MX25L25645G_lfs_mount(lfs_t *lfs,
 								 uint32_t first_block_offset);
 
 #endif

@@ -23,6 +23,7 @@ static const uint16_t E_FAIL_BIT_MASK = 0x40;
 #define PAGE_SIZE 256
 #define LOOKAHEAD_SIZE ((LOG_BUFFER_SIZE - 1) / 8) + 1
 static const uint16_t SECTOR_SIZE = 4096;
+static const uint32_t MX25L25645G_FLASH_SIZE = 0x2000000;
 
 static const uint32_t PROG_US_PER_BYTE = 15;
 static const uint32_t MS_PER_US = 1000;
@@ -617,7 +618,7 @@ const struct lfs_config cfg = {
 	.read_size = 1,
 	.prog_size = PAGE_SIZE,
 	.block_size = SECTOR_SIZE,
-	.block_count = 0,
+	.block_count = (MX25L25645G_FLASH_SIZE / SECTOR_SIZE),
 	.block_cycles = 500,
 	.cache_size = CACHE_SIZE,
 	.lookahead_size = LOOKAHEAD_SIZE,
@@ -635,7 +636,6 @@ const struct lfs_config cfg = {
 
 w_status_t MX25L25645G_init() {
 	if (g_flash_ctx.is_init) {
-		log_text(0, LOG_LVL_WARN, "MX25L25645G", "Attempting to reinitialize");
 		return W_FAILURE;
 	}
 
@@ -702,23 +702,33 @@ w_status_t MX25L25645G_init() {
 	return W_SUCCESS;
 }
 
-w_status_t MX25L25645G_lfs_mount(lfs_t *lfs, OSPI_HandleTypeDef *hospi,
+w_status_t MX25L25645G_lfs_mount(lfs_t *lfs,
 								 uint32_t first_block_offset) {
 	// make sure is init
 	if (!(g_flash_ctx.is_init)) {
 		return W_FAILURE;
 	}
 
-	if ((first_block_offset % (cfg.block_size)) == 0) {
+	if ((first_block_offset % (cfg.block_size)) != 0) {
 		return W_INVALID_PARAM; // because I am lazy
 	}
 	memset(lfs, 0, sizeof(lfs_t));
 
 	g_flash_ctx.lfs_first_block_offset = first_block_offset;
-	g_flash_ctx.spi_handle = hospi;
 
-	if (lfs_mount(lfs, &cfg) != 0) {
-		return W_IO_ERROR;
+	int res = lfs_mount(lfs, &cfg);
+	if (res != 0) {
+		
+		// try to reformat
+		res = lfs_format(lfs, &cfg);
+		if (res != 0) {
+			return W_FAILURE;
+		}
+		res = lfs_mount(lfs, &cfg);
+		if (res != 0) {
+			return W_FAILURE;
+		}
+
 	}
 
 	return W_SUCCESS;
