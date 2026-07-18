@@ -1,9 +1,11 @@
-#include "drivers/MX25L25645G/MX25L25645G.h"
-#include "drivers/gpio/gpio.h"
-#include "drivers/timer/timer.h"
 #include "littlefs/lfs.h"
 #include "octospi.h"
 #include "third_party/rocketlib/include/common.h"
+
+#include "application/logger/log.h"
+#include "drivers/MX25L25645G/MX25L25645G.h"
+#include "drivers/gpio/gpio.h"
+#include "drivers/timer/timer.h"
 
 #define SPI_4_ENABLED // so 1 - (1 or 4) - 4
 
@@ -17,8 +19,9 @@ static const uint16_t P_FAIL_BIT_MASK = 0x20;
 static const uint16_t E_FAIL_BIT_MASK = 0x40;
 
 // make sure cache size is always less than 2^16 times of Page size
-static const uint16_t CACHE_SIZE = 2048;
-static const uint16_t PAGE_SIZE = 256;
+#define CACHE_SIZE 2048
+#define PAGE_SIZE 256
+#define LOOKAHEAD_SIZE ((LOG_BUFFER_SIZE - 1) / 8) + 1
 static const uint16_t SECTOR_SIZE = 4096;
 
 static const uint32_t PROG_US_PER_BYTE = 15;
@@ -26,6 +29,10 @@ static const uint32_t MS_PER_US = 1000;
 static const uint32_t FLASH_PROG_DELAY_MS = 100;
 
 static const uint32_t flash_read_dummy_cycle = 8;
+
+static uint8_t lfs_flash_read_buffer[CACHE_SIZE] = {0};
+static uint8_t lfs_flash_prog_buffer[CACHE_SIZE] = {0};
+static uint8_t lfs_flash_lookahead_buffer[LOOKAHEAD_SIZE] = {0};
 
 typedef enum {
 	FLASH_SPI_NOT_INIT,
@@ -44,7 +51,8 @@ typedef struct {
 	bool is_init;
 } flash_lfs_ctx;
 
-static flash_lfs_ctx g_flash_ctx = {.spi_state = FLASH_SPI_NOT_INIT, .ncs_pin = GPIO_PIN_FLASH_CS};
+static flash_lfs_ctx g_flash_ctx = {
+	.spi_handle = &hospi1, .spi_state = FLASH_SPI_NOT_INIT, .ncs_pin = GPIO_PIN_FLASH_CS};
 
 void HAL_OSPI_ErrorCallback(OSPI_HandleTypeDef *hospi) {
 	if (hospi != (g_flash_ctx.spi_handle)) {
@@ -75,7 +83,7 @@ void HAL_OSPI_RxCpltCallback(OSPI_HandleTypeDef *hospi) {
 	if (hospi != (g_flash_ctx.spi_handle)) {
 		return;
 	}
-	if (FLASH_SPI_WRITING == g_flash_ctx.spi_state) {
+	if (FLASH_SPI_READING == g_flash_ctx.spi_state) {
 		g_flash_ctx.spi_state = FLASH_SPI_READY;
 	} else {
 		g_flash_ctx.spi_state = FLASH_SPI_ERROR;
@@ -86,7 +94,7 @@ void HAL_OSPI_TxCpltCallback(OSPI_HandleTypeDef *hospi) {
 	if (hospi != (g_flash_ctx.spi_handle)) {
 		return;
 	}
-	if (FLASH_SPI_READING == g_flash_ctx.spi_state) {
+	if (FLASH_SPI_WRITING == g_flash_ctx.spi_state) {
 		g_flash_ctx.spi_state = FLASH_SPI_READY;
 	} else {
 		g_flash_ctx.spi_state = FLASH_SPI_ERROR;
@@ -247,7 +255,6 @@ static w_status_t send_wren(bool select_ncs) {
 	cmd_wren.NbData = 0;
 
 	return send_spi_cmd(&cmd_wren, select_ncs);
-	;
 }
 
 static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
@@ -308,7 +315,7 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	// write
 	uint8_t rdsr_response = 0x0;
 	for (uint8_t i = 0; i < MAX_RDStatus_ATTEMPTS; ++i) {
-		if ((send_wren(true) != W_SUCCESS) && (get_rdsr(&rdsr_response, true) != W_SUCCESS)) {
+		if ((send_wren(true) != W_SUCCESS) || (get_rdsr(&rdsr_response, true) != W_SUCCESS)) {
 			return W_FAILURE;
 		}
 
@@ -359,12 +366,12 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 			return W_IO_ERROR;
 		}
 
-		if ((rdsr_response & WIP_BIT_MASK) != 0x01) {
+		if ((rdsr_response & WIP_BIT_MASK) == 0x00) {
 			break;
 		}
 	}
 
-	if ((rdsr_response & WIP_BIT_MASK) != 0x0) {
+	if ((rdsr_response & WIP_BIT_MASK) != 0x00) {
 		return W_IO_ERROR;
 	}
 
@@ -418,7 +425,7 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	// erase
 	uint8_t rdsr_response = 0x0;
 	for (uint8_t i = 0; i < MAX_RDStatus_ATTEMPTS; ++i) {
-		if ((send_wren(true) != W_SUCCESS) && (get_rdsr(&rdsr_response, true) != W_SUCCESS)) {
+		if ((send_wren(true) != W_SUCCESS) || (get_rdsr(&rdsr_response, true) != W_SUCCESS)) {
 			return W_FAILURE;
 		}
 
@@ -478,11 +485,11 @@ static w_status_t flash_erase_sector(uint32_t address) {
 			return W_IO_ERROR;
 		}
 
-		if ((rdsr_response & WIP_BIT_MASK) != 0x01) {
+		if ((rdsr_response & WIP_BIT_MASK) == 0x00) {
 			break;
 		}
 	}
-	if ((rdsr_response & WIP_BIT_MASK) != 0x01) {
+	if ((rdsr_response & WIP_BIT_MASK) != 0x00) {
 		return W_IO_ERROR;
 	}
 
@@ -501,6 +508,11 @@ static w_status_t flash_erase_sector(uint32_t address) {
 // to the user.
 static int MX25L25645G_lfs_read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off,
 								void *buffer, lfs_size_t size) {
+	// make sure is init
+	if (!(g_flash_ctx.is_init)) {
+		return W_FAILURE;
+	}
+
 	if ((size % (c->read_size)) != 0) {
 		return LFS_ERR_INVAL;
 	}
@@ -519,6 +531,11 @@ static int MX25L25645G_lfs_read(const struct lfs_config *c, lfs_block_t block, l
 // May return LFS_ERR_CORRUPT if the block should be considered bad.
 static int MX25L25645G_lfs_prg(const struct lfs_config *c, lfs_block_t block, lfs_off_t off,
 							   const void *buffer, lfs_size_t size) {
+	// make sure is init
+	if (!(g_flash_ctx.is_init)) {
+		return W_FAILURE;
+	}
+
 	uint32_t curr_address = (g_flash_ctx.lfs_first_block_offset) + (block * c->block_size) + off;
 
 	uint32_t overflow_amount = 0;
@@ -551,7 +568,7 @@ static int MX25L25645G_lfs_prg(const struct lfs_config *c, lfs_block_t block, lf
 		}
 	}
 
-	if (size > 0) {
+	if (size > curr_write_size) {
 		return LFS_ERR_IO;
 	} else {
 		return LFS_ERR_OK;
@@ -563,6 +580,11 @@ static int MX25L25645G_lfs_prg(const struct lfs_config *c, lfs_block_t block, lf
 // are propagated to the user.
 // May return LFS_ERR_CORRUPT if the block should be considered bad.
 static int MX25L25645G_lfs_erase(const struct lfs_config *c, lfs_block_t block) {
+	// make sure is init
+	if (!(g_flash_ctx.is_init)) {
+		return W_FAILURE;
+	}
+
 	if ((c->block_size % SECTOR_SIZE) != 0) {
 		return LFS_ERR_INVAL;
 	}
@@ -598,8 +620,13 @@ const struct lfs_config cfg = {
 	.block_count = 0,
 	.block_cycles = 500,
 	.cache_size = CACHE_SIZE,
-	.lookahead_size = 2048 / 8,
+	.lookahead_size = LOOKAHEAD_SIZE,
 	.compact_thresh = -1,
+
+	.read_buffer = lfs_flash_read_buffer,
+	.prog_buffer = lfs_flash_prog_buffer,
+	.lookahead_buffer = lfs_flash_lookahead_buffer,
+
 	.name_max = 0,
 	.file_max = 0,
 	.attr_max = 0,
@@ -607,6 +634,11 @@ const struct lfs_config cfg = {
 	.inline_max = -1};
 
 w_status_t MX25L25645G_init() {
+	if (g_flash_ctx.is_init) {
+		log_text(0, LOG_LVL_WARN, "MX25L25645G", "Attempting to reinitialize");
+		return W_FAILURE;
+	}
+
 	g_flash_ctx.spi_state = FLASH_SPI_READY;
 
 	// SET UP THE CHIP
@@ -615,10 +647,10 @@ w_status_t MX25L25645G_init() {
 	OSPI_RegularCmdTypeDef wrsr_cmd = {0};
 
 	// Enable 4 Byte address
-	wrsr_cmd.Instruction = 0x01; // WREN
+	wrsr_cmd.Instruction = 0x01; // WRSR
 	wrsr_cmd.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
 	wrsr_cmd.AddressMode = HAL_OSPI_ADDRESS_NONE;
-	wrsr_cmd.DataMode = HAL_OSPI_DATA_NONE;
+	wrsr_cmd.DataMode = HAL_OSPI_DATA_1_LINE;
 	wrsr_cmd.DummyCycles = 0;
 	wrsr_cmd.NbData = 2;
 
@@ -635,7 +667,7 @@ w_status_t MX25L25645G_init() {
 	OSPI_RegularCmdTypeDef en4b_cmd = {0};
 
 	// Enable 4 Byte address
-	en4b_cmd.Instruction = 0xB7; // WREN
+	en4b_cmd.Instruction = 0xB7; // EN4B
 	en4b_cmd.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
 	en4b_cmd.AddressMode = HAL_OSPI_ADDRESS_NONE;
 	en4b_cmd.DataMode = HAL_OSPI_DATA_NONE;
@@ -672,6 +704,14 @@ w_status_t MX25L25645G_init() {
 
 w_status_t MX25L25645G_lfs_mount(lfs_t *lfs, OSPI_HandleTypeDef *hospi,
 								 uint32_t first_block_offset) {
+	// make sure is init
+	if (!(g_flash_ctx.is_init)) {
+		return W_FAILURE;
+	}
+
+	if ((first_block_offset % (cfg.block_size)) == 0) {
+		return W_INVALID_PARAM; // because I am lazy
+	}
 	memset(lfs, 0, sizeof(lfs_t));
 
 	g_flash_ctx.lfs_first_block_offset = first_block_offset;
