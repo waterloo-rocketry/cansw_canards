@@ -109,6 +109,11 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 	switch (p_ctx->curr_state) {
 		case STATE_IDLE:
 			p_ctx->p_navigator_context->last_run_tenth_ms = timestamp_tenth_ms;
+
+			if (pad_filter_init(p_ctx->p_navigator_context, p_fsm_input->p_sensor_data) !=
+				W_SUCCESS) {
+				// add error handling
+			}
 			break;
 
 			// both Pad filter and boost will only run estimator step
