@@ -27,6 +27,8 @@ static can_handler_status_t can_error_stats = {0};
 
 static can_callback_t callback_map[MSG_ID_ENUM_MAX] = {NULL};
 
+static can_callback_t act_callback_map[ACTUATOR_ENUM_MAX] = {NULL};
+
 static w_status_t can_reset_callback(const can_msg_t *msg) {
 	bool need_reset = false;
 	if (check_board_need_reset(msg, &need_reset) != W_SUCCESS) {
@@ -66,6 +68,25 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 	return status;
 }
 
+static w_status_t can_actuator_cmd_callback(const can_msg_t *msg) {
+	can_actuator_id_t actuator_id = ACTUATOR_ENUM_MAX;
+	if (get_actuator_id(msg, &actuator_id) != W_SUCCESS) {
+		log_text(1, LOG_LVL_WARN, "CANHandlerRX", "Can't get the actuator id.");
+		return W_INVALID_PARAM;
+	}
+	if ((actuator_id < ACTUATOR_ENUM_MAX) && (act_callback_map[actuator_id] != NULL)) {
+		if (act_callback_map[actuator_id](msg) != W_SUCCESS) {
+			log_text(1,
+					 LOG_LVL_WARN,
+					 "CANHandlerRX",
+					 "Callback failed for Act Cmd with Act ID: %d.",
+					 actuator_id);
+			return W_FAILURE;
+		}
+	}
+	return W_SUCCESS;
+}
+
 void can_handle_rx_message(const can_msg_t *message) {
 	// software filter: only queue messages with registered callbacks
 	can_msg_type_t msg_type = get_message_type(message);
@@ -102,11 +123,22 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 
 	if ((W_SUCCESS != can_handler_register_callback(MSG_RESET_CMD, can_reset_callback)) ||
 		(W_SUCCESS != can_handler_register_callback(MSG_LEDS_ON, can_led_on_callback)) ||
-		(W_SUCCESS != can_handler_register_callback(MSG_LEDS_OFF, can_led_off_callback))) {
+		(W_SUCCESS != can_handler_register_callback(MSG_LEDS_OFF, can_led_off_callback) ||
+		 (W_SUCCESS !=
+		  can_handler_register_callback(MSG_ACTUATOR_CMD, can_actuator_cmd_callback)))) {
 		log_text(1, LOG_LVL_FATAL, "CANHandler", "Failed to register mandatory CAN callbacks.");
 		return W_FAILURE;
 	}
 
+	return W_SUCCESS;
+}
+
+w_status_t can_handler_act_cmd_register_callback(can_actuator_id_t act_type,
+												 can_callback_t callback) {
+	if ((NULL == callback) || (act_type >= ACTUATOR_ENUM_MAX)) {
+		return W_INVALID_PARAM;
+	}
+	act_callback_map[act_type] = callback;
 	return W_SUCCESS;
 }
 
