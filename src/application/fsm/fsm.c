@@ -123,17 +123,6 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			/* fall through */
 		case STATE_PAD_NAV:
 
-			// run controller at 100 hz
-			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
-				ctrl_call_time_elapsed_tenth_ms >= CONTROLLER_LOOP_FREQ) {
-				controller_step(&controller_input,
-								timestamp_tenth_ms,
-								p_ctx->p_controller_context,
-								&controller_output);
-			}
-			// set motor command to zero in non-actuation state
-			ak45_send_position_cmd(0);
-
 			// Nav enters flight filter
 			/* fall through */
 		case STATE_BOOST:
