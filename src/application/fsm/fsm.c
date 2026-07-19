@@ -25,7 +25,7 @@ extern TaskHandle_t fsm_task_handle;
 
 static const uint8_t MAX_FSM_DELAY_MS = 4;
 static const uint32_t MS_TO_TENTH_MS = 10;
-static const uint8_t CONTROLLER_LOOP_FREQ = 100;
+static const uint8_t CONTROLLER_PERIOD_TENTH_MS = 100;
 
 // global
 static fsm_ctx_t g_ctx = {0};
@@ -133,7 +133,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 			// run controller at 100 hz
 			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
-				ctrl_call_time_elapsed_tenth_ms >= CONTROLLER_LOOP_FREQ) {
+				ctrl_call_time_elapsed_tenth_ms >= CONTROLLER_PERIOD_TENTH_MS) {
 				controller_step(&controller_input,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
@@ -161,7 +161,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 			// run controller at 100 hz
 			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
-				ctrl_call_time_elapsed_tenth_ms >= CONTROLLER_LOOP_FREQ) {
+				ctrl_call_time_elapsed_tenth_ms >= CONTROLLER_PERIOD_TENTH_MS) {
 				controller_step(&controller_input,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,

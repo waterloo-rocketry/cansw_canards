@@ -27,10 +27,10 @@ static const int32_t AD_ACCEL_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t AD_GYRO_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t MAG_FRESHNESS_TIMEOUT_MS = 5;
 static const int32_t BARO_FRESHNESS_TIMEOUT_MS = 5;
-static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 10;
+static const int32_t MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS = 10;
 
 // TODO: consider splitting to each sensor since the data is coming seperately
-static const int32_t MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS = 5;
+static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 5;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 // static const uint32_t IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
