@@ -38,6 +38,31 @@ static FDCAN_HandleTypeDef *g_ak45_hfdcan = NULL;
 static QueueHandle_t g_feedback_queue = NULL;
 static volatile bool received_can_msg = false;
 
+/**
+ * Status variables describing the health of the AK45 driver module
+ */
+typedef struct {
+	// TODO: implement calibration step and add the two checks
+	bool is_init;
+	bool hard_stop_calibrated; // false until hard stop calibration succeeds
+	bool hard_stop_cal_failed; // set true on failed attempt, clear on success
+	bool feedback_rx_failed; // set true on failed attempt, clear on success
+	bool cmd_tx_failed; // set true on failed attempt, clear on success
+	uint32_t rx_errors; // FDCAN RX-callback failures
+	uint32_t tx_errors; // FDCAN transmit FIFO add failures
+	uint32_t invalid_args; // NULL or out of range arguments to functions
+	uint32_t out_of_memory; // failure to allocate memory for queue creation
+	uint32_t not_initialized; // calls to get_feedback when driver is not initialized
+	uint32_t feedback_queue_empty; // calls for latest feedback when queue empty
+	uint32_t reinit_attempts; // count of init attempts after first successful init
+	uint32_t fdcan_stop_fails; // count of failures to stop FDCAN bus
+	uint32_t init_fdcan_timeout; // count of timeouts to receive response from the motor during init
+	uint32_t init_fdcan_notification_fails; // Count of failures to activate FDCAN notification
+											// during init
+	uint32_t init_fdcan_start_fails; // count of failures to start FDCAN bus
+	uint32_t init_fdcan_filter_cfg_fails; // count of failures to configure FDCAN filter during init
+} ak45_health_t;
+
 static ak45_health_t ak45_health = {0};
 
 /**
@@ -67,6 +92,7 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(g_ak45_hfdcan, &tx_header, data) != HAL_OK) {
 		ak45_health.tx_errors++;
+		ak45_health.cmd_tx_failed = true;
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
@@ -267,6 +293,7 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 
 	if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) != HAL_OK) {
 		ak45_health.rx_errors++;
+		ak45_health.feedback_rx_failed = true;
 		return;
 	}
 
@@ -274,11 +301,14 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 
 	if ((rx_header.IdType != FDCAN_EXTENDED_ID) || (rx_header.Identifier != expected_id)) {
 		ak45_health.rx_errors++;
+		ak45_health.feedback_rx_failed = true;
 		return;
 	}
 
 	ak45_feedback_t fb = {0};
-	ak45_parse_feedback(rx_data, &fb);
+	if (ak45_parse_feedback(rx_data, &fb) != W_SUCCESS) {
+		ak45_health.feedback_rx_failed = true;
+	}
 
 	// overwrite stale data if newer data is available
 	BaseType_t higher_priority_task_woken = pdFALSE;
@@ -296,20 +326,29 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 health_status_t ak45_get_status(void) {
 	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_AK45, .error_bitfield = 0};
 
-	if (!ak45_health.is_init) {
-		status.severity = HEALTH_ERROR; // not sure if this should be fatal or error
-		status.error_bitfield |= 1 << ERR_NOT_INIT;
+	if (!ak45_health.hard_stop_calibrated) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << ERR_NOT_CALIBRATED;
 	}
 
-	// TODO: implement calibration logic and add this check to it
 	if (ak45_health.hard_stop_cal_failed) {
 		status.severity = HEALTH_ERROR;
 		status.error_bitfield |= 1 << ERR_FAILED_CALIBRATION;
 	}
 
-	if (!ak45_health.hard_stop_calibrated) {
+	if (!ak45_health.cmd_tx_failed) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_NOT_CALIBRATED;
+		status.error_bitfield |= 1 << ERR_TX_FAILURE;
+	}
+
+	if (!ak45_health.feedback_rx_failed) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= 1 << ERR_RX_FAILURE;
+	}
+
+	if (!ak45_health.is_init) {
+		status.severity = HEALTH_ERROR; // not sure if this should be fatal or error
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	log_text(LOG_WAIT_MS,
@@ -344,6 +383,12 @@ health_status_t ak45_get_status(void) {
 			 ak45_health.init_fdcan_start_fails,
 			 ak45_health.init_fdcan_filter_cfg_fails,
 			 ak45_health.fdcan_stop_fails);
+
+	ak45_health.hard_stop_calibrated = false;
+	ak45_health.hard_stop_cal_failed = false;
+	ak45_health.cmd_tx_failed = false;
+	ak45_health.feedback_rx_failed = false;
+	ak45_health.is_init = false;
 
 	return status;
 }

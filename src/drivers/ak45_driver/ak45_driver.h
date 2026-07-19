@@ -33,29 +33,6 @@ typedef struct {
 } ak45_feedback_t;
 
 /**
- * Status variables describing the health of the AK45 driver module
- */
-typedef struct {
-	// TODO: implement calibration step and add the two checks
-	bool is_init;
-	bool hard_stop_calibrated; // false until hard stop calibration succeeds
-	bool hard_stop_cal_failed; // set true on failed attempt, clear on success
-	uint32_t rx_errors; // FDCAN RX-callback failures
-	uint32_t tx_errors; // FDCAN transmit FIFO add failures
-	uint32_t invalid_args; // NULL or out of range arguments to functions
-	uint32_t out_of_memory; // failure to allocate memory for queue creation
-	uint32_t not_initialized; // calls to get_feedback when driver is not initialized
-	uint32_t feedback_queue_empty; // calls for latest feedback when queue empty
-	uint32_t reinit_attempts; // count of init attempts after first successful init
-	uint32_t fdcan_stop_fails; // count of failures to stop FDCAN bus
-	uint32_t init_fdcan_timeout; // count of timeouts to receive response from the motor during init
-	uint32_t init_fdcan_notification_fails; // Count of failures to activate FDCAN notification
-											// during init
-	uint32_t init_fdcan_start_fails; // count of failures to start FDCAN bus
-	uint32_t init_fdcan_filter_cfg_fails; // count of failures to configure FDCAN filter during init
-} ak45_health_t;
-
-/**
  * @brief Initialize the servo driver
  *
  * Sets up internal queues and configures the FDCAN RX filter for the servo's extended ID.
