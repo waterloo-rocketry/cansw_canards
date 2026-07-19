@@ -298,18 +298,18 @@ health_status_t ak45_get_status(void) {
 
 	if (!ak45_health.is_init) {
 		status.severity = HEALTH_ERROR; // not sure if this should be fatal or error
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	// TODO: implement calibration logic and add this check to it
 	if (ak45_health.hard_stop_cal_failed) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_AK45_FAILED_CALIBRATION;
+		status.error_bitfield |= 1 << ERR_FAILED_CALIBRATION;
 	}
 
 	if (!ak45_health.hard_stop_calibrated) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_AK45_NOT_CALIBRATED;
+		status.error_bitfield |= 1 << ERR_NOT_CALIBRATED;
 	}
 
 	log_text(LOG_WAIT_MS,
