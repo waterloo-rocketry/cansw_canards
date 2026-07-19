@@ -32,8 +32,6 @@ typedef enum {
 	POWER_INPUT_NONE
 } power_input_source_t;
 
-#define NUM_ACT_ID_TYPE 2
-
 // LiPo Thresholds
 static const float VBAT_MIN = 22.2;
 static const float VBAT_MAX = 25.4;
@@ -567,10 +565,10 @@ w_status_t power_handler_init(void) {
 	}
 
 	// Register callbacks
-	can_actuator_id_t actuator_types[NUM_ACT_ID_TYPE] = {ACTUATOR_CANARD_5V_OUTPUT,
-														 ACTUATOR_CANARD_LIPO_ON};
-	cb_status |= can_handler_act_cmd_register_callback(
-		actuator_types, NUM_ACT_ID_TYPE, power_actuator_callback);
+	cb_status |=
+		can_handler_act_cmd_register_callback(ACTUATOR_CANARD_5V_OUTPUT, power_actuator_callback);
+	cb_status |=
+		can_handler_act_cmd_register_callback(ACTUATOR_CANARD_LIPO_ON, power_actuator_callback);
 	cb_status |= can_handler_register_callback(MSG_RESET_CMD, power_reset_callback);
 
 	if (W_SUCCESS != cb_status) {

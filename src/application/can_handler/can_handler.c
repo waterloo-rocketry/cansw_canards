@@ -133,18 +133,12 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 	return W_SUCCESS;
 }
 
-w_status_t can_handler_act_cmd_register_callback(const can_actuator_id_t *act_type,
-												 uint16_t num_act, can_callback_t callback) {
-	if ((NULL == act_type) || (NULL == callback)) {
+w_status_t can_handler_act_cmd_register_callback(can_actuator_id_t act_type,
+												 can_callback_t callback) {
+	if ((NULL == callback) || (act_type >= ACTUATOR_ENUM_MAX)) {
 		return W_INVALID_PARAM;
 	}
-
-	for (uint16_t i = 0; i < num_act; ++i) {
-		if (act_type[i] >= ACTUATOR_ENUM_MAX) {
-			return W_INVALID_PARAM;
-		}
-		act_callback_map[act_type[i]] = callback;
-	}
+	act_callback_map[act_type] = callback;
 	return W_SUCCESS;
 }
 

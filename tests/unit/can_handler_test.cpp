@@ -114,24 +114,12 @@ TEST_F(CanHandlerTest, CanTransmitSucceeds) {
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
 }
 
-TEST_F(CanHandlerTest, ActCmdRegisterCallbackFailsWithNullActuatorArray) {
-    // Arrange
-    const can_actuator_id_t *actuators = NULL;
-
-    // Act
-    w_status_t status =
-        can_handler_act_cmd_register_callback(actuators, 1, test_actuator_callback);
-
-    // Assert
-    EXPECT_EQ(status, W_INVALID_PARAM);
-}
-
 TEST_F(CanHandlerTest, ActCmdRegisterCallbackFailsWithNullCallback) {
     // Arrange
     can_actuator_id_t actuator = (can_actuator_id_t)0;
 
     // Act
-    w_status_t status = can_handler_act_cmd_register_callback(&actuator, 1, NULL);
+    w_status_t status = can_handler_act_cmd_register_callback(actuator, NULL);
 
     // Assert
     EXPECT_EQ(status, W_INVALID_PARAM);
@@ -142,8 +130,8 @@ TEST_F(CanHandlerTest, ActCmdRegisterCallbackFailsWithInvalidActuatorId) {
     can_actuator_id_t invalid_actuator = ACTUATOR_ENUM_MAX;
 
     // Act
-    w_status_t status = can_handler_act_cmd_register_callback(
-        &invalid_actuator, 1, test_actuator_callback);
+    w_status_t status =
+        can_handler_act_cmd_register_callback(invalid_actuator, test_actuator_callback);
 
     // Assert
     EXPECT_EQ(status, W_INVALID_PARAM);
@@ -154,8 +142,7 @@ TEST_F(CanHandlerTest, ActCmdRegisterCallbackSucceedsWithValidActuatorId) {
     can_actuator_id_t actuator = (can_actuator_id_t)0;
 
     // Act
-    w_status_t status =
-        can_handler_act_cmd_register_callback(&actuator, 1, test_actuator_callback);
+    w_status_t status = can_handler_act_cmd_register_callback(actuator, test_actuator_callback);
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
