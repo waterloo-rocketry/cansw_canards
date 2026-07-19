@@ -109,6 +109,8 @@ w_status_t fsm_init() {
 	}
 #endif
 
+	controller_codegen_init(g_ctx.p_controller_context);
+
 	return W_SUCCESS;
 }
 
@@ -205,6 +207,7 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 	w_status_t send_rc = hil_send_simulink_cmd(&navigator_input,
 											   &navigator_output,
 											   &p_ctx->p_navigator_context->gnc_navigator_ctx.x,
+											   &p_ctx->p_controller_context->gnc_controller_ctx,
 											   &controller_input,
 											   &controller_output);
 	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
@@ -235,7 +238,7 @@ void fsm_task(void *args) {
 	gnc_x_state_t x_state = {0};
 
 	hil_send_simulink_cmd(
-		&navigator_input, &navigator_output, &x_state, &controller_input, &controller_output);
+		&navigator_input, &navigator_output, &x_state, &g_ctx.p_controller_context->gnc_controller_ctx, &controller_input, &controller_output);
 #endif
 
 	while (1) {
@@ -344,6 +347,11 @@ void fsm_task(void *args) {
 	log_container.ad_accel.accelerometer.z = (float)sensor_data.ad_meas.ad_accel.meas.z;
 
 	log_data(1, LOG_TYPE_AD_ACCEL, &log_container);
+
+
+	log_container.ad_gyro.gyroscope = (float)sensor_data.ad_meas.ad_accel.meas.z;
+
+	log_data(1, LOG_TYPE_AD_GYRO, &log_container);
 
     // do not log AD Gyro here, log it in the raw read so we get raw mV for calibration
 

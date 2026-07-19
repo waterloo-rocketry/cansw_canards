@@ -30,6 +30,15 @@ w_status_t controller_init(void) {
 	return W_SUCCESS;
 }
 
+w_status_t controller_codegen_init(controller_ctx_t *p_ctx) {
+	// init to default values
+	p_ctx->gnc_controller_ctx.coeffs[0] = 2;
+	p_ctx->gnc_controller_ctx.P[0] = 1e-9;
+	p_ctx->gnc_controller_ctx.P[3] = 1e-5;
+
+	return W_SUCCESS;
+}
+
 // helper to run 1 iteration of the controller algo, including delaying where needed.
 w_status_t controller_step(const controller_input_t *p_input, const uint32_t timestamp_tenth_ms,
 						   controller_ctx_t *p_ctx, controller_output_t *p_output) {

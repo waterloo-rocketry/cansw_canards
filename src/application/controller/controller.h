@@ -48,6 +48,8 @@ typedef struct {
  */
 w_status_t controller_init(void);
 
+w_status_t controller_codegen_init(controller_ctx_t *p_ctx);
+
 /**
  * @brief run 1 step of the controller
  * @param p_input pointer to new inputs for this iteration

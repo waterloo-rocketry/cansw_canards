@@ -295,7 +295,7 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	out->ad_meas.ad_accel.is_new = ready_packet->ad_accel_status;
 
 	out->ad_meas.ad_gyro.meas = ready_packet->ad_gyro;
-	out->ad_meas.ad_gyro.is_new = ready_packet->ad_gyro_status;
+	out->ad_meas.ad_gyro.is_new = false;
 
 	out->motor_encoder_meas.meas = ready_packet->motor_encoder;
 	out->motor_encoder_meas.is_new = true;
@@ -350,15 +350,15 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 static hil_tx_packet_t tx_packet = {0};
 
 w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
-								 gnc_x_state_t *p_x_state, controller_input_t *p_cntl_in,
+								 gnc_x_state_t *p_x_state, gnc_controller_ctx_t *p_controller_ctx, controller_input_t *p_cntl_in,
 								 controller_output_t *p_cntl_out) {
-	log_text(1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", p_cntl_in->canard_angle_rad);
+	log_text(1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", p_cntl_out->canard_command_angle_rad);
 	tx_packet.header[0] = HIL_HEADER_CHAR_0;
 	tx_packet.header[1] = HIL_HEADER_CHAR_1;
 	tx_packet.header[2] = HIL_HEADER_CHAR_2;
 	tx_packet.header[3] = HIL_HEADER_CHAR_3;
 
-	tx_packet.payload.canard_cmd = p_cntl_in->canard_angle_rad;
+	tx_packet.payload.canard_cmd = p_cntl_out->canard_command_angle_rad;
 
 	tx_packet.payload.att_w = p_x_state->q.w;
 	tx_packet.payload.att_x = p_x_state->q.x;
@@ -372,7 +372,7 @@ w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t
 	tx_packet.payload.vel_z = p_x_state->vel.z;
 	tx_packet.payload.altitude = p_x_state->altitude;
 
-	// tx_packet.payload.cl = this.c
+	tx_packet.payload.cl = p_controller_ctx->coeffs[0];
 	// tx_packet.payload.cov_norm = p_nav_out->cov_norm;
 	// tx_packet.payload.where_it_is[0] = p_nav_out->roll_state[0];
 	// tx_packet.payload.where_it_is[1] = p_nav_out->roll_state[1];
