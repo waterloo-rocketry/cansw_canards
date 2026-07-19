@@ -71,7 +71,7 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 						  navigator_ctx_t *p_ctx, navigator_output_t *p_output);
 
 /**
- * @brief 1 step of navigator
+ * @brief initialize the pad filter
  * @param p_ctx pointer to navigator context
  * @param p_sensor_data sensor data
  */

@@ -128,7 +128,8 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 }
 
 w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_data) {
-	if ((NULL == p_ctx) && (NULL == p_sensor_data)) {
+	if ((NULL == p_ctx) || (NULL == p_sensor_data)) {
+		log_text(0, LOG_LVL_WARN, "navigator", "Invalid context ptr.");
 		return W_INVALID_PARAM;
 	}
 
