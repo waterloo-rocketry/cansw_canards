@@ -70,4 +70,11 @@ health_status_t navigator_get_status(void);
 w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t timestamp_tenth_ms,
 						  navigator_ctx_t *p_ctx, navigator_output_t *p_output);
 
+/**
+ * @brief initialize the pad filter
+ * @param p_ctx pointer to navigator context
+ * @param p_sensor_data sensor data
+ */
+w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_data);
+
 #endif

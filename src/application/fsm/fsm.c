@@ -129,10 +129,15 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 	navigator_output_t navigator_output = {0};
 	controller_output_t controller_output = {0};
 
-	// TODO: ask tristan how to get behaviour of first cycle
 	switch (p_ctx->curr_state) {
 		case STATE_IDLE:
 			p_ctx->p_navigator_context->last_run_tenth_ms = timestamp_tenth_ms;
+
+			if (pad_filter_init(p_ctx->p_navigator_context, p_fsm_input->p_sensor_data) !=
+				W_SUCCESS) {
+				// TODO: add error handling
+				log_text(0, LOG_LVL_WARN, "FSM", "pad_filter_init failed");
+			}
 			break;
 
 			// both Pad filter and boost will only run estimator step
