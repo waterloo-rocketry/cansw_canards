@@ -18,7 +18,7 @@
 typedef struct {
 	bool initialized;
 	bool external_5v_enabled;
-	bool low_power_mode;
+	bool lipo_state;
 	uint32_t external_5v_fault_count;
 	uint32_t lipo_1_fault_count;
 	uint32_t lipo_2_fault_count;
@@ -371,13 +371,6 @@ static w_status_t power_handler_set_5V_external(bool enabled) {
 	w_status_t gpio_status = W_SUCCESS;
 
 	if (enabled) {
-		// Prevent enabling when low power mode active
-		if (power_handler_status.low_power_mode) {
-			log_text(
-				10, LOG_LVL_WARN, "power_handler", "Cannot enable 5V external in low power mode");
-			return W_FAILURE;
-		}
-
 		// Prevent enabling when charge line is active
 		if (POWER_INPUT_CHG == get_active_input()) {
 			log_text(
@@ -410,56 +403,26 @@ static w_status_t power_handler_set_5V_external(bool enabled) {
 }
 
 /**
- * Toggles low power mode via GPIO pin.
- * Disables external 5V and turns off LiPo when enabling.
- * TODO: do more power saving stuff in low power mode?
+ * Toggles LiPo power on or off
+ * Operators will make decision for how to work with 5v external
  */
-static w_status_t power_handler_set_low_power_mode(bool enabled) {
+static w_status_t power_handler_set_LiPo_state(bool enabled) {
 	w_status_t gpio_status = W_SUCCESS;
 
-	if (enabled) {
-		// Disable external 5V when entering low power mode
+	gpio_level_t lipo_gpio_state = enabled ? GPIO_LEVEL_LOW : GPIO_LEVEL_HIGH;
+	gpio_status = gpio_write(GPIO_PIN_PWR_EN, lipo_gpio_state, 5);
 
-		if (W_SUCCESS != power_handler_set_5V_external(false)) {
-			log_text(1,
-					 LOG_LVL_WARN,
-					 "power_handler",
-					 "Failed to turn off 5v external in low power mode.");
-			return W_FAILURE;
-		}
-
-		// Disable LiPo
-		gpio_status = gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_HIGH, 5);
-
-		if (W_SUCCESS != gpio_status) {
-			log_text(1,
-					 LOG_LVL_WARN,
-					 "power_handler",
-					 "gpio write failed while disabling lipo. Error code: %d",
-					 gpio_status);
-			return gpio_status;
-		}
-
-		log_text(1, LOG_LVL_INFO, "power_handler", "Low power mode enabled: LiPo disabled");
+	if (W_SUCCESS != gpio_status) {
+		log_text(1,
+				 LOG_LVL_WARN,
+				 "power_handler",
+				 "gpio write failed while disabling lipo. Error code: %d",
+				 gpio_status);
 	} else {
-		// Enable LiPo when exiting low power mode
-		gpio_status = gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_LOW, 5);
-
-		if (W_SUCCESS != gpio_status) {
-			log_text(1,
-					 LOG_LVL_WARN,
-					 "power_handler",
-					 "gpio write failed while enabling lipo. Error code: %d",
-					 gpio_status);
-			return gpio_status;
-		}
-
-		log_text(1, LOG_LVL_INFO, "power_handler", "Low power mode disabled: LiPo enabled");
+		power_handler_status.lipo_state = enabled;
 	}
 
-	power_handler_status.low_power_mode = enabled;
-
-	return W_SUCCESS;
+	return gpio_status;
 }
 
 /**
@@ -507,7 +470,7 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 		}
 	} else if (ACTUATOR_CANARD_LIPO_ON == actuator_id) {
 		bool lipo_enable = (ACT_STATE_ON == cmd_state);
-		status = power_handler_set_low_power_mode(!lipo_enable);
+		status = power_handler_set_LiPo_state(lipo_enable);
 
 		if (W_SUCCESS == status) {
 			build_actuator_status_msg(PRIO_MEDIUM,
@@ -566,8 +529,8 @@ w_status_t power_handler_init(void) {
 	w_status_t cb_status = W_SUCCESS;
 	w_status_t gpio_status = W_SUCCESS;
 
-	// Default: CHG_MUX_EN HIGH, external 5V ON, LiPo ON
-	gpio_status |= gpio_write(GPIO_PIN_CHG_MUX_EN, GPIO_LEVEL_HIGH, 5);
+	// Default: CHG_MUX_EN LOW (disabled), external 5V ON, LiPo ON
+	gpio_status |= gpio_write(GPIO_PIN_CHG_MUX_EN, GPIO_LEVEL_LOW, 5);
 	gpio_status |= gpio_write(GPIO_PIN_EN_EXT_5V, GPIO_LEVEL_HIGH, 5);
 	gpio_status |= gpio_write(GPIO_PIN_PWR_EN, GPIO_LEVEL_LOW, 5);
 
@@ -587,7 +550,7 @@ w_status_t power_handler_init(void) {
 
 	power_handler_status.initialized = true;
 	power_handler_status.external_5v_enabled = true;
-	power_handler_status.low_power_mode = false;
+	power_handler_status.lipo_state = false;
 
 	return init_status;
 }
