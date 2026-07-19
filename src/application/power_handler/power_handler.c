@@ -406,7 +406,7 @@ static w_status_t power_handler_set_5V_external(bool enabled) {
  * Toggles LiPo power on or off
  * Operators will make decision for how to work with 5v external
  */
-static w_status_t power_handler_set_LiPo_state(bool enabled) {
+static w_status_t power_handler_set_lipo_state(bool enabled) {
 	w_status_t gpio_status = W_SUCCESS;
 
 	gpio_level_t lipo_gpio_state = enabled ? GPIO_LEVEL_LOW : GPIO_LEVEL_HIGH;
@@ -416,7 +416,7 @@ static w_status_t power_handler_set_LiPo_state(bool enabled) {
 		log_text(1,
 				 LOG_LVL_WARN,
 				 "power_handler",
-				 "gpio write failed while disabling lipo. Error code: %d",
+				 "gpio write failed while toggle lipo. Error code: %d",
 				 gpio_status);
 	} else {
 		power_handler_status.lipo_state = enabled;
@@ -470,7 +470,7 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 		}
 	} else if (ACTUATOR_CANARD_LIPO_ON == actuator_id) {
 		bool lipo_enable = (ACT_STATE_ON == cmd_state);
-		status = power_handler_set_LiPo_state(lipo_enable);
+		status = power_handler_set_lipo_state(lipo_enable);
 
 		if (W_SUCCESS == status) {
 			build_actuator_status_msg(PRIO_MEDIUM,
