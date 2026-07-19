@@ -37,6 +37,7 @@ static const uint32_t NUM_CONSEC_LAUNCH_DETECT_THRESHOLD =
 	   // launch
 
 // #define TASK_TIMEOUT_MS 1000
+#define NUM_ACT_ID_TYPE 3
 
 /**
  * module health status trackers
@@ -78,12 +79,12 @@ w_status_t flight_phase_init(void) {
 	// larger size in case of burst events like multiple inj valve opens
 	event_queue = xQueueCreate(3, sizeof(flight_phase_event_t));
 
-	can_actuator_id_t actuator_types[3] = {
+	can_actuator_id_t actuator_types[NUM_ACT_ID_TYPE] = {
 		ACTUATOR_OX_INJECTOR_VALVE, ACTUATOR_IGNITION, ACTUATOR_CANARD_PAD_FILTER};
 
 	if ((NULL == event_queue) ||
 		(W_SUCCESS != can_handler_act_cmd_register_callback(
-						  actuator_types, sizeof(actuator_types), act_cmd_callback))) {
+						  actuator_types, NUM_ACT_ID_TYPE, act_cmd_callback))) {
 		log_text(
 			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
 		return W_FAILURE;

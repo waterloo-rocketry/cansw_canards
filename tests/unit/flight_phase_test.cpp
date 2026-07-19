@@ -13,6 +13,7 @@ extern "C" {
 #include "queue.h"
 #include "rocketlib/include/common.h"
 #include "timers.h"
+#include <stdint.h>
 
 // FAKES
 // w_status_t log_init(void)
@@ -22,13 +23,12 @@ FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *
 // w_status_t log_data(uint32_t id, log_level_t level, log_data_type_t type, const log_data_container_t *data)
 FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t *);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
-// w_status_t can_handler_register_callback(can_msg_type_t msg_type, can_callback_t callback)
-FAKE_VALUE_FUNC(w_status_t, can_handler_register_callback, can_msg_type_t, can_callback_t)
+FAKE_VALUE_FUNC(w_status_t, can_handler_act_cmd_register_callback, const can_actuator_id_t *, uint16_t, can_callback_t);
 
-FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_t *)
+FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_t *);
 
 // w_status_t get_cmd_actuator_state(const can_msg_t *msg, can_actuator_state_t *cmd_actuator_state);
-FAKE_VALUE_FUNC(w_status_t, get_cmd_actuator_state, const can_msg_t *, can_actuator_state_t *)
+FAKE_VALUE_FUNC(w_status_t, get_cmd_actuator_state, const can_msg_t *, can_actuator_state_t *);
 FAKE_VALUE_FUNC(double, math_vector3d_norm, const vector3d_t *);
 
 BaseType_t
@@ -56,7 +56,7 @@ protected:
         RESET_FAKE(xTimerCreate);
         RESET_FAKE(xQueueOverwrite);
         RESET_FAKE(log_text);
-        RESET_FAKE(can_handler_register_callback);
+        RESET_FAKE(can_handler_act_cmd_register_callback);
         RESET_FAKE(get_actuator_id);
         RESET_FAKE(get_cmd_actuator_state);
         RESET_FAKE(timer_get_ms);
@@ -73,7 +73,7 @@ TEST_F(FlightPhaseTest, InitCreatesMutexes) {
     // Arrange
     xQueueCreate_fake.return_val = (QueueHandle_t)1;
     xTimerCreate_fake.return_val = (TimerHandle_t)1;
-    can_handler_register_callback_fake.return_val = W_SUCCESS;
+    can_handler_act_cmd_register_callback_fake.return_val = W_SUCCESS;
 
     // Act
     w_status_t status = flight_phase_init();
@@ -85,7 +85,7 @@ TEST_F(FlightPhaseTest, InitCreatesMutexes) {
 TEST_F(FlightPhaseTest, InitFailsIfMutexCreationFails) {
     // Arrange
     xQueueCreate_fake.return_val = (QueueHandle_t)NULL;
-    can_handler_register_callback_fake.return_val = W_SUCCESS;
+    can_handler_act_cmd_register_callback_fake.return_val = W_SUCCESS;
 
     // Act
     w_status_t status = flight_phase_init();
@@ -98,7 +98,7 @@ TEST_F(FlightPhaseTest, InitFailsIfRegistrationFails) {
     // // Arrange
     xQueueCreate_fake.return_val = (QueueHandle_t)1;
     xTimerCreate_fake.return_val = (TimerHandle_t)1;
-    can_handler_register_callback_fake.return_val = W_FAILURE;
+    can_handler_act_cmd_register_callback_fake.return_val = W_FAILURE;
 
     // Act
     w_status_t status = flight_phase_init();

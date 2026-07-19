@@ -69,18 +69,17 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 }
 
 static w_status_t can_actuator_cmd_callback(const can_msg_t *msg) {
-	can_actuator_id_t actuator_id = 0;
+	can_actuator_id_t actuator_id = ACTUATOR_ENUM_MAX;
 	if (W_SUCCESS != get_actuator_id(msg, &actuator_id)) {
 		log_text(1, LOG_LVL_WARN, "CANHandlerRX", "Can't get the actuator id.");
 		return W_INVALID_PARAM;
-	} else if (act_callback_map[actuator_id] != NULL) {
+	} else if ((actuator_id < ACTUATOR_ENUM_MAX) && (act_callback_map[actuator_id] != NULL)) {
 		if (act_callback_map[actuator_id](msg) != W_SUCCESS) {
 			log_text(1,
 					 LOG_LVL_WARN,
 					 "CANHandlerRX",
 					 "Callback failed for Act Cmd with Act ID: %d.",
 					 actuator_id);
-			can_error_stats.rx_callback_errors++; // Track callback execution errors
 			return W_FAILURE;
 		}
 	}
@@ -134,8 +133,15 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 }
 
 w_status_t can_handler_act_cmd_register_callback(const can_actuator_id_t *act_type,
-												 const uint16_t num_act, can_callback_t callback) {
+												 uint16_t num_act, can_callback_t callback) {
+	if ((NULL == act_type) || (NULL == callback)) {
+		return W_INVALID_PARAM;
+	}
+
 	for (uint16_t i = 0; i < num_act; ++i) {
+		if (act_type[i] >= ACTUATOR_ENUM_MAX) {
+			return W_INVALID_PARAM;
+		}
 		act_callback_map[act_type[i]] = callback;
 	}
 	return W_SUCCESS;

@@ -10,6 +10,7 @@ extern "C" {
 #include "stm32h7/stm32h7_can.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"
+#include <stdint.h>
 
 // bool can_init_stm(FDCAN_HandleTypeDef *handle,  can_receive_callback receive_callback)
 FAKE_VALUE_FUNC(bool, can_init_stm, FDCAN_HandleTypeDef *, can_receive_callback)
@@ -24,6 +25,11 @@ FAKE_VALUE_FUNC(uint16_t, get_message_type, const can_msg_t *)
 
 // w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout);
 FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t)
+}
+
+static w_status_t test_actuator_callback(const can_msg_t *msg) {
+    (void)msg;
+    return W_SUCCESS;
 }
 
 class CanHandlerTest : public ::testing::Test {
@@ -106,5 +112,52 @@ TEST_F(CanHandlerTest, CanTransmitSucceeds) {
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
     EXPECT_EQ(xQueueSend_fake.call_count, 1);
+}
+
+TEST_F(CanHandlerTest, ActCmdRegisterCallbackFailsWithNullActuatorArray) {
+    // Arrange
+    const can_actuator_id_t *actuators = NULL;
+
+    // Act
+    w_status_t status =
+        can_handler_act_cmd_register_callback(actuators, 1, test_actuator_callback);
+
+    // Assert
+    EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
+TEST_F(CanHandlerTest, ActCmdRegisterCallbackFailsWithNullCallback) {
+    // Arrange
+    can_actuator_id_t actuator = (can_actuator_id_t)0;
+
+    // Act
+    w_status_t status = can_handler_act_cmd_register_callback(&actuator, 1, NULL);
+
+    // Assert
+    EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
+TEST_F(CanHandlerTest, ActCmdRegisterCallbackFailsWithInvalidActuatorId) {
+    // Arrange
+    can_actuator_id_t invalid_actuator = ACTUATOR_ENUM_MAX;
+
+    // Act
+    w_status_t status = can_handler_act_cmd_register_callback(
+        &invalid_actuator, 1, test_actuator_callback);
+
+    // Assert
+    EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
+TEST_F(CanHandlerTest, ActCmdRegisterCallbackSucceedsWithValidActuatorId) {
+    // Arrange
+    can_actuator_id_t actuator = (can_actuator_id_t)0;
+
+    // Act
+    w_status_t status =
+        can_handler_act_cmd_register_callback(&actuator, 1, test_actuator_callback);
+
+    // Assert
+    EXPECT_EQ(status, W_SUCCESS);
 }
 
