@@ -129,12 +129,12 @@ health_status_t timer_get_status(void) {
 
 	if (!timer_health.is_init) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	if (timer_health.is_fatal_error) {
 		status.severity = HEALTH_FATAL;
-		status.error_bitfield |= 1 << MODULE_TIMER_HANDLE_INVALID;
+		status.error_bitfield |= 1 << ERR_INVALID_PARAM;
 	}
 
 	// Log call statistics
