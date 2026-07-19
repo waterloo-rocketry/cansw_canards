@@ -27,9 +27,10 @@ static const int32_t AD_ACCEL_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t AD_GYRO_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t MAG_FRESHNESS_TIMEOUT_MS = 5;
 static const int32_t BARO_FRESHNESS_TIMEOUT_MS = 5;
+static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 10;
 
 // TODO: consider splitting to each sensor since the data is coming seperately
-static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 5;
+static const int32_t MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS = 5;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 // static const uint32_t IMU_HANDLER_CAN_TX_PERIOD_MS = 100;
@@ -416,7 +417,8 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 	w_status_t status = ak45_get_latest_feedback(&motor_feedback);
 
 	if (W_SUCCESS == status) {
-		if ((motor_feedback.timestamp_ms) > (ctx->last_motor_encoder_timestamp_ms)) {
+		if ((motor_feedback.timestamp_ms) - (ctx->last_motor_encoder_timestamp_ms) <=
+			MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS) {
 			encoder_data->is_new = true;
 
 			sensor_handler_state.motor_encoder_stats.success_count++;

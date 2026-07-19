@@ -34,6 +34,7 @@ static const uint8_t MAX_FSM_DELAY_MS = 4;
 #endif
 
 static const uint32_t MS_TO_TENTH_MS = 10;
+static const uint8_t CONTROLLER_LOOP_FREQ = 100;
 
 // global
 static fsm_ctx_t g_ctx = {0};
@@ -131,6 +132,11 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 	navigator_output_t navigator_output = {0};
 	controller_output_t controller_output = {0};
 
+	// calculate time elapsed since last controller run
+	uint32_t time_elapsed_tenth_ms =
+		timestamp_tenth_ms - p_ctx->p_controller_context->last_run_tenth_ms;
+
+	// TODO: ask tristan how to get behaviour of first cycle
 	switch (p_ctx->curr_state) {
 		case STATE_IDLE:
 			p_ctx->p_navigator_context->last_run_tenth_ms = timestamp_tenth_ms;
@@ -147,6 +153,19 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 			// Nav enters pad filter
 			/* fall through */
 		case STATE_PAD_NAV:
+
+			// run controller at 100 hz
+			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
+				time_elapsed_tenth_ms >= CONTROLLER_LOOP_FREQ) {
+				controller_step(&controller_input,
+								timestamp_tenth_ms,
+								p_ctx->p_controller_context,
+								&controller_output);
+				p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
+			}
+			// set motor command to zero in non-actuation state
+			ak45_send_position_cmd(0);
+
 			// Nav enters flight filter
 			/* fall through */
 		case STATE_BOOST:
@@ -156,6 +175,19 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 						   p_ctx->p_navigator_context,
 						   &navigator_output);
 			p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
+
+			// run controller at 100 hz
+			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
+				time_elapsed_tenth_ms >= CONTROLLER_LOOP_FREQ) {
+				controller_step(&controller_input,
+								timestamp_tenth_ms,
+								p_ctx->p_controller_context,
+								&controller_output);
+				p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
+			}
+			// set motor command to zero in non-actuation state
+			ak45_send_position_cmd(0);
+
 			break;
 
 			// both act allowed and recovery will only run estimator and controller step
@@ -176,11 +208,14 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 			controller_input.canard_angle_rad = p_fsm_input->p_sensor_data->motor_encoder_meas.meas;
 			/****************************************************************/
 
-			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new) {
+			// run controller at 100 hz
+			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
+				time_elapsed_tenth_ms >= CONTROLLER_LOOP_FREQ) {
 				controller_step(&controller_input,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
 								&controller_output);
+				p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
 
 				// TODO: switch to motor handler once exists
 				/****************************************************************/
