@@ -544,13 +544,13 @@ health_status_t iis2mdc_get_status(void) {
 	// I2C/DMA failure
 	if (W_IO_ERROR == iis2mdc_latest_status) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_I2C_FAIL;
+		status.error_bitfield |= 1 << ERR_COMM_FAILURE;
 	}
 
 	// driver not initialized
 	if (iis2mdc_state != IIS2MDC_STATE_ASYNC_DMA_ACTIVE) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.error_bitfield |= 1 << ERR_NOT_INIT;
 	}
 
 	log_text(10,
