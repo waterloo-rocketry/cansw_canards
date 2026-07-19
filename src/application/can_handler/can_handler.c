@@ -70,10 +70,11 @@ static w_status_t can_led_off_callback(const can_msg_t *msg) {
 
 static w_status_t can_actuator_cmd_callback(const can_msg_t *msg) {
 	can_actuator_id_t actuator_id = ACTUATOR_ENUM_MAX;
-	if (W_SUCCESS != get_actuator_id(msg, &actuator_id)) {
+	if (get_actuator_id(msg, &actuator_id) != W_SUCCESS) {
 		log_text(1, LOG_LVL_WARN, "CANHandlerRX", "Can't get the actuator id.");
 		return W_INVALID_PARAM;
-	} else if ((actuator_id < ACTUATOR_ENUM_MAX) && (act_callback_map[actuator_id] != NULL)) {
+	}
+	if ((actuator_id < ACTUATOR_ENUM_MAX) && (act_callback_map[actuator_id] != NULL)) {
 		if (act_callback_map[actuator_id](msg) != W_SUCCESS) {
 			log_text(1,
 					 LOG_LVL_WARN,
