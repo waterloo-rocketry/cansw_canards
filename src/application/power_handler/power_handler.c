@@ -539,7 +539,10 @@ w_status_t power_handler_init(void) {
 	}
 
 	// Register callbacks
-	cb_status |= can_handler_register_callback(MSG_ACTUATOR_CMD, power_actuator_callback);
+	cb_status |=
+		can_handler_act_cmd_register_callback(ACTUATOR_CANARD_5V_OUTPUT, power_actuator_callback);
+	cb_status |=
+		can_handler_act_cmd_register_callback(ACTUATOR_CANARD_LIPO_ON, power_actuator_callback);
 	cb_status |= can_handler_register_callback(MSG_RESET_CMD, power_reset_callback);
 
 	if (W_SUCCESS != cb_status) {
