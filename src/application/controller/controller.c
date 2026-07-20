@@ -53,7 +53,7 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 											 (p_input->launch_timestamp_ms))) *
 								MS_TO_SEC;
 	float64_t dt_controller_sec =
-		((float64_t)(timestamp_tenth_ms - (p_ctx->last_run_tenth_ms))) * MS_TO_SEC;
+		((float64_t)(timestamp_tenth_ms - (p_ctx->last_run_tenth_ms))) * TENTH_MS_TO_MS * MS_TO_SEC;
 
 	float64_t ref_signal = 0.0;
 
@@ -70,13 +70,13 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 							 p_output->ref_roll,
 							 &is_run);
 
-	if (is_run) { // the controller ran
-		// update new timestamp
+	// if (is_run) { // the controller ran
+	// 	// update new timestamp
 		p_output->timestamp_tenth_ms = timestamp_tenth_ms;
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
-	} else {
-		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
-	}
+	// } else {
+	// 	log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
+	// }
 
 	return W_SUCCESS;
 }

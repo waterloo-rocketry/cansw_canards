@@ -130,7 +130,7 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 	// initialize the outputs
 	navigator_output_t navigator_output = {0};
-	controller_output_t controller_output = {0};
+	static controller_output_t controller_output = {0}; 
 
 	// calculate time elapsed since last controller run
 	uint32_t time_elapsed_tenth_ms =
@@ -140,6 +140,7 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 	switch (p_ctx->curr_state) {
 		case STATE_IDLE:
 			p_ctx->p_navigator_context->last_run_tenth_ms = timestamp_tenth_ms;
+			p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
 
 			if (pad_filter_init(p_ctx->p_navigator_context, p_fsm_input->p_sensor_data) !=
 				W_SUCCESS) {
@@ -150,22 +151,17 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 			// both Pad filter and boost will only run estimator step
 		case STATE_PAD_FILTER:
+			gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_LOW, 0);
+			navigator_step(&navigator_input,
+						   timestamp_tenth_ms,
+						   p_ctx->p_navigator_context,
+						   &navigator_output);
+			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(controller_input.xR));
+			controller_input.dynamic_pressure = navigator_output.dynamic_pressure;
+			break;
 			// Nav enters pad filter
 			/* fall through */
 		case STATE_PAD_NAV:
-
-			// run controller at 100 hz
-			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
-				time_elapsed_tenth_ms >= CONTROLLER_LOOP_FREQ) {
-				controller_step(&controller_input,
-								timestamp_tenth_ms,
-								p_ctx->p_controller_context,
-								&controller_output);
-				p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
-			}
-			// set motor command to zero in non-actuation state
-			ak45_send_position_cmd(0);
-
 			// Nav enters flight filter
 			/* fall through */
 		case STATE_BOOST:
@@ -174,7 +170,12 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 						   timestamp_tenth_ms,
 						   p_ctx->p_navigator_context,
 						   &navigator_output);
-			p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
+
+			// input the navigator outputs into controller
+			memcpy(controller_input.xR, navigator_output.roll_state, sizeof(controller_input.xR));
+			controller_input.dynamic_pressure = navigator_output.dynamic_pressure;
+
+			controller_input.canard_angle_rad = p_fsm_input->p_sensor_data->motor_encoder_meas.meas;
 
 			// run controller at 100 hz
 			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
@@ -183,7 +184,6 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
 								&controller_output);
-				p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
 			}
 			// set motor command to zero in non-actuation state
 			ak45_send_position_cmd(0);
@@ -215,7 +215,6 @@ void fsm_exec(const fsm_input_t* p_fsm_input, const uint32_t timestamp_tenth_ms,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
 								&controller_output);
-				p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
 
 				// TODO: switch to motor handler once exists
 				/****************************************************************/
