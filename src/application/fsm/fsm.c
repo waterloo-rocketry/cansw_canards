@@ -131,7 +131,12 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 	// initialize the outputs
 	navigator_output_t navigator_output = {0};
+#ifdef HIL
 	static controller_output_t controller_output = {0};
+	bool ran_ctrl = false;
+#else 
+	controller_output_t controller_output = {0};
+#endif
 
 	// calculate time elapsed since last controller run
 	uint32_t ctrl_call_time_elapsed_tenth_ms =
@@ -178,6 +183,9 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
 								&controller_output);
+#ifdef HIL
+				ran_ctrl = true;
+#endif
 			}
 			// set motor command to zero in non-actuation state
 			ak45_send_position_cmd(0);
@@ -209,6 +217,9 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
 								&controller_output);
+#ifdef HIL
+				ran_ctrl = true;
+#endif
 
 				// TODO: switch to motor handler once exists
 				/****************************************************************/
@@ -237,7 +248,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 											   &p_ctx->p_navigator_context->gnc_navigator_ctx.x,
 											   &p_ctx->p_controller_context->gnc_controller_ctx,
 											   &controller_input,
-											   &controller_output);
+											   &controller_output, ran_ctrl);
 	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
 	if (send_rc != W_SUCCESS) {
 		log_text(1, LOG_LVL_WARN, "HIL", "Failed to send cmd to simulink: %d", send_rc);
@@ -270,7 +281,7 @@ void fsm_task(void *args) {
 						  &x_state,
 						  &g_ctx.p_controller_context->gnc_controller_ctx,
 						  &controller_input,
-						  &controller_output);
+						  &controller_output, false);
 #endif
 
 	while (1) {
@@ -360,9 +371,9 @@ void fsm_task(void *args) {
 
 		log_data(1, LOG_TYPE_MOVELLA_PT2, &log_container);
 
-		// Movella orientation
+		// // Movella orientation
 		// log_container.movella_pt3.orient_w =
-		// 	(float)sensor_data.mti_meas..w;
+		// 	(float)sensor_data.mti_meas.w;
 		// log_container.movella_pt3.orient_x =
 		// 	(float)sensor_data.mti_meas.orientation.x;
 		// log_container.movella_pt3.orient_y =
@@ -370,7 +381,7 @@ void fsm_task(void *args) {
 		// log_container.movella_pt3.orient_z =
 		// 	(float)sensor_data.mti_meas.orientation.z;
 
-		// log_data(1, LOG_TYPE_MOVELLA_PT3, &log_container);
+		log_data(1, LOG_TYPE_MOVELLA_PT3, &log_container);
 
 		// AD accelerometer
 		log_container.ad_accel.accelerometer.x = (float)sensor_data.ad_meas.ad_accel.meas.x;

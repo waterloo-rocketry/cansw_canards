@@ -98,7 +98,7 @@ w_status_t flight_phase_init(void) {
  * Send a flight phase event to the state machine
  * ISR safe
  */
-w_status_t flight_phase_send_event(flight_phase_event_t event) {
+w_status_t flight_phase_send_event_isr(flight_phase_event_t event) {
 	// Update event statistics
 	switch (event) {
 		case EVENT_PAD_FILTER:
@@ -129,11 +129,52 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 
 	// Allow sending from ISR
 	if (xQueueSendFromISR(event_queue, &event, 0) != pdPASS) {
-		// log_text(0,
-		// 		 LOG_LVL_FATAL,
-		// 		 "FlightPhase",
-		// 		 "Failed to send event %d to queue. Queue full?",
-		// 		 event);
+		flight_phase_status.event_queue_full_count++;
+		return W_FAILURE;
+	}
+	return W_SUCCESS;
+}
+
+
+/**
+ * Send a flight phase event to the state machine
+ * Not ISR safe
+ */
+w_status_t flight_phase_send_event(flight_phase_event_t event) {
+	// Update event statistics
+	switch (event) {
+		case EVENT_PAD_FILTER:
+			flight_phase_status.event_counts.pad_filter++;
+			break;
+		case EVENT_IGNITOR:
+			flight_phase_status.event_counts.ignitor++;
+			break;
+		case EVENT_INJ_OPEN:
+			flight_phase_status.event_counts.inj_open++;
+			break;
+		case EVENT_LAUNCH_ACCEL:
+			flight_phase_status.event_counts.launch_accel++;
+			break;
+		case EVENT_ACT_DELAY_ELAPSED:
+			flight_phase_status.event_counts.act_delay_elapsed++;
+			break;
+		case EVENT_RECOVERY_START:
+			flight_phase_status.event_counts.recovery_rate++;
+			break;
+		case EVENT_SLEEP_START:
+			flight_phase_status.event_counts.sleep_rate++;
+			break;
+		default:
+			// Unexpected event type
+			break;
+	}
+
+	if (xQueueSend(event_queue, &event, 0) != pdPASS) {
+		log_text(0,
+				 LOG_LVL_FATAL,
+				 "FlightPhase",
+				 "Failed to send event %d to queue. Queue full?",
+				 event);
 		flight_phase_status.event_queue_full_count++;
 		return W_FAILURE;
 	}

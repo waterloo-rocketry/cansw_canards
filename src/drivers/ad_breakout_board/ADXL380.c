@@ -165,7 +165,9 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
  */
 w_status_t adxl380_is_data_ready(bool *p_drdy) {
 	if (!is_initialized) {
-		// log_text(0, LOG_LVL_WARN, "ADXL380", "Failed initialized.");
+#ifndef HIL
+		log_text(0, LOG_LVL_WARN, "ADXL380", "Failed initialized.");
+#endif
 		return W_FAILURE;
 	}
 	if (NULL == p_drdy) {

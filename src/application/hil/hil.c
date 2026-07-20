@@ -13,6 +13,7 @@
 #include "common/math/math.h"
 
 extern void unblock_fsm_hil();
+extern w_status_t flight_phase_send_event_isr(flight_phase_event_t event);
 
 // Packet framing bytes
 #define HIL_HEADER_SIZE_BYTES (4U)
@@ -208,13 +209,13 @@ void hil_parse_rx_bytes(uint8_t byte) {
 		hil_rx_payload_t *ready_packet = (hil_rx_payload_t *)&hil_ctx.ready_rx_packet[0];
 
 		if (float_equal(ready_packet->can_msg, 3.0)) {
-			flight_phase_send_event(EVENT_PAD_FILTER);
+			flight_phase_send_event_isr(EVENT_PAD_FILTER);
 		}
 		if (float_equal(ready_packet->can_msg, 2.0)) {
-			flight_phase_send_event(EVENT_IGNITOR);
+			flight_phase_send_event_isr(EVENT_IGNITOR);
 		}
 		if (float_equal(ready_packet->can_msg, 1.0)) {
-			flight_phase_send_event(EVENT_INJ_OPEN);
+			flight_phase_send_event_isr(EVENT_INJ_OPEN);
 		}
 
 		// also increment timestamp as we use HIL as the timebase for timer_get_ms()
@@ -346,17 +347,23 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 
 static hil_tx_packet_t tx_packet = {0};
 
+static controller_output_t newest_cntl_out = {0};
+
 w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
 								 gnc_x_state_t *p_x_state, gnc_controller_ctx_t *p_controller_ctx,
-								 controller_input_t *p_cntl_in, controller_output_t *p_cntl_out) {
+								 controller_input_t *p_cntl_in, controller_output_t *p_cntl_out, bool ran_ctrl) {
+	if (ran_ctrl) {
+		memcpy(&newest_cntl_out, p_cntl_out, sizeof(newest_cntl_out));
+	}
+	
 	log_text(
-		1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", p_cntl_out->canard_command_angle_rad);
+		1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", newest_cntl_out.canard_command_angle_rad);
 	tx_packet.header[0] = HIL_HEADER_CHAR_0;
 	tx_packet.header[1] = HIL_HEADER_CHAR_1;
 	tx_packet.header[2] = HIL_HEADER_CHAR_2;
 	tx_packet.header[3] = HIL_HEADER_CHAR_3;
 
-	tx_packet.payload.canard_cmd = p_cntl_out->canard_command_angle_rad;
+	tx_packet.payload.canard_cmd = newest_cntl_out.canard_command_angle_rad;
 
 	tx_packet.payload.att_w = p_x_state->q.w;
 	tx_packet.payload.att_x = p_x_state->q.x;
