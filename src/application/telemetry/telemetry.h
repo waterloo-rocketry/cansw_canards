@@ -19,7 +19,7 @@ typedef struct {
 	telemetry_log_fn_t log_fn; // function to call periodically to log data
 	fsm_state_t flight_phase_state; // the flight phase state in which this source should be logged
 
-	uint32_t period_ms; // the period in ms between logs
+	uint32_t period_ms; // the period in ms between logs, derived from desired_frequency_hz
 } telemetry_source_config_t;
 
 /**

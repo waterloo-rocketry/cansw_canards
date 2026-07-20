@@ -15,12 +15,13 @@ typedef struct {
 	uint32_t
 		last_logged_ms; // the last ms timestamp when this source was logged (for health checks)
 	uint32_t due_date_ms; // the next ms timestamp when this source should be logged
-} telemetry_timestamped_internal_config_t;
+} telemetry_internal_config_t;
 
 // struct to keep track of registered telemetry sources
 typedef struct {
-	uint32_t num_sources;
-	telemetry_timestamped_internal_config_t sources[TELEMETRY_MAX_SOURCES];
+	uint32_t num_sources; // number of sources currently registered
+	telemetry_internal_config_t
+		sources[TELEMETRY_MAX_SOURCES]; // array of registered telemetry sources
 } telemetry_registry_t;
 
 // struct to keep track of telemetry statistics
@@ -65,7 +66,7 @@ void telemetry_clear_all_data(void) {
 void telemetry_init_due_dates(uint32_t curr_time) {
 	// set due date to every registered function once telemetry starts
 	for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
-		telemetry_timestamped_internal_config_t *curr = &g_telemetry_registry.sources[i];
+		telemetry_internal_config_t *curr = &g_telemetry_registry.sources[i];
 		curr->due_date_ms =
 			curr->source_config.period_ms + curr_time; // first log is due one period after t=0
 	}
@@ -105,7 +106,7 @@ void telemetry_run_once(void) {
 	// and it's due/overdue
 	if (W_SUCCESS == time_status) {
 		for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
-			telemetry_timestamped_internal_config_t *source = &g_telemetry_registry.sources[i];
+			telemetry_internal_config_t *source = &g_telemetry_registry.sources[i];
 
 			if (phase != source->source_config.flight_phase_state) {
 				continue;
@@ -184,7 +185,7 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
 
 	// Copy the caller's config into the registry slot, then initialize the internally-managed
 	// scheduling fields (avoids mutating the caller's const struct).
-	telemetry_timestamped_internal_config_t *slot =
+	telemetry_internal_config_t *slot =
 		&g_telemetry_registry.sources[g_telemetry_registry.num_sources];
 	slot->source_config = *config;
 	slot->last_logged_ms = 0;
