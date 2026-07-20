@@ -32,6 +32,25 @@ typedef struct {
 	char data[LOG_BUFFER_SIZE];
 } log_buffer_t;
 
+/**
+ * A collection of status variables describing the current health of the logger module.
+ */
+typedef struct {
+	bool is_init;
+	uint32_t dropped_txt_msgs;
+	uint32_t dropped_data_msgs;
+	uint32_t trunc_msgs;
+	uint32_t full_buffer_moments;
+	uint32_t log_write_timeouts;
+	uint32_t invalid_region_moments;
+	uint32_t queue_send_fails;
+	uint32_t no_full_buf_moments;
+	uint32_t buffer_flush_fails;
+	uint32_t unsafe_buffer_flushes;
+	bool buffer_is_full; // flag for full buffer since last health check
+	bool timeout_occurred; // flag for timeout since last health check
+} logger_health_t;
+
 static log_buffer_t log_text_buffers[NUM_TEXT_LOG_BUFFERS];
 static log_buffer_t log_data_buffers[NUM_DATA_LOG_BUFFERS];
 static uint32_t current_text_buf_num = 0;
@@ -110,7 +129,7 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 	if (msg_num == DATA_MSGS_PER_BUFFER - 1) {
 		if (xQueueSendToBack(full_buffers_queue, &buffer, 0) != pdPASS) {
 			// This should never be reached as the queue should have space for all buffers
-			logger_health.crit_errs++;
+			logger_health.queue_send_fails++;
 			return W_FAILURE;
 		}
 	}
@@ -257,6 +276,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	// Attempt to acquire mutex to safely access current_text_buf_num
 	if (xSemaphoreTake(log_text_write_mutex, pdMS_TO_TICKS(timeout)) != pdPASS) {
 		logger_health.log_write_timeouts++;
+		logger_health.timeout_occurred = true;
 		logger_health.dropped_txt_msgs++;
 		return W_FAILURE;
 	}
@@ -268,6 +288,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 		xSemaphoreGive(log_text_write_mutex);
 		logger_health.full_buffer_moments++;
 		logger_health.dropped_txt_msgs++;
+		logger_health.buffer_is_full = true;
 		return W_FAILURE;
 	}
 
@@ -348,7 +369,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	if (msg_num == TEXT_MSGS_PER_BUFFER - 1) {
 		if (xQueueSendToBack(full_buffers_queue, &buffer, 0) != pdPASS) {
 			// This should never be reached as the queue should have space for all buffers
-			logger_health.crit_errs++;
+			logger_health.queue_send_fails++;
 			return W_FAILURE;
 		}
 	}
@@ -371,6 +392,7 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	// Attempt to acquire mutex to safely access current_data_buf_num
 	if (xSemaphoreTake(log_data_write_mutex, pdMS_TO_TICKS(timeout)) != pdPASS) {
 		logger_health.log_write_timeouts++;
+		logger_health.timeout_occurred = true;
 		logger_health.dropped_data_msgs++;
 		return W_FAILURE;
 	}
@@ -382,6 +404,7 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 		xSemaphoreGive(log_data_write_mutex);
 		logger_health.full_buffer_moments++;
 		logger_health.dropped_data_msgs++;
+		logger_health.buffer_is_full = true;
 		return W_FAILURE;
 	}
 
@@ -466,8 +489,27 @@ health_status_t logger_get_status(void) {
 
 	if (!logger_health.is_init) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_NOT_INIT;
+		status.error_bitfield |= (1 << ERR_NOT_INIT);
 	}
+
+	if (logger_health.buffer_is_full) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= (1 << ERR_OVERFLOW);
+	}
+
+	if (logger_health.timeout_occurred) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= (1 << ERR_TIMEOUT);
+	}
+
+	if ((logger_health.queue_send_fails > 0) || (logger_health.unsafe_buffer_flushes > 0)) {
+		status.severity = HEALTH_ERROR;
+		status.error_bitfield |= (1 << ERR_OS);
+	}
+
+	// reset error flags
+	logger_health.buffer_is_full = false;
+	logger_health.timeout_occurred = false;
 
 	log_text(10,
 			 LOG_LVL_INFO,
@@ -484,10 +526,10 @@ health_status_t logger_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "logger",
-			 "invalid_region=%d, crit_errs=%d, no_full_buf=%d, "
+			 "invalid_region=%d, queue_send_fails=%d, no_full_buf=%d, "
 			 "buffer_flush_fails=%d, unsafe_buffer_flush=%d",
 			 logger_health.invalid_region_moments,
-			 logger_health.crit_errs,
+			 logger_health.queue_send_fails,
 			 logger_health.no_full_buf_moments,
 			 logger_health.buffer_flush_fails,
 			 logger_health.unsafe_buffer_flushes);
