@@ -15,12 +15,13 @@ typedef struct {
 	uint32_t
 		last_logged_ms; // the last ms timestamp when this source was logged (for health checks)
 	uint32_t due_date_ms; // the next ms timestamp when this source should be logged
-} telemetry_timestamped_internal_config_t;
+} telemetry_internal_config_t;
 
 // struct to keep track of registered telemetry sources
 typedef struct {
-	uint32_t num_sources;
-	telemetry_timestamped_internal_config_t sources[TELEMETRY_MAX_SOURCES];
+	uint32_t num_sources; // number of sources currently registered
+	telemetry_internal_config_t
+		sources[TELEMETRY_MAX_SOURCES]; // array of registered telemetry sources
 } telemetry_registry_t;
 
 // struct to keep track of telemetry statistics
@@ -47,7 +48,7 @@ void telemetry_clear_all_data(void) {
 
 	// zero init telemetry registry source array
 	for (uint32_t i = 0; i < TELEMETRY_MAX_SOURCES; i++) {
-		g_telemetry_registry.sources[i].source_config.source_name = NULL;
+		g_telemetry_registry.sources[i].source_config.name = NULL;
 		g_telemetry_registry.sources[i].source_config.log_fn = NULL;
 		g_telemetry_registry.sources[i].source_config.flight_phase_state = STATE_ERROR;
 		g_telemetry_registry.sources[i].source_config.period_ms = 0;
@@ -65,7 +66,7 @@ void telemetry_clear_all_data(void) {
 void telemetry_init_due_dates(uint32_t curr_time) {
 	// set due date to every registered function once telemetry starts
 	for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
-		telemetry_timestamped_internal_config_t *curr = &g_telemetry_registry.sources[i];
+		telemetry_internal_config_t *curr = &g_telemetry_registry.sources[i];
 		curr->due_date_ms =
 			curr->source_config.period_ms + curr_time; // first log is due one period after t=0
 	}
@@ -105,7 +106,7 @@ void telemetry_run_once(void) {
 	// and it's due/overdue
 	if (W_SUCCESS == time_status) {
 		for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
-			telemetry_timestamped_internal_config_t *source = &g_telemetry_registry.sources[i];
+			telemetry_internal_config_t *source = &g_telemetry_registry.sources[i];
 
 			if (phase != source->source_config.flight_phase_state) {
 				continue;
@@ -113,17 +114,17 @@ void telemetry_run_once(void) {
 
 			// signed-difference compare so this survives the 32-bit ms counter wrapping around
 			int32_t overdue_by = (int32_t)(curr_time - source->due_date_ms);
+
+			// overdue euqal to 0 not handled
 			if (overdue_by < 0) {
 				continue; // not due yet
-			}
-
-			if (overdue_by > 0) {
+			} else if (overdue_by > 0) {
 				// TODO: report to health check with module name
 				g_telemetry_stats.overdue_count++;
 			}
 
 			// call the function and check execution status
-			if (W_SUCCESS == source->source_config.log_fn()) {
+			if (source->source_config.log_fn() == W_SUCCESS) {
 				g_telemetry_stats.successful_transmissions++;
 			} else {
 				g_telemetry_stats.failed_transmissions++;
@@ -144,7 +145,7 @@ void telemetry_task(void *argument) {
 	uint32_t curr_time = 0;
 	w_status_t time_status = timer_get_ms(&curr_time);
 
-	if (W_SUCCESS != time_status) {
+	if (time_status != W_SUCCESS) {
 		log_text(1,
 				 LOG_LVL_WARN,
 				 "telemetry module",
@@ -177,14 +178,14 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
 		return W_FAILURE;
 	}
 
-	if ((config->source_name == NULL) || (config->log_fn == NULL) || (config->period_ms == 0)) {
+	if ((config->name == NULL) || (config->log_fn == NULL) || (config->period_ms == 0)) {
 		log_text(1, LOG_LVL_WARN, "telemetry module", "Invalid telemetry source configuration");
 		return W_INVALID_PARAM;
 	}
 
 	// Copy the caller's config into the registry slot, then initialize the internally-managed
 	// scheduling fields (avoids mutating the caller's const struct).
-	telemetry_timestamped_internal_config_t *slot =
+	telemetry_internal_config_t *slot =
 		&g_telemetry_registry.sources[g_telemetry_registry.num_sources];
 	slot->source_config = *config;
 	slot->last_logged_ms = 0;

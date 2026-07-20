@@ -12,6 +12,8 @@ extern "C" {
 #include "drivers/timer/timer.h"
 #include "task.h"
 
+extern void telemetry_clear_all_data(void);
+
 // Dependencies of the telemetry module (declared inline; no mock files exist).
 FAKE_VALUE_FUNC(fsm_state_t, fsm_get_state);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
@@ -58,7 +60,7 @@ protected:
     static telemetry_source_config_t
     make_source(telemetry_log_fn_t log_fn, fsm_state_t phase, uint32_t period_ms) {
         telemetry_source_config_t cfg = {};
-        cfg.source_name = "test_source";
+        cfg.name = "test_source";
         cfg.log_fn = log_fn;
         cfg.flight_phase_state = phase;
         cfg.period_ms = period_ms;
@@ -81,7 +83,7 @@ TEST_F(TelemetryModuleTest, RegisterValidSourceSucceeds) {
 TEST_F(TelemetryModuleTest, RegisterNullNameIsInvalidParam) {
     ASSERT_EQ(telemetry_init(), W_SUCCESS);
     telemetry_source_config_t cfg = make_source(source_log_ok, STATE_ACT_ALLOWED, 100);
-    cfg.source_name = nullptr;
+    cfg.name = nullptr;
     EXPECT_EQ(telemetry_register(&cfg), W_INVALID_PARAM);
 }
 

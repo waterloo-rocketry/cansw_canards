@@ -14,12 +14,12 @@ typedef w_status_t (*telemetry_log_fn_t)(void);
 
 // struct for telemetry source configuration
 typedef struct {
-	const char *source_name;
+	const char *name; // source name for debugging
 
 	telemetry_log_fn_t log_fn; // function to call periodically to log data
 	fsm_state_t flight_phase_state; // the flight phase state in which this source should be logged
 
-	uint32_t period_ms; // the period in ms between logs
+	uint32_t period_ms; // the period in ms at which log_fn will get called by telemetry module
 } telemetry_source_config_t;
 
 /**
@@ -55,12 +55,6 @@ void telemetry_run_once(void);
  * @note normally called internally by telemetry_task; exposed for unit testing
  */
 void telemetry_init_due_dates(uint32_t curr_time);
-
-/**
- * @brief clears registry + stats, including the initialized flag
- * @note normally called internally by telemetry_init; exposed for unit testing
- */
-void telemetry_clear_all_data(void);
 
 /**
  * @brief Reports the current status of the telemetry module
