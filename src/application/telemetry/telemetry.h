@@ -17,9 +17,6 @@ typedef struct {
 	fsm_state_t flight_phase_state; // the flight phase state in which this source should be logged
 
 	uint32_t period_ms; // the period in ms between logs, derived from desired_frequency_hz
-	uint32_t
-		last_logged_ms; // the last ms timestamp when this source was logged (for health checks)
-	uint32_t due_date_ms; // the next ms timestamp when this source should be logged
 } telemetry_source_config_t;
 
 /*

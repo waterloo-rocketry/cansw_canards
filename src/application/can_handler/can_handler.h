@@ -38,7 +38,17 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan);
 w_status_t can_handler_transmit(const can_msg_t *message);
 
 /**
- * @brief Binds a callback which will be triggered when we recieve any messages of a particular type
+ * @brief Binds a callback which will be triggered when actuator cmd type of a particular type
+ * @param act_type The canlib actuator types to register the callback for
+ * @param callback Pointer to the callback function to use
+ * @return Status of the operation
+ */
+
+w_status_t can_handler_act_cmd_register_callback(can_actuator_id_t act_type,
+												 can_callback_t callback);
+/**
+ * @brief Binds a callback which will be triggered when we recieve any messages of a particular
+ * type
  * @param msg_type The canlib message type to register the callback for
  * @param callback Pointer to the callback function to use
  * @return Status of the operation
