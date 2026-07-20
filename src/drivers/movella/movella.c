@@ -138,50 +138,6 @@ w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
 		return W_FAILURE;
 	}
 
-	// if saturated, set val to min/max instead of fail. prefer saturated values over nothing
-	if (fabs(s_movella.latest_data.acc.x) > MOVELLA_ACC_RANGE) {
-		s_movella.latest_data.acc.x =
-			(s_movella.latest_data.acc.x > 0) ? MOVELLA_ACC_RANGE : -MOVELLA_ACC_RANGE;
-	}
-	if (fabs(s_movella.latest_data.acc.y) > MOVELLA_ACC_RANGE) {
-		s_movella.latest_data.acc.y =
-			(s_movella.latest_data.acc.y > 0) ? MOVELLA_ACC_RANGE : -MOVELLA_ACC_RANGE;
-	}
-	if (fabs(s_movella.latest_data.acc.z) > MOVELLA_ACC_RANGE) {
-		s_movella.latest_data.acc.z =
-			(s_movella.latest_data.acc.z > 0) ? MOVELLA_ACC_RANGE : -MOVELLA_ACC_RANGE;
-	}
-	if (fabs(s_movella.latest_data.gyr.x) > MOVELLA_GYRO_RANGE) {
-		s_movella.latest_data.gyr.x =
-			(s_movella.latest_data.gyr.x > 0) ? MOVELLA_GYRO_RANGE : -MOVELLA_GYRO_RANGE;
-	}
-	if (fabs(s_movella.latest_data.gyr.y) > MOVELLA_GYRO_RANGE) {
-		s_movella.latest_data.gyr.y =
-			(s_movella.latest_data.gyr.y > 0) ? MOVELLA_GYRO_RANGE : -MOVELLA_GYRO_RANGE;
-	}
-	if (fabs(s_movella.latest_data.gyr.z) > MOVELLA_GYRO_RANGE) {
-		s_movella.latest_data.gyr.z =
-			(s_movella.latest_data.gyr.z > 0) ? MOVELLA_GYRO_RANGE : -MOVELLA_GYRO_RANGE;
-	}
-	if (fabs(s_movella.latest_data.mag.x) > MOVELLA_MAG_RANGE) {
-		s_movella.latest_data.mag.x =
-			(s_movella.latest_data.mag.x > 0) ? MOVELLA_MAG_RANGE : -MOVELLA_MAG_RANGE;
-	}
-	if (fabs(s_movella.latest_data.mag.y) > MOVELLA_MAG_RANGE) {
-		s_movella.latest_data.mag.y =
-			(s_movella.latest_data.mag.y > 0) ? MOVELLA_MAG_RANGE : -MOVELLA_MAG_RANGE;
-	}
-	if (fabs(s_movella.latest_data.mag.z) > MOVELLA_MAG_RANGE) {
-		s_movella.latest_data.mag.z =
-			(s_movella.latest_data.mag.z > 0) ? MOVELLA_MAG_RANGE : -MOVELLA_MAG_RANGE;
-	}
-	if (s_movella.latest_data.pres > MOVELLA_BARO_MAX) {
-		s_movella.latest_data.pres = MOVELLA_BARO_MAX;
-	}
-	if (s_movella.latest_data.pres < MOVELLA_BARO_MIN) {
-		s_movella.latest_data.pres = MOVELLA_BARO_MIN;
-	}
-
 	if (pdTRUE == xSemaphoreTake(s_movella.data_mutex, pdMS_TO_TICKS(timeout_ms))) {
 		*out_data = s_movella.latest_data;
 		xSemaphoreGive(s_movella.data_mutex);
