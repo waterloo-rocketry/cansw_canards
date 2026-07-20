@@ -34,7 +34,7 @@ static const uint8_t MAX_FSM_DELAY_MS = 4;
 #endif
 
 static const uint32_t MS_TO_TENTH_MS = 10;
-static const uint8_t CONTROLLER_LOOP_FREQ = 100;
+static const uint8_t CONTROLLER_PERIOD_TENTH_MS = 100;
 
 // global
 static fsm_ctx_t g_ctx = {0};
@@ -134,7 +134,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 	static controller_output_t controller_output = {0};
 
 	// calculate time elapsed since last controller run
-	uint32_t time_elapsed_tenth_ms =
+	uint32_t ctrl_call_time_elapsed_tenth_ms =
 		timestamp_tenth_ms - p_ctx->p_controller_context->last_run_tenth_ms;
 
 	// TODO: ask tristan how to get behaviour of first cycle
@@ -148,6 +148,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 				// TODO: add error handling
 				log_text(0, LOG_LVL_WARN, "FSM", "pad_filter_init failed");
 			}
+			p_ctx->p_controller_context->last_run_tenth_ms = timestamp_tenth_ms;
 			break;
 
 		// both Pad filter and boost will only run estimator step
@@ -172,7 +173,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 			// run controller at 100 hz
 			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
-				time_elapsed_tenth_ms >= CONTROLLER_LOOP_FREQ) {
+				ctrl_call_time_elapsed_tenth_ms >= CONTROLLER_PERIOD_TENTH_MS) {
 				controller_step(&controller_input,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,
@@ -203,7 +204,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 			// run controller at 100 hz
 			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
-				time_elapsed_tenth_ms >= CONTROLLER_LOOP_FREQ) {
+				ctrl_call_time_elapsed_tenth_ms >= CONTROLLER_PERIOD_TENTH_MS) {
 				controller_step(&controller_input,
 								timestamp_tenth_ms,
 								p_ctx->p_controller_context,

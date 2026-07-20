@@ -71,7 +71,8 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 						  navigator_ctx_t *p_ctx, navigator_output_t *p_output);
 
 /**
- * @brief initialize the pad filter
+ * @brief init pad filter with alive sensors. Must call before pad filter starts. Can call this
+ * multiple times to overwrite with new sensor values. Dead sensors will persist previous values.
  * @param p_ctx pointer to navigator context
  * @param p_sensor_data sensor data
  */
