@@ -5,10 +5,17 @@
 #define TELEMETRY_MAX_SOURCES 32 // TODO: find out real value for this
 #define TELEMETRY_TASK_PERIOD_MS 1 // 1000hz
 
+typedef struct {
+	telemetry_source_config_t source_config;
+	uint32_t
+		last_logged_ms; // the last ms timestamp when this source was logged (for health checks)
+	uint32_t due_date_ms; // the next ms timestamp when this source should be logged
+} telemetry_timestamped_internal_config_t;
+
 // struct to keep track of registered telemetry sources
 typedef struct {
 	uint32_t num_sources; // number of sources currently registered
-	telemetry_source_config_t
+	telemetry_timestamped_internal_config_t
 		sources[TELEMETRY_MAX_SOURCES]; // array of registered telemetry sources
 } telemetry_registry_t;
 
