@@ -38,16 +38,22 @@ static uart_handle_t s_uart_handles[UART_CHANNEL_COUNT] = {0};
  */
 typedef struct {
 	bool initialized; /**< Whether UART is initialized */
-	uint32_t overflows; /**< Count of message size overflows */
+	uint32_t reinit_attempts; /**< Count of reinitialization attempts */
+	uint32_t msg_length_overflows; /**< Count of message size overflows */
 	uint32_t timeouts; /**< Count of operation timeouts */
+	uint32_t invalid_params; /**< Invalid parameter errors */
+	uint32_t init_mutex_errors; /**< Mutex creation errors */
+	uint32_t init_queue_errors; /**< Queue creation errors */
+	uint32_t init_callback_errors; /**< Callback registration errors */
+	uint32_t init_rx_errors; /**< Init receive errors */
 	uint32_t hw_errors; /**< Count of hardware errors */
 	uint32_t messages_received; /**< Count of messages successfully received */
 	uint32_t messages_sent; /**< Count of messages successfully sent */
 	uint32_t restart_failed; /**< Count of times we failed to restart reception after error */
-} uart_stats_t;
+} uart_health_t;
 
 /** @brief Error statistics for each channel */
-static uart_stats_t s_uart_stats[UART_CHANNEL_COUNT] = {0};
+static uart_health_t uart_health[UART_CHANNEL_COUNT] = {0};
 
 /**
  * @brief Initialize UART channel
@@ -57,7 +63,12 @@ static uart_stats_t s_uart_stats[UART_CHANNEL_COUNT] = {0};
  * @return Status of the initialization
  */
 w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t timeout_ms) {
+	if (uart_health[channel].initialized) {
+		uart_health[channel].reinit_attempts++;
+		return W_FAILURE;
+	}
 	if ((channel >= UART_CHANNEL_COUNT) || (NULL == huart)) {
+		uart_health[channel].invalid_params++;
 		return W_INVALID_PARAM;
 	}
 
@@ -74,6 +85,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
 		log_text(10, LOG_LVL_FATAL, "uart", "initmtxfail %d", channel);
+		uart_health[channel].init_mutex_errors++;
 		return W_FAILURE;
 	}
 
@@ -89,6 +101,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 	if (NULL == handle->msg_queue) {
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
+		uart_health[channel].init_queue_errors++;
 		log_text(10, LOG_LVL_FATAL, "uart", "initqfail %d", channel);
 		return W_FAILURE;
 	}
@@ -101,6 +114,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
 		log_text(10, LOG_LVL_FATAL, "uart", "initcbfail %d", channel);
+		uart_health[channel].init_callback_errors++;
 		return W_FAILURE;
 	}
 
@@ -111,6 +125,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
 		log_text(10, LOG_LVL_FATAL, "uart", "initfail %d", channel);
+		uart_health[channel].init_callback_errors++;
 		return W_FAILURE;
 	}
 
@@ -122,6 +137,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
 		log_text(10, LOG_LVL_FATAL, "uart", "initisr %d", channel);
+		uart_health[channel].init_callback_errors++;
 		return W_FAILURE;
 	}
 
@@ -131,11 +147,12 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
 		log_text(10, LOG_LVL_FATAL, "uart", "initrx %d", channel);
+		uart_health[channel].init_rx_errors++;
 		return W_IO_ERROR;
 	}
 
 	// Mark as initialized
-	s_uart_stats[channel].initialized = true;
+	uart_health[channel].initialized = true;
 
 	return W_SUCCESS;
 }
@@ -155,9 +172,11 @@ w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
 	w_status_t status = W_SUCCESS;
 	if ((channel >= UART_CHANNEL_COUNT) || (NULL == s_uart_handles[channel].huart) ||
 		(buffer == NULL) || (length == 0)) {
-		status = W_INVALID_PARAM; // Invalid parameter(s)
-		return status;
-	} else if (pdTRUE != xSemaphoreTake(s_uart_handles[channel].write_mutex, timeout_ms)) {
+		uart_health[channel].invalid_params++;
+		return W_INVALID_PARAM; // Invalid parameter(s)
+	}
+	if (pdTRUE != xSemaphoreTake(s_uart_handles[channel].write_mutex, timeout_ms)) {
+		uart_health[channel].timeouts++;
 		return W_IO_TIMEOUT; // Could not acquire the mutex in the given time
 	}
 	HAL_StatusTypeDef transmit_status =
@@ -166,9 +185,10 @@ w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
 	if (HAL_OK != transmit_status) {
 		xSemaphoreGive(s_uart_handles[channel].write_mutex); // Release mutex on failure
 		if (HAL_ERROR == transmit_status) {
+			uart_health[channel].hw_errors++;
 			return W_IO_ERROR;
 		} else if (HAL_BUSY == transmit_status) {
-			s_uart_stats[channel].timeouts++;
+			uart_health[channel].timeouts++;
 			return W_IO_TIMEOUT;
 		}
 	}
@@ -179,11 +199,11 @@ w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
 		if (pdTRUE != xSemaphoreGive(s_uart_handles[channel].write_mutex)) {
 			status = W_IO_TIMEOUT;
 		} else {
-			s_uart_stats[channel].messages_sent++;
+			uart_health[channel].messages_sent++;
 		}
 		return status;
 	} else {
-		s_uart_stats[channel].timeouts++;
+		uart_health[channel].timeouts++;
 		status = W_IO_TIMEOUT;
 		return status;
 	}
@@ -203,6 +223,7 @@ w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
 					 uint32_t timeout_ms) {
 	/* Validate all parameters before proceeding */
 	if ((channel >= UART_CHANNEL_COUNT) || (NULL == buffer) || (NULL == length)) {
+		uart_health[channel].invalid_params++;
 		return W_INVALID_PARAM;
 	}
 
@@ -211,21 +232,21 @@ w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
 
 	// Wait for message pointer from queue
 	if (xQueueReceive(handle->msg_queue, &msg, pdMS_TO_TICKS(timeout_ms)) != pdTRUE) {
-		s_uart_stats[channel].timeouts++;
+		uart_health[channel].timeouts++;
 		*length = 0;
 		return W_IO_TIMEOUT;
 	}
 
 	// Check for message overflow
 	if (msg->len > UART_MAX_LEN) {
-		s_uart_stats[channel].overflows++;
+		uart_health[channel].msg_length_overflows++;
 		msg->len = UART_MAX_LEN; // Truncate to avoid buffer overflow
 	}
 
 	memcpy(buffer, msg->data, msg->len);
 	*length = (uint16_t)msg->len;
 	msg->busy = false; // Buffer can be reused
-	s_uart_stats[channel].messages_received++;
+	uart_health[channel].messages_received++;
 	return W_SUCCESS;
 }
 
@@ -280,7 +301,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 
 	for (ch = 0; ch < UART_CHANNEL_COUNT; ch++) {
 		if (s_uart_handles[ch].huart == huart) {
-			s_uart_stats[ch].hw_errors++;
+			uart_health[ch].hw_errors++;
 
 			// Reset current buffer and restart reception
 			uart_handle_t *handle = &s_uart_handles[ch];
@@ -289,7 +310,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 			curr_msg->busy = false;
 			// Attempt to restart reception
 			if (HAL_UARTEx_ReceiveToIdle_DMA(huart, curr_msg->data, UART_MAX_LEN) != HAL_OK) {
-				s_uart_stats[ch].restart_failed++;
+				uart_health[ch].restart_failed++;
 			}
 			portYIELD_FROM_ISR(higher_priority_task_woken);
 			break;
@@ -323,6 +344,8 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
  * @return Status code indicating success or failure
  */
 health_status_t uart_get_status(void) {
+	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_UART, .error_bitfield = 0};
+
 	// Iterate through all UART channels
 	for (uart_channel_t channel = 0; channel < UART_CHANNEL_COUNT; channel++) {
 		const char *channel_name = "";
@@ -338,21 +361,50 @@ health_status_t uart_get_status(void) {
 				break;
 		}
 
-		uart_stats_t *stats = &s_uart_stats[channel];
+		uart_health_t *stats = &uart_health[channel];
 
-		// Log initialization status
-		log_text(0,
+		// Log operation statistics and error counters for this channel
+		log_text(10,
 				 LOG_LVL_INFO,
 				 "uart",
-				 "%s: %s timeouts %lu hw_err %lu overflows %lu",
+				 "%s init=%d reinit=%lu timeouts=%lu hw_err=%lu ovf=%lu",
 				 channel_name,
-				 stats->initialized ? "INIT" : "NOT INIT",
+				 stats->initialized,
+				 stats->reinit_attempts,
 				 stats->timeouts,
 				 stats->hw_errors,
-				 stats->overflows);
-	}
+				 stats->msg_length_overflows);
 
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_UART, .error_bitfield = 0};
+		log_text(10,
+				 LOG_LVL_INFO,
+				 "uart",
+				 "%s inval=%lu rst_fail=%lu rx=%lu tx=%lu",
+				 channel_name,
+				 stats->invalid_params,
+				 stats->restart_failed,
+				 stats->messages_received,
+				 stats->messages_sent);
+
+		log_text(10,
+				 LOG_LVL_INFO,
+				 "uart",
+				 "%s init_mtx=%lu init_q=%lu init_cb=%lu init_rx=%lu",
+				 channel_name,
+				 stats->init_mutex_errors,
+				 stats->init_queue_errors,
+				 stats->init_callback_errors,
+				 stats->init_rx_errors);
+
+		if (!stats->initialized) {
+			status.severity = HEALTH_ERROR;
+			status.error_bitfield |= (1 << ERR_NOT_INIT);
+		}
+
+		if (stats->restart_failed > 0) {
+			status.severity = HEALTH_ERROR;
+			status.error_bitfield |= (1 << ERR_COMM_FAILURE);
+		}
+	}
 
 	return status;
 }
