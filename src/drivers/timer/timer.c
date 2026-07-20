@@ -9,6 +9,8 @@
 #include "stm32h7xx_hal.h"
 #ifdef HIL
 #include "application/hil/hil.h"
+
+extern bool done_sys_init;
 #endif
 
 // external timer handle declaration
@@ -65,6 +67,10 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 
 #ifdef HIL
 	uint32_t timer_count = hil_timestamp_tenth_ms;
+
+	if (!done_sys_init) {
+		timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+	}
 #else
 	// retrieve the current timer count (in clock ticks)
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
@@ -104,6 +110,10 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 
 #ifdef HIL
 	uint32_t timer_count = hil_timestamp_tenth_ms;
+
+	if (!done_sys_init) {
+		timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+	}
 #else
 	// retrieve the current timer count (in clock ticks)
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);

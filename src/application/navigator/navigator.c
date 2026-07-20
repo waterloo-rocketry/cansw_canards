@@ -138,17 +138,17 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 	log_data(1, LOG_TYPE_NAVIGATOR_PT2, (log_data_container_t *)&container);
 
 	log_text(1,
-				LOG_LVL_INFO,
-				"bias",
-				"board_baro bias %f, mti_baro %f",
-				p_ctx->gnc_navigator_ctx.bias.board_baro,
-				p_ctx->gnc_navigator_ctx.bias.mti_baro);
+			 LOG_LVL_INFO,
+			 "bias",
+			 "board_baro bias %f, mti_baro %f",
+			 p_ctx->gnc_navigator_ctx.bias.board_baro,
+			 p_ctx->gnc_navigator_ctx.bias.mti_baro);
 	log_text(1,
-				LOG_LVL_INFO,
-				"sensorfilter",
-				"board_baro bias %f, mti_baro %f",
-				p_ctx->gnc_navigator_ctx.sensor_filter.board_baro,
-				p_ctx->gnc_navigator_ctx.sensor_filter.mti_baro);
+			 LOG_LVL_INFO,
+			 "sensorfilter",
+			 "board_baro bias %f, mti_baro %f",
+			 p_ctx->gnc_navigator_ctx.sensor_filter.board_baro,
+			 p_ctx->gnc_navigator_ctx.sensor_filter.mti_baro);
 #endif
 
 #ifdef HIL

@@ -351,11 +351,12 @@ static controller_output_t newest_cntl_out = {0};
 
 w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
 								 gnc_x_state_t *p_x_state, gnc_controller_ctx_t *p_controller_ctx,
-								 controller_input_t *p_cntl_in, controller_output_t *p_cntl_out, bool ran_ctrl) {
+								 controller_input_t *p_cntl_in, controller_output_t *p_cntl_out,
+								 bool ran_ctrl) {
 	if (ran_ctrl) {
 		memcpy(&newest_cntl_out, p_cntl_out, sizeof(newest_cntl_out));
 	}
-	
+
 	log_text(
 		1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", newest_cntl_out.canard_command_angle_rad);
 	tx_packet.header[0] = HIL_HEADER_CHAR_0;

@@ -135,7 +135,6 @@ w_status_t flight_phase_send_event_isr(flight_phase_event_t event) {
 	return W_SUCCESS;
 }
 
-
 /**
  * Send a flight phase event to the state machine
  * Not ISR safe

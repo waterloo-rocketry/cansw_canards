@@ -12,10 +12,10 @@
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
-#include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
 #ifdef HIL
 #include "application/hil/hil.h"
+#include "drivers/gpio/gpio.h"
 #endif
 
 // TODO: remove after motor_handler implemented
@@ -134,7 +134,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 #ifdef HIL
 	static controller_output_t controller_output = {0};
 	bool ran_ctrl = false;
-#else 
+#else
 	controller_output_t controller_output = {0};
 #endif
 
@@ -164,7 +164,9 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			// Nav enters flight filter
 			/* fall through */
 		case STATE_BOOST:
+#ifdef HIL
 			gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_LOW, 0);
+#endif
 			navigator_step(&navigator_input,
 						   timestamp_tenth_ms,
 						   p_ctx->p_navigator_context,
@@ -195,9 +197,11 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
+#ifdef HIL
 			if (timestamp_tenth_ms % 50 == 0) {
 				gpio_toggle(GPIO_PIN_GREEN_LED, 0);
 			}
+#endif
 			navigator_step(&navigator_input,
 						   timestamp_tenth_ms,
 						   p_ctx->p_navigator_context,
@@ -248,7 +252,8 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 											   &p_ctx->p_navigator_context->gnc_navigator_ctx.x,
 											   &p_ctx->p_controller_context->gnc_controller_ctx,
 											   &controller_input,
-											   &controller_output, ran_ctrl);
+											   &controller_output,
+											   ran_ctrl);
 	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);
 	if (send_rc != W_SUCCESS) {
 		log_text(1, LOG_LVL_WARN, "HIL", "Failed to send cmd to simulink: %d", send_rc);
@@ -281,7 +286,8 @@ void fsm_task(void *args) {
 						  &x_state,
 						  &g_ctx.p_controller_context->gnc_controller_ctx,
 						  &controller_input,
-						  &controller_output, false);
+						  &controller_output,
+						  false);
 #endif
 
 	while (1) {
