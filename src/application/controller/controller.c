@@ -70,13 +70,13 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 							 p_output->ref_roll,
 							 &is_run);
 
-	// if (is_run) { // the controller ran
-	// 	// update new timestamp
+	if (is_run) { // the controller ran
+		// update new timestamp
 		p_output->timestamp_tenth_ms = timestamp_tenth_ms;
-		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
-	// } else {
-	// 	log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
-	// }
+	} else {
+		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
+	}
+	p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 
 	return W_SUCCESS;
 }

@@ -12,9 +12,7 @@
 #include "application/logger/log.h"
 #include "common/math/math.h"
 
-#ifdef HIL
 extern void unblock_fsm_hil();
-#endif
 
 // Packet framing bytes
 #define HIL_HEADER_SIZE_BYTES (4U)
@@ -35,7 +33,6 @@ typedef enum {
 
 // payload from simulink + footer (excluding header)
 typedef struct __attribute__((packed)) {
-
 	float32_t motor_encoder;
 
 	float32_t board_accel_x;
@@ -220,10 +217,10 @@ void hil_parse_rx_bytes(uint8_t byte) {
 			flight_phase_send_event(EVENT_INJ_OPEN);
 		}
 
-        // also increment timestamp as we use HIL as the timebase for timer_get_ms()
-        hil_timestamp_tenth_ms += 25; // hil gives packets at 400 hz (2.5 ms per packet)
+		// also increment timestamp as we use HIL as the timebase for timer_get_ms()
+		hil_timestamp_tenth_ms += 25; // hil gives packets at 400 hz (2.5 ms per packet)
 
-        // also unblock fsm (since tim5 is not used as the timebase in HIL)
+		// also unblock fsm (since tim5 is not used as the timebase in HIL)
 		unblock_fsm_hil();
 	}
 }
@@ -350,9 +347,10 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 static hil_tx_packet_t tx_packet = {0};
 
 w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
-								 gnc_x_state_t *p_x_state, gnc_controller_ctx_t *p_controller_ctx, controller_input_t *p_cntl_in,
-								 controller_output_t *p_cntl_out) {
-	log_text(1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", p_cntl_out->canard_command_angle_rad);
+								 gnc_x_state_t *p_x_state, gnc_controller_ctx_t *p_controller_ctx,
+								 controller_input_t *p_cntl_in, controller_output_t *p_cntl_out) {
+	log_text(
+		1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", p_cntl_out->canard_command_angle_rad);
 	tx_packet.header[0] = HIL_HEADER_CHAR_0;
 	tx_packet.header[1] = HIL_HEADER_CHAR_1;
 	tx_packet.header[2] = HIL_HEADER_CHAR_2;

@@ -11,10 +11,6 @@
 #include "application/hil/hil.h"
 #endif
 
-// #ifdef HIL
-// extern volatile uint32_t hil_timestamp_tenth_ms;
-// #endif
-
 // external timer handle declaration
 extern TIM_HandleTypeDef htim2;
 
@@ -38,23 +34,6 @@ w_status_t timer_init() {
 	if (HAL_OK != HAL_TIM_Base_Start(&htim2)) {
 		return W_FAILURE;
 	}
-
-#ifdef HIL
-
-// wait until hil connection is established!!!
-	// while (hil_timestamp_tenth_ms == 0) {
-		// // kickoff simulink by unblocking it with 1 msg. use dummy data to verify it started
-		// navigator_input_t navigator_input = {0};
-		// controller_input_t controller_input = {0};
-		// navigator_output_t navigator_output = {0};
-		// controller_output_t controller_output = {0};
-		// gnc_x_state_t x_state = {0};
-	
-		// hil_send_simulink_cmd(
-		// 	&navigator_input, &navigator_output, &x_state, &controller_input, &controller_output);
-        // wait for hil to send first packet. Timestamp increment must mean a packet was recvd
-    // }
-#endif
 
 	g_timer_initialized = true;
 	return W_SUCCESS;
@@ -89,7 +68,7 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 #else
 	// retrieve the current timer count (in clock ticks)
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
-    #endif
+#endif
 
 	// convert the timer count to milliseconds
 	// each tick is 0.1 ms, so we divide by 10 to truncate to ms accuracy

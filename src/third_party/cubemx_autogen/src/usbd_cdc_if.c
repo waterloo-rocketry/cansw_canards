@@ -271,15 +271,12 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 11 */
   HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET); // indicate packet received
-  if (false) {
-    // log_text(1, LOG_LVL_WARN, "hil", "CDC_Receive_HS called before sys init done");
-    // return (USBD_OK);
-  } else {
-    // process packet
-    for (uint32_t i = 0; i < *Len; i++) {
-        hil_parse_rx_bytes(Buf[i]);
-      }
+  #ifdef HIL
+  // process packet
+  for (uint32_t i = 0; i < *Len; i++) {
+      hil_parse_rx_bytes(Buf[i]);
   }
+  #endif
     
     USBD_CDC_SetRxBuffer(&hUsbDeviceHS, &Buf[0]);
     USBD_CDC_ReceivePacket(&hUsbDeviceHS);

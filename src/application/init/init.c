@@ -40,7 +40,7 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
-static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1; // 10 seconds
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -82,9 +82,11 @@ static void system_init_task(void *arg) {
 	}
 
 	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status =  sd_card_init();
-	non_crit_status |=  log_init();
-	// non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
+	w_status_t non_crit_status = sd_card_init();
+	non_crit_status |= log_init();
+#ifndef HIL
+	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
+#endif
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
@@ -97,7 +99,7 @@ static void system_init_task(void *arg) {
 	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
 	status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
 	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
-	// status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
+	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	status |= uart_init(UART_MOVELLA, &huart3, 100);
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= navigator_init();
@@ -108,12 +110,14 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	// status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	// status |= adxrs649_init();
 	status |= ms5611_init();
-	// status |= iis2mdc_init();
 	status |= power_handler_init();
+#ifndef HIL
+	status |= adxl380_init();
+	status |= adxrs649_init();
+	status |= iis2mdc_init();
+#endif
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {

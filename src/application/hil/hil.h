@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 
+#include "GNC_codegen_types.h"
 #include "common/gnc/gnc_types.h"
 #include "rocketlib/include/common.h"
-#include "GNC_codegen_types.h"
 
 #ifdef HIL
 // This is to prevent unintentionally building in HIL mode. Devs must explicitly allow HIL!
@@ -34,8 +34,8 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out);
  * @brief Build and send cmd+telem packet to simulink over USB CDC
  */
 w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
-								 gnc_x_state_t *p_x_state, gnc_controller_ctx_t *p_controller_ctx, controller_input_t *p_cntl_in,
-								 controller_output_t *p_cntl_out);
+								 gnc_x_state_t *p_x_state, gnc_controller_ctx_t *p_controller_ctx,
+								 controller_input_t *p_cntl_in, controller_output_t *p_cntl_out);
 
 #endif // HIL
 
