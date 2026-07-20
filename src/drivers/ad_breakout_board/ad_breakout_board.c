@@ -5,7 +5,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
@@ -53,6 +52,9 @@ static ad_task_ctx_t g_task_ctx = {};
 
 static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, const uint32_t raw_gyro,
 												 const adxl380_raw_accel_data_t *g_raw_accel) {
+	(void)loop_count;
+	(void)raw_gyro;
+	(void)g_raw_accel;
 	return W_SUCCESS;
 }
 

@@ -8,7 +8,6 @@
 
 #include "GNC_codegen_types.h"
 #include "common/gnc/gnc_types.h"
-#include "common/math/math.h"
 
 /**
  * persistent state updated by navigator and fsm

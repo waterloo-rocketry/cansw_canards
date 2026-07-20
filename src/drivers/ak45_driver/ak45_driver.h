@@ -1,7 +1,6 @@
 #ifndef AK45_DRIVER_H
 #define AK45_DRIVER_H
 
-#include "FreeRTOS.h"
 #include "stm32h7xx_hal.h"
 #include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>

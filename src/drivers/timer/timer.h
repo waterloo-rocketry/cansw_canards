@@ -16,7 +16,7 @@ typedef struct {
 	uint32_t timer_invalid; /**< Count of calls when timer was invalid */
 } timer_health_t;
 
-w_status_t timer_init();
+w_status_t timer_init(void);
 
 /**
  * @brief tracks system time since program startup

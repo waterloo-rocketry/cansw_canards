@@ -1,3 +1,6 @@
+#include <stdint.h>
+#include <string.h>
+
 #include "FreeRTOS.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"
@@ -8,10 +11,10 @@
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
-#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
+#include "common/gnc/gnc_types.h"
 #include "drivers/timer/timer.h"
 
 // TODO: remove after motor_handler implemented

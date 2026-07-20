@@ -1,15 +1,19 @@
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
 #include "i2c.h" // for hi2c4
 #include "main.h" // for INT_MAG_Pin
+#include "stm32h7xx_hal.h"
 #include "task.h"
 
 #include "application/logger/log.h"
+#include "common/math/math.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
+#include "rocketlib/include/common.h"
 
 // I2C bus and slave address
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;

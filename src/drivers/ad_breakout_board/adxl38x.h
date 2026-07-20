@@ -33,7 +33,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380_regmap.h"
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"

@@ -1,9 +1,10 @@
 // Add these includes for hardware handles
+#include <stdint.h>
+
 #include "FreeRTOS.h"
 #include "adc.h" // For hadc1
 #include "fdcan.h" // For hfdcan1 and hfdcan3
 #include "i2c.h" // For hi2c2, hi2c4
-#include "stm32h7xx_hal.h"
 #include "task.h"
 #include "usart.h"
 
@@ -24,7 +25,6 @@
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
-#include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
@@ -33,6 +33,7 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#include "rocketlib/include/common.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -69,6 +70,7 @@ const uint32_t log_task_priority = 15;
 const uint32_t health_checks_task_priority = 10;
 
 static void system_init_task(void *arg) {
+	(void)arg;
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready

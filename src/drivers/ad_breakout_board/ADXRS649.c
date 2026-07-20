@@ -6,12 +6,12 @@
 #include "task.h"
 
 #include "application/logger/log.h"
-#include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/ad_breakout_board/ADS1219_reg.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "rocketlib/include/common.h"
 
 // define addresses
 static const uint16_t ADS1219_ADDR = 0x40;
@@ -118,7 +118,7 @@ static w_status_t adxrs649_self_test() {
  * @brief initialize and start up the ADXRS649 AD Gyro and ADS1219
  * @return the status at which the ADXRS649 initalization goes
  */
-w_status_t adxrs649_init() {
+w_status_t adxrs649_init(void) {
 	// don't reinit
 	if (is_initialized) {
 		log_text(0, LOG_LVL_WARN, "ADXRS649", "Reinitialization is not allowed.");

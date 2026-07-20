@@ -17,7 +17,7 @@ typedef struct {
  * @brief this is initializes the ADXL380
  * @return the status of the function call
  */
-w_status_t adxl380_init();
+w_status_t adxl380_init(void);
 
 /**
  * @brief this gets the raw acceleration data from the ADXL380

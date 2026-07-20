@@ -1,4 +1,6 @@
-#include "health_checks.h"
+#include <stdint.h>
+#include <string.h>
+
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
@@ -10,16 +12,21 @@
 #include "application/telemetry/telemetry.h"
 #include "can.h"
 #include "drivers/adc/adc.h"
-#include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
-#include "drivers/movella/movella.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 #include "fdcan.h"
+#include "health_checks.h"
+#include "message/msg_canards.h"
+#include "message/msg_general.h"
 #include "message_types.h"
 #include "printf.h"
+#include "rocketlib/include/common.h"
+#include "stm32h7/stm32h7_can.h"
+#include "stm32h7xx_hal.h"
 #include "task.h"
 
 #define TASK_DELAY_MS 1000

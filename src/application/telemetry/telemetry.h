@@ -1,8 +1,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
+#include "common/gnc/gnc_types.h"
 #include "rocketlib/include/common.h"
 
 // Pass in any fuction your module desire to log data (had to be NON-BLOCKING and returns a status

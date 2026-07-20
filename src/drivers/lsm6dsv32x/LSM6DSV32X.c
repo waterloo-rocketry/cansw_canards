@@ -1,17 +1,19 @@
 #include "FreeRTOS.h"
 #include "i2c.h"
-#include "main.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X_regmap.h"
 #include "drivers/timer/timer.h"
+#include "rocketlib/include/common.h"
 
 typedef enum {
 	LSM6DSV32X_READ_BUFFER = 0,
@@ -150,7 +152,7 @@ static void lsm6dsv32x_dma_error_handle(I2C_HandleTypeDef *hi2c) {
  * @note Must be called after bit registers are configured, called before flight!!!
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_init() {
+w_status_t lsm6dsv32x_init(void) {
 	if (lsm6dsv32x_ctx.switched_callback) {
 		log_text(
 			1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
@@ -240,7 +242,7 @@ w_status_t lsm6dsv32x_init() {
  * @brief ISR for the interrupt pin that begins DMA data transfer
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_int1_isr_handler() {
+w_status_t lsm6dsv32x_int1_isr_handler(void) {
 	if (!lsm6dsv32x_health.is_init) {
 		return W_SUCCESS;
 	}

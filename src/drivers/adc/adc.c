@@ -1,7 +1,12 @@
 #include "drivers/adc/adc.h"
 #include "FreeRTOS.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "rocketlib/include/common.h"
 #include "semphr.h"
+#include "stm32h7xx_hal.h"
+#include "task.h"
+#include <stdint.h>
 
 #define ADC_CONV_TIMEOUT_TICKS pdMS_TO_TICKS(1)
 #define V_REF 2.5f

@@ -1,21 +1,22 @@
 #include <limits.h>
-#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "FreeRTOS.h"
+#include "can.h"
 #include "canlib.h"
-#include "fdcan.h"
+#include "message/msg_common.h"
+#include "message_types.h"
 #include "queue.h"
+#include "rocketlib/include/common.h"
+#include "stm32h7/stm32h7_can.h"
 #include "stm32h7xx_hal.h"
 
 #include "application/can_handler/can_handler.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/gpio/gpio.h"
-#include "drivers/timer/timer.h"
-#include "third_party/rocketlib/include/mathops.h" /* For clamp functions */
 
 // TODO: calculate better. for now make excessively large and check dropped tx counter
 #define BUS_QUEUE_LENGTH 32

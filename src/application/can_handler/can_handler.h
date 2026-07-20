@@ -1,8 +1,13 @@
 #ifndef CAN_HANDLER_H
 #define CAN_HANDLER_H
 
+#include <stdint.h>
+
 #include "application/health_checks/health_checks.h"
+#include "can.h"
 #include "canlib.h"
+#include "message/msg_common.h"
+#include "message_types.h"
 #include "rocketlib/include/common.h"
 #include "stm32h7xx_hal.h"
 

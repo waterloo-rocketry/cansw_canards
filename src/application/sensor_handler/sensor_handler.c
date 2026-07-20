@@ -1,11 +1,10 @@
 #include <stdbool.h>
 #include <stdint.h>
-#include <string.h>
 
-#include "application/can_handler/can_handler.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/sensor_handler/sensor_handler.h"
-#include "canlib.h"
+#include "common/gnc/gnc_types.h"
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
 #include "drivers/MS5611/MS5611.h"
@@ -15,6 +14,7 @@
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
+#include "rocketlib/include/common.h"
 
 // conversion factors
 static const float64_t M_S2_PER_G = 9.81;
@@ -413,6 +413,7 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
  */
 static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t *encoder_data,
 								  const uint32_t curr_timestamp_ms) {
+	(void)curr_timestamp_ms;
 	ak45_feedback_t motor_feedback = {0};
 	w_status_t status = ak45_get_latest_feedback(&motor_feedback);
 

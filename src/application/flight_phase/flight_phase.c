@@ -5,11 +5,15 @@
 
 #include "application/can_handler/can_handler.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
-#include "canlib.h"
+#include "canlib/can.h"
+#include "canlib/message/msg_actuator.h"
+#include "canlib/message_types.h"
 #include "common/gnc/gnc_types.h"
 #include "common/math/math-algebra3d.h"
 #include "drivers/timer/timer.h"
+#include "rocketlib/include/common.h"
 
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these

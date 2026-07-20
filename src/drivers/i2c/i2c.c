@@ -5,9 +5,9 @@
 
 #include "i2c.h"
 #include "FreeRTOS.h"
-#include "application/can_handler/can_handler.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
-#include "message_types.h"
+#include "rocketlib/include/common.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
 /** @brief Default timeout for I2C operations in milliseconds */

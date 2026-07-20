@@ -1,6 +1,8 @@
 #ifndef SENSOR_HANDLER_H
 #define SENSOR_HANDLER_H
 
+#include <stdint.h>
+
 #include "common/gnc/gnc_types.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/iis2mdc/IIS2MDC.h"

@@ -1,18 +1,12 @@
-#include "FreeRTOS.h"
-#include "math.h"
-#include "queue.h"
-#include "semphr.h"
-#include "task.h"
-
-#include "canlib.h"
+#include <stdint.h>
+#include <string.h>
 
 #include "GNC_codegen.h"
-#include "application/can_handler/can_handler.h"
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "common/gnc/gnc_types.h"
-#include "drivers/timer/timer.h"
+#include "third_party/rocketlib/include/common.h"
 
 // ---------- private variables ----------
 // IDEAL task period, for calculating CAN send rate limiter

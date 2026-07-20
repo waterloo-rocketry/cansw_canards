@@ -23,13 +23,13 @@ typedef struct __attribute__((packed)) {
  * @note Must be called to wake up imu
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_init();
+w_status_t lsm6dsv32x_init(void);
 
 /**
  * @brief ISR for the interrupt pin that begins DMA data transfer
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_int1_isr_handler();
+w_status_t lsm6dsv32x_int1_isr_handler(void);
 
 /**
  * @brief Retrieves all 12 bytes of imu data

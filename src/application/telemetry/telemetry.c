@@ -1,6 +1,12 @@
 #include "telemetry.h"
+
+#include <stdint.h>
+
 #include "FreeRTOS.h"
-#include "application/fsm/fsm.h"
+#include "task.h"
+
+#include "application/health_checks/health_checks.h"
+#include "rocketlib/include/common.h"
 
 #define TELEMETRY_MAX_SOURCES 32 // TODO: find out real value for this
 #define TELEMETRY_TASK_PERIOD_MS 1 // 1000hz
@@ -44,6 +50,7 @@ w_status_t telemetry_init(void) {
  * @return status of registering
  */
 w_status_t telemetry_register(const telemetry_source_config_t *config) {
+	(void)config;
 	return W_SUCCESS;
 }
 
@@ -62,6 +69,7 @@ health_status_t telemetry_get_status(void) {
  * @brief telem task function
  */
 void telemetry_task(void *argument) {
+	(void)argument;
 	TickType_t lastWakeTime = xTaskGetTickCount();
 
 	while (1) {

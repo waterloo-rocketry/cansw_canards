@@ -6,7 +6,9 @@
 #ifndef COMMON_MATH_ALGEBRA3D_H
 #define COMMON_MATH_ALGEBRA3D_H
 
-#include "arm_math.h"
+#include "dsp/matrix_functions.h"
+#include <stdint.h>
+
 #include "common/math/math.h"
 
 // vector * scalar // vector scaling

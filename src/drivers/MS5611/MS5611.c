@@ -1,14 +1,15 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "application/logger/log.h"
 #include "drivers/MS5611/MS5611.h"
-#include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/timer/timer.h"
 
+#include "rocketlib/include/common.h"
 #include "semphr.h"
 
 /* Period between successive pressure samples taken by ms5611_task at 100 hz */

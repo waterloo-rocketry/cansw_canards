@@ -6,7 +6,11 @@
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include <limits.h>
-#include <stdio.h>
+#include <math.h>
+#include <stdint.h>
+
+#include "common/math/math.h"
+#include "rocketlib/include/common.h"
 
 // AltIMU device addresses and configuration
 #define LSM6DSO_ADDR 0x6B // addr sel pin HIGH IMU
@@ -75,7 +79,7 @@ w_status_t altimu_check_sanity(void) {
  * @note Must be called after scheduler start
  * @return Status of the operation
  */
-w_status_t altimu_init() {
+w_status_t altimu_init(void) {
 	w_status_t status = W_SUCCESS;
 
 	// Drive addr sel pin HIGH to use each device's "default" i2c addr

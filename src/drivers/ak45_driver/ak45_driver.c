@@ -1,12 +1,13 @@
-#include <string.h>
+#include <stdint.h>
 
 #include "FreeRTOS.h"
-#include "fdcan.h"
 #include "queue.h"
+#include "stm32h7xx_hal.h"
 
 #include "application/logger/log.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/timer/timer.h"
+#include "rocketlib/include/common.h"
 
 // TODO: add health checks for motor
 

@@ -1,16 +1,24 @@
+#include <stdint.h>
+
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
 #include "timers.h"
 
 #include "application/can_handler/can_handler.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "canlib/can.h"
+#include "canlib/message/msg_actuator.h"
+#include "canlib/message/msg_general.h"
+#include "canlib/message/msg_sensor.h"
 #include "canlib/message_types.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
 #include "power_handler.h"
 #include "rocketlib/include/common.h"
+#include "stm32h7xx_hal.h"
 
 /**
  * States of the power handler.

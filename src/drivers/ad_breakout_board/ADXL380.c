@@ -8,6 +8,7 @@
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
+#include "drivers/ad_breakout_board/ADXL380_regmap.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
@@ -30,7 +31,7 @@ static bool is_initialized = false;
  * @note Must be called after scheduler start
  * @return the status of the function call
  */
-w_status_t adxl380_init() {
+w_status_t adxl380_init(void) {
 	// so that we don't reinitialize
 	if (is_initialized) {
 		log_text(0, LOG_LVL_WARN, "ADXL380", "Reinitialization is not allowed.");

@@ -4,11 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "application/can_handler/can_handler.h"
 #include "application/health_checks/health_checks.h"
-#include "application/logger/log.h"
-#include "drivers/adc/adc.h"
-#include "drivers/gpio/gpio.h"
 #include "rocketlib/include/common.h"
 
 /**

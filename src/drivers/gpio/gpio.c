@@ -3,6 +3,7 @@
  * Driver for GPIO pins
  */
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "main.h"
 #include "stm32h7xx_hal.h"
@@ -10,10 +11,13 @@
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
 #include "semphr.h"
+#include "task.h"
 
+#include "application/health_checks/health_checks.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
+#include "rocketlib/include/common.h"
 
 // Private --------------------------------------------------------------------
 
@@ -76,7 +80,7 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 /**
  * Initialize gpio module. Can be run before scheduler start
  */
-w_status_t gpio_init() {
+w_status_t gpio_init(void) {
 	w_status_t status = W_SUCCESS;
 
 	gpio_status.is_init = false;
