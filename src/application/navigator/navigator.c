@@ -127,6 +127,63 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 	return W_SUCCESS;
 }
 
+w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_data) {
+	if ((NULL == p_ctx) || (NULL == p_sensor_data)) {
+		log_text(0, LOG_LVL_WARN, "navigator", "Invalid context ptr.");
+		return W_INVALID_PARAM;
+	}
+
+	// check if sensor is alive
+	if (p_sensor_data->board_meas.board_imu.is_new) {
+		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.board_accel,
+			   p_sensor_data->board_meas.board_imu.accel.array,
+			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.board_accel));
+		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.board_gyro,
+			   p_sensor_data->board_meas.board_imu.gyro.array,
+			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.board_gyro));
+	}
+	if (p_sensor_data->board_meas.board_mag.is_new) {
+		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.board_mag,
+			   p_sensor_data->board_meas.board_mag.meas.array,
+			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.board_mag));
+	}
+	if (p_sensor_data->board_meas.board_baro.is_new) {
+		p_ctx->gnc_navigator_ctx.sensor_filter.board_baro =
+			p_sensor_data->board_meas.board_baro.meas;
+	}
+
+	if (p_sensor_data->ad_meas.ad_accel.is_new) {
+		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.ad_accel,
+			   p_sensor_data->ad_meas.ad_accel.meas.array,
+			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.ad_accel));
+	}
+	if (p_sensor_data->ad_meas.ad_gyro.is_new) {
+		p_ctx->gnc_navigator_ctx.sensor_filter.ad_gyro[0] = p_sensor_data->ad_meas.ad_gyro.meas;
+		p_ctx->gnc_navigator_ctx.sensor_filter.ad_gyro[1] = 0;
+		p_ctx->gnc_navigator_ctx.sensor_filter.ad_gyro[2] = 0;
+	}
+
+	if (p_sensor_data->mti_meas.mti_accel.is_new) {
+		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.mti_accel,
+			   p_sensor_data->mti_meas.mti_accel.meas.array,
+			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.mti_accel));
+	}
+	if (p_sensor_data->mti_meas.mti_gyro.is_new) {
+		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.mti_gyro,
+			   p_sensor_data->mti_meas.mti_gyro.meas.array,
+			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.mti_gyro));
+	}
+	if (p_sensor_data->mti_meas.mti_mag.is_new) {
+		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.mti_mag,
+			   p_sensor_data->mti_meas.mti_mag.meas.array,
+			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.mti_mag));
+	}
+	if (p_sensor_data->mti_meas.mti_baro.is_new) {
+		p_ctx->gnc_navigator_ctx.sensor_filter.mti_baro = p_sensor_data->mti_meas.mti_baro.meas;
+	}
+	return W_SUCCESS;
+}
+
 // TODO: to be revived
 // w_status_t navigator_log_state_to_can(const x_state_t *current_state) {
 // 	can_msg_t msg;
