@@ -25,9 +25,10 @@ typedef enum {
  */
 typedef struct {
 	bool is_init; /**< Initialization status flag */
-	uint32_t conversion_timeouts; /**< Count of ADC conversion timeouts */
 	uint32_t invalid_channels; /**< Count of attempts to read invalid channels */
 	uint32_t overflow_errors; /**< Count of ADC value overflow errors */
+	bool is_overflow; /**< Overflow status flag */
+	bool is_invalid_channel; /**< Invalid channel status flag */
 } adc_error_data_t;
 
 /**
