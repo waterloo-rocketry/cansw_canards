@@ -175,8 +175,8 @@ static void system_init_task(void *arg) {
 							   ad_breakout_task_priority,
 							   &ad_breakout_task_handle);
 
-	task_status &=
-		xTaskCreate(telemetry_task, "telem module", NULL, telem_task_priority, &telem_task_handle);
+	task_status &= xTaskCreate(
+		telemetry_task, "telem module", 512, NULL, telem_task_priority, &telem_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
