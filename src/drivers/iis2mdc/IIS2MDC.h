@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
 #include "rocketlib/include/common.h"
 
@@ -41,5 +42,11 @@ w_status_t iis2mdc_init(void);
  * @return W_SUCCESS on successful read and conversion of most recent sample
  */
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data, uint32_t *timestamp_ms);
+
+/**
+ * @brief Get and report the magnetometer status for the health check system
+ * @return CAN board status bitfield
+ */
+health_status_t iis2mdc_get_status(void);
 
 #endif // IIS2MDC_H
