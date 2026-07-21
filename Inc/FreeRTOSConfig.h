@@ -73,7 +73,7 @@ extern unsigned long getRunTimeCounterValue(void);
 #define configUSE_SB_COMPLETED_CALLBACK          ( 0 )
 #define configUSE_MINI_LIST_ITEM                ( 1 )
 #define configMINIMAL_STACK_SIZE                 ((uint16_t)512)
-#define configTOTAL_HEAP_SIZE                    ((size_t)131072)
+#define configTOTAL_HEAP_SIZE                    ((size_t) 80000)
 #define configMAX_TASK_NAME_LEN                  ( 16 )
 #define configGENERATE_RUN_TIME_STATS            1
 #define configHEAP_CLEAR_MEMORY_ON_FREE          0
