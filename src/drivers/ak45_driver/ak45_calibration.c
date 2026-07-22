@@ -15,19 +15,19 @@ static const uint32_t POLL_MS = 20;
 static const uint32_t CMD_RESEND_MS = 500;
 
 const ak45_calibration_config_t ak45_calibration_config_default = {
-	.seek_target_deg = 12.0f,
-	.backoff_deg = 1.5f,
+	.seek_target_deg = 25.0f,
+	.backoff_deg = 3.0f,
 	.backoff_settle_ms = 300,
 	.stall_speed_erpm_max = 50.0f,
-	.stall_current_a_min = 0.5f,
+	.stall_current_a_min = 0.2f,
 	.stall_hold_ms = 200,
 	.stall_sample_count = 5,
 	.max_tap_delta_deg = 0.3f,
 	.seek_timeout_ms = 8000,
 	.settle_timeout_ms = 3000,
 	.position_tolerance_deg = 0.5f,
-	.min_span_deg = 18.0f,
-	.max_span_deg = 22.0f,
+	.min_span_deg = 36.0f,
+	.max_span_deg = 44.0f,
 };
 
 // tracks elapsed time and resend/freshness bookkeeping for one wait loop
