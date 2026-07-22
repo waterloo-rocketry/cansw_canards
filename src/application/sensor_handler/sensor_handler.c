@@ -598,8 +598,9 @@ health_status_t sensor_handler_get_status(void) {
 			 sensor_handler_state.motor_encoder_stats.success_count,
 			 sensor_handler_state.motor_encoder_stats.failure_count);
 
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_SENSOR_HANDLER, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_SENSOR_HANDLER,
+							  .error_bitfield = 0};
 
 	return status;
 }
