@@ -17,39 +17,68 @@ typedef enum {
 } health_severity_t;
 
 typedef enum {
-	MODULE_I2C = 0,
-	MODULE_ADC = 1,
-	MODULE_CAN_HANDLER = 2,
-	MODULE_ESTIMATOR = 3,
-	MODULE_CONTROLLER = 4,
-	MODULE_SD_CARD = 5,
-	MODULE_TIMER = 6,
-	MODULE_GPIO = 7,
-	MODULE_FLIGHT_PHASE = 8,
-	MODULE_SENSOR_HANDLER = 9,
-	MODULE_UART = 10,
+	MODULE_ADC = 0,
+	MODULE_ADXL380 = 1,
+	MODULE_ADXRS649 = 2,
+	MODULE_AK45 = 3,
+	MODULE_CAN_HANDLER = 4,
+	MODULE_CONTROLLER = 5,
+	MODULE_FLIGHT_PHASE = 6,
+	MODULE_FSM = 7,
+	MODULE_GPIO = 8,
+	MODULE_I2C = 9,
+	MODULE_IIS2MDC = 10,
 	MODULE_LOGGER = 11,
-	MODULE_POWER_HANDLER = 12,
-	MODULE_LSM6DSV32X = 13,
-	MODULE_COUNT = 14, // number of modules
+	MODULE_LSM6DSV32X = 12,
+	MODULE_MOVELLA = 13,
+	MODULE_MS5611 = 14,
+	MODULE_NAVIGATOR = 15,
+	MODULE_POWER_HANDLER = 16,
+	MODULE_SD_CARD = 17,
+	MODULE_SENSOR_HANDLER = 18,
+	MODULE_TELEMETRY = 19,
+	MODULE_TIMER = 20,
+	MODULE_UART = 21,
+	MODULE_COUNT = 22, // number of modules
 	MODULE_MAX = 31
 } module_id_t;
 
 // Any module can add more error codes
 typedef enum {
-	MODULE_ERR_NONE = 0,
-	MODULE_ERR_NOT_INIT = 1,
-	MODULE_ERR_I2C_FAIL = 2,
-	MODULE_POWER_HANDLER_FAULT_BAT1_VOLT = 3,
-	MODULE_POWER_HANDLER_FAULT_BAT2_VOLT = 4,
-	MODULE_POWER_HANDLER_FAULT_RKT_VOLT = 5,
-	MODULE_POWER_HANDLER_FAULT_CHG_VOLT = 6,
-	MODULE_POWER_HANDLER_FAULT_5V_CURR = 7,
-	MODULE_POWER_HANDLER_FAULT_5V_EXT_OUTPUT = 8,
-	MODULE_POWER_HANDLER_FAULT_3V3_CURR = 9,
-	MODULE_POWER_HANDLER_FAULT_BAT1_CURR = 10,
-	MODULE_POWER_HANDLER_FAULT_BAT2_CURR = 11,
-	MODULE_ERR_MAX = 31
+	ERR_NONE = 0,
+	/* --- Hardware & Power Faults --- */
+	ERR_BAT1_FAULT = 1, /**< Battery 1 fault */
+	ERR_BAT2_FAULT = 2, /**< Battery 2 fault */
+	ERR_DEVICE_FAULT = 3, /**< External device fault */
+	ERR_FILE_SYSTEM = 4, /**< SD card or flash storage mount, read, or write operation failed */
+	ERR_HARDWARE_FAIL = 5, /**< Hardware interface failed (GPIO, pin config, etc.) */
+	ERR_LOW_POWER_MODE_WITH_EXT_5V_ON = 6, /**< Low-power mode active while external 5V is on */
+
+	/* --- Communication & Data Bus Faults --- */
+	ERR_COMM_FAILURE = 7, /**< Communication protocol failure (I2C, SPI, UART, etc.) */
+	ERR_CRC_FAILED = 8, /**< Integrity check failed */
+	ERR_NO_DATA = 9, /**< Expected sensor data packet or control command frame is missing */
+	ERR_RX_FAILURE = 10, /**< Error occurred during data reception on physical bus transceivers */
+	ERR_TIMEOUT = 11, /**< Operation or sensor handshake exceeded its allocated time window */
+	ERR_TX_FAILURE = 12, /**< Transmit failure */
+
+	/* --- System Execution & Timing Faults --- */
+	ERR_ERROR_STATE = 13, /**< FSM transitioned into an unhandled, invalid, or corrupted state */
+	ERR_FAILED_CALIBRATION = 14, /**< Calibration routine executed but failed */
+	ERR_NOT_CALIBRATED = 15, /**< Calibration did not execute */
+	ERR_LOOP_TIMING = 16, /**< Control loop period did not meet timing requirements */
+	ERR_NOT_INIT = 17, /**< Module, task, or driver was accessed before being initialized */
+	ERR_OS = 18, /**< RTOS feature (queue, semaphore) failed */
+
+	/* --- Software & Logic Faults --- */
+	ERR_CODEGEN = 19, /**< Error occurred inside codegen */
+	ERR_UNEXPECTED_EVENT = 20, /**< Attempted to trigger an illegal state transition event */
+	ERR_INVALID_PARAM = 21, /**< Function argument passed with value outside of legal range */
+	ERR_MATH = 22, /**< Floating-point exception, division by zero, or NaN in control algorithms */
+	ERR_OUT_OF_BOUNDS = 23, /**< Data is out of range */
+	ERR_OVERFLOW = 24, /**< Buffer, queue, or integer arithmetic register overflow */
+	ERR_INTERNAL = 25, /**< General software assertion or unhandled catch-all logical exception */
+	ERR_MAX = 31
 } module_error_code_t;
 
 /**
