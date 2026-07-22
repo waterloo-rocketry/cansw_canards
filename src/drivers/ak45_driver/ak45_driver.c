@@ -5,6 +5,7 @@
 #include "queue.h"
 
 #include "application/logger/log.h"
+#include "application/telemetry/telemetry.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/timer/timer.h"
 
@@ -120,6 +121,18 @@ static void ak45_stop_can() {
 	}
 }
 
+static w_status_t ak45_driver_temperature_telemetry() {
+	return W_SUCCESS;
+}
+
+static w_status_t ak45_driver_current_telemetry() {
+	return W_SUCCESS;
+}
+
+static w_status_t ak45_driver_angle_telemetry() {
+	return W_SUCCESS;
+}
+
 w_status_t ak45_send_position_cmd(float32_t angle_deg) {
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | AK45_DRIVER_ID;
 
@@ -221,6 +234,76 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "failed to reset to 0");
 		ak45_stop_can();
 		return W_FAILURE;
+	}
+
+	// Register telemetry callbacks
+	// Frequencies per spreadsheet: Idle=5Hz, Pad(filter+nav)/Flight(boost+act_allowed) vary by
+	// variable, Recovery=0Hz (not registered)
+	static const telemetry_source_config_t telemetry_sources[] = {
+		{"Motor Temperature; Phase: IDLE, Freq: 5Hz",
+		 ak45_driver_temperature_telemetry,
+		 STATE_IDLE,
+		 1000 / 5},
+		{"Motor Temperature; Phase: PAD_FILTER, Freq: 5Hz",
+		 ak45_driver_temperature_telemetry,
+		 STATE_PAD_FILTER,
+		 1000 / 5},
+		{"Motor Temperature; Phase: PAD_NAV, Freq: 5Hz",
+		 ak45_driver_temperature_telemetry,
+		 STATE_PAD_NAV,
+		 1000 / 5},
+		{"Motor Temperature; Phase: BOOST, Freq: 1Hz",
+		 ak45_driver_temperature_telemetry,
+		 STATE_BOOST,
+		 1000 / 1},
+		{"Motor Temperature; Phase: ACT_ALLOWED, Freq: 1Hz",
+		 ak45_driver_temperature_telemetry,
+		 STATE_ACT_ALLOWED,
+		 1000 / 1},
+		// No telem sent during RECOVERY, SLEEP, or ERROR phases
+
+		{"Motor Angle; Phase: IDLE, Freq: 5Hz", ak45_driver_angle_telemetry, STATE_IDLE, 1000 / 5},
+		{"Motor Angle; Phase: PAD_FILTER, Freq: 20Hz",
+		 ak45_driver_angle_telemetry,
+		 STATE_PAD_FILTER,
+		 1000 / 20},
+		{"Motor Angle; Phase: PAD_NAV, Freq: 20Hz",
+		 ak45_driver_angle_telemetry,
+		 STATE_PAD_NAV,
+		 1000 / 20},
+		{"Motor Angle; Phase: BOOST, Freq: 10Hz",
+		 ak45_driver_angle_telemetry,
+		 STATE_BOOST,
+		 1000 / 10},
+		{"Motor Angle; Phase: ACT_ALLOWED, Freq: 10Hz",
+		 ak45_driver_angle_telemetry,
+		 STATE_ACT_ALLOWED,
+		 1000 / 10},
+
+		{"Motor Current; Phase: IDLE, Freq: 5Hz",
+		 ak45_driver_current_telemetry,
+		 STATE_IDLE,
+		 1000 / 5},
+		{"Motor Current; Phase: PAD_FILTER, Freq: 5Hz",
+		 ak45_driver_current_telemetry,
+		 STATE_PAD_FILTER,
+		 1000 / 5},
+		{"Motor Current; Phase: PAD_NAV, Freq: 5Hz",
+		 ak45_driver_current_telemetry,
+		 STATE_PAD_NAV,
+		 1000 / 5},
+		{"Motor Current; Phase: BOOST, Freq: 2Hz",
+		 ak45_driver_current_telemetry,
+		 STATE_BOOST,
+		 1000 / 2},
+		{"Motor Current; Phase: ACT_ALLOWED, Freq: 2Hz",
+		 ak45_driver_current_telemetry,
+		 STATE_ACT_ALLOWED,
+		 1000 / 2},
+	};
+
+	for (size_t i = 0; i < sizeof(telemetry_sources) / sizeof(telemetry_sources[0]); i++) {
+		telemetry_register(&telemetry_sources[i]);
 	}
 
 	g_tx_errors = 0;
