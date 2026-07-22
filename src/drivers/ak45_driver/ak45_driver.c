@@ -4,6 +4,7 @@
 #include "fdcan.h"
 #include "queue.h"
 
+#include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "application/telemetry/telemetry.h"
 #include "drivers/ak45_driver/ak45_driver.h"
@@ -36,6 +37,8 @@ static const float32_t AK45_POS_FB_TO_DEG = 0.1f; // Feedback position: raw * 0.
 // eRPM is electrically counted RPM
 static const float32_t AK45_SPEED_FB_TO_ERPM = 10.0f; // speed feedback: raw * 10.0 = ERPM
 static const float32_t AK45_CURRENT_FB_TO_A = 0.01f; // current feedback: raw * 0.01 = Amps
+
+static const uint16_t AK45_TELEMETRY_INT16_OFFSET = 32768; // convert signed int to unsigned
 
 static FDCAN_HandleTypeDef *g_ak45_hfdcan = NULL;
 static QueueHandle_t g_feedback_queue = NULL;
@@ -122,15 +125,69 @@ static void ak45_stop_can() {
 }
 
 static w_status_t ak45_driver_temperature_telemetry() {
-	return W_SUCCESS;
+	ak45_feedback_t fb = {0};
+	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get feedback failed for temp telemetry");
+		return W_FAILURE;
+	}
+
+	uint32_t timestamp_ms = 0;
+	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get timestamp failed for temp telemetry");
+		return W_FAILURE;
+	}
+
+	uint16_t scaled_temperature = (uint16_t)(fb.temperature_c + AK45_TELEMETRY_INT16_OFFSET);
+
+	can_msg_t msg = {0};
+	build_analog_sensor_16bit_msg(
+		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_TEMP, scaled_temperature, &msg);
+
+	return can_handler_transmit(&msg);
 }
 
 static w_status_t ak45_driver_current_telemetry() {
-	return W_SUCCESS;
+	ak45_feedback_t fb = {0};
+	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get feedback failed for current telemetry");
+		return W_FAILURE;
+	}
+
+	uint32_t timestamp_ms = 0;
+	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get timestamp failed for current telemetry");
+		return W_FAILURE;
+	}
+
+	uint16_t scaled_current = (uint16_t)((fb.current_a * 100.0f) + AK45_TELEMETRY_INT16_OFFSET);
+
+	can_msg_t msg = {0};
+	build_analog_sensor_16bit_msg(
+		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_CURR, scaled_current, &msg);
+
+	return can_handler_transmit(&msg);
 }
 
 static w_status_t ak45_driver_angle_telemetry() {
-	return W_SUCCESS;
+	ak45_feedback_t fb = {0};
+	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get feedback failed for angle telemetry");
+		return W_FAILURE;
+	}
+
+	uint32_t timestamp_ms = 0;
+	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get timestamp failed for angle telemetry");
+		return W_FAILURE;
+	}
+
+	uint16_t scaled_angle = (uint16_t)((fb.position_deg * 1000.0f) + AK45_TELEMETRY_INT16_OFFSET);
+
+	can_msg_t msg = {0};
+	build_analog_sensor_16bit_msg(
+		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_ANGLE, scaled_angle, &msg);
+
+	return can_handler_transmit(&msg);
 }
 
 w_status_t ak45_send_position_cmd(float32_t angle_deg) {
@@ -237,9 +294,30 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	}
 
 	// Register telemetry callbacks
-	// Frequencies per spreadsheet: Idle=5Hz, Pad(filter+nav)/Flight(boost+act_allowed) vary by
-	// variable, Recovery=0Hz (not registered)
+	// No telem sent during SLEEP or ERROR phases
 	static const telemetry_source_config_t telemetry_sources[] = {
+		{"Motor Angle; Phase: IDLE, Freq: 5Hz", ak45_driver_angle_telemetry, STATE_IDLE, 1000 / 5},
+		{"Motor Angle; Phase: PAD_FILTER, Freq: 20Hz",
+		 ak45_driver_angle_telemetry,
+		 STATE_PAD_FILTER,
+		 1000 / 20},
+		{"Motor Angle; Phase: PAD_NAV, Freq: 20Hz",
+		 ak45_driver_angle_telemetry,
+		 STATE_PAD_NAV,
+		 1000 / 20},
+		{"Motor Angle; Phase: BOOST, Freq: 10Hz",
+		 ak45_driver_angle_telemetry,
+		 STATE_BOOST,
+		 1000 / 10},
+		{"Motor Angle; Phase: ACT_ALLOWED, Freq: 10Hz",
+		 ak45_driver_angle_telemetry,
+		 STATE_ACT_ALLOWED,
+		 1000 / 10},
+		{"Motor Angle; Phase: RECOVERY, Freq: 10Hz",
+		 ak45_driver_angle_telemetry,
+		 STATE_RECOVERY,
+		 1000 / 10},
+
 		{"Motor Temperature; Phase: IDLE, Freq: 5Hz",
 		 ak45_driver_temperature_telemetry,
 		 STATE_IDLE,
@@ -260,25 +338,10 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		 ak45_driver_temperature_telemetry,
 		 STATE_ACT_ALLOWED,
 		 1000 / 1},
-		// No telem sent during RECOVERY, SLEEP, or ERROR phases
-
-		{"Motor Angle; Phase: IDLE, Freq: 5Hz", ak45_driver_angle_telemetry, STATE_IDLE, 1000 / 5},
-		{"Motor Angle; Phase: PAD_FILTER, Freq: 20Hz",
-		 ak45_driver_angle_telemetry,
-		 STATE_PAD_FILTER,
-		 1000 / 20},
-		{"Motor Angle; Phase: PAD_NAV, Freq: 20Hz",
-		 ak45_driver_angle_telemetry,
-		 STATE_PAD_NAV,
-		 1000 / 20},
-		{"Motor Angle; Phase: BOOST, Freq: 10Hz",
-		 ak45_driver_angle_telemetry,
-		 STATE_BOOST,
-		 1000 / 10},
-		{"Motor Angle; Phase: ACT_ALLOWED, Freq: 10Hz",
-		 ak45_driver_angle_telemetry,
-		 STATE_ACT_ALLOWED,
-		 1000 / 10},
+		{"Motor Temperature; Phase: RECOVERY, Freq: 1Hz",
+		 ak45_driver_temperature_telemetry,
+		 STATE_RECOVERY,
+		 1000 / 1},
 
 		{"Motor Current; Phase: IDLE, Freq: 5Hz",
 		 ak45_driver_current_telemetry,
@@ -300,10 +363,25 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		 ak45_driver_current_telemetry,
 		 STATE_ACT_ALLOWED,
 		 1000 / 2},
+		{"Motor Current; Phase: RECOVERY, Freq: 2Hz",
+		 ak45_driver_current_telemetry,
+		 STATE_RECOVERY,
+		 1000 / 2},
 	};
 
-	for (size_t i = 0; i < sizeof(telemetry_sources) / sizeof(telemetry_sources[0]); i++) {
-		telemetry_register(&telemetry_sources[i]);
+	static const size_t telemetry_source_count =
+		sizeof(telemetry_sources) / sizeof(telemetry_source_config_t);
+	w_status_t telemetry_register_status = W_SUCCESS;
+
+	// Register callbacks and check
+	for (size_t i = 0; i < telemetry_source_count; i++) {
+		telemetry_register_status |= telemetry_register(&telemetry_sources[i]);
+	}
+
+	if (W_SUCCESS != telemetry_register_status) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to register telemetry sources.");
+		ak45_stop_can();
+		return W_FAILURE;
 	}
 
 	g_tx_errors = 0;
