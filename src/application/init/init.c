@@ -106,9 +106,9 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	// status |= adxl380_init();
+	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	// status |= adxrs649_init();
+	status |= adxrs649_init();
 	status |= ms5611_init();
 	status |= iis2mdc_init();
 	status |= power_handler_init();
