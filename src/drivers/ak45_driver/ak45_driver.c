@@ -124,6 +124,10 @@ static void ak45_stop_can() {
 	}
 }
 
+/**
+ * @brief Send temperature telemetry through CAN from the AK45 motor
+ * @return W_SUCCESS on success, W_FAILURE on error
+ */
 static w_status_t ak45_driver_temperature_telemetry() {
 	ak45_feedback_t fb = {0};
 	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
@@ -146,6 +150,10 @@ static w_status_t ak45_driver_temperature_telemetry() {
 	return can_handler_transmit(&msg);
 }
 
+/**
+ * @brief Send current telemetry through CAN from the AK45 motor
+ * @return W_SUCCESS on success, W_FAILURE on error
+ */
 static w_status_t ak45_driver_current_telemetry() {
 	ak45_feedback_t fb = {0};
 	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
@@ -168,6 +176,10 @@ static w_status_t ak45_driver_current_telemetry() {
 	return can_handler_transmit(&msg);
 }
 
+/**
+ * @brief Send temperature angle through CAN from the AK45 motor
+ * @return W_SUCCESS on success, W_FAILURE on error
+ */
 static w_status_t ak45_driver_angle_telemetry() {
 	ak45_feedback_t fb = {0};
 	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
