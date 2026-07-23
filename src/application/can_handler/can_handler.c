@@ -234,8 +234,9 @@ health_status_t can_handler_get_status(void) {
 			 can_error_stats.rx_timeouts,
 			 can_error_stats.tx_timeouts);
 
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_CAN_HANDLER, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_CAN_HANDLER,
+							  .error_bitfield = 0};
 
 	return status;
 }
