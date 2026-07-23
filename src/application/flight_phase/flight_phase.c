@@ -334,8 +334,9 @@ health_status_t flight_phase_get_status(void) {
 			 flight_phase_status.initialized ? "INIT" : "NOT INIT",
 			 flight_phase_status.event_queue_full_count);
 
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_FLIGHT_PHASE, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_FLIGHT_PHASE,
+							  .error_bitfield = 0};
 
 	return status;
 }
