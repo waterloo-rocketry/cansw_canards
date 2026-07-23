@@ -4,7 +4,9 @@
 #include "fdcan.h"
 #include "queue.h"
 
+#include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
+#include "drivers/ak45_driver/ak45_calibration.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/timer/timer.h"
 
@@ -41,6 +43,22 @@ static QueueHandle_t g_feedback_queue = NULL;
 static uint32_t g_tx_errors = 0;
 static bool is_init = false;
 static volatile bool received_can_msg = false;
+
+const ak45_calibration_config_t ak45_calibration_config = {
+	.seek_target_deg = 25.0f,
+	.backoff_deg = 3.0f,
+	.backoff_settle_ms = 300,
+	.stall_speed_erpm_max = 50.0f,
+	.stall_current_a_min = 0.2f,
+	.stall_hold_ms = 200,
+	.stall_sample_count = 5,
+	.max_tap_delta_deg = 0.3f,
+	.seek_timeout_ms = 8000,
+	.settle_timeout_ms = 3000,
+	.position_tolerance_deg = 0.5f,
+	.min_span_deg = 36.0f,
+	.max_span_deg = 44.0f,
+};
 
 /**
  * @brief Transmit 29-bit ID via FDCAN
@@ -120,6 +138,23 @@ static void ak45_stop_can() {
 	}
 }
 
+static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
+	can_actuator_id_t msg_id;
+	can_actuator_state_t msg_state;
+
+	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
+		(get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
+		log_text(1, LOG_LVL_WARN, "ak45", "invalid actuator data");
+		return W_FAILURE;
+	}
+	// make sure it is the correct message
+	if ((ACTUATOR_CANARD_MOTOR_CALIBRATION == msg_id) && (ACT_STATE_ON == msg_state)) {
+		return ak45_hard_stop_calibrate(&ak45_calibration_config);
+	}
+	// default return
+	return W_SUCCESS;
+}
+
 w_status_t ak45_send_position_cmd(float32_t angle_deg) {
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | AK45_DRIVER_ID;
 
@@ -183,8 +218,6 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		ak45_stop_can();
 		return W_FAILURE;
 	}
-	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE << 8) | AK45_DRIVER_ID;
-
 	// make sure we recieved a can msg before we send one
 	uint32_t start_can_init_time_ms = 0;
 	if (timer_get_ms(&start_can_init_time_ms) != W_SUCCESS) {
@@ -216,9 +249,15 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	}
 
 	// set current position to 0
-	uint8_t zero_data[1] = {0};
-	if (ak45_can_transmit_ext(ext_id, zero_data, FDCAN_DLC_BYTES_1) != W_SUCCESS) {
+	if (ak45_send_set_origin() != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "failed to reset to 0");
+		ak45_stop_can();
+		return W_FAILURE;
+	}
+
+	if (can_handler_act_cmd_register_callback(ACTUATOR_CANARD_MOTOR_CALIBRATION,
+											  &ak45_motor_calibration) != W_SUCCESS) {
+		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "failed to add calibration callback");
 		ak45_stop_can();
 		return W_FAILURE;
 	}
@@ -234,6 +273,12 @@ w_status_t ak45_send_disable_cmd(void) {
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT << 8) | AK45_DRIVER_ID;
 	uint8_t data[4] = {0, 0, 0, 0};
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
+}
+
+w_status_t ak45_send_set_origin(void) {
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE << 8) | AK45_DRIVER_ID;
+	uint8_t zero_data[1] = {0};
+	return ak45_can_transmit_ext(ext_id, zero_data, FDCAN_DLC_BYTES_1);
 }
 
 w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {

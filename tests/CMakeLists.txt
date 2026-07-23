@@ -307,4 +307,9 @@ add_test_group(test_ak45_driver
     ${UNIT_TESTS_DIR}/ak45_driver_test_helpers.c # source file included here
 )
 
+add_test_group(test_ak45_calibration
+    ${UNIT_TESTS_DIR}/ak45_calibration_test.cpp
+    ${PROC_SRC_DIR}/drivers/ak45_driver/ak45_calibration.c
+)
+
 # TODO: add fsm unit tes once get a good version of codegen

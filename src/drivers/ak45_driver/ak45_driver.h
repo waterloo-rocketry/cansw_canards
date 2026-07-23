@@ -57,6 +57,16 @@ w_status_t ak45_send_position_cmd(float32_t angle_deg);
 w_status_t ak45_send_disable_cmd(void);
 
 /**
+ * @brief Set encoder origin at the motor's current position
+ *
+ * Sends CAN_PACKET_SET_ORIGIN_HERE. Used at boot after first feedback and
+ * on-demand after hard-stop calibration.
+ *
+ * @return W_SUCCESS on success, W_FAILURE on error
+ */
+w_status_t ak45_send_set_origin(void);
+
+/**
  * @brief Get the latest motor feedback
  *
  * @param[out] fb Pointer to store data
