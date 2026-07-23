@@ -5,6 +5,8 @@ extern "C" {
 #include "FreeRTOS.h"
 #include "ak45_driver_test_helpers.h"
 #include "application/logger/log.h"
+#include "application/telemetry/telemetry.h"
+#include "can.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "hal_fdcan_mock.h"
 #include "queue.h"
@@ -15,9 +17,12 @@ FDCAN_HandleTypeDef hfdcan1;
 DEFINE_FFF_GLOBALS;
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
+FAKE_VOID_FUNC(build_analog_sensor_16bit_msg, can_msg_prio_t, uint16_t, can_analog_sensor_id_t, uint16_t, can_msg_t *);
+FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
+FAKE_VALUE_FUNC(w_status_t, telemetry_register, const telemetry_source_config_t *)
 }
 
-// There is a while loop in ak45_driver initialization which waits for messages to be received.
+// There is a while loop in ak45_driver initialization which waits for messages to be received.il
 // Calling this function set the variable it check to true and avoids the actualy time wait.
 void vTaskDelay_custom_bypass_while(const TickType_t ticks) {
 	HAL_FDCAN_RxFifo1Callback(&hfdcan1, 0);
@@ -52,6 +57,9 @@ protected:
 		RESET_FAKE(vTaskDelay);
 		RESET_FAKE(log_text);
 		RESET_FAKE(timer_get_ms);
+		RESET_FAKE(build_analog_sensor_16bit_msg);
+		RESET_FAKE(can_handler_transmit);
+		RESET_FAKE(telemetry_register);
 
 		FFF_RESET_HISTORY();
 
