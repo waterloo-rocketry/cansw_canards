@@ -14,22 +14,6 @@ static const uint32_t POLL_MS = 20;
 // must be resent periodically while waiting on a long-running condition
 static const uint32_t CMD_RESEND_MS = 500;
 
-const ak45_calibration_config_t ak45_calibration_config_default = {
-	.seek_target_deg = 25.0f,
-	.backoff_deg = 3.0f,
-	.backoff_settle_ms = 300,
-	.stall_speed_erpm_max = 50.0f,
-	.stall_current_a_min = 0.2f,
-	.stall_hold_ms = 200,
-	.stall_sample_count = 5,
-	.max_tap_delta_deg = 0.3f,
-	.seek_timeout_ms = 8000,
-	.settle_timeout_ms = 3000,
-	.position_tolerance_deg = 0.5f,
-	.min_span_deg = 36.0f,
-	.max_span_deg = 44.0f,
-};
-
 // tracks elapsed time and resend/freshness bookkeeping for one wait loop
 typedef struct {
 	uint32_t start_ms;
@@ -50,7 +34,8 @@ static bool config_is_valid(const ak45_calibration_config_t *config) {
 		   (config->min_span_deg > 0.0f) && (config->max_span_deg > config->min_span_deg);
 }
 
-static bool feedback_is_stalled(const ak45_feedback_t *fb, const ak45_calibration_config_t *config) {
+static bool feedback_is_stalled(const ak45_feedback_t *fb,
+								const ak45_calibration_config_t *config) {
 	return (fabsf(fb->speed_erpm) < config->stall_speed_erpm_max) &&
 		   (fabsf(fb->current_a) > config->stall_current_a_min);
 }
@@ -97,7 +82,8 @@ static w_status_t cal_timer_start(cal_timer_t *timer) {
  * can wait on motor state without the MCB failsafing on CAN silence.
  */
 static w_status_t poll_feedback(cal_timer_t *timer, float32_t target_deg, bool resend,
-								uint32_t timeout_ms, ak45_feedback_t *out_fb, uint32_t *out_now_ms) {
+								uint32_t timeout_ms, ak45_feedback_t *out_fb,
+								uint32_t *out_now_ms) {
 	while (true) {
 		uint32_t now_ms = 0;
 		if (timer_get_ms(&now_ms) != W_SUCCESS) {
@@ -226,7 +212,8 @@ static w_status_t seek_stop_confirmed(float32_t sign, const ak45_calibration_con
 	}
 
 	float32_t backoff_target = tap1 - (sign * config->backoff_deg);
-	if (wait_for_low_speed(backoff_target, config, config->backoff_settle_ms, config->seek_timeout_ms) !=
+	if (wait_for_low_speed(
+			backoff_target, config, config->backoff_settle_ms, config->seek_timeout_ms) !=
 		W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45_cal", "backoff settle timeout");
 		return W_FAILURE;
@@ -242,8 +229,13 @@ static w_status_t seek_stop_confirmed(float32_t sign, const ak45_calibration_con
 	}
 
 	*out_stop_deg = (tap1 + tap2) / 2.0f;
-	log_text(
-		LOG_WAIT_MS, LOG_LVL_INFO, "ak45_cal", "stop %.2f (taps %.2f, %.2f)", *out_stop_deg, tap1, tap2);
+	log_text(LOG_WAIT_MS,
+			 LOG_LVL_INFO,
+			 "ak45_cal",
+			 "stop %.2f (taps %.2f, %.2f)",
+			 *out_stop_deg,
+			 tap1,
+			 tap2);
 	return W_SUCCESS;
 }
 
@@ -287,7 +279,8 @@ static w_status_t verify_origin(const ak45_calibration_config_t *config) {
 	for (uint32_t i = 0; i < config->stall_sample_count; i++) {
 		ak45_feedback_t fb = {0};
 		uint32_t now_ms = 0;
-		if (poll_feedback(&timer, 0.0f, false, config->settle_timeout_ms, &fb, &now_ms) != W_SUCCESS) {
+		if (poll_feedback(&timer, 0.0f, false, config->settle_timeout_ms, &fb, &now_ms) !=
+			W_SUCCESS) {
 			return W_FAILURE;
 		}
 		sample_sum += fb.position_deg;
@@ -295,7 +288,8 @@ static w_status_t verify_origin(const ak45_calibration_config_t *config) {
 
 	float32_t mean_position_deg = sample_sum / (float32_t)config->stall_sample_count;
 	if (fabsf(mean_position_deg) > config->position_tolerance_deg) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45_cal", "origin verify failed %.2f", mean_position_deg);
+		log_text(
+			LOG_WAIT_MS, LOG_LVL_WARN, "ak45_cal", "origin verify failed %.2f", mean_position_deg);
 		return W_FAILURE;
 	}
 
