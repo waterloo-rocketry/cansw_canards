@@ -11,6 +11,8 @@
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
 
+extern I2C_HandleTypeDef hi2c4; // added for iis2mdc_test
+
 // I2C bus and slave address
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
 static const uint8_t IIS2MDC_I2C_ADDR = 0x1E;
