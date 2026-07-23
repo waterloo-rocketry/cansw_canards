@@ -292,6 +292,7 @@ w_status_t health_check_exec() {
 
 	status_bitfield |= check_watchdog_tasks();
 	status_bitfield |= check_modules_status();
+	status_bitfield |= power_handler_get_board_status();
 
 	// send status CAN msg
 	can_msg_t msg = {0};
