@@ -27,6 +27,7 @@ static const int32_t AD_ACCEL_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t AD_GYRO_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t MAG_FRESHNESS_TIMEOUT_MS = 5;
 static const int32_t BARO_FRESHNESS_TIMEOUT_MS = 5;
+static const int32_t MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS = 10;
 
 // TODO: consider splitting to each sensor since the data is coming seperately
 static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 5;
@@ -435,7 +436,8 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 	w_status_t status = ak45_get_latest_feedback(&motor_feedback);
 
 	if (W_SUCCESS == status) {
-		if ((motor_feedback.timestamp_ms) > (ctx->last_motor_encoder_timestamp_ms)) {
+		if ((motor_feedback.timestamp_ms) - (ctx->last_motor_encoder_timestamp_ms) <=
+			MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS) {
 			encoder_data->is_new = true;
 
 			sensor_handler_state.motor_encoder_stats.success_count++;
@@ -615,8 +617,9 @@ health_status_t sensor_handler_get_status(void) {
 			 sensor_handler_state.motor_encoder_stats.success_count,
 			 sensor_handler_state.motor_encoder_stats.failure_count);
 
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_SENSOR_HANDLER, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_SENSOR_HANDLER,
+							  .error_bitfield = 0};
 
 	return status;
 }
