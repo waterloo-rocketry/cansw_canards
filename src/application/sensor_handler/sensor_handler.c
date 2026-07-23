@@ -27,6 +27,7 @@ static const int32_t AD_ACCEL_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t AD_GYRO_FRESHNESS_TIMEOUT_MS = 2;
 static const int32_t MAG_FRESHNESS_TIMEOUT_MS = 5;
 static const int32_t BARO_FRESHNESS_TIMEOUT_MS = 5;
+static const int32_t MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS = 10;
 
 // TODO: consider splitting to each sensor since the data is coming seperately
 static const int32_t MTI_FRESHNESS_TIMEOUT_MS = 5;
@@ -44,6 +45,16 @@ static const matrix3d_t g_board_mag_correction_matrix = {
 	.array = {{0, 0, -1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 static const matrix3d_t g_ad_accel_correction_matrix = {
 	.array = {{0, 0, 1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
+
+// mag hard iron and soft iron calibration values
+static const vector3d_t hard_iron_bias = {.x = 0, .y = 0, .z = 0};
+static const matrix3d_t soft_iron_correction_matrix = {
+	.array = {{1.0, 0, 0}, {0, 1.0, 0}, {0, 0, 1.0}}};
+
+// ad accel null bias offsets
+static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.61;
+static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.65;
+static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.15;
 
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
@@ -221,6 +232,10 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 	board_data->board_mag.meas =
 		math_vector3d_rotate(&g_board_mag_correction_matrix, &(board_data->board_mag.meas));
 
+	board_data->board_mag.meas = math_vector3d_subt(&(board_data->board_mag.meas), &hard_iron_bias);
+	board_data->board_mag.meas =
+		math_vector3d_rotate(&soft_iron_correction_matrix, &(board_data->board_mag.meas));
+
 	// success is if at least one of the sensors updated
 	if ((!board_data->board_mag.is_new) && (!board_data->board_imu.is_new) &&
 		(!board_data->board_baro.is_new)) {
@@ -303,6 +318,11 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 	// Apply orientation correction
 	ad_data->ad_accel.meas =
 		math_vector3d_rotate(&g_ad_accel_correction_matrix, &(ad_data->ad_accel.meas));
+
+	// ad null bias offset
+	ad_data->ad_accel.meas.x -= AD_ACCEL_X_NULL_BIAS_OFFSET;
+	ad_data->ad_accel.meas.y -= AD_ACCEL_Y_NULL_BIAS_OFFSET;
+	ad_data->ad_accel.meas.z -= AD_ACCEL_Z_NULL_BIAS_OFFSET;
 
 	// success is if at least one of the sensors updated
 	if ((!ad_data->ad_gyro.is_new) && (!ad_data->ad_accel.is_new)) {
@@ -416,7 +436,8 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 	w_status_t status = ak45_get_latest_feedback(&motor_feedback);
 
 	if (W_SUCCESS == status) {
-		if ((motor_feedback.timestamp_ms) > (ctx->last_motor_encoder_timestamp_ms)) {
+		if ((motor_feedback.timestamp_ms) - (ctx->last_motor_encoder_timestamp_ms) <=
+			MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS) {
 			encoder_data->is_new = true;
 
 			sensor_handler_state.motor_encoder_stats.success_count++;
@@ -596,8 +617,9 @@ health_status_t sensor_handler_get_status(void) {
 			 sensor_handler_state.motor_encoder_stats.success_count,
 			 sensor_handler_state.motor_encoder_stats.failure_count);
 
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_SENSOR_HANDLER, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_SENSOR_HANDLER,
+							  .error_bitfield = 0};
 
 	return status;
 }

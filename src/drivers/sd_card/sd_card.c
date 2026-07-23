@@ -192,12 +192,13 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 }
 
 health_status_t sd_card_get_status(void) {
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_SD_CARD, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_SD_CARD,
+							  .error_bitfield = 0};
 
 	if (sd_card_health.is_init == false) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	// Log operation statistics
