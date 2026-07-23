@@ -200,8 +200,9 @@ health_status_t power_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 	w_status_t gpio_read_status = W_SUCCESS;
 	float adc_value = 0;
-	health_status_t status = {
-		.error_bitfield = 0, .module_id = MODULE_POWER_HANDLER, .severity = HEALTH_OK};
+	health_status_t status = {.error_bitfield = 0,
+							  .module_id = CANARDS_MODULE_ID_POWER_HANDLER,
+							  .severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK};
 
 	if (!power_handler_status.initialized) {
 		status_bitfield |= (1) << CANARDS_MODULE_E_NOT_INIT_OFFSET;
@@ -251,7 +252,7 @@ health_status_t power_handler_get_status(void) {
 	}
 
 	// Power draining state: external 5V enabled while in low power mode
-	if (power_handler_status.low_power_mode && power_handler_status.external_5v_enabled) {
+	if ((!power_handler_status.lipo_state) && power_handler_status.external_5v_enabled) {
 		status_bitfield |= (1) << CANARDS_MODULE_E_LOW_POWER_MODE_WITH_EXT_5V_ON_OFFSET;
 	}
 
@@ -260,7 +261,7 @@ health_status_t power_handler_get_status(void) {
 	}
 
 	if (0 != status_bitfield) {
-		status.severity = HEALTH_ERROR;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 	}
 
 	status.error_bitfield = status_bitfield;
