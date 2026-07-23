@@ -461,12 +461,13 @@ void log_task(void *argument) {
 }
 
 health_status_t logger_get_status(void) {
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_LOGGER,
+							  .error_bitfield = 0};
 
 	if (!logger_health.is_init) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_NOT_INIT;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	log_text(10,

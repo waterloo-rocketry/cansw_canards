@@ -52,8 +52,9 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
  * @return health check handle for telem error
  */
 health_status_t telemetry_get_status(void) {
-	health_status_t status = {
-		.error_bitfield = 0, .module_id = MODULE_TELEMETRY, .severity = HEALTH_OK};
+	health_status_t status = {.error_bitfield = 0,
+							  .module_id = CANARDS_MODULE_ID_TELEMETRY,
+							  .severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK};
 
 	return status;
 }
