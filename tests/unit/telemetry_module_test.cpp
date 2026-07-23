@@ -162,7 +162,7 @@ TEST_F(TelemetryModuleTest, DueExactlyLogsOnceAndAdvancesSchedule) {
     EXPECT_EQ(source_log_ok_fake.call_count, 2u);
 
     // On-time logging keeps the module healthy.
-    EXPECT_EQ(telemetry_get_status().severity, HEALTH_OK);
+    EXPECT_EQ(telemetry_get_status().severity, CANARDS_HEALTH_SEVERITY_HEALTH_OK);
 }
 
 TEST_F(TelemetryModuleTest, OverdueLogsAndFlagsError) {
@@ -178,7 +178,7 @@ TEST_F(TelemetryModuleTest, OverdueLogsAndFlagsError) {
 
     EXPECT_EQ(source_log_ok_fake.call_count, 1u);
     // An overdue log bumps overdue_count, which surfaces as HEALTH_ERROR.
-    EXPECT_EQ(telemetry_get_status().severity, HEALTH_ERROR);
+    EXPECT_EQ(telemetry_get_status().severity, CANARDS_HEALTH_SEVERITY_HEALTH_ERROR);
 }
 
 TEST_F(TelemetryModuleTest, FailedTransmissionFlagsError) {
@@ -194,7 +194,7 @@ TEST_F(TelemetryModuleTest, FailedTransmissionFlagsError) {
 
     EXPECT_EQ(source_log_fail_fake.call_count, 1u);
     // A failed transmission surfaces as HEALTH_ERROR.
-    EXPECT_EQ(telemetry_get_status().severity, HEALTH_ERROR);
+    EXPECT_EQ(telemetry_get_status().severity, CANARDS_HEALTH_SEVERITY_HEALTH_ERROR);
 }
 
 TEST_F(TelemetryModuleTest, TimerFailureSkipsProcessing) {
@@ -210,7 +210,7 @@ TEST_F(TelemetryModuleTest, TimerFailureSkipsProcessing) {
     telemetry_run_once();
 
     EXPECT_EQ(source_log_ok_fake.call_count, 0u);
-    EXPECT_EQ(telemetry_get_status().severity, HEALTH_OK);
+    EXPECT_EQ(telemetry_get_status().severity, CANARDS_HEALTH_SEVERITY_HEALTH_OK);
 }
 
 TEST_F(TelemetryModuleTest, DueDateSurvivesCounterWraparound) {
