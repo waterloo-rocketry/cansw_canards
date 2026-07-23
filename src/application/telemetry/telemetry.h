@@ -44,12 +44,6 @@ w_status_t telemetry_register(const telemetry_source_config_t *config);
 void telemetry_task(void *argument);
 
 /**
- * @brief run telemtry once, calling all registered function due at call time
- * @note normally called internally by telemetry_task; exposed for unit testing
- */
-void telemetry_run_once(void);
-
-/**
  * @brief seed the due date of every registered source relative to curr_time
  * @param curr_time current time in ms (start of telemetry task)
  * @note normally called internally by telemetry_task; exposed for unit testing

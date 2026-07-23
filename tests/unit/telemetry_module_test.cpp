@@ -13,6 +13,7 @@ extern "C" {
 #include "task.h"
 
 extern void telemetry_clear_all_data(void);
+extern void telemetry_run_once(void);
 
 // Dependencies of the telemetry module (declared inline; no mock files exist).
 FAKE_VALUE_FUNC(fsm_state_t, fsm_get_state);

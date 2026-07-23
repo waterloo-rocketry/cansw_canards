@@ -69,7 +69,7 @@ const uint32_t ad_breakout_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
-const uint32_t telem_task_priority = 10;
+const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
 
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.

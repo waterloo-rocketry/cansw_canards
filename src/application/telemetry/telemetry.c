@@ -66,7 +66,7 @@ void telemetry_clear_all_data(void) {
 void telemetry_init_due_dates(uint32_t curr_time) {
 	// set due date to every registered function once telemetry starts
 	for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
-		telemetry_internal_config_t *curr = &g_telemetry_registry.sources[i];
+		telemetry_internal_config_t *curr = &(g_telemetry_registry.sources[i]);
 		curr->due_date_ms =
 			curr->source_config.period_ms + curr_time; // first log is due one period after t=0
 	}
@@ -100,20 +100,19 @@ void telemetry_run_once(void) {
 	fsm_state_t phase = fsm_get_state();
 
 	uint32_t curr_time;
-	w_status_t time_status = timer_get_ms(&curr_time);
 
 	// loop through the array of registered sources and log if it's the correct flight phase
 	// and it's due/overdue
-	if (W_SUCCESS == time_status) {
+	if (W_SUCCESS == timer_get_ms(&curr_time)) {
 		for (uint32_t i = 0; i < g_telemetry_registry.num_sources; i++) {
-			telemetry_internal_config_t *source = &g_telemetry_registry.sources[i];
+			telemetry_internal_config_t *source = &(g_telemetry_registry.sources[i]);
 
 			if (phase != source->source_config.flight_phase_state) {
 				continue;
 			}
 
 			// signed-difference compare so this survives the 32-bit ms counter wrapping around
-			int32_t overdue_by = (int32_t)(curr_time - source->due_date_ms);
+			int32_t overdue_by = ((int32_t)curr_time) - ((int32_t)source->due_date_ms);
 
 			// overdue euqal to 0 not handled
 			if (overdue_by < 0) {
