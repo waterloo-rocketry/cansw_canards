@@ -62,6 +62,7 @@ void telemetry_clear_all_data(void) {
 /**
  * @brief seed the due date of every registered source relative to curr_time
  * @param curr_time current time in ms (start of telemetry task)
+ * @note this is ONLY FOR TELEM UNIT TESTING!! Please don't use.
  */
 void telemetry_init_due_dates(uint32_t curr_time) {
 	// set due date to every registered function once telemetry starts
@@ -94,7 +95,8 @@ w_status_t telemetry_init(void) {
 /**
  * @brief run a single telemetry scheduling iteration
  * @note logs each registered source whose flight phase matches the current fsm
- * state and whose due date has passed, updating stats. Excludes the RTOS delay. For unit testing!
+ * state and whose due date has passed, updating stats. Excludes the RTOS delay.
+ * @note THIS IS ONLY FOR TELEM UNIT TESTING. Please don't use otherwise.
  */
 void telemetry_run_once(void) {
 	fsm_state_t phase = fsm_get_state();

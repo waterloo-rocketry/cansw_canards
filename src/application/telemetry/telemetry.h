@@ -44,13 +44,6 @@ w_status_t telemetry_register(const telemetry_source_config_t *config);
 void telemetry_task(void *argument);
 
 /**
- * @brief seed the due date of every registered source relative to curr_time
- * @param curr_time current time in ms (start of telemetry task)
- * @note normally called internally by telemetry_task; exposed for unit testing
- */
-void telemetry_init_due_dates(uint32_t curr_time);
-
-/**
  * @brief Reports the current status of the telemetry module
  * @return telemetry status bitfield
  */
