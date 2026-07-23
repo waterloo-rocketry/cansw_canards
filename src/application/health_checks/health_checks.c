@@ -3,6 +3,7 @@
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
