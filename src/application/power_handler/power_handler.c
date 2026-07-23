@@ -206,8 +206,9 @@ health_status_t power_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 	w_status_t gpio_read_status = W_SUCCESS;
 	float adc_value = 0;
-	health_status_t status = {
-		.error_bitfield = 0, .module_id = MODULE_POWER_HANDLER, .severity = HEALTH_OK};
+	health_status_t status = {.error_bitfield = 0,
+							  .module_id = CANARDS_MODULE_ID_POWER_HANDLER,
+							  .severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK};
 
 	// Check battery fault pins
 	gpio_level_t flt1 = GPIO_LEVEL_HIGH;
@@ -353,7 +354,7 @@ health_status_t power_handler_get_status(void) {
 	}
 
 	if (0 != status_bitfield) {
-		status.severity = HEALTH_ERROR;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 	}
 
 	status.error_bitfield = status_bitfield;
