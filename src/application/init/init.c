@@ -126,7 +126,7 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(fsm_task,
 							   "fsm",
-							   8192, // TODO: set the correct size
+							   6144, // TODO: set the correct size
 							   NULL,
 							   fsm_task_priority,
 							   &fsm_task_handle);
@@ -153,11 +153,11 @@ static void system_init_task(void *arg) {
 							   &can_handler_handle_tx);
 
 	task_status &= xTaskCreate(
-		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+		movella_task, "movella", 512, NULL, movella_task_priority, &movella_task_handle);
 
 	task_status &= xTaskCreate(ms5611_task,
 							   "ms5611",
-							   512,
+							   256,
 							   NULL,
 							   ms5611_task_priority,
 							   &ms5611_task_handle); // TODO: set the correct size
@@ -166,7 +166,7 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(ad_breakout_board_task,
 							   "ad board task",
-							   2560, // TODO: set when sure of size
+							   256, // TODO: set when sure of size
 							   NULL,
 							   ad_breakout_task_priority,
 							   &ad_breakout_task_handle);
