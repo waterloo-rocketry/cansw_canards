@@ -61,6 +61,7 @@ typedef struct {
 											// during init
 	uint32_t init_fdcan_start_fails; // count of failures to start FDCAN bus
 	uint32_t init_fdcan_filter_cfg_fails; // count of failures to configure FDCAN filter during init
+	uint32_t timer_get_ms_fails; // count of failures to get ms timestamp during feedback parsing
 } ak45_health_t;
 
 static ak45_health_t ak45_health = {0};
@@ -128,6 +129,7 @@ static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) 
 		return W_SUCCESS;
 	}
 
+	ak45_health.timer_get_ms_fails++;
 	return W_FAILURE;
 }
 
@@ -205,6 +207,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	// make sure we recieved a can msg before we send one
 	uint32_t start_can_init_time_ms = 0;
 	if (timer_get_ms(&start_can_init_time_ms) != W_SUCCESS) {
+		ak45_health.timer_get_ms_fails++;
 		ak45_stop_can();
 		return W_FAILURE;
 	}
@@ -218,6 +221,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		vTaskDelay(500);
 
 		if (timer_get_ms(&curr_time_ms) != W_SUCCESS) {
+			ak45_health.timer_get_ms_fails++;
 			ak45_stop_can();
 			return W_FAILURE;
 		}
@@ -307,6 +311,7 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 
 	ak45_feedback_t fb = {0};
 	if (ak45_parse_feedback(rx_data, &fb) != W_SUCCESS) {
+		ak45_health.rx_errors++;
 		ak45_health.feedback_rx_failed = true;
 	}
 
@@ -324,31 +329,33 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 }
 
 health_status_t ak45_get_status(void) {
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_AK45, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_AK45,
+							  .error_bitfield = 0};
 
 	if (!ak45_health.hard_stop_calibrated) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_NOT_CALIBRATED;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_CALIBRATED_OFFSET;
 	}
 
 	if (ak45_health.hard_stop_cal_failed) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_FAILED_CALIBRATION;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_FAILED_CALIBRATION_OFFSET;
 	}
 
-	if (!ak45_health.cmd_tx_failed) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_TX_FAILURE;
+	if (ak45_health.cmd_tx_failed) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
 	}
 
-	if (!ak45_health.feedback_rx_failed) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_RX_FAILURE;
+	if (ak45_health.feedback_rx_failed) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_RX_FAILURE_OFFSET;
 	}
 
 	if (!ak45_health.is_init) {
-		status.severity = HEALTH_ERROR; // not sure if this should be fatal or error
-		status.error_bitfield |= 1 << ERR_NOT_INIT;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	log_text(LOG_WAIT_MS,
@@ -366,12 +373,13 @@ health_status_t ak45_get_status(void) {
 			 LOG_LVL_INFO,
 			 "ak45",
 			 "out_of_memory=%lu, not_initialized=%lu, feedback_queue_empty=%lu, "
-			 "reinit_attempts=%lu, invalid_args=%lu",
+			 "reinit_attempts=%lu, invalid_args=%lu, timer_get_ms_fails=%lu",
 			 ak45_health.out_of_memory,
 			 ak45_health.not_initialized,
 			 ak45_health.feedback_queue_empty,
 			 ak45_health.reinit_attempts,
-			 ak45_health.invalid_args);
+			 ak45_health.invalid_args,
+			 ak45_health.timer_get_ms_fails);
 
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
@@ -384,11 +392,9 @@ health_status_t ak45_get_status(void) {
 			 ak45_health.init_fdcan_filter_cfg_fails,
 			 ak45_health.fdcan_stop_fails);
 
-	ak45_health.hard_stop_calibrated = false;
 	ak45_health.hard_stop_cal_failed = false;
 	ak45_health.cmd_tx_failed = false;
 	ak45_health.feedback_rx_failed = false;
-	ak45_health.is_init = false;
 
 	return status;
 }

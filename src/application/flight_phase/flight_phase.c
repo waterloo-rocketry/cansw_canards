@@ -79,7 +79,11 @@ w_status_t flight_phase_init(void) {
 	event_queue = xQueueCreate(3, sizeof(flight_phase_event_t));
 
 	if ((NULL == event_queue) ||
-		(W_SUCCESS != can_handler_register_callback(MSG_ACTUATOR_CMD, act_cmd_callback))) {
+		(W_SUCCESS !=
+		 can_handler_act_cmd_register_callback(ACTUATOR_OX_INJECTOR_VALVE, act_cmd_callback)) ||
+		(W_SUCCESS != can_handler_act_cmd_register_callback(ACTUATOR_IGNITION, act_cmd_callback)) ||
+		(W_SUCCESS !=
+		 can_handler_act_cmd_register_callback(ACTUATOR_CANARD_PAD_FILTER, act_cmd_callback))) {
 		log_text(
 			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
 		return W_FAILURE;
@@ -330,8 +334,9 @@ health_status_t flight_phase_get_status(void) {
 			 flight_phase_status.initialized ? "INIT" : "NOT INIT",
 			 flight_phase_status.event_queue_full_count);
 
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_FLIGHT_PHASE, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_FLIGHT_PHASE,
+							  .error_bitfield = 0};
 
 	return status;
 }
