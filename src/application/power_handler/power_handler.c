@@ -191,11 +191,6 @@ static w_status_t transmit_curr_volt_status_can_msg() {
 	return can_tx_status;
 }
 
-/**
- * report power-handler module health as a health_status_t.
- * Also transmits the periodic voltage/current status CAN messages.
- * Called by health checks.
- */
 health_status_t power_handler_get_status(void) {
 	uint32_t status_bitfield = 0;
 	w_status_t gpio_read_status = W_SUCCESS;
@@ -205,7 +200,7 @@ health_status_t power_handler_get_status(void) {
 							  .severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK};
 
 	if (!power_handler_status.initialized) {
-		status_bitfield |= (1) << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status_bitfield |= (1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	// Check battery fault pins and external 5V power good
@@ -218,7 +213,7 @@ health_status_t power_handler_get_status(void) {
 	gpio_read_status |= gpio_read(GPIO_PIN_PG_EXT_5V, &pg_ext_5v, 5);
 
 	if (W_SUCCESS != gpio_read_status) {
-		status_bitfield |= (1) << CANARDS_MODULE_E_HARDWARE_FAIL_OFFSET;
+		status_bitfield |= (1U) << CANARDS_MODULE_E_HARDWARE_FAIL_OFFSET;
 		log_text(1,
 				 LOG_LVL_WARN,
 				 "power_handler",
@@ -227,7 +222,7 @@ health_status_t power_handler_get_status(void) {
 	}
 
 	if (GPIO_LEVEL_LOW == flt1) {
-		status_bitfield |= (1) << CANARDS_MODULE_E_BAT1_FAULT_OFFSET;
+		status_bitfield |= (1U) << CANARDS_MODULE_E_BAT1_FAULT_OFFSET;
 		power_handler_status.lipo_1_fault_count++;
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -237,7 +232,7 @@ health_status_t power_handler_get_status(void) {
 	}
 
 	if (GPIO_LEVEL_LOW == flt2) {
-		status_bitfield |= (1) << CANARDS_MODULE_E_BAT2_FAULT_OFFSET;
+		status_bitfield |= (1U) << CANARDS_MODULE_E_BAT2_FAULT_OFFSET;
 		power_handler_status.lipo_2_fault_count++;
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -248,16 +243,16 @@ health_status_t power_handler_get_status(void) {
 
 	// External 5V output device fault
 	if (GPIO_LEVEL_LOW == pg_ext_5v) {
-		status_bitfield |= (1) << CANARDS_MODULE_E_DEVICE_FAULT_OFFSET;
+		status_bitfield |= (1U) << CANARDS_MODULE_E_DEVICE_FAULT_OFFSET;
 	}
 
 	// Power draining state: external 5V enabled while in low power mode
 	if ((!power_handler_status.lipo_state) && power_handler_status.external_5v_enabled) {
-		status_bitfield |= (1) << CANARDS_MODULE_E_LOW_POWER_MODE_WITH_EXT_5V_ON_OFFSET;
+		status_bitfield |= (1U) << CANARDS_MODULE_E_LOW_POWER_MODE_WITH_EXT_5V_ON_OFFSET;
 	}
 
 	if (W_SUCCESS != transmit_curr_volt_status_can_msg()) {
-		status_bitfield |= (1) << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
+		status_bitfield |= (1U) << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
 	}
 
 	if (0 != status_bitfield) {
@@ -269,22 +264,18 @@ health_status_t power_handler_get_status(void) {
 	return status;
 }
 
-/**
- * Reports power-handler BOARD electrical health as a raw error bitfield.
- * Returns 0 if no board faults are detected. Called by health checks.
- */
 uint32_t power_handler_get_board_status(void) {
 	uint32_t board_bitfield = 0;
 	float adc_value = 0;
 
 	gpio_level_t pg_ext_5v = GPIO_LEVEL_HIGH;
 	if (gpio_read(GPIO_PIN_PG_EXT_5V, &pg_ext_5v, 5) != W_SUCCESS) {
-		board_bitfield |= (1) << E_IO_ERROR_OFFSET;
+		board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 	}
 
 	// External 5V output efuse fault
 	if (GPIO_LEVEL_LOW == pg_ext_5v) {
-		board_bitfield |= (1) << E_5V_EFUSE_FAULT_OFFSET;
+		board_bitfield |= (1U) << E_5V_EFUSE_FAULT_OFFSET;
 		power_handler_status.external_5v_fault_count++;
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -297,7 +288,7 @@ uint32_t power_handler_get_board_status(void) {
 	// trigger the fault
 	if (W_SUCCESS == adc_get_converted_val(ISENS_5V, &adc_value)) {
 		if (adc_value > I5V_MAX) {
-			board_bitfield |= (1) << E_5V_OVER_CURR_OFFSET;
+			board_bitfield |= (1U) << E_5V_OVER_CURR_OFFSET;
 			power_handler_status.overcurrent_count++;
 			log_text(1,
 					 LOG_LVL_WARN,
@@ -306,12 +297,12 @@ uint32_t power_handler_get_board_status(void) {
 					 power_handler_status.overcurrent_count);
 		}
 	} else {
-		board_bitfield |= (1) << E_IO_ERROR_OFFSET;
+		board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_3V3, &adc_value)) {
 		if (adc_value > I3V3_MAX) {
-			board_bitfield |= (1) << E_LOCAL_RAIL_OVER_CURR_OFFSET;
+			board_bitfield |= (1U) << E_LOCAL_RAIL_OVER_CURR_OFFSET;
 			power_handler_status.overcurrent_count++;
 			log_text(1,
 					 LOG_LVL_WARN,
@@ -320,7 +311,7 @@ uint32_t power_handler_get_board_status(void) {
 					 power_handler_status.overcurrent_count);
 		}
 	} else {
-		board_bitfield |= (1) << E_IO_ERROR_OFFSET;
+		board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 	}
 
 	power_input_source_t active_input = get_active_input();
@@ -331,10 +322,10 @@ uint32_t power_handler_get_board_status(void) {
 			if (W_SUCCESS == adc_get_converted_val(VSENS_CHG, &adc_value)) {
 				// under volt not handled as it is not expected to be on all the time
 				if (adc_value > VCHG_MAX) {
-					board_bitfield |= (1) << E_CHARGE_RAIL_OVER_VOLT_OFFSET;
+					board_bitfield |= (1U) << E_CHARGE_RAIL_OVER_VOLT_OFFSET;
 				}
 			} else {
-				board_bitfield |= (1) << E_IO_ERROR_OFFSET;
+				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 			}
 
 			log_text(1, LOG_LVL_INFO, "power_handler", "Active power source: CHG");
@@ -343,12 +334,12 @@ uint32_t power_handler_get_board_status(void) {
 		case POWER_INPUT_RKT:
 			if (W_SUCCESS == adc_get_converted_val(VSENS_RKT, &adc_value)) {
 				if (adc_value < VRKT_MIN) {
-					board_bitfield |= (1) << E_12V_UNDER_VOLT_OFFSET;
+					board_bitfield |= (1U) << E_12V_UNDER_VOLT_OFFSET;
 				} else if (adc_value > VRKT_MAX) {
-					board_bitfield |= (1) << E_12V_OVER_VOLT_OFFSET;
+					board_bitfield |= (1U) << E_12V_OVER_VOLT_OFFSET;
 				}
 			} else {
-				board_bitfield |= (1) << E_IO_ERROR_OFFSET;
+				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 			}
 
 			log_text(1, LOG_LVL_INFO, "power_handler", "Active power source: RKT");
@@ -357,27 +348,27 @@ uint32_t power_handler_get_board_status(void) {
 		case POWER_INPUT_BAT:
 			if (W_SUCCESS == adc_get_converted_val(VSENS_BAT1, &adc_value)) {
 				if (adc_value < VBAT_MIN) {
-					board_bitfield |= (1) << E_BATT_UNDER_VOLT_OFFSET;
+					board_bitfield |= (1U) << E_BATT_UNDER_VOLT_OFFSET;
 				} else if (adc_value > VBAT_MAX) {
-					board_bitfield |= (1) << E_BATT_OVER_VOLT_OFFSET;
+					board_bitfield |= (1U) << E_BATT_OVER_VOLT_OFFSET;
 				}
 			} else {
-				board_bitfield |= (1) << E_IO_ERROR_OFFSET;
+				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(VSENS_BAT2, &adc_value)) {
 				if (adc_value < VBAT_MIN) {
-					board_bitfield |= (1) << E_BATT_UNDER_VOLT_OFFSET;
+					board_bitfield |= (1U) << E_BATT_UNDER_VOLT_OFFSET;
 				} else if (adc_value > VBAT_MAX) {
-					board_bitfield |= (1) << E_BATT_OVER_VOLT_OFFSET;
+					board_bitfield |= (1U) << E_BATT_OVER_VOLT_OFFSET;
 				}
 			} else {
-				board_bitfield |= (1) << E_IO_ERROR_OFFSET;
+				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT1, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
-					board_bitfield |= (1) << E_BATT_OVER_CURR_OFFSET;
+					board_bitfield |= (1U) << E_BATT_OVER_CURR_OFFSET;
 					power_handler_status.overcurrent_count++;
 					log_text(1,
 							 LOG_LVL_WARN,
@@ -386,12 +377,12 @@ uint32_t power_handler_get_board_status(void) {
 							 power_handler_status.overcurrent_count);
 				}
 			} else {
-				board_bitfield |= (1) << E_IO_ERROR_OFFSET;
+				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT2, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
-					board_bitfield |= (1) << E_BATT_OVER_CURR_OFFSET;
+					board_bitfield |= (1U) << E_BATT_OVER_CURR_OFFSET;
 					power_handler_status.overcurrent_count++;
 					log_text(1,
 							 LOG_LVL_WARN,
@@ -400,7 +391,7 @@ uint32_t power_handler_get_board_status(void) {
 							 power_handler_status.overcurrent_count);
 				}
 			} else {
-				board_bitfield |= (1) << E_IO_ERROR_OFFSET;
+				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 			}
 
 			log_text(1, LOG_LVL_INFO, "power_handler", "Active power source: BAT");
