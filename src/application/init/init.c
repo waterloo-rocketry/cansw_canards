@@ -126,7 +126,7 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(fsm_task,
 							   "fsm",
-							   6144, // TODO: set the correct size
+							   6144,
 							   NULL,
 							   fsm_task_priority,
 							   &fsm_task_handle);
@@ -160,13 +160,13 @@ static void system_init_task(void *arg) {
 							   256,
 							   NULL,
 							   ms5611_task_priority,
-							   &ms5611_task_handle); // TODO: set the correct size
+							   &ms5611_task_handle);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
 	task_status &= xTaskCreate(ad_breakout_board_task,
 							   "ad board task",
-							   256, // TODO: set when sure of size
+							   256,
 							   NULL,
 							   ad_breakout_task_priority,
 							   &ad_breakout_task_handle);
