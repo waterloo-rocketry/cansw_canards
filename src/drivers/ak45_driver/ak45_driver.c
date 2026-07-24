@@ -8,8 +8,6 @@
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/timer/timer.h"
 
-// TODO: add health checks for motor
-
 // Motor CAN driver ID
 static const uint16_t AK45_DRIVER_ID = 0x45;
 static const uint16_t LOG_WAIT_MS = 1;
@@ -38,9 +36,35 @@ static const float32_t AK45_CURRENT_FB_TO_A = 0.01f; // current feedback: raw * 
 
 static FDCAN_HandleTypeDef *g_ak45_hfdcan = NULL;
 static QueueHandle_t g_feedback_queue = NULL;
-static uint32_t g_tx_errors = 0;
-static bool is_init = false;
 static volatile bool received_can_msg = false;
+
+/**
+ * Status variables describing the health of the AK45 driver module
+ */
+typedef struct {
+	// TODO: implement calibration step and add the two checks
+	bool is_init;
+	bool hard_stop_calibrated; // false until hard stop calibration succeeds
+	bool hard_stop_cal_failed; // set true on failed attempt, clear on success
+	bool feedback_rx_failed; // set true on failed attempt, clear on success
+	bool cmd_tx_failed; // set true on failed attempt, clear on success
+	uint32_t rx_errors; // FDCAN RX-callback failures
+	uint32_t tx_errors; // FDCAN transmit FIFO add failures
+	uint32_t invalid_args; // NULL or out of range arguments to functions
+	uint32_t out_of_memory; // failure to allocate memory for queue creation
+	uint32_t not_initialized; // calls to get_feedback when driver is not initialized
+	uint32_t feedback_queue_empty; // calls for latest feedback when queue empty
+	uint32_t reinit_attempts; // count of init attempts after first successful init
+	uint32_t fdcan_stop_fails; // count of failures to stop FDCAN bus
+	uint32_t init_fdcan_timeout; // count of timeouts to receive response from the motor during init
+	uint32_t init_fdcan_notification_fails; // Count of failures to activate FDCAN notification
+											// during init
+	uint32_t init_fdcan_start_fails; // count of failures to start FDCAN bus
+	uint32_t init_fdcan_filter_cfg_fails; // count of failures to configure FDCAN filter during init
+	uint32_t timer_get_ms_fails; // count of failures to get ms timestamp during feedback parsing
+} ak45_health_t;
+
+static ak45_health_t ak45_health = {0};
 
 /**
  * @brief Transmit 29-bit ID via FDCAN
@@ -52,7 +76,7 @@ static volatile bool received_can_msg = false;
  */
 static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, uint8_t len) {
 	if ((NULL == g_ak45_hfdcan) || (NULL == data) || (len > 8)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointer");
+		ak45_health.invalid_args++;
 		return W_FAILURE;
 	}
 
@@ -68,9 +92,8 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
 	tx_header.DataLength = len;
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(g_ak45_hfdcan, &tx_header, data) != HAL_OK) {
-		g_tx_errors++;
-
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Unable to add CAN message");
+		ak45_health.tx_errors++;
+		ak45_health.cmd_tx_failed = true;
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
@@ -84,10 +107,7 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
  */
 static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
 	if ((NULL == data) || (NULL == fb)) {
-		log_text(LOG_WAIT_MS,
-				 LOG_LVL_WARN,
-				 "ak45",
-				 "Invalid pointers or not initialized for Parse Feedback");
+		ak45_health.invalid_args++;
 		return W_FAILURE;
 	}
 
@@ -109,6 +129,7 @@ static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) 
 		return W_SUCCESS;
 	}
 
+	ak45_health.timer_get_ms_fails++;
 	return W_FAILURE;
 }
 
@@ -116,7 +137,7 @@ static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) 
 static void ak45_stop_can() {
 	// turn off fdcan so can restart
 	if (HAL_FDCAN_Stop(g_ak45_hfdcan) != HAL_OK) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "FDCAN stop failed");
+		ak45_health.fdcan_stop_fails++;
 	}
 }
 
@@ -134,16 +155,14 @@ w_status_t ak45_send_position_cmd(float32_t angle_deg) {
 }
 
 w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms) {
-	// TODO: REPORT TO HEALTH CHECKS IF DRIVER FAILED TO INIT
-
 	// check if the driver has inited
-	if (is_init) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "attempting to reinit ak45 driver");
+	if (ak45_health.is_init) {
+		ak45_health.reinit_attempts++;
 		return W_FAILURE;
 	}
 
 	if (NULL == hfdcan) {
-		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "Invalid pointers");
+		ak45_health.invalid_args++;
 		return W_INVALID_PARAM;
 	}
 
@@ -152,7 +171,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	// feedback queue with length 1
 	g_feedback_queue = xQueueCreate(1, sizeof(ak45_feedback_t));
 	if (g_feedback_queue == NULL) {
-		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "Lack of memory to create feedback queue");
+		ak45_health.out_of_memory++;
 		return W_FAILURE;
 	}
 
@@ -165,12 +184,12 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	motor_filter.FilterID2 = (uint32_t)(CAN_START_FRAME << 8) | AK45_DRIVER_ID;
 
 	if (HAL_FDCAN_ConfigFilter(g_ak45_hfdcan, &motor_filter) != HAL_OK) {
-		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "FDCAN filter config failed");
+		ak45_health.init_fdcan_filter_cfg_fails++;
 		return W_FAILURE;
 	}
 
 	if (HAL_FDCAN_Start(g_ak45_hfdcan) != HAL_OK) {
-		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "FDCAN start failed");
+		ak45_health.init_fdcan_start_fails++;
 		ak45_stop_can();
 		return W_FAILURE;
 	}
@@ -179,7 +198,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	received_can_msg = false;
 
 	if (HAL_FDCAN_ActivateNotification(g_ak45_hfdcan, FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) != HAL_OK) {
-		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "FDCAN activate notification failed");
+		ak45_health.init_fdcan_notification_fails++;
 		ak45_stop_can();
 		return W_FAILURE;
 	}
@@ -188,7 +207,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	// make sure we recieved a can msg before we send one
 	uint32_t start_can_init_time_ms = 0;
 	if (timer_get_ms(&start_can_init_time_ms) != W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "Failed to get time");
+		ak45_health.timer_get_ms_fails++;
 		ak45_stop_can();
 		return W_FAILURE;
 	}
@@ -202,7 +221,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		vTaskDelay(500);
 
 		if (timer_get_ms(&curr_time_ms) != W_SUCCESS) {
-			log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "Failed to get time");
+			ak45_health.timer_get_ms_fails++;
 			ak45_stop_can();
 			return W_FAILURE;
 		}
@@ -210,7 +229,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 
 	// return error if no response from motor
 	if (!received_can_msg) {
-		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "Unable to connect to AK45 CAN");
+		ak45_health.init_fdcan_timeout++;
 		ak45_stop_can();
 		return W_FAILURE;
 	}
@@ -218,15 +237,13 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	// set current position to 0
 	uint8_t zero_data[1] = {0};
 	if (ak45_can_transmit_ext(ext_id, zero_data, FDCAN_DLC_BYTES_1) != W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "failed to reset to 0");
 		ak45_stop_can();
 		return W_FAILURE;
 	}
 
-	g_tx_errors = 0;
-	is_init = true;
+	ak45_health.tx_errors = 0;
+	ak45_health.is_init = true;
 
-	log_text(LOG_WAIT_MS, LOG_LVL_INFO, "ak45", "Init successful");
 	return W_SUCCESS;
 }
 
@@ -237,8 +254,13 @@ w_status_t ak45_send_disable_cmd(void) {
 }
 
 w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
-	if ((NULL == fb) || (!is_init)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointers or not initialized");
+	if (NULL == fb) {
+		ak45_health.invalid_args++;
+		return W_FAILURE;
+	}
+
+	if (!ak45_health.is_init) {
+		ak45_health.not_initialized++;
 		return W_FAILURE;
 	}
 
@@ -246,11 +268,12 @@ w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
 		return W_SUCCESS;
 	}
 
+	ak45_health.feedback_queue_empty++;
 	return W_FAILURE; // empty queue or no feedback yet
 }
 
 uint32_t ak45_get_tx_errors(void) {
-	return g_tx_errors;
+	return ak45_health.tx_errors;
 }
 
 /**
@@ -273,19 +296,24 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 	uint8_t rx_data[8];
 
 	if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) != HAL_OK) {
-		g_tx_errors++;
+		ak45_health.rx_errors++;
+		ak45_health.feedback_rx_failed = true;
 		return;
 	}
 
 	uint32_t expected_id = ((uint32_t)CAN_REAL_TIME_FEEDBACK << 8) | AK45_DRIVER_ID;
 
-	if (rx_header.IdType != FDCAN_EXTENDED_ID || rx_header.Identifier != expected_id) {
-		g_tx_errors++;
+	if ((rx_header.IdType != FDCAN_EXTENDED_ID) || (rx_header.Identifier != expected_id)) {
+		ak45_health.rx_errors++;
+		ak45_health.feedback_rx_failed = true;
 		return;
 	}
 
 	ak45_feedback_t fb = {0};
-	ak45_parse_feedback(rx_data, &fb);
+	if (ak45_parse_feedback(rx_data, &fb) != W_SUCCESS) {
+		ak45_health.rx_errors++;
+		ak45_health.feedback_rx_failed = true;
+	}
 
 	// overwrite stale data if newer data is available
 	BaseType_t higher_priority_task_woken = pdFALSE;
@@ -298,4 +326,75 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	if (g_ak45_hfdcan == hfdcan) {
 		ak45_fdcan_rx_callback(hfdcan, RxFifo1ITs);
 	}
+}
+
+health_status_t ak45_get_status(void) {
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_AK45,
+							  .error_bitfield = 0};
+
+	if (!ak45_health.hard_stop_calibrated) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_CALIBRATED_OFFSET;
+	}
+
+	if (ak45_health.hard_stop_cal_failed) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_FAILED_CALIBRATION_OFFSET;
+	}
+
+	if (ak45_health.cmd_tx_failed) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
+	}
+
+	if (ak45_health.feedback_rx_failed) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_RX_FAILURE_OFFSET;
+	}
+
+	if (!ak45_health.is_init) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+	}
+
+	log_text(LOG_WAIT_MS,
+			 LOG_LVL_INFO,
+			 "ak45",
+			 "is_init=%d, hard_stop_calibrated=%d, hard_stop_cal_failed=%d, rx_errors=%lu, "
+			 "tx_errors=%lu",
+			 ak45_health.is_init,
+			 ak45_health.hard_stop_calibrated,
+			 ak45_health.hard_stop_cal_failed,
+			 ak45_health.rx_errors,
+			 ak45_health.tx_errors);
+
+	log_text(LOG_WAIT_MS,
+			 LOG_LVL_INFO,
+			 "ak45",
+			 "out_of_memory=%lu, not_initialized=%lu, feedback_queue_empty=%lu, "
+			 "reinit_attempts=%lu, invalid_args=%lu, timer_get_ms_fails=%lu",
+			 ak45_health.out_of_memory,
+			 ak45_health.not_initialized,
+			 ak45_health.feedback_queue_empty,
+			 ak45_health.reinit_attempts,
+			 ak45_health.invalid_args,
+			 ak45_health.timer_get_ms_fails);
+
+	log_text(LOG_WAIT_MS,
+			 LOG_LVL_INFO,
+			 "ak45",
+			 "init_timeout=%lu, init_notif_fails=%lu, init_start_fails=%lu, init_filter_fails=%lu, "
+			 "fdcan_stop_fails=%lu",
+			 ak45_health.init_fdcan_timeout,
+			 ak45_health.init_fdcan_notification_fails,
+			 ak45_health.init_fdcan_start_fails,
+			 ak45_health.init_fdcan_filter_cfg_fails,
+			 ak45_health.fdcan_stop_fails);
+
+	ak45_health.hard_stop_cal_failed = false;
+	ak45_health.cmd_tx_failed = false;
+	ak45_health.feedback_rx_failed = false;
+
+	return status;
 }
