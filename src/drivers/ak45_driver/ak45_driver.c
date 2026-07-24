@@ -141,7 +141,16 @@ static w_status_t ak45_driver_temperature_telemetry() {
 		return W_FAILURE;
 	}
 
-	uint16_t scaled_temperature = (uint16_t)(fb.temperature_c + AK45_TELEMETRY_INT16_OFFSET);
+	// TODO: change to use automatic telem scaling once merged
+	int32_t temperature_scaled_int32 = (int32_t)fb.temperature_c + AK45_TELEMETRY_INT16_OFFSET;
+	uint16_t scaled_temperature;
+	if (temperature_scaled_int32 < 0) {
+		scaled_temperature = 0;
+	} else if (temperature_scaled_int32 > UINT16_MAX) {
+		scaled_temperature = UINT16_MAX;
+	} else {
+		scaled_temperature = (uint16_t)temperature_scaled_int32;
+	}
 
 	can_msg_t msg = {0};
 	build_analog_sensor_16bit_msg(
@@ -167,7 +176,16 @@ static w_status_t ak45_driver_current_telemetry() {
 		return W_FAILURE;
 	}
 
-	uint16_t scaled_current = (uint16_t)((fb.current_a * 100.0f) + AK45_TELEMETRY_INT16_OFFSET);
+	// TODO: change to use automatic telem scaling once merged
+	float32_t current_scaled_f = (fb.current_a * 100.0f) + AK45_TELEMETRY_INT16_OFFSET;
+	uint16_t scaled_current;
+	if (current_scaled_f < 0.0f) {
+		scaled_current = 0;
+	} else if (current_scaled_f > (float32_t)UINT16_MAX) {
+		scaled_current = UINT16_MAX;
+	} else {
+		scaled_current = (uint16_t)current_scaled_f;
+	}
 
 	can_msg_t msg = {0};
 	build_analog_sensor_16bit_msg(
@@ -193,7 +211,16 @@ static w_status_t ak45_driver_angle_telemetry() {
 		return W_FAILURE;
 	}
 
-	uint16_t scaled_angle = (uint16_t)((fb.position_deg * 1000.0f) + AK45_TELEMETRY_INT16_OFFSET);
+	// TODO: change to use automatic telem scaling once merged
+	float32_t angle_scaled_f = (fb.position_deg * 1000.0f) + AK45_TELEMETRY_INT16_OFFSET;
+	uint16_t scaled_angle;
+	if (angle_scaled_f < 0.0f) {
+		scaled_angle = 0;
+	} else if (angle_scaled_f > (float32_t)UINT16_MAX) {
+		scaled_angle = UINT16_MAX;
+	} else {
+		scaled_angle = (uint16_t)angle_scaled_f;
+	}
 
 	can_msg_t msg = {0};
 	build_analog_sensor_16bit_msg(
@@ -308,77 +335,26 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	// Register telemetry callbacks
 	// No telem sent during SLEEP or ERROR phases
 	static const telemetry_source_config_t telemetry_sources[] = {
-		{"Motor Angle; Phase: IDLE, Freq: 5Hz", ak45_driver_angle_telemetry, STATE_IDLE, 1000 / 5},
-		{"Motor Angle; Phase: PAD_FILTER, Freq: 20Hz",
-		 ak45_driver_angle_telemetry,
-		 STATE_PAD_FILTER,
-		 1000 / 20},
-		{"Motor Angle; Phase: PAD_NAV, Freq: 20Hz",
-		 ak45_driver_angle_telemetry,
-		 STATE_PAD_NAV,
-		 1000 / 20},
-		{"Motor Angle; Phase: BOOST, Freq: 10Hz",
-		 ak45_driver_angle_telemetry,
-		 STATE_BOOST,
-		 1000 / 10},
-		{"Motor Angle; Phase: ACT_ALLOWED, Freq: 10Hz",
-		 ak45_driver_angle_telemetry,
-		 STATE_ACT_ALLOWED,
-		 1000 / 10},
-		{"Motor Angle; Phase: RECOVERY, Freq: 10Hz",
-		 ak45_driver_angle_telemetry,
-		 STATE_RECOVERY,
-		 1000 / 10},
+		{"Motor Angle", ak45_driver_angle_telemetry, STATE_IDLE, 1000 / 5},
+		{"Motor Angle", ak45_driver_angle_telemetry, STATE_PAD_FILTER, 1000 / 20},
+		{"Motor Angle", ak45_driver_angle_telemetry, STATE_PAD_NAV, 1000 / 20},
+		{"Motor Angle", ak45_driver_angle_telemetry, STATE_BOOST, 1000 / 10},
+		{"Motor Angle", ak45_driver_angle_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
+		{"Motor Angle", ak45_driver_angle_telemetry, STATE_RECOVERY, 1000 / 10},
 
-		{"Motor Temperature; Phase: IDLE, Freq: 5Hz",
-		 ak45_driver_temperature_telemetry,
-		 STATE_IDLE,
-		 1000 / 5},
-		{"Motor Temperature; Phase: PAD_FILTER, Freq: 5Hz",
-		 ak45_driver_temperature_telemetry,
-		 STATE_PAD_FILTER,
-		 1000 / 5},
-		{"Motor Temperature; Phase: PAD_NAV, Freq: 5Hz",
-		 ak45_driver_temperature_telemetry,
-		 STATE_PAD_NAV,
-		 1000 / 5},
-		{"Motor Temperature; Phase: BOOST, Freq: 1Hz",
-		 ak45_driver_temperature_telemetry,
-		 STATE_BOOST,
-		 1000 / 1},
-		{"Motor Temperature; Phase: ACT_ALLOWED, Freq: 1Hz",
-		 ak45_driver_temperature_telemetry,
-		 STATE_ACT_ALLOWED,
-		 1000 / 1},
-		{"Motor Temperature; Phase: RECOVERY, Freq: 1Hz",
-		 ak45_driver_temperature_telemetry,
-		 STATE_RECOVERY,
-		 1000 / 1},
+		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_IDLE, 1000 / 5},
+		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_PAD_FILTER, 1000 / 5},
+		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_PAD_NAV, 1000 / 5},
+		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_BOOST, 1000 / 1},
+		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_ACT_ALLOWED, 1000 / 1},
+		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_RECOVERY, 1000 / 1},
 
-		{"Motor Current; Phase: IDLE, Freq: 5Hz",
-		 ak45_driver_current_telemetry,
-		 STATE_IDLE,
-		 1000 / 5},
-		{"Motor Current; Phase: PAD_FILTER, Freq: 5Hz",
-		 ak45_driver_current_telemetry,
-		 STATE_PAD_FILTER,
-		 1000 / 5},
-		{"Motor Current; Phase: PAD_NAV, Freq: 5Hz",
-		 ak45_driver_current_telemetry,
-		 STATE_PAD_NAV,
-		 1000 / 5},
-		{"Motor Current; Phase: BOOST, Freq: 2Hz",
-		 ak45_driver_current_telemetry,
-		 STATE_BOOST,
-		 1000 / 2},
-		{"Motor Current; Phase: ACT_ALLOWED, Freq: 2Hz",
-		 ak45_driver_current_telemetry,
-		 STATE_ACT_ALLOWED,
-		 1000 / 2},
-		{"Motor Current; Phase: RECOVERY, Freq: 2Hz",
-		 ak45_driver_current_telemetry,
-		 STATE_RECOVERY,
-		 1000 / 2},
+		{"Motor Current", ak45_driver_current_telemetry, STATE_IDLE, 1000 / 5},
+		{"Motor Current", ak45_driver_current_telemetry, STATE_PAD_FILTER, 1000 / 5},
+		{"Motor Current", ak45_driver_current_telemetry, STATE_PAD_NAV, 1000 / 5},
+		{"Motor Current", ak45_driver_current_telemetry, STATE_BOOST, 1000 / 2},
+		{"Motor Current", ak45_driver_current_telemetry, STATE_ACT_ALLOWED, 1000 / 2},
+		{"Motor Current", ak45_driver_current_telemetry, STATE_RECOVERY, 1000 / 2},
 	};
 
 	static const size_t telemetry_source_count =
