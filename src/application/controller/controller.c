@@ -57,7 +57,7 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 
 	float64_t ref_signal = 0.0;
 
-	bool is_run = false;
+	bool is_success = false;
 
 	controller_codegen_entry(p_ctx->p_gnc_stack_data,
 							 flight_time_sec,
@@ -68,13 +68,14 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 							 &(p_ctx->gnc_controller_ctx),
 							 &(p_output->canard_command_angle_rad),
 							 p_output->ref_roll,
-							 &is_run);
+							 &is_success);
 
-	if (is_run) { // the controller ran
+	if (is_success) { // the controller ran
 		// update new timestamp
-		p_output->timestamp_tenth_ms = timestamp_tenth_ms;
+		p_output->timestamp_tenth_ms =
+			timestamp_tenth_ms; // this is the timestamp of last motor cmd
 	} else {
-		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
+		log_text(0, LOG_LVL_WARN, "controller", "Controller failed");
 	}
 	p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 

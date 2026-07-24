@@ -189,8 +189,11 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 				ran_ctrl = true;
 #endif
 			}
+
+#ifndef NO_MOTOR
 			// set motor command to zero in non-actuation state
 			ak45_send_position_cmd(0);
+#endif
 
 			break;
 
@@ -225,12 +228,14 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 				ran_ctrl = true;
 #endif
 
+#ifndef NO_MOTOR
 				// TODO: switch to motor handler once exists
 				/****************************************************************/
 				float32_t motor_angle_deg =
 					(float32_t)(controller_output.canard_command_angle_rad * DEG_PER_RAD);
 				ak45_send_position_cmd(motor_angle_deg);
 				/****************************************************************/
+#endif
 			}
 			break;
 
