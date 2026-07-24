@@ -15,7 +15,7 @@
 #define M_PI 3.14159265
 #endif
 
-static inline bool float_equal(double a, double b) {
+static inline bool float_equal(float64_t a, float64_t b) {
 	return fabs(a - b) < 0.00001;
 }
 
@@ -32,16 +32,16 @@ static inline bool float_equal(double a, double b) {
 #define EQ_EPSILON 1e-8
 
 /**
- * 3D double vector.
+ * 3D float64_t vector.
  */
 // TODO: rename to vector3d_f64_t
 typedef union {
-	double array[SIZE_VECTOR_3D];
+	float64_t array[SIZE_VECTOR_3D];
 
 	struct {
-		double x;
-		double y;
-		double z;
+		float64_t x;
+		float64_t y;
+		float64_t z;
 	};
 } vector3d_t;
 
@@ -56,22 +56,22 @@ typedef union {
 } vector3d_f32_t;
 
 /**
- * Double quaternion.
+ * float64_t quaternion.
  */
 // TODO: rename to quaternion_f64_t
 typedef union {
-	double array[SIZE_QUAT];
+	float64_t array[SIZE_QUAT];
 
 	struct {
-		double w;
-		double x;
-		double y;
-		double z;
+		float64_t w;
+		float64_t x;
+		float64_t y;
+		float64_t z;
 	};
 } quaternion_t;
 
 /**
- * Double quaternion.
+ * float64_t quaternion.
  */
 typedef union {
 	float array[SIZE_QUAT];
@@ -88,20 +88,20 @@ typedef union {
  * 3D (rotation) matrix.
  */
 typedef union {
-	double array[SIDE_MATRIX_3D][SIDE_MATRIX_3D];
+	float64_t array[SIDE_MATRIX_3D][SIDE_MATRIX_3D];
 
 	// elements sij, with the row i and the column j
 	struct {
-		double s11, s12, s13;
-		double s21, s22, s23;
-		double s31, s32, s33;
+		float64_t s11, s12, s13;
+		float64_t s21, s22, s23;
+		float64_t s31, s32, s33;
 	};
 
-	double flat[SIDE_MATRIX_3D * SIDE_MATRIX_3D];
+	float64_t flat[SIDE_MATRIX_3D * SIDE_MATRIX_3D];
 } matrix3d_t;
 
 // helper function for estimator models
-static inline double cot(double x) {
+static inline float64_t cot(float64_t x) {
 	if (float_equal(tan(x), 0)) {
 		return 0;
 	}
@@ -111,7 +111,7 @@ static inline double cot(double x) {
 // diy helpers for f64 because cmsis-dsp doesnt have them
 
 /**
- * @brief Floating-point matrix addition (double-precision).
+ * @brief Floating-point matrix addition (float64_t-precision).
  * @param[in]  pSrcA points to the first input matrix structure
  * @param[in]  pSrcB points to the second input matrix structure
  * @param[out] pDst  points to output matrix structure
@@ -142,7 +142,7 @@ static inline void arm_mat_add_f64(const arm_matrix_instance_f64 *pSrcA,
 }
 
 /**
- * @brief Floating-point matrix and vector multiplication (double-precision).
+ * @brief Floating-point matrix and vector multiplication (float64_t-precision).
  * @param[in]  pSrcMat points to the input matrix structure
  * @param[in]  pVec    points to input vector
  * @param[out] pDst    points to output vector
@@ -165,7 +165,7 @@ static inline void arm_mat_vec_mult_f64(const arm_matrix_instance_f64 *pSrcMat,
 }
 
 /**
- * @brief Floating-point matrix scaling (double-precision).
+ * @brief Floating-point matrix scaling (float64_t-precision).
  * @param[in]  pSrc   points to input matrix
  * @param[in]  scale  scale factor
  * @param[out] pDst   points to output matrix

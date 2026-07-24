@@ -94,7 +94,9 @@ void ad_breakout_board_task(void *argument) {
 		} else {
 			update_gyro_data = true;
 			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
+#ifndef HIL
 			log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read gyro drdy.");
+#endif
 		}
 
 		// if new gyro data update the timestamp
@@ -112,14 +114,18 @@ void ad_breakout_board_task(void *argument) {
 				if (adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
 										   &raw_accel) != W_SUCCESS) {
 					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
+#ifndef HIL
 					log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read accel.");
+#endif
 				}
 			}
 
 		} else {
 			update_accel_data = true;
 			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
+#ifndef HIL
 			log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read accel drdy.");
+#endif
 		}
 
 		// if new gyro data update the timestamp

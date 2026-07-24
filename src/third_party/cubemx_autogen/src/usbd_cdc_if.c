@@ -22,6 +22,10 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
+#include "application/hil/hil.h"
+
+#include "main.h"
+#include "stm32h7xx_hal.h"
 
 /* USER CODE END INCLUDE */
 
@@ -246,6 +250,8 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   /* USER CODE END 10 */
 }
 
+extern bool done_sys_init;
+
 /**
   * @brief Data received over USB OUT endpoint are sent over CDC interface
   *         through this function.
@@ -264,8 +270,18 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 11 */
-  USBD_CDC_SetRxBuffer(&hUsbDeviceHS, &Buf[0]);
-  USBD_CDC_ReceivePacket(&hUsbDeviceHS);
+  HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET); // indicate packet received
+  #ifdef HIL
+  // process packet
+  for (uint32_t i = 0; i < *Len; i++) {
+      hil_parse_rx_bytes(Buf[i]);
+  }
+  #endif
+    
+    USBD_CDC_SetRxBuffer(&hUsbDeviceHS, &Buf[0]);
+    USBD_CDC_ReceivePacket(&hUsbDeviceHS);
+
+    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET); // indicate packet received
   return (USBD_OK);
   /* USER CODE END 11 */
 }

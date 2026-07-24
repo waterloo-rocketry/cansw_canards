@@ -7,6 +7,11 @@
 #include "drivers/timer/timer.h"
 #include "application/logger/log.h"
 #include "stm32h7xx_hal.h"
+#ifdef HIL
+#include "application/hil/hil.h"
+
+extern bool done_sys_init;
+#endif
 
 // external timer handle declaration
 extern TIM_HandleTypeDef htim2;
@@ -60,8 +65,16 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 		return W_FAILURE;
 	}
 
+#ifdef HIL
+	uint32_t timer_count = hil_timestamp_tenth_ms;
+
+	if (!done_sys_init) {
+		timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+	}
+#else
 	// retrieve the current timer count (in clock ticks)
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+#endif
 
 	// convert the timer count to milliseconds
 	// each tick is 0.1 ms, so we divide by 10 to truncate to ms accuracy
@@ -95,8 +108,16 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 		return W_FAILURE;
 	}
 
+#ifdef HIL
+	uint32_t timer_count = hil_timestamp_tenth_ms;
+
+	if (!done_sys_init) {
+		timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+	}
+#else
 	// retrieve the current timer count (in clock ticks)
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+#endif
 
 	// convert the timer count to milliseconds
 	// each tick is 0.1 ms, so we just keep the same value for a tenth of ms accuracy

@@ -191,7 +191,9 @@ w_status_t adxrs649_init() {
  */
 w_status_t adxrs649_is_data_ready(bool *p_drdy) {
 	if (!is_initialized) {
+#ifndef HIL
 		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed initialized.");
+#endif
 		return W_FAILURE;
 	}
 	if ((NULL == p_drdy)) {
@@ -224,7 +226,9 @@ w_status_t adxrs649_is_data_ready(bool *p_drdy) {
  */
 w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 	if (!is_initialized) {
+#ifndef HIL
 		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed initialized.");
+#endif
 		return W_FAILURE;
 	}
 
