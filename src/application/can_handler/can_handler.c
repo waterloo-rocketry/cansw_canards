@@ -4,11 +4,11 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../Inc/fdcan.h"
-#include "third_party/cubemx_autogen/Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h"
-#include "third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h"
-#include "third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS/Source/include/queue.h"
+#include "fdcan.h"
 #include "third_party/canlib/canlib.h"
+#include "stm32h7xx_hal.h"
+#include "FreeRTOS.h"
+#include "queue.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/can_handler/can_telemetry_scaling.h"
