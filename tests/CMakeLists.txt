@@ -307,4 +307,11 @@ add_test_group(test_ak45_driver
     ${UNIT_TESTS_DIR}/ak45_driver_test_helpers.c # source file included here
 )
 
+add_test_group(test_power_handler
+    # test file(s)
+    ${UNIT_TESTS_DIR}/power_handler_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/power_handler/power_handler.c
+)
+
 # TODO: add fsm unit tes once get a good version of codegen
