@@ -310,7 +310,15 @@ add_test_group(test_ak45_driver
 add_test_group(test_can_handler
     # test file(s)
     ${UNIT_TESTS_DIR}/can_handler_test.cpp
-    ${PROC_SRC_DIR}/application/can_handler/can_handler.c
+    # src file(s)
+    ${PROC_SRC_DIR}/application/can_handler/can_handler.c  
+)
+
+add_test_group(test_telemetry
+    # test file(s)
+    ${UNIT_TESTS_DIR}/telemetry_module_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/telemetry/telemetry.c
 )
 
 # TODO: add fsm unit tes once get a good version of codegen
