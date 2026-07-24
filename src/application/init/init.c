@@ -18,6 +18,7 @@
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
+#include "application/telemetry/telemetry.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
@@ -51,6 +52,7 @@ TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
 TaskHandle_t ms5611_task_handle = NULL;
 TaskHandle_t ad_breakout_task_handle = NULL;
+TaskHandle_t telem_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
@@ -67,6 +69,7 @@ const uint32_t ad_breakout_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
+const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
 
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
@@ -112,6 +115,7 @@ static void system_init_task(void *arg) {
 	status |= ms5611_init();
 	status |= iis2mdc_init();
 	status |= power_handler_init();
+	status |= telemetry_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -170,6 +174,9 @@ static void system_init_task(void *arg) {
 							   NULL,
 							   ad_breakout_task_priority,
 							   &ad_breakout_task_handle);
+
+	task_status &= xTaskCreate(
+		telemetry_task, "telem module", 512, NULL, telem_task_priority, &telem_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure

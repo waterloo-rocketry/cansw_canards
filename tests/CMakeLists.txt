@@ -312,6 +312,13 @@ add_test_group(test_power_handler
     ${UNIT_TESTS_DIR}/power_handler_test.cpp
     # src file(s)
     ${PROC_SRC_DIR}/application/power_handler/power_handler.c
+)   
+
+add_test_group(test_telemetry
+    # test file(s)
+    ${UNIT_TESTS_DIR}/telemetry_module_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/telemetry/telemetry.c
 )
 
 # TODO: add fsm unit tes once get a good version of codegen
