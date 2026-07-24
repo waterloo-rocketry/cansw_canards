@@ -4,11 +4,11 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "fdcan.h"
-#include "third_party/canlib/canlib.h"
-#include "stm32h7xx_hal.h"
 #include "FreeRTOS.h"
+#include "fdcan.h"
 #include "queue.h"
+#include "stm32h7xx_hal.h"
+#include "third_party/canlib/canlib.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/can_handler/can_telemetry_scaling.h"
