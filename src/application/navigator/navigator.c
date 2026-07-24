@@ -273,8 +273,9 @@ health_status_t navigator_get_status(void) {
 			 estimator_error_stats.can_log_fails,
 			 estimator_error_stats.invalid_phase_errors);
 
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_NAVIGATOR, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_NAVIGATOR,
+							  .error_bitfield = 0};
 
 	return status;
 }
