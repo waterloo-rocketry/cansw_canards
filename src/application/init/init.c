@@ -122,7 +122,6 @@ static void system_init_task(void *arg) {
 	status |= lsm6dsv32x_init();
 	status |= ms5611_init();
 	status |= power_handler_init();
-	status |= telemetry_init();
 	status |= iis2mdc_init();
 	status |= adxl380_init();
 	status |= adxrs649_init();
