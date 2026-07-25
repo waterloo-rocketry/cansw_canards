@@ -87,10 +87,18 @@ static void system_init_task(void *arg) {
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
-	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
-		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
+		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx (log)", non_crit_status);
+	}
+
+	if (telemetry_init() != W_SUCCESS) {
+		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (telem).");
+		proc_handle_fatal_error("sysinit");
+	}
+
+	if (ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS) != W_SUCCESS) {
+		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail (motor)", non_crit_status);
 	}
 
 	w_status_t status = W_SUCCESS;
