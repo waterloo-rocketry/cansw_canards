@@ -200,7 +200,8 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
 /**
  * @brief health check getter for telemtry module
  * @return health check handle for telem error
- * @note this currently does not work - it is on the todo list to make telem have health checks stuff.
+ * @note this currently does not work - it is on the todo list to make telem have health checks
+ * stuff.
  */
 health_status_t telemetry_get_status(void) {
 	health_status_t status = {.error_bitfield = 0,
