@@ -28,7 +28,7 @@
 extern TaskHandle_t fsm_task_handle;
 
 #ifdef HIL
-static const uint16_t MAX_FSM_DELAY_MS = 15000;
+static const uint16_t MAX_FSM_DELAY_MS = 60000;
 #else
 static const uint8_t MAX_FSM_DELAY_MS = 4;
 #endif
@@ -228,14 +228,12 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 				ran_ctrl = true;
 #endif
 
-#ifndef NO_MOTOR
 				// TODO: switch to motor handler once exists
 				/****************************************************************/
 				float32_t motor_angle_deg =
 					(float32_t)(controller_output.canard_command_angle_rad * DEG_PER_RAD);
 				ak45_send_position_cmd(motor_angle_deg);
 				/****************************************************************/
-#endif
 			}
 			break;
 
@@ -278,23 +276,6 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 void fsm_task(void *args) {
 	(void)args;
 
-#ifdef HIL
-	// kickoff simulink by unblocking it with 1 msg. use dummy data to verify it started
-	navigator_input_t navigator_input = {0};
-	controller_input_t controller_input = {0};
-	navigator_output_t navigator_output = {0};
-	controller_output_t controller_output = {0};
-	gnc_x_state_t x_state = {0};
-
-	hil_send_simulink_cmd(&navigator_input,
-						  &navigator_output,
-						  &x_state,
-						  &g_ctx.p_controller_context->gnc_controller_ctx,
-						  &controller_input,
-						  &controller_output,
-						  false);
-#endif
-
 	while (1) {
 		// Unblock once we receive the notification to unblock fsm
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS)) == 0) {
@@ -311,8 +292,6 @@ void fsm_task(void *args) {
 
 		all_sensors_data_t sensor_data = {0};
 
-		// TODO: decide how to deal with a function returning an error
-
 		// get inputs needed for state machine:
 		// - imu data
 		// - etc (probably more later)
@@ -322,98 +301,12 @@ void fsm_task(void *args) {
 		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
 		/******************************** HIL START ********************************/
 		// override sensor data with simulink sensors in HIL mode.
-		// expect first run of this loop to fail, as we havent unblocked hil 1st step yet.
-		// but fsm_exec() unconditionally sends cmd+telem to simulink, so next loop will have data
-		// ready.
+		// expect first run of this loop to fail, until hil statrs.
 		if (hil_wait_for_simulink_data(&sensor_data) != W_SUCCESS) {
 			log_text(1, LOG_LVL_WARN, "HIL", "Failed to get latest sensor data");
 		}
 		/******************************** HIL END ********************************/
 		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);
-
-		// TODO: add logging for board meas
-		log_data_container_t log_container = {0};
-
-		// Board IMU
-		log_container.board_imu.accelerometer.x = (float)sensor_data.board_meas.board_imu.accel.x;
-		log_container.board_imu.accelerometer.y = (float)sensor_data.board_meas.board_imu.accel.y;
-		log_container.board_imu.accelerometer.z = (float)sensor_data.board_meas.board_imu.accel.z;
-
-		log_container.board_imu.gyroscope.x = (float)sensor_data.board_meas.board_imu.gyro.x;
-		log_container.board_imu.gyroscope.y = (float)sensor_data.board_meas.board_imu.gyro.y;
-		log_container.board_imu.gyroscope.z = (float)sensor_data.board_meas.board_imu.gyro.z;
-
-		log_data(1, LOG_TYPE_BOARD_IMU, &log_container);
-
-		// Board magnetometer
-		log_container.board_mag.accelerometer.x = (float)sensor_data.board_meas.board_imu.accel.x;
-		log_container.board_mag.accelerometer.y = (float)sensor_data.board_meas.board_imu.accel.y;
-		log_container.board_mag.accelerometer.z = (float)sensor_data.board_meas.board_imu.accel.z;
-
-		log_container.board_mag.magnetometer.x = (float)sensor_data.board_meas.board_mag.meas.x;
-		log_container.board_mag.magnetometer.y = (float)sensor_data.board_meas.board_mag.meas.y;
-		log_container.board_mag.magnetometer.z = (float)sensor_data.board_meas.board_mag.meas.z;
-
-		log_data(1, LOG_TYPE_BOARD_MAG, &log_container);
-
-		// Board barometer
-		log_container.board_barometer.barometer = sensor_data.board_meas.board_baro.meas;
-		log_container.board_barometer.thermometer = 0;
-
-		log_data(1, LOG_TYPE_BOARD_BAROMETER, &log_container);
-
-		// Movella IMU accelerometer + gyro
-		log_container.movella_pt1.accelerometer.x = (float)sensor_data.mti_meas.mti_accel.meas.x;
-		log_container.movella_pt1.accelerometer.y = (float)sensor_data.mti_meas.mti_accel.meas.y;
-		log_container.movella_pt1.accelerometer.z = (float)sensor_data.mti_meas.mti_accel.meas.z;
-
-		log_container.movella_pt1.gyroscope.x = (float)sensor_data.mti_meas.mti_gyro.meas.x;
-		log_container.movella_pt1.gyroscope.y = (float)sensor_data.mti_meas.mti_gyro.meas.y;
-		log_container.movella_pt1.gyroscope.z = (float)sensor_data.mti_meas.mti_gyro.meas.z;
-
-		log_data(1, LOG_TYPE_MOVELLA_PT1, &log_container);
-
-		// Movella magnetometer + barometer
-		log_container.movella_pt2.magnetometer.x = (float)sensor_data.mti_meas.mti_mag.meas.x;
-		log_container.movella_pt2.magnetometer.y = (float)sensor_data.mti_meas.mti_mag.meas.y;
-		log_container.movella_pt2.magnetometer.z = (float)sensor_data.mti_meas.mti_mag.meas.z;
-
-		log_container.movella_pt2.barometer = sensor_data.mti_meas.mti_baro.meas;
-
-		log_data(1, LOG_TYPE_MOVELLA_PT2, &log_container);
-
-		// // Movella orientation
-		// log_container.movella_pt3.orient_w =
-		// 	(float)sensor_data.mti_meas.w;
-		// log_container.movella_pt3.orient_x =
-		// 	(float)sensor_data.mti_meas.orientation.x;
-		// log_container.movella_pt3.orient_y =
-		// 	(float)sensor_data.mti_meas.orientation.y;
-		// log_container.movella_pt3.orient_z =
-		// 	(float)sensor_data.mti_meas.orientation.z;
-
-		log_data(1, LOG_TYPE_MOVELLA_PT3, &log_container);
-
-		// AD accelerometer
-		log_container.ad_accel.accelerometer.x = (float)sensor_data.ad_meas.ad_accel.meas.x;
-		log_container.ad_accel.accelerometer.y = (float)sensor_data.ad_meas.ad_accel.meas.y;
-		log_container.ad_accel.accelerometer.z = (float)sensor_data.ad_meas.ad_accel.meas.z;
-
-		log_data(1, LOG_TYPE_AD_ACCEL, &log_container);
-
-		log_container.ad_gyro.gyroscope = (float)sensor_data.ad_meas.ad_accel.meas.z;
-
-		log_data(1, LOG_TYPE_AD_GYRO, &log_container);
-
-		// do not log AD Gyro here, log it in the raw read so we get raw mV for calibration
-
-		// Servo motor
-		log_container.servo_motor.motor_angle = sensor_data.motor_encoder_meas.meas;
-		log_container.servo_motor.motor_current = 0;
-		log_container.servo_motor.motor_temperature = 0;
-
-		log_data(1, LOG_TYPE_SERVO_MOTOR, &log_container);
-
 #endif
 
 		flight_phase_gen_sync_events(

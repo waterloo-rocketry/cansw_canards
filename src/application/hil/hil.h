@@ -8,8 +8,6 @@
 #include "rocketlib/include/common.h"
 
 #ifdef HIL
-// This is to prevent unintentionally building in HIL mode. Devs must explicitly allow HIL!
-// #warning "HIL mode enabled! Comment out this line while working on HIL then uncomment when done."
 
 extern volatile uint32_t hil_timestamp_tenth_ms; // HIL timestamp in 0.1 ms units
 

@@ -87,9 +87,7 @@ static void system_init_task(void *arg) {
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
-#ifndef NO_MOTOR
 	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
-#endif
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
@@ -118,10 +116,8 @@ static void system_init_task(void *arg) {
 	status |= power_handler_init();
 	status |= telemetry_init();
 	status |= iis2mdc_init();
-#ifndef HIL
 	status |= adxl380_init();
 	status |= adxrs649_init();
-#endif
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
