@@ -143,14 +143,19 @@ static w_status_t ak45_driver_temperature_telemetry() {
 
 	// TODO: change to use automatic telem scaling once merged
 	int16_t temperature_scaled_int16 = 0;
-	if (can_encode_scaled_int(SCALE_SERVO_TEMP, fb.temperature_c, &temperature_scaled_int16) != W_SUCCESS) {
+	if (can_encode_scaled_int(SCALE_SERVO_TEMP, fb.temperature_c, &temperature_scaled_int16) !=
+		W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperture");
 		return W_FAILURE;
 	}
 
 	can_msg_t msg = {0};
 	build_analog_sensor_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_TEMP, (uint16_t)(temperature_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET), &msg);
+		PRIO_LOW,
+		(uint16_t)timestamp_ms,
+		SENSOR_CANARD_SERVO_TEMP,
+		(uint16_t)(temperature_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET),
+		&msg);
 
 	return can_handler_transmit(&msg);
 }
@@ -173,14 +178,18 @@ static w_status_t ak45_driver_current_telemetry() {
 	}
 	// TODO: change to use automatic telem scaling once merged
 	int16_t current_scaled_int16 = 0;
-	if (can_encode_scaled_float(SCALE_SERVO_CURRENT, fb.current_a, &current_scaled_int16) != W_SUCCESS) {
+	if (can_encode_scaled_float(SCALE_SERVO_CURRENT, fb.current_a, &current_scaled_int16) !=
+		W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperture");
 		return W_FAILURE;
 	}
 
 	can_msg_t msg = {0};
-	build_analog_sensor_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_CURR, (uint16_t)(current_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET), &msg);
+	build_analog_sensor_16bit_msg(PRIO_LOW,
+								  (uint16_t)timestamp_ms,
+								  SENSOR_CANARD_SERVO_CURR,
+								  (uint16_t)(current_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET),
+								  &msg);
 
 	return can_handler_transmit(&msg);
 }
@@ -203,14 +212,18 @@ static w_status_t ak45_driver_angle_telemetry() {
 	}
 
 	int16_t scaled_angle_int16 = 0;
-	if (can_encode_scaled_float(SCALE_SERVO_ANGLE, fb.position_deg, &scaled_angle_int16) != W_SUCCESS) {
+	if (can_encode_scaled_float(SCALE_SERVO_ANGLE, fb.position_deg, &scaled_angle_int16) !=
+		W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale the value");
 		return W_FAILURE;
 	}
 
 	can_msg_t msg = {0};
-	build_analog_sensor_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_ANGLE, (uint16_t)(scaled_angle_int16 + AK45_TELEMETRY_INT16_OFFSET), &msg);
+	build_analog_sensor_16bit_msg(PRIO_LOW,
+								  (uint16_t)timestamp_ms,
+								  SENSOR_CANARD_SERVO_ANGLE,
+								  (uint16_t)(scaled_angle_int16 + AK45_TELEMETRY_INT16_OFFSET),
+								  &msg);
 
 	return can_handler_transmit(&msg);
 }
@@ -326,21 +339,18 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		{"Motor Angle", ak45_driver_angle_telemetry, STATE_PAD_NAV, 1000 / 20},
 		{"Motor Angle", ak45_driver_angle_telemetry, STATE_BOOST, 1000 / 10},
 		{"Motor Angle", ak45_driver_angle_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
-		{"Motor Angle", ak45_driver_angle_telemetry, STATE_RECOVERY, 1000 / 10},
 
 		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_IDLE, 1000 / 5},
 		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_PAD_FILTER, 1000 / 5},
 		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_PAD_NAV, 1000 / 5},
 		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_BOOST, 1000 / 1},
 		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_ACT_ALLOWED, 1000 / 1},
-		{"Motor Temperature", ak45_driver_temperature_telemetry, STATE_RECOVERY, 1000 / 1},
 
 		{"Motor Current", ak45_driver_current_telemetry, STATE_IDLE, 1000 / 5},
 		{"Motor Current", ak45_driver_current_telemetry, STATE_PAD_FILTER, 1000 / 5},
 		{"Motor Current", ak45_driver_current_telemetry, STATE_PAD_NAV, 1000 / 5},
 		{"Motor Current", ak45_driver_current_telemetry, STATE_BOOST, 1000 / 2},
 		{"Motor Current", ak45_driver_current_telemetry, STATE_ACT_ALLOWED, 1000 / 2},
-		{"Motor Current", ak45_driver_current_telemetry, STATE_RECOVERY, 1000 / 2},
 	};
 
 	static const size_t telemetry_source_count =

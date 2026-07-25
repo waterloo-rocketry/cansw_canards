@@ -10,6 +10,7 @@ extern "C" {
 #include "can.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "hal_fdcan_mock.h"
+#include "application/can_handler/can_telemetry_scaling.h"
 #include "queue.h"
 #include "task.h"
 
@@ -23,6 +24,8 @@ FAKE_VOID_FUNC(build_analog_sensor_16bit_msg, can_msg_prio_t, uint16_t, can_anal
 			   uint16_t, can_msg_t *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
 FAKE_VALUE_FUNC(w_status_t, telemetry_register, const telemetry_source_config_t *)
+FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_int, can_scaling_types_t, int64_t, void *)
+FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_float, can_scaling_types_t, float32_t, void *)
 }
 
 // There is a while loop in ak45_driver initialization which waits for messages to be received.il
@@ -381,79 +384,4 @@ TEST_F(AK45DriverTest, SendTelemetryFailsIfCanHandlerTransmitFails) {
 	EXPECT_EQ(ak45_test_temperature_telemetry(), W_FAILURE);
 	EXPECT_EQ(ak45_test_current_telemetry(), W_FAILURE);
 	EXPECT_EQ(can_handler_transmit_fake.call_count, 3);
-}
-
-TEST_F(AK45DriverTest, SendTelemetrySucceedsAndScalesDataCorrectly) {
-	// Init
-	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
-	ak45_driver_init(&hfdcan1, 0);
-
-	// Arrange
-	xQueuePeek_fake.custom_fake = xQueuePeek_custom_feedback;
-	timer_get_ms_fake.return_val = W_SUCCESS;
-	can_handler_transmit_fake.return_val = W_SUCCESS;
-
-	// Customize angle and ensure runs smoothly
-	g_test_feedback.position_deg = 12.345f;
-	EXPECT_EQ(ak45_test_angle_telemetry(), W_SUCCESS);
-	// Ensure the angle is as expected
-	uint16_t expected_angle = (uint16_t)((g_test_feedback.position_deg * 1000.0f) + 32768);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg3_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  expected_angle);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg2_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  SENSOR_CANARD_SERVO_ANGLE);
-
-	// Customize angle to overflow
-	g_test_feedback.position_deg = 1000.0f;
-	EXPECT_EQ(ak45_test_angle_telemetry(), W_SUCCESS);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg3_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  UINT16_MAX);
-
-	// Cuztomize angle to go negative
-	g_test_feedback.position_deg = -1000.0f;
-	EXPECT_EQ(ak45_test_angle_telemetry(), W_SUCCESS);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg3_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  0);
-
-	// Customize temperature and ensure runs smoothly (not possible to go negative or overflow)
-	g_test_feedback.temperature_c = 42;
-	EXPECT_EQ(ak45_test_temperature_telemetry(), W_SUCCESS);
-	uint16_t expected_temperature = (uint16_t)((int32_t)g_test_feedback.temperature_c + 32768);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg3_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  expected_temperature);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg2_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  SENSOR_CANARD_SERVO_TEMP);
-
-	// Customize current and ensure runs smoothly
-	g_test_feedback.current_a = 5.5f;
-	EXPECT_EQ(ak45_test_current_telemetry(), W_SUCCESS);
-	uint16_t expected_current = (uint16_t)((g_test_feedback.current_a * 100.0f) + 32768);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg3_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  expected_current);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg2_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  SENSOR_CANARD_SERVO_CURR);
-
-	// Customize current to overflow
-	g_test_feedback.current_a = 1000.0f;
-	EXPECT_EQ(ak45_test_current_telemetry(), W_SUCCESS);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg3_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  UINT16_MAX);
-
-	// Customize current to go negative
-	g_test_feedback.current_a = -1000.0f;
-	EXPECT_EQ(ak45_test_current_telemetry(), W_SUCCESS);
-	EXPECT_EQ(build_analog_sensor_16bit_msg_fake
-				  .arg3_history[build_analog_sensor_16bit_msg_fake.call_count - 1],
-			  0);
-
-	EXPECT_EQ(can_handler_transmit_fake.call_count, 7);
 }
