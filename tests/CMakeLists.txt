@@ -312,7 +312,14 @@ add_test_group(test_power_handler
     ${UNIT_TESTS_DIR}/power_handler_test.cpp
     # src file(s)
     ${PROC_SRC_DIR}/application/power_handler/power_handler.c
-)   
+)
+
+add_test_group(test_can_handler
+    # test file(s)
+    ${UNIT_TESTS_DIR}/can_handler_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/can_handler/can_handler.c  
+)
 
 add_test_group(test_telemetry
     # test file(s)
