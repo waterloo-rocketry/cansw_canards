@@ -30,6 +30,15 @@ w_status_t controller_init(void) {
 	return W_SUCCESS;
 }
 
+w_status_t controller_codegen_init(controller_ctx_t *p_ctx) {
+	// init to default values
+	p_ctx->gnc_controller_ctx.coeffs[0] = 2;
+	p_ctx->gnc_controller_ctx.P[0] = 1e-9;
+	p_ctx->gnc_controller_ctx.P[3] = 1e-5;
+
+	return W_SUCCESS;
+}
+
 // helper to run 1 iteration of the controller algo, including delaying where needed.
 w_status_t controller_step(const controller_input_t *p_input, const uint32_t timestamp_tenth_ms,
 						   controller_ctx_t *p_ctx, controller_output_t *p_output) {
@@ -44,11 +53,11 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 											 (p_input->launch_timestamp_ms))) *
 								MS_TO_SEC;
 	float64_t dt_controller_sec =
-		((float64_t)(timestamp_tenth_ms - (p_ctx->last_run_tenth_ms))) * MS_TO_SEC;
+		((float64_t)(timestamp_tenth_ms - (p_ctx->last_run_tenth_ms))) * TENTH_MS_TO_MS * MS_TO_SEC;
 
 	float64_t ref_signal = 0.0;
 
-	bool is_run = false;
+	bool is_success = false;
 
 	controller_codegen_entry(p_ctx->p_gnc_stack_data,
 							 flight_time_sec,
@@ -59,15 +68,16 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 							 &(p_ctx->gnc_controller_ctx),
 							 &(p_output->canard_command_angle_rad),
 							 p_output->ref_roll,
-							 &is_run);
+							 &is_success);
 
-	if (is_run) { // the controller ran
+	if (is_success) { // the controller ran
 		// update new timestamp
-		p_output->timestamp_tenth_ms = timestamp_tenth_ms;
-		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
+		p_output->timestamp_tenth_ms =
+			timestamp_tenth_ms; // this is the timestamp of last motor cmd
 	} else {
-		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
+		log_text(0, LOG_LVL_WARN, "controller", "Controller failed");
 	}
+	p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 
 	return W_SUCCESS;
 }
