@@ -5,11 +5,10 @@
 #include <string.h>
 
 #include "FreeRTOS.h"
-#include "application/logger/log.h"
-#include "drivers/gpio/gpio.h"
+#include "fdcan.h"
 #include "queue.h"
-#include "third_party/canlib/message/msg_general.h" /* For build_debug_raw_msg */
-#include "third_party/canlib/message_types.h" /* For MSG_DEBUG_RAW, PRIO_HIGH, etc. */
+#include "stm32h7xx_hal.h"
+#include "third_party/canlib/canlib.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/can_handler/can_telemetry_scaling.h"

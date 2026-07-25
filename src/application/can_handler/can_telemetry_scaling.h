@@ -55,9 +55,6 @@ typedef struct {
 
 static const can_scale_data_t can_scale_factor[SCALE_COUNT] = {
 	[SCALE_NAV_ORIENTATION] = {.type = TYPE_INT16, .scale = 10000},
-	// TODO: check with Tristan whether INT24 is necessary here. Using INT32 for now
-	// because can_store_signed() stores INT24 as a full 4-byte int32 anyway (the 3-byte
-	// packing isn't implemented), so INT24 would overflow a real 24-bit field
 	[SCALE_NAV_ANGULAR_VELOCITY] = {.type = TYPE_INT24, .scale = 1000},
 	[SCALE_NAV_VELOCITY] = {.type = TYPE_INT24, .scale = 1000},
 	[SCALE_NAV_ALTITUDE] = {.type = TYPE_UINT16, .scale = 1},
@@ -77,7 +74,7 @@ static const can_scale_data_t can_scale_factor[SCALE_COUNT] = {
 	[SCALE_MTI_EST_VELOCITY] = {.type = TYPE_INT16, .scale = 10},
 
 	[SCALE_SERVO_ANGLE] = {.type = TYPE_INT16, .scale = 1000},
-	[SCALE_SERVO_CURRENT] = {.type = TYPE_UINT16, .scale = 1},
+	[SCALE_SERVO_CURRENT] = {.type = TYPE_INT16, .scale = 1},
 	[SCALE_SERVO_TEMP] = {.type = TYPE_INT16, .scale = 1},
 };
 
