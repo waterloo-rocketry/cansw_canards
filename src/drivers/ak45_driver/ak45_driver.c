@@ -46,6 +46,25 @@ static uint32_t g_tx_errors = 0;
 static bool is_init = false;
 static volatile bool received_can_msg = false;
 
+const ak45_calibration_config_t ak45_calibration_config = {
+	.seek_target_deg = 50.0f,
+	.backoff_deg = 3.0f,
+	.backoff_settle_ms = 300,
+	.stall_speed_erpm_max = 50.0f,
+	.stall_current_a_min = 0.2f,
+	.stall_hold_ms = 200,
+	.stall_sample_count = 5,
+	.max_tap_delta_deg = 1.0f,
+	.seek_timeout_ms = 40000,
+	.settle_timeout_ms = 3000,
+	.position_tolerance_deg = 0.5f,
+	.min_span_deg = 30.0f,
+	.max_span_deg = 60.0f,
+
+	.cal_speed_rpm = 200,
+	.cal_accel_rpm_s2 = 32767,
+};
+
 /**
  * @brief Transmit 29-bit ID via FDCAN
  *
@@ -58,6 +77,13 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
 	if ((NULL == g_ak45_hfdcan) || (NULL == data) || (len > 8)) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointer");
 		return W_FAILURE;
+	}
+
+	// Reinit the CAN module if a bus off state was detected
+	FDCAN_ProtocolStatusTypeDef protocolStatus = {};
+	HAL_FDCAN_GetProtocolStatus(g_ak45_hfdcan, &protocolStatus);
+	if (protocolStatus.BusOff) {
+		CLEAR_BIT(g_ak45_hfdcan->Instance->CCCR, FDCAN_CCCR_INIT);
 	}
 
 	FDCAN_TxHeaderTypeDef tx_header = {0};
@@ -178,8 +204,8 @@ static w_status_t ak45_driver_current_telemetry() {
 	}
 	// TODO: change to use automatic telem scaling once merged
 	int16_t current_scaled_int16 = 0;
-	if (can_encode_scaled_float(SCALE_SERVO_CURRENT, fb.current_a, &current_scaled_int16) !=
-		W_SUCCESS) {
+	if (can_encode_scaled_float(
+			SCALE_SERVO_CURRENT, (fb.current_a * 1000), &current_scaled_int16) != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperture");
 		return W_FAILURE;
 	}
@@ -228,17 +254,62 @@ static w_status_t ak45_driver_angle_telemetry() {
 	return can_handler_transmit(&msg);
 }
 
+w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
+	if ((NULL == fb) || (!is_init)) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointers or not initialized");
+		return W_FAILURE;
+	}
+
+	if (xQueuePeek(g_feedback_queue, fb, 0) == pdPASS) {
+		return W_SUCCESS;
+	}
+
+	return W_FAILURE; // empty queue or no feedback yet
+}
+
 w_status_t ak45_send_position_cmd(float32_t angle_deg) {
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | AK45_DRIVER_ID;
 
 	int32_t pos_raw = (int32_t)(angle_deg * AK45_POS_CMD_DEG_TO_POS);
 	uint8_t data[4];
+	data[0] = (uint8_t)(((uint32_t)pos_raw >> 24) & 0xFF);
+	data[1] = (uint8_t)(((uint32_t)pos_raw >> 16) & 0xFF);
+	data[2] = (uint8_t)(((uint32_t)pos_raw >> 8) & 0xFF);
+	data[3] = (uint8_t)((uint32_t)pos_raw & 0xFF);
+
+	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
+}
+
+w_status_t ak45_send_current_cmd(int32_t current_mA) {
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT << 8) | AK45_DRIVER_ID;
+
+	uint8_t data[4];
+	data[0] = (uint8_t)(((uint32_t)current_mA >> 24) & 0xFF);
+	data[1] = (uint8_t)(((uint32_t)current_mA >> 16) & 0xFF);
+	data[2] = (uint8_t)(((uint32_t)current_mA >> 8) & 0xFF);
+	data[3] = (uint8_t)((uint32_t)current_mA & 0xFF);
+
+	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
+}
+
+w_status_t ak45_send_pos_velo_cmd(float32_t angle_deg, uint16_t mag_speed_rpm,
+								  int16_t accel_rpm_s2) {
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS_SPD << 8) | AK45_DRIVER_ID;
+
+	uint32_t pos_raw = ((int32_t)(angle_deg * AK45_POS_CMD_DEG_TO_POS));
+	uint8_t data[8];
 	data[0] = (uint8_t)((pos_raw >> 24) & 0xFF);
 	data[1] = (uint8_t)((pos_raw >> 16) & 0xFF);
 	data[2] = (uint8_t)((pos_raw >> 8) & 0xFF);
 	data[3] = (uint8_t)(pos_raw & 0xFF);
 
-	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
+	data[4] = (uint8_t)(((uint16_t)mag_speed_rpm >> 8) & 0xFF);
+	data[5] = (uint8_t)((uint16_t)mag_speed_rpm & 0xFF);
+
+	data[6] = (uint8_t)((accel_rpm_s2 >> 8) & 0xFF);
+	data[7] = (uint8_t)(accel_rpm_s2 & 0xFF);
+
+	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_8);
 }
 
 w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms) {
@@ -291,8 +362,6 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 		ak45_stop_can();
 		return W_FAILURE;
 	}
-	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE << 8) | AK45_DRIVER_ID;
-
 	// make sure we recieved a can msg before we send one
 	uint32_t start_can_init_time_ms = 0;
 	if (timer_get_ms(&start_can_init_time_ms) != W_SUCCESS) {
@@ -307,7 +376,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	// described timeout
 	while ((!received_can_msg) &&
 		   ((curr_time_ms - start_can_init_time_ms) <= can_init_timeout_ms)) {
-		vTaskDelay(500);
+		vTaskDelay(pdMS_TO_TICKS(500));
 
 		if (timer_get_ms(&curr_time_ms) != W_SUCCESS) {
 			log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "Failed to get time");
@@ -324,8 +393,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	}
 
 	// set current position to 0
-	uint8_t zero_data[1] = {0};
-	if (ak45_can_transmit_ext(ext_id, zero_data, FDCAN_DLC_BYTES_1) != W_SUCCESS) {
+	if (ak45_send_set_origin() != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_FATAL, "ak45", "failed to reset to 0");
 		ak45_stop_can();
 		return W_FAILURE;
@@ -379,19 +447,13 @@ w_status_t ak45_send_disable_cmd(void) {
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT << 8) | AK45_DRIVER_ID;
 	uint8_t data[4] = {0, 0, 0, 0};
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
+	return W_SUCCESS;
 }
 
-w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
-	if ((NULL == fb) || (!is_init)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointers or not initialized");
-		return W_FAILURE;
-	}
-
-	if (xQueuePeek(g_feedback_queue, fb, 0) == pdPASS) {
-		return W_SUCCESS;
-	}
-
-	return W_FAILURE; // empty queue or no feedback yet
+w_status_t ak45_send_set_origin(void) {
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE << 8) | AK45_DRIVER_ID;
+	uint8_t zero_data[1] = {0};
+	return ak45_can_transmit_ext(ext_id, zero_data, FDCAN_DLC_BYTES_1);
 }
 
 uint32_t ak45_get_tx_errors(void) {
@@ -443,4 +505,21 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	if (g_ak45_hfdcan == hfdcan) {
 		ak45_fdcan_rx_callback(hfdcan, RxFifo1ITs);
 	}
+}
+
+// TODO: test version which 5 degrees on both side with
+w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config) {
+	if (ak45_send_pos_velo_cmd(10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
+		return W_FAILURE;
+	}
+	vTaskDelay(pdMS_TO_TICKS(5000)); // 10 seconds
+	if (ak45_send_pos_velo_cmd(-10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
+		return W_FAILURE;
+	}
+	vTaskDelay(pdMS_TO_TICKS(5000)); // 10 seconds
+
+	// set to calibrated
+	return W_SUCCESS;
 }
