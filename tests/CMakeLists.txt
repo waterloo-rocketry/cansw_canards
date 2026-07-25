@@ -307,6 +307,20 @@ add_test_group(test_ak45_driver
     ${UNIT_TESTS_DIR}/ak45_driver_test_helpers.c # source file included here
 )
 
+add_test_group(test_can_handler
+    # test file(s)
+    ${UNIT_TESTS_DIR}/can_handler_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/can_handler/can_handler.c  
+)
+
+add_test_group(test_telemetry
+    # test file(s)
+    ${UNIT_TESTS_DIR}/telemetry_module_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/telemetry/telemetry.c
+)
+
 add_test_group(test_ak45_calibration
     ${UNIT_TESTS_DIR}/ak45_calibration_test.cpp
     ${PROC_SRC_DIR}/drivers/ak45_driver/ak45_calibration.c
