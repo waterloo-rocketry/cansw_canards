@@ -142,19 +142,15 @@ static w_status_t ak45_driver_temperature_telemetry() {
 	}
 
 	// TODO: change to use automatic telem scaling once merged
-	int32_t temperature_scaled_int32 = (int32_t)fb.temperature_c + AK45_TELEMETRY_INT16_OFFSET;
-	uint16_t scaled_temperature;
-	if (temperature_scaled_int32 < 0) {
-		scaled_temperature = 0;
-	} else if (temperature_scaled_int32 > UINT16_MAX) {
-		scaled_temperature = UINT16_MAX;
-	} else {
-		scaled_temperature = (uint16_t)temperature_scaled_int32;
+	int16_t temperature_scaled_int16 = 0;
+	if (can_encode_scaled_int(SCALE_SERVO_TEMP, fb.temperature_c, &temperature_scaled_int16) != W_SUCCESS) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperture");
+		return W_FAILURE;
 	}
 
 	can_msg_t msg = {0};
 	build_analog_sensor_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_TEMP, scaled_temperature, &msg);
+		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_TEMP, (uint16_t)(temperature_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET), &msg);
 
 	return can_handler_transmit(&msg);
 }
@@ -175,21 +171,16 @@ static w_status_t ak45_driver_current_telemetry() {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get timestamp failed for current telemetry");
 		return W_FAILURE;
 	}
-
 	// TODO: change to use automatic telem scaling once merged
-	float32_t current_scaled_f = (fb.current_a * 100.0f) + AK45_TELEMETRY_INT16_OFFSET;
-	uint16_t scaled_current;
-	if (current_scaled_f < 0.0f) {
-		scaled_current = 0;
-	} else if (current_scaled_f > (float32_t)UINT16_MAX) {
-		scaled_current = UINT16_MAX;
-	} else {
-		scaled_current = (uint16_t)current_scaled_f;
+	int16_t current_scaled_int16 = 0;
+	if (can_encode_scaled_float(SCALE_SERVO_CURRENT, fb.current_a, &current_scaled_int16) != W_SUCCESS) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperture");
+		return W_FAILURE;
 	}
 
 	can_msg_t msg = {0};
 	build_analog_sensor_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_CURR, scaled_current, &msg);
+		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_CURR, (uint16_t)(current_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET), &msg);
 
 	return can_handler_transmit(&msg);
 }
@@ -211,20 +202,15 @@ static w_status_t ak45_driver_angle_telemetry() {
 		return W_FAILURE;
 	}
 
-	// TODO: change to use automatic telem scaling once merged
-	float32_t angle_scaled_f = (fb.position_deg * 1000.0f) + AK45_TELEMETRY_INT16_OFFSET;
-	uint16_t scaled_angle;
-	if (angle_scaled_f < 0.0f) {
-		scaled_angle = 0;
-	} else if (angle_scaled_f > (float32_t)UINT16_MAX) {
-		scaled_angle = UINT16_MAX;
-	} else {
-		scaled_angle = (uint16_t)angle_scaled_f;
+	int16_t scaled_angle_int16 = 0;
+	if (can_encode_scaled_float(SCALE_SERVO_ANGLE, fb.position_deg, &scaled_angle_int16) != W_SUCCESS) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale the value");
+		return W_FAILURE;
 	}
 
 	can_msg_t msg = {0};
 	build_analog_sensor_16bit_msg(
-		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_ANGLE, scaled_angle, &msg);
+		PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_ANGLE, (uint16_t)(scaled_angle_int16 + AK45_TELEMETRY_INT16_OFFSET), &msg);
 
 	return can_handler_transmit(&msg);
 }
