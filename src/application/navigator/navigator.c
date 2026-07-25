@@ -21,10 +21,7 @@
 // IDEAL task period, for calculating CAN send rate limiter
 static const uint32_t ESTIMATOR_TASK_PERIOD_MS = 5;
 static const float64_t TENTH_MS_TO_SEC = 0.0001;
-// Offsets to map a signed scaled value into the unsigned CAN field:
-// int16: [-2^15, 2^15) -> [0, 2^16); int24: [-2^23, 2^23) -> [0, 2^24)
-static const uint16_t TELEMETRY_INT16_OFFSET = 32768;
-static const uint32_t TELEMETRY_INT24_OFFSET = 8388608;
+
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 // TODO: if kept change to static const
 #define ESTIMATOR_CAN_TX_PERIOD_MS 100
