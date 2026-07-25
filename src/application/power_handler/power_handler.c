@@ -188,10 +188,7 @@ static w_status_t transmit_curr_volt_status_can_msg() {
 	}
 
 	if (W_SUCCESS != can_tx_status) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "CAN tx for i and v failed.");
+		log_text(1, LOG_LVL_WARN, "power_handler", "CAN tx for i and v failed.");
 	}
 
 	return can_tx_status;
