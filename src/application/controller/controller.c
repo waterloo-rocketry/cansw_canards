@@ -21,8 +21,8 @@ static const float64_t TENTH_MS_TO_MS = 0.1;
 
 typedef struct {
 	float64_t command;
-	double coefficient_of_roll_control[2];
-	float64_t roll_target;
+	double coefficient_of_roll_control[2]; // body lift coeff (coefficient_of_roll_control[1]) omitted from sending through can since we dont have a sensor id for it... 
+	float64_t roll_target; // also not sending through can - no id
 } ctrl_value_handle_t;
 
 static QueueHandle_t ctrl_value_queue;
@@ -184,20 +184,6 @@ static w_status_t ctrl_ctx_telemetry(void)
 			return W_FAILURE;
 		}
 
-		if (W_SUCCESS != can_encode_scaled_float(SCALE_CTRL_COEF_OF_ROLL_CTRL,
-											   ctrl_value_latest_raw.coefficient_of_roll_control[1],
-											   &coef_body_lift)) {
-			log_text(0, LOG_LVL_WARN, "controller", "Can encode failed for body lift coefficient.");
-			return W_FAILURE;
-		}
-
-		if (W_SUCCESS != can_encode_scaled_float(SCALE_CTRL_ROLL_TARGET,
-											   ctrl_value_latest_raw.roll_target,
-											   &roll_target_angle)) {
-			log_text(0, LOG_LVL_WARN, "controller", "Can encode failed for roll target.");
-			return W_FAILURE;
-		}
-
 		uint32_t timestamp;
 
 		if (timer_get_ms(&timestamp) != W_SUCCESS) {
@@ -233,29 +219,6 @@ static w_status_t ctrl_ctx_telemetry(void)
 				"Failed to transmit canard lift coefficient value through can.");
 			status = W_FAILURE;
 		}
-
-		// TODO: solve issue with sending two different coeff under same id
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-										 (uint16_t)timestamp,
-										 SENSOR_CANARD_CTRL_COEFF_LIFT,
-										 (uint16_t)(coef_body_lift + TELEMETRY_INT16_OFFSET),
-										 &msg);
-		
-		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(
-				0,
-				LOG_LVL_WARN,
-				"controller",
-				"Failed to transmit body lift coefficient value through can.");
-			status = W_FAILURE;
-		}
-
-		// TODO: roll target id doesn't exist in canlib... findout what to do
-		// build_analog_sensor_16bit_msg(PRIO_LOW,
-		// 								 (uint16_t)timestamp,
-		// 								 SENSOR_CANARD_CTRL_ROLL_TARGET,
-		// 								 (uint16_t)(roll_target_angle + TELEMETRY_INT16_OFFSET),
-		// 								 &msg);
 
 		return status;
 	} else {
