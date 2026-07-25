@@ -190,10 +190,8 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 #endif
 			}
 
-#ifndef NO_MOTOR
 			// set motor command to zero in non-actuation state
 			ak45_send_position_cmd(0);
-#endif
 
 			break;
 
