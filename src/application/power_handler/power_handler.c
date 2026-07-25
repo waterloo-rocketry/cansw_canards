@@ -595,7 +595,7 @@ w_status_t power_handler_init(void) {
 
 	power_handler_status.initialized = true;
 	power_handler_status.external_5v_enabled = true;
-	power_handler_status.lipo_state = false;
+	power_handler_status.lipo_state = true;
 
 	return init_status;
 }
