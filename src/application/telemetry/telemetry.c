@@ -200,6 +200,7 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
 /**
  * @brief health check getter for telemtry module
  * @return health check handle for telem error
+ * @note this currently does not work - it is on the todo list to make telem have health checks stuff.
  */
 health_status_t telemetry_get_status(void) {
 	health_status_t status = {.error_bitfield = 0,
@@ -207,7 +208,7 @@ health_status_t telemetry_get_status(void) {
 							  .severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK};
 
 	if (g_telemetry_stats.failed_transmissions > 0 || g_telemetry_stats.overdue_count > 0) {
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		// status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		// status.error_bitfield = (1) << MODULE_ERR_TELEMETRY_NOT_INIT;
 		//  status.error_bitfield = (1) << MODULE_ERR_TELEMETRY_FAILED_TX;
 	}
