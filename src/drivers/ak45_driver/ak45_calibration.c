@@ -9,10 +9,10 @@
 #include "drivers/timer/timer.h"
 
 static const uint32_t LOG_WAIT_MS = 1;
-static const uint32_t POLL_MS = 20;
+static const uint32_t POLL_MS = 5;
 // motor failsafes to 0 after a short period of CAN silence, so position commands
 // must be resent periodically while waiting on a long-running condition
-static const uint32_t CMD_RESEND_MS = 500;
+static const uint32_t CMD_RESEND_MS = 100;
 
 // tracks elapsed time and resend/freshness bookkeeping for one wait loop
 typedef struct {
@@ -82,9 +82,11 @@ static w_status_t cal_timer_start(cal_timer_t *timer) {
  * can wait on motor state without the MCB failsafing on CAN silence.
  */
 static w_status_t poll_feedback(cal_timer_t *timer, float32_t target_deg, bool resend,
-								uint32_t timeout_ms, ak45_feedback_t *out_fb,
-								uint32_t *out_now_ms) {
+								uint32_t timeout_ms, ak45_feedback_t *out_fb, uint32_t *out_now_ms,
+								const ak45_calibration_config_t *config) {
 	while (true) {
+		vTaskDelay(pdMS_TO_TICKS(POLL_MS));
+
 		uint32_t now_ms = 0;
 		if (timer_get_ms(&now_ms) != W_SUCCESS) {
 			return W_FAILURE;
@@ -95,18 +97,19 @@ static w_status_t poll_feedback(cal_timer_t *timer, float32_t target_deg, bool r
 		}
 
 		if (resend && ((now_ms - timer->last_cmd_ms) >= CMD_RESEND_MS)) {
-			if (ak45_send_position_cmd(target_deg) != W_SUCCESS) {
+			// add sweep behaviour
+			if (ak45_send_pos_velo_cmd(
+					target_deg, (config->cal_speed_rpm), (config->cal_accel_rpm_s2)) != W_SUCCESS) {
 				return W_FAILURE;
 			}
 			timer->last_cmd_ms = now_ms;
 		}
+		vTaskDelay(pdMS_TO_TICKS(5));
 
 		if (read_fresh_feedback(out_fb, &timer->last_timestamp_ms) == W_SUCCESS) {
 			*out_now_ms = now_ms;
 			return W_SUCCESS;
 		}
-
-		vTaskDelay(pdMS_TO_TICKS(POLL_MS));
 	}
 }
 
@@ -131,7 +134,8 @@ static w_status_t wait_for_stall(float32_t target_deg, const ak45_calibration_co
 	while (true) {
 		ak45_feedback_t fb = {0};
 		uint32_t now_ms = 0;
-		if (poll_feedback(&timer, target_deg, true, config->seek_timeout_ms, &fb, &now_ms) !=
+		if (poll_feedback(
+				&timer, target_deg, true, config->seek_timeout_ms, &fb, &now_ms, config) !=
 			W_SUCCESS) {
 			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45_cal", "seek timeout");
 			return W_FAILURE;
@@ -173,7 +177,8 @@ static w_status_t wait_for_low_speed(float32_t target_deg, const ak45_calibratio
 	while (true) {
 		ak45_feedback_t fb = {0};
 		uint32_t now_ms = 0;
-		if (poll_feedback(&timer, target_deg, true, timeout_ms, &fb, &now_ms) != W_SUCCESS) {
+		if (poll_feedback(&timer, target_deg, true, timeout_ms, &fb, &now_ms, config) !=
+			W_SUCCESS) {
 			return W_FAILURE;
 		}
 
@@ -252,7 +257,8 @@ static w_status_t wait_for_position(float32_t target_deg, const ak45_calibration
 	while (true) {
 		ak45_feedback_t fb = {0};
 		uint32_t now_ms = 0;
-		if (poll_feedback(&timer, target_deg, true, config->settle_timeout_ms, &fb, &now_ms) !=
+		if (poll_feedback(
+				&timer, target_deg, true, config->settle_timeout_ms, &fb, &now_ms, config) !=
 			W_SUCCESS) {
 			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45_cal", "midpoint settle timeout");
 			return W_FAILURE;
@@ -279,7 +285,7 @@ static w_status_t verify_origin(const ak45_calibration_config_t *config) {
 	for (uint32_t i = 0; i < config->stall_sample_count; i++) {
 		ak45_feedback_t fb = {0};
 		uint32_t now_ms = 0;
-		if (poll_feedback(&timer, 0.0f, false, config->settle_timeout_ms, &fb, &now_ms) !=
+		if (poll_feedback(&timer, 0.0f, false, config->settle_timeout_ms, &fb, &now_ms, config) !=
 			W_SUCCESS) {
 			return W_FAILURE;
 		}
@@ -310,6 +316,12 @@ w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config) {
 	if (seek_stop_confirmed(-1.0f, config, &pos_neg) != W_SUCCESS) {
 		return abort_calibration();
 	}
+
+	// reset to zero
+	if (ak45_send_position_cmd(0) != W_SUCCESS) {
+		return abort_calibration();
+	}
+	vTaskDelay(1);
 
 	float32_t pos_pos = 0.0f;
 	if (seek_stop_confirmed(1.0f, config, &pos_pos) != W_SUCCESS) {

@@ -24,6 +24,7 @@
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/adc/adc.h"
+#include "drivers/ak45_driver/ak45_calibration.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
@@ -35,6 +36,7 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
+extern const ak45_calibration_config_t ak45_calibration_config;
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
@@ -75,7 +77,7 @@ static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
-	vTaskDelay(500);
+	vTaskDelay(2000);
 
 	// initialize timer first to make sure other modules can use it
 	if (W_SUCCESS != timer_init()) {
@@ -199,8 +201,37 @@ static void system_init_task(void *arg) {
 	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
 	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 1);
 	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1);
+	ak45_feedback_t fb;
+	ak45_send_position_cmd(10);
+	vTaskDelay(4000);
+	ak45_send_position_cmd(-10);
+	vTaskDelay(4000);
+
+	// if (ak45_hard_stop_calibrate(&ak45_calibration_config) != W_SUCCESS) {
+	// 	ak45_send_position_cmd(0);
+	// 	vTaskDelay(4000);
+	// }
+	for (int i = 0; i < 10; i++) {
+		ak45_send_current_cmd(700);
+		vTaskDelay(500);
+	}
+	for (int i = 0; i < 10; i++) {
+		ak45_send_current_cmd(-600);
+		vTaskDelay(500);
+	}
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+		// vTaskDelay(500);
+		// for (int i = 0; i < 100; i++) {
+		// 	ak45_send_pos_velo_cmd(40, 200, 32767);
+		// 	ak45_get_latest_feedback(&fb);
+		// 	vTaskDelay(100);
+		// }
+		// for (int i = 0; i < 100; i++) {
+		// 	ak45_send_pos_velo_cmd(-40, 200, 32767);
+		// 	ak45_get_latest_feedback(&fb);
+		// 	vTaskDelay(100);
+		// }
 		vTaskDelay(500);
 	}
 }

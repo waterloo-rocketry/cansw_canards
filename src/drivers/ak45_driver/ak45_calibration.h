@@ -7,17 +7,27 @@
 typedef struct {
 	float32_t seek_target_deg;
 	float32_t backoff_deg;
+
 	uint32_t backoff_settle_ms;
+
 	float32_t stall_speed_erpm_max;
 	float32_t stall_current_a_min;
+
 	uint32_t stall_hold_ms;
 	uint32_t stall_sample_count;
+
 	float32_t max_tap_delta_deg;
+
 	uint32_t seek_timeout_ms;
 	uint32_t settle_timeout_ms;
+
 	float32_t position_tolerance_deg;
+
 	float32_t min_span_deg;
 	float32_t max_span_deg;
+
+	uint16_t cal_speed_rpm;
+	int16_t cal_accel_rpm_s2;
 } ak45_calibration_config_t;
 
 extern const ak45_calibration_config_t ak45_calibration_config_default;
