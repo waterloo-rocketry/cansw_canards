@@ -53,6 +53,7 @@ TaskHandle_t movella_task_handle = NULL;
 TaskHandle_t ms5611_task_handle = NULL;
 TaskHandle_t ad_breakout_task_handle = NULL;
 TaskHandle_t telem_task_handle = NULL;
+TaskHandle_t init_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
@@ -72,6 +73,25 @@ const uint32_t health_checks_task_priority = 10;
 
 bool done_sys_init = false;
 const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
+
+// Motor calibration callback.
+// Run this in init to avoid blocking other tasks for too long, so blinky will survive.
+static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
+	can_actuator_id_t msg_id;
+	can_actuator_state_t msg_state;
+
+	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
+		(get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
+		log_text(1, LOG_LVL_WARN, "ak45", "invalid actuator data");
+		return W_FAILURE;
+	}
+	// make sure it is the correct message
+	if ((ACTUATOR_CANARD_MOTOR_CALIBRATION == msg_id) && (ACT_STATE_ON == msg_state)) {
+		xTaskNotifyGive(init_task_handle);
+	}
+	// default return
+	return W_SUCCESS;
+}
 
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
@@ -201,10 +221,26 @@ static void system_init_task(void *arg) {
 	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
 	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
 	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
+
+	// grab the task handle
+	init_task_handle = xTaskGetCurrentTaskHandle();
+
+	// register motor calibration
+	if (can_handler_act_cmd_register_callback(ACTUATOR_CANARD_MOTOR_CALIBRATION,
+											  &ak45_motor_calibration) != W_SUCCESS) {
+		log_text(0, LOG_LVL_FATAL, "ak45", "failed to add calibration callback");
+		ak45_send_disable_cmd();
+	}
 	// its blinky now
+	ak45_hard_stop_calibrate(&ak45_calibration_config);
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
+
+		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
+			// TODO: TEST ONLY
+			ak45_hard_stop_calibrate(&ak45_calibration_config);
+		}
 	}
 }
 
