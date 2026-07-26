@@ -292,7 +292,7 @@ static w_status_t ad_telemetry(void) {
 	build_analog_sensor_32bit_msg(PRIO_LOW,
 								  (uint16_t)ts_ms,
 								  SENSOR_CANARD_ADXRS649_GYRO,
-								  (uint16_t)((int16_t)data.ad_gyro + TELEM_INT32_OFFSET),
+								  (uint16_t)((int16_t)data.ad_gyro + TELEM_INT32_OFFSET), //spans -+ 1000 so this is fine
 								  &gyro_msg);
 	status |= can_handler_transmit(&gyro_msg);
 	return status;
