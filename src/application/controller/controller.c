@@ -19,12 +19,12 @@
 static const float64_t MS_TO_SEC = 0.001;
 static const float64_t TENTH_MS_TO_MS = 0.1;
 
+// TODO: send roll target angle through can and body lift coeff (need updated canlib)
 typedef struct {
 	float64_t command;
 	double coefficient_of_roll_control[2]; // body lift coeff (coefficient_of_roll_control[1])
-										   // omitted from sending through can since we dont have a
-										   // sensor id for it...
-	float64_t roll_target; // also not sending through can - no id
+	// omitted from sending through can since we dont have a
+	// sensor id for it...
 } ctrl_value_handle_t;
 
 static QueueHandle_t ctrl_value_queue;
@@ -44,22 +44,10 @@ w_status_t controller_init(void) {
 	configASSERT(ctrl_value_queue != NULL);
 
 	static const telemetry_source_config_t telemetry_sources[] = {
-		{"Controller context",
-		 ctrl_ctx_telemetry,
-		 STATE_PAD_FILTER,
-		 1000 / 5},
-		{"Controller context",
-		 ctrl_ctx_telemetry,
-		 STATE_PAD_NAV,
-		 1000 / 5},
-		{"Controller context",
-		 ctrl_ctx_telemetry,
-		 STATE_BOOST,
-		 1000 / 10},
-		{"Controller context",
-		 ctrl_ctx_telemetry,
-		 STATE_ACT_ALLOWED,
-		 1000 / 10},
+		{"Controller context", ctrl_ctx_telemetry, STATE_PAD_FILTER, 1000 / 5},
+		{"Controller context", ctrl_ctx_telemetry, STATE_PAD_NAV, 1000 / 5},
+		{"Controller context", ctrl_ctx_telemetry, STATE_BOOST, 1000 / 10},
+		{"Controller context", ctrl_ctx_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
 	};
 
 	static const size_t telemetry_source_count =
@@ -124,9 +112,8 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 		ctrl_latest_values.coefficient_of_roll_control[0] =
 			p_ctx->gnc_controller_ctx.coeffs[0]; // canard lift
 		ctrl_latest_values.coefficient_of_roll_control[1] =
-			p_ctx->gnc_controller_ctx.coeffs[1]; // body lift
+			p_ctx->gnc_controller_ctx.coeffs[1]; // body lift (not send through can)
 		ctrl_latest_values.command = p_output->canard_command_angle_rad;
-		ctrl_latest_values.roll_target = p_output->ref_roll[0]; // angle in rad
 
 		xQueueOverwrite(ctrl_value_queue, &ctrl_latest_values);
 
@@ -173,8 +160,6 @@ static w_status_t ctrl_ctx_telemetry(void) {
 	if (xQueuePeek(ctrl_value_queue, &ctrl_value_latest_raw, 0) == pdTRUE) {
 		int16_t cmd;
 		int16_t coef_canard_lift;
-		int16_t coef_body_lift;
-		int16_t roll_target_angle;
 
 		if (W_SUCCESS !=
 			can_encode_scaled_float(SCALE_CTRL_CMD, ctrl_value_latest_raw.command, &cmd)) {
