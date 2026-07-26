@@ -74,7 +74,7 @@ static const can_scale_data_t can_scale_factor[SCALE_COUNT] = {
 	[SCALE_MTI_EST_VELOCITY] = {.type = TYPE_INT16, .scale = 10},
 
 	[SCALE_SERVO_ANGLE] = {.type = TYPE_INT16, .scale = 1000},
-	[SCALE_SERVO_CURRENT] = {.type = TYPE_INT16, .scale = 1},
+	[SCALE_SERVO_CURRENT] = {.type = TYPE_INT16, .scale = 1000},
 	[SCALE_SERVO_TEMP] = {.type = TYPE_INT16, .scale = 1},
 };
 
