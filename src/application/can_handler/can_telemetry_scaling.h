@@ -78,7 +78,7 @@ static const can_scale_data_t can_scale_factor[SCALE_COUNT] = {
 	[SCALE_ADXRS649_GYROSCOPE] = {.type = TYPE_INT32, .scale = 10000},
 
 	[SCALE_SERVO_ANGLE] = {.type = TYPE_INT16, .scale = 1000},
-	[SCALE_SERVO_CURRENT] = {.type = TYPE_INT16, .scale = 1},
+	[SCALE_SERVO_CURRENT] = {.type = TYPE_INT16, .scale = 1000},
 	[SCALE_SERVO_TEMP] = {.type = TYPE_INT16, .scale = 1},
 };
 
