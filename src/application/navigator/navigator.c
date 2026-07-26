@@ -405,18 +405,17 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 
 	nav_value_handle_t nav_latest_values;
 
-	// x-state layout: [0..3] quaternion (w,x,y,z), [4..6] angular velocity,
-	// [7..9] velocity, [10] altitude. Copied unscaled; scaling happens at tx.
+	// Copied unscaled; scaling happens at tx.
 	memcpy(nav_latest_values.orientation,
-		   &(p_ctx->gnc_navigator_ctx.x[0]),
+		   p_ctx->gnc_navigator_ctx.x.q.array,
 		   sizeof(nav_latest_values.orientation));
 	memcpy(nav_latest_values.angular_velocity,
-		   &(p_ctx->gnc_navigator_ctx.x[4]),
+		   p_ctx->gnc_navigator_ctx.x.ang_rate.array,
 		   sizeof(nav_latest_values.angular_velocity));
 	memcpy(nav_latest_values.velocity,
-		   &(p_ctx->gnc_navigator_ctx.x[7]),
+		   p_ctx->gnc_navigator_ctx.x.vel.array,
 		   sizeof(nav_latest_values.velocity));
-	nav_latest_values.altitude = p_ctx->gnc_navigator_ctx.x[10];
+	nav_latest_values.altitude = p_ctx->gnc_navigator_ctx.x.altitude;
 
 	// variance_norm is not part of the x-state; it comes from the nav output
 	nav_latest_values.variance_norm = p_output->cov_norm;
