@@ -114,7 +114,6 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 	if (is_success) { // the controller ran
 		// update new timestamp
 		p_output->timestamp_tenth_ms = timestamp_tenth_ms;
-		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 
 		ctrl_value_handle_t ctrl_latest_values;
 
