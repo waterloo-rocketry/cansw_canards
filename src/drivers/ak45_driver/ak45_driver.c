@@ -173,7 +173,7 @@ static w_status_t ak45_driver_temperature_telemetry() {
 	int16_t temperature_scaled_int16 = 0;
 	if (can_encode_scaled_int(SCALE_SERVO_TEMP, fb.temperature_c, &temperature_scaled_int16) !=
 		W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperture");
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperature");
 		return W_FAILURE;
 	}
 
