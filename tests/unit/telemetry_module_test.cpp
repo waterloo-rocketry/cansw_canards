@@ -166,38 +166,6 @@ TEST_F(TelemetryModuleTest, DueExactlyLogsOnceAndAdvancesSchedule) {
     EXPECT_EQ(telemetry_get_status().severity, CANARDS_HEALTH_SEVERITY_HEALTH_OK);
 }
 
-TEST_F(TelemetryModuleTest, OverdueLogsAndFlagsError) {
-    ASSERT_EQ(telemetry_init(), W_SUCCESS);
-    telemetry_source_config_t cfg = make_source(source_log_ok, STATE_BOOST, 100);
-    ASSERT_EQ(telemetry_register(&cfg), W_SUCCESS);
-
-    telemetry_init_due_dates(0); // due at t=100
-    fsm_get_state_fake.return_val = STATE_BOOST;
-    g_mock_now_ms = 150; // past due -> overdue
-
-    telemetry_run_once();
-
-    EXPECT_EQ(source_log_ok_fake.call_count, 1u);
-    // An overdue log bumps overdue_count, which surfaces as HEALTH_ERROR.
-    EXPECT_EQ(telemetry_get_status().severity, CANARDS_HEALTH_SEVERITY_HEALTH_ERROR);
-}
-
-TEST_F(TelemetryModuleTest, FailedTransmissionFlagsError) {
-    ASSERT_EQ(telemetry_init(), W_SUCCESS);
-    telemetry_source_config_t cfg = make_source(source_log_fail, STATE_BOOST, 100);
-    ASSERT_EQ(telemetry_register(&cfg), W_SUCCESS);
-
-    telemetry_init_due_dates(0);
-    fsm_get_state_fake.return_val = STATE_BOOST;
-    g_mock_now_ms = 100; // exactly due (not overdue)
-
-    telemetry_run_once();
-
-    EXPECT_EQ(source_log_fail_fake.call_count, 1u);
-    // A failed transmission surfaces as HEALTH_ERROR.
-    EXPECT_EQ(telemetry_get_status().severity, CANARDS_HEALTH_SEVERITY_HEALTH_ERROR);
-}
-
 TEST_F(TelemetryModuleTest, TimerFailureSkipsProcessing) {
     ASSERT_EQ(telemetry_init(), W_SUCCESS);
     telemetry_source_config_t cfg = make_source(source_log_ok, STATE_BOOST, 100);

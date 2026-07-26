@@ -8,8 +8,9 @@
 #include "application/health_checks/health_checks.h"
 #include "rocketlib/include/common.h"
 
-static const uint16_t TELEM_INT16_OFFSET = 32768;
-static const uint32_t TELEM_INT32_OFFSET = 2147483748;
+static const uint16_t TELEMETRY_INT16_OFFSET = 32768;
+static const uint32_t TELEMETRY_INT32_OFFSET = 2147483748;
+static const uint32_t TELEMETRY_INT24_OFFSET = 8388608;
 
 // Pass in any fuction your module desire to log data (had to be NON-BLOCKING and returns a status
 // code)
