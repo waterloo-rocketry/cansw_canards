@@ -54,20 +54,20 @@ static w_status_t nav_orientation_altitude_varnorm_telemetry(void) {
 		int16_t orientation_z;
 
 		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
-											   nav_value_lastest_raw.orientation[1],
-											   &orientation_x)) {
+												 nav_value_lastest_raw.orientation[1],
+												 &orientation_x)) {
 			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion x.");
 		}
 
 		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
-											   nav_value_lastest_raw.orientation[2],
-											   &orientation_y)) {
+												 nav_value_lastest_raw.orientation[2],
+												 &orientation_y)) {
 			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion y.");
 		}
 
 		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
-											   nav_value_lastest_raw.orientation[3],
-											   &orientation_z)) {
+												 nav_value_lastest_raw.orientation[3],
+												 &orientation_z)) {
 			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion z.");
 		}
 
@@ -77,19 +77,19 @@ static w_status_t nav_orientation_altitude_varnorm_telemetry(void) {
 		uint16_t varnorm;
 
 		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
-											   nav_value_lastest_raw.orientation[0],
-											   &orientation_w)) {
+												 nav_value_lastest_raw.orientation[0],
+												 &orientation_w)) {
 			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion w.");
 		}
 
-		if (W_SUCCESS !=
-			can_encode_scaled_float(SCALE_NAV_ALTITUDE, nav_value_lastest_raw.altitude, &altitude)) {
+		if (W_SUCCESS != can_encode_scaled_float(
+							 SCALE_NAV_ALTITUDE, nav_value_lastest_raw.altitude, &altitude)) {
 			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for altitude.");
 		}
 
 		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_VARIANCE_NORM,
-											   nav_value_lastest_raw.variance_norm,
-											   &varnorm)) {
+												 nav_value_lastest_raw.variance_norm,
+												 &varnorm)) {
 			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for variance norm.");
 		}
 
