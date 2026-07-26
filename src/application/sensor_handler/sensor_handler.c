@@ -163,9 +163,9 @@ static w_status_t board_imu_telemetry(void) {
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 										 (uint16_t)ts_ms,
 										 DEM_3D_SENSOR_CANARD_LSM6DSV32X_ACCEL,
-										 (uint16_t)(accel_x + TELEM_INT16_OFFSET),
-										 (uint16_t)(accel_y + TELEM_INT16_OFFSET),
-										 (uint16_t)(accel_z + TELEM_INT16_OFFSET),
+										 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
 										 &accel_msg);
 		status |= can_handler_transmit(&accel_msg);
 
@@ -189,9 +189,9 @@ static w_status_t board_imu_telemetry(void) {
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 										 (uint16_t)ts_ms,
 										 DEM_3D_SENSOR_CANARD_LSM6DSV32X_GYRO,
-										 (uint16_t)(gyro_x + TELEM_INT16_OFFSET),
-										 (uint16_t)(gyro_y + TELEM_INT16_OFFSET),
-										 (uint16_t)(gyro_z + TELEM_INT16_OFFSET),
+										 (uint16_t)(gyro_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(gyro_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(gyro_z + TELEMETRY_INT16_OFFSET),
 										 &gyro_msg);
 		status |= can_handler_transmit(&gyro_msg);
 
@@ -252,9 +252,9 @@ static w_status_t mti_board_mag_telemetry(void) {
 	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)ts_ms,
 									 DEM_3D_SENSOR_CANARD_IIS2MDC_MAG,
-									 (uint16_t)(board_mag_x + TELEM_INT16_OFFSET),
-									 (uint16_t)(board_mag_y + TELEM_INT16_OFFSET),
-									 (uint16_t)(board_mag_z + TELEM_INT16_OFFSET),
+									 (uint16_t)(board_mag_x + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(board_mag_y + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(board_mag_z + TELEMETRY_INT16_OFFSET),
 									 &board_mag_msg);
 	w_status_t status = can_handler_transmit(&board_mag_msg);
 
@@ -269,9 +269,9 @@ static w_status_t mti_board_mag_telemetry(void) {
 	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)ts_ms,
 									 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
-									 (uint16_t)(accel_x + TELEM_INT16_OFFSET),
-									 (uint16_t)(accel_y + TELEM_INT16_OFFSET),
-									 (uint16_t)(accel_z + TELEM_INT16_OFFSET),
+									 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
 									 &mti_accel_msg);
 	status |= can_handler_transmit(&mti_accel_msg);
 
@@ -285,9 +285,9 @@ static w_status_t mti_board_mag_telemetry(void) {
 	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)ts_ms,
 									 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
-									 (uint16_t)(gyro_x + TELEM_INT16_OFFSET),
-									 (uint16_t)(gyro_y + TELEM_INT16_OFFSET),
-									 (uint16_t)(gyro_z + TELEM_INT16_OFFSET),
+									 (uint16_t)(gyro_x + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(gyro_y + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(gyro_z + TELEMETRY_INT16_OFFSET),
 									 &mti_gyro_msg);
 	status |= can_handler_transmit(&mti_gyro_msg);
 
@@ -301,9 +301,9 @@ static w_status_t mti_board_mag_telemetry(void) {
 	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)ts_ms,
 									 DEM_3D_SENSOR_CANARD_MTI630_MAG,
-									 (uint16_t)(mag_x + TELEM_INT16_OFFSET),
-									 (uint16_t)(mag_y + TELEM_INT16_OFFSET),
-									 (uint16_t)(mag_z + TELEM_INT16_OFFSET),
+									 (uint16_t)(mag_x + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(mag_y + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(mag_z + TELEMETRY_INT16_OFFSET),
 									 &mti_mag_msg);
 	status |= can_handler_transmit(&mti_mag_msg);
 
@@ -346,9 +346,9 @@ static w_status_t ad_telemetry(void) {
 	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)ts_ms,
 									 DEM_3D_SENSOR_CANARD_ADXL380_ACCEL,
-									 (uint16_t)(accel_x + TELEM_INT16_OFFSET),
-									 (uint16_t)(accel_y + TELEM_INT16_OFFSET),
-									 (uint16_t)(accel_z + TELEM_INT16_OFFSET),
+									 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
+									 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
 									 &accel_msg);
 	w_status_t status = can_handler_transmit(&accel_msg);
 
@@ -359,7 +359,7 @@ static w_status_t ad_telemetry(void) {
 		PRIO_LOW,
 		(uint16_t)ts_ms,
 		SENSOR_CANARD_ADXRS649_GYRO,
-		(uint32_t)(gyro_scaled + TELEM_INT32_OFFSET), // spans -+ 1000 so this is fine
+		(uint32_t)(gyro_scaled + TELEMETRY_INT32_OFFSET), // spans -+ 1000 so this is fine
 		&gyro_msg);
 	status |= can_handler_transmit(&gyro_msg);
 	return status;
