@@ -8,9 +8,11 @@
 
 #include "GNC_codegen.h"
 #include "application/can_handler/can_handler.h"
+#include "application/can_handler/can_telemetry_scaling.h"
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
+#include "application/telemetry/telemetry.h"
 #include "common/gnc/gnc_types.h"
 #include "drivers/timer/timer.h"
 
@@ -18,6 +20,7 @@
 // IDEAL task period, for calculating CAN send rate limiter
 static const uint32_t ESTIMATOR_TASK_PERIOD_MS = 5;
 static const float64_t TENTH_MS_TO_SEC = 0.0001;
+
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 // TODO: if kept change to static const
 #define ESTIMATOR_CAN_TX_PERIOD_MS 100
@@ -28,11 +31,250 @@ static const float64_t TENTH_MS_TO_SEC = 0.0001;
 // Error tracking
 static navigator_error_data_t estimator_error_stats = {0};
 
+// Latest nav state, stored unscaled as raw floats. Scaling + offset into the
+// CAN integer fields happens at telemetry-tx time (see nav_*_telemetry below)
+// so no precision is lost before the scale factor is applied.
+typedef struct {
+	float64_t orientation[4]; // quaternion w, x, y, z
+	float64_t angular_velocity[3];
+	float64_t velocity[3];
+	float64_t altitude;
+	float64_t variance_norm;
+} nav_value_handle_t;
+
+static QueueHandle_t nav_value_queue; // mailbox queue to hold the latest nav values
+
+static w_status_t nav_orientation_altitude_varnorm_telemetry(void) {
+	nav_value_handle_t nav_value_lastest_raw;
+
+	if (xQueuePeek(nav_value_queue, &nav_value_lastest_raw, 0) == pdTRUE) {
+		// scale quaternion x, y, z (orientation[1..3]) and offset into uint16
+		int16_t orientation_x;
+		int16_t orientation_y;
+		int16_t orientation_z;
+
+		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
+												 nav_value_lastest_raw.orientation[1],
+												 &orientation_x)) {
+			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion x.");
+		}
+
+		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
+												 nav_value_lastest_raw.orientation[2],
+												 &orientation_y)) {
+			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion y.");
+		}
+
+		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
+												 nav_value_lastest_raw.orientation[3],
+												 &orientation_z)) {
+			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion z.");
+		}
+
+		// quaternion w is signed (offset into uint16); altitude and varnorm are unsigned
+		int16_t orientation_w;
+		uint16_t altitude;
+		uint16_t varnorm;
+
+		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
+												 nav_value_lastest_raw.orientation[0],
+												 &orientation_w)) {
+			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion w.");
+		}
+
+		if (W_SUCCESS != can_encode_scaled_float(
+							 SCALE_NAV_ALTITUDE, nav_value_lastest_raw.altitude, &altitude)) {
+			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for altitude.");
+		}
+
+		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_VARIANCE_NORM,
+												 nav_value_lastest_raw.variance_norm,
+												 &varnorm)) {
+			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for variance norm.");
+		}
+
+		uint32_t timestamp;
+
+		if (timer_get_ms(&timestamp) != W_SUCCESS) {
+			log_text(0, LOG_LVL_WARN, "navigator", "Failed to get timestamp for can msg tx");
+			return W_FAILURE;
+		}
+
+		w_status_t status = W_SUCCESS;
+
+		can_msg_t msg_qxyz;
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 (uint16_t)timestamp,
+										 DEM_3D_SENSOR_CANARD_NAV_ORI_QX_QY_QZ,
+										 (uint16_t)(orientation_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(orientation_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(orientation_z + TELEMETRY_INT16_OFFSET),
+										 &msg_qxyz);
+
+		if (can_handler_transmit(&msg_qxyz) != W_SUCCESS) {
+			log_text(0,
+					 LOG_LVL_WARN,
+					 "navigator",
+					 "Failed to transmit orientation x y z values through can.");
+			status = W_FAILURE;
+		}
+
+		can_msg_t msg_qw_alt_var;
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 (uint16_t)timestamp,
+										 DEM_3D_SENSOR_CANARD_NAV_ORI_QW_ALT_VARNORM,
+										 (uint16_t)(orientation_w + TELEMETRY_INT16_OFFSET),
+										 altitude,
+										 varnorm,
+										 &msg_qw_alt_var);
+
+		if (can_handler_transmit(&msg_qw_alt_var) != W_SUCCESS) {
+			log_text(
+				0,
+				LOG_LVL_WARN,
+				"navigator",
+				"Failed to transmit orientation w, altitude, variance norm values through can.");
+			status = W_FAILURE;
+		}
+
+		return status;
+	} else {
+		log_text(0,
+				 LOG_LVL_WARN,
+				 "navigator",
+				 "Failed to peek mailbox queue while sending current nav values through can.");
+
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}
+
+// Velocity and angular velocity are carried per-axis by the 2D 24bit messages
+// DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_{X,Y,Z}: each message packs that axis's
+// (velocity, angular_velocity) pair, both scaled as int24 (scale table entries
+// SCALE_NAV_VELOCITY / SCALE_NAV_ANGULAR_VELOCITY).
+static w_status_t nav_velocity_angular_velocity_telemetry(void) {
+	nav_value_handle_t nav_value_lastest_raw;
+
+	if (xQueuePeek(nav_value_queue, &nav_value_lastest_raw, 0) != pdTRUE) {
+		log_text(0,
+				 LOG_LVL_WARN,
+				 "navigator",
+				 "Failed to peek mailbox queue while sending current nav values through can.");
+		return W_FAILURE;
+	}
+
+	const can_dem_2d_sensor_id_t axis_ids[3] = {
+		DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_X,
+		DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Y,
+		DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Z,
+	};
+
+	uint32_t timestamp;
+	if (timer_get_ms(&timestamp) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "navigator", "Failed to get timestamp for can msg tx");
+		return W_FAILURE;
+	}
+
+	w_status_t status = W_SUCCESS;
+	for (int axis = 0; axis < 3; axis++) {
+		int32_t velocity = 0;
+		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_VELOCITY,
+												 (float32_t)nav_value_lastest_raw.velocity[axis],
+												 &velocity)) {
+			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for velocity.");
+			status = W_FAILURE;
+		}
+
+		int32_t angular_velocity = 0;
+		if (W_SUCCESS !=
+			can_encode_scaled_float(SCALE_NAV_ANGULAR_VELOCITY,
+									(float32_t)nav_value_lastest_raw.angular_velocity[axis],
+									&angular_velocity)) {
+			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for angular velocity.");
+			status = W_FAILURE;
+		}
+
+		can_msg_t msg;
+		build_2d_analog_sensor_24bit_msg(PRIO_LOW,
+										 (uint16_t)timestamp,
+										 axis_ids[axis],
+										 (uint32_t)(velocity + TELEMETRY_INT24_OFFSET),
+										 (uint32_t)(angular_velocity + TELEMETRY_INT24_OFFSET),
+										 &msg);
+
+		if (can_handler_transmit(&msg) != W_SUCCESS) {
+			log_text(0,
+					 LOG_LVL_WARN,
+					 "navigator",
+					 "Failed to transmit velocity/angular velocity values through can.");
+			status = W_FAILURE;
+		}
+	}
+
+	return status;
+}
+
 // ---------- public functions ----------
 
 w_status_t navigator_init(void) {
 	// Initialize error tracking
 	estimator_error_stats = (navigator_error_data_t){.is_init = true};
+
+	// create mailbox queue for nav values
+	nav_value_queue = xQueueCreate(1, sizeof(nav_value_handle_t));
+	configASSERT(nav_value_queue != NULL);
+
+	static const telemetry_source_config_t telemetry_sources[] = {
+		{"Navigator angular velocity and velocity",
+		 nav_velocity_angular_velocity_telemetry,
+		 STATE_PAD_FILTER,
+		 1000 / 10},
+		{"Navigator angular velocity and velocity",
+		 nav_velocity_angular_velocity_telemetry,
+		 STATE_PAD_NAV,
+		 1000 / 10},
+		{"Navigator angular velocity and velocity",
+		 nav_velocity_angular_velocity_telemetry,
+		 STATE_BOOST,
+		 1000 / 5},
+		{"Navigator angular velocity and velocity",
+		 nav_velocity_angular_velocity_telemetry,
+		 STATE_ACT_ALLOWED,
+		 1000 / 5},
+
+		{"Navigator orientation, altitude, and variance norm",
+		 nav_orientation_altitude_varnorm_telemetry,
+		 STATE_PAD_FILTER,
+		 1000 / 10},
+		{"Navigator orientation, altitude, and variance norm",
+		 nav_orientation_altitude_varnorm_telemetry,
+		 STATE_PAD_NAV,
+		 1000 / 10},
+		{"Navigator orientation, altitude, and variance norm",
+		 nav_orientation_altitude_varnorm_telemetry,
+		 STATE_BOOST,
+		 1000 / 10},
+		{"Navigator orientation, altitude, and variance norm",
+		 nav_orientation_altitude_varnorm_telemetry,
+		 STATE_ACT_ALLOWED,
+		 1000 / 10},
+	};
+
+	static const size_t telemetry_source_count =
+		sizeof(telemetry_sources) / sizeof(telemetry_source_config_t);
+	w_status_t telemetry_register_status = W_SUCCESS;
+
+	// Register callbacks and check
+	for (size_t i = 0; i < telemetry_source_count; i++) {
+		telemetry_register_status |= telemetry_register(&telemetry_sources[i]);
+	}
+
+	if (W_SUCCESS != telemetry_register_status) {
+		log_text(1, LOG_LVL_WARN, "Navigator", "Failed to register telemetry sources.");
+		return W_FAILURE;
+	}
 
 	return W_SUCCESS;
 }
@@ -161,6 +403,25 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 	}
 #endif
 
+	nav_value_handle_t nav_latest_values;
+
+	// Copied unscaled; scaling happens at tx.
+	memcpy(nav_latest_values.orientation,
+		   p_ctx->gnc_navigator_ctx.x.q.array,
+		   sizeof(nav_latest_values.orientation));
+	memcpy(nav_latest_values.angular_velocity,
+		   p_ctx->gnc_navigator_ctx.x.ang_rate.array,
+		   sizeof(nav_latest_values.angular_velocity));
+	memcpy(nav_latest_values.velocity,
+		   p_ctx->gnc_navigator_ctx.x.vel.array,
+		   sizeof(nav_latest_values.velocity));
+	nav_latest_values.altitude = p_ctx->gnc_navigator_ctx.x.altitude;
+
+	// variance_norm is not part of the x-state; it comes from the nav output
+	nav_latest_values.variance_norm = p_output->cov_norm;
+
+	xQueueOverwrite(nav_value_queue, &nav_latest_values);
+
 	return W_SUCCESS;
 }
 
@@ -279,3 +540,4 @@ health_status_t navigator_get_status(void) {
 
 	return status;
 }
+
