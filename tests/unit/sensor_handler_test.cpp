@@ -61,6 +61,7 @@ FAKE_VOID_FUNC(build_analog_sensor_32bit_msg, can_msg_prio_t, uint16_t, can_anal
 FAKE_VOID_FUNC(build_3d_analog_sensor_16bit_msg, can_msg_prio_t, uint16_t, can_dem_3d_sensor_id_t, uint16_t, uint16_t, uint16_t, can_msg_t *);
 FAKE_VOID_FUNC(build_2d_analog_sensor_24bit_msg, can_msg_prio_t, uint16_t, can_dem_2d_sensor_id_t, uint32_t, uint32_t, can_msg_t *);
 FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_float, can_scaling_types_t, float32_t, void *);
+FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_int, can_scaling_types_t, int64_t, void *);
 FAKE_VALUE_FUNC(w_status_t, telemetry_register, const telemetry_source_config_t *);
 // FAKE_VALUE_FUNC(
 //     bool, build_baro_data_msg, can_msg_prio_t, uint16_t, can_imu_id_t, uint32_t, uint16_t,
@@ -213,6 +214,7 @@ protected:
 
 		// Reset telemetry / scaling / queue mocks used by the telemetry wiring
 		RESET_FAKE(can_encode_scaled_float);
+		RESET_FAKE(can_encode_scaled_int);
 		RESET_FAKE(telemetry_register);
 		RESET_FAKE(xQueueCreate);
 		RESET_FAKE(xQueueOverwrite);
