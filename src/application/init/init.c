@@ -69,6 +69,8 @@ const uint32_t ad_breakout_task_priority = 20;
 const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
+
+bool done_sys_init = false;
 const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
 
 static void system_init_task(void *arg) {
@@ -117,12 +119,12 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
 	status |= ms5611_init();
-	status |= iis2mdc_init();
 	status |= power_handler_init();
+	status |= iis2mdc_init();
+	status |= adxl380_init();
+	status |= adxrs649_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -131,6 +133,8 @@ static void system_init_task(void *arg) {
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}
+
+	done_sys_init = true;
 
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
@@ -194,11 +198,10 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
-
+	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
+	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
+	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
 	// its blinky now
-	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
-	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 1);
-	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1);
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
