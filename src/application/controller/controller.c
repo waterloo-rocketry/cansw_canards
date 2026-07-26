@@ -44,19 +44,19 @@ w_status_t controller_init(void) {
 	configASSERT(ctrl_value_queue != NULL);
 
 	static const telemetry_source_config_t telemetry_sources[] = {
-		{"Controller cmd, coefficient_of_roll_control, and roll target",
+		{"Controller context",
 		 ctrl_ctx_telemetry,
 		 STATE_PAD_FILTER,
 		 1000 / 5},
-		{"Controller cmd, coefficient_of_roll_control, and roll target",
+		{"Controller context",
 		 ctrl_ctx_telemetry,
 		 STATE_PAD_NAV,
 		 1000 / 5},
-		{"Controller cmd, coefficient_of_roll_control, and roll target",
+		{"Controller context",
 		 ctrl_ctx_telemetry,
 		 STATE_BOOST,
 		 1000 / 10},
-		{"Controller cmd, coefficient_of_roll_control, and roll target",
+		{"Controller context",
 		 ctrl_ctx_telemetry,
 		 STATE_ACT_ALLOWED,
 		 1000 / 10},
