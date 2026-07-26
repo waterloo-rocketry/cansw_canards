@@ -54,6 +54,11 @@ Run tests:
 - Hover over `Build`, click the build icon to build the configuration
     - The build preset should automatically be selected (eg, `Build Firmware (Debug) preset`)
 
+### 4. Build HIL
+- Switch to the HIL build environment: `Ctrl+Shift+P > PlatformIO: Pick Project Environment > env:hil`
+- Build and upload as usual. Now the board will be in HIL mode
+
+
 ## Unit Testing
 
 We use GoogleTest and Fake Function Framework (fff) for unit testing. All testing-related files are in `tests/`.
