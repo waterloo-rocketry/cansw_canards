@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
+
 // Servo fault codes
 typedef enum {
 	AK45_FAULT_NONE = 0,
@@ -135,5 +137,14 @@ uint32_t ak45_get_tx_errors(void);
  * @return W_SUCCESS on success, W_FAILURE on error.
  */
 w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config);
+
+/**
+ * @brief Get and report the AK45 motor driver status for the health check system
+ *
+ * Follows the module_get_status naming convention used by health_checks.
+ *
+ * @return CAN board status bitfield
+ */
+health_status_t ak45_get_status(void);
 
 #endif // AK45_DRIVER_H
