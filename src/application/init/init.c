@@ -74,9 +74,8 @@ const uint32_t health_checks_task_priority = 10;
 bool done_sys_init = false;
 const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
 
-// motor calibration callback
-// this is being done in init to make sure to not block any other task for so ,ong and blinky will
-// survive
+// Motor calibration callback.
+// Run this in init to avoid blocking other tasks for too long, so blinky will survive.
 static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
 	can_actuator_id_t msg_id;
 	can_actuator_state_t msg_state;
@@ -239,6 +238,7 @@ static void system_init_task(void *arg) {
 		vTaskDelay(500);
 
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
+			// TODO: TEST ONLY
 			ak45_hard_stop_calibrate(&ak45_calibration_config);
 		}
 	}

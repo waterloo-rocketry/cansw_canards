@@ -232,8 +232,8 @@ static w_status_t ak45_driver_current_telemetry() {
 	}
 	// TODO: change to use automatic telem scaling once merged
 	int16_t current_scaled_int16 = 0;
-	if (can_encode_scaled_float(
-			SCALE_SERVO_CURRENT, (fb.current_a * 1000), &current_scaled_int16) != W_SUCCESS) {
+	if (can_encode_scaled_float(SCALE_SERVO_CURRENT, fb.current_a, &current_scaled_int16) !=
+		W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperture");
 		return W_FAILURE;
 	}
@@ -280,19 +280,6 @@ static w_status_t ak45_driver_angle_telemetry() {
 								  &msg);
 
 	return can_handler_transmit(&msg);
-}
-
-w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
-	if ((NULL == fb) || (!is_init)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointers or not initialized");
-		return W_FAILURE;
-	}
-
-	if (xQueuePeek(g_feedback_queue, fb, 0) == pdPASS) {
-		return W_SUCCESS;
-	}
-
-	return W_FAILURE; // empty queue or no feedback yet
 }
 
 w_status_t ak45_send_position_cmd(float32_t angle_deg) {
@@ -567,18 +554,30 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 
 // TODO: test version which 5 degrees on both side with
 w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config) {
+	if (NULL == config) {
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointers or not initialized");
+		ak45_health.invalid_args++;
+		return W_FAILURE;
+	}
+
 	if (ak45_send_pos_velo_cmd(10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(5000)); // 10 seconds
 	if (ak45_send_pos_velo_cmd(-10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(5000)); // 10 seconds
 
 	// set to calibrated
+	ak45_health.hard_stop_calibrated = true;
+	ak45_health.hard_stop_cal_failed = false;
 	return W_SUCCESS;
 }
 

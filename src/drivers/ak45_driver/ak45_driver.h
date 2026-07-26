@@ -80,7 +80,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 w_status_t ak45_send_position_cmd(float32_t angle_deg);
 
 /**
- * @brief Send a position command to the servo
+ * @brief Send a cuurrent command to the servo
  *
  * @param[in] current_mA  Target current in mA
  * @return W_SUCCESS on success, W_FAILURE on error
@@ -88,7 +88,7 @@ w_status_t ak45_send_position_cmd(float32_t angle_deg);
 w_status_t ak45_send_current_cmd(int32_t current_mA);
 
 /**
- * @brief Send a position command to the servo
+ * @brief Send a position and velocity command to the servo
  *
  * @param[in] angle_deg  Target position in degrees
  * @param[in] mag_speed_rpm  the target magnitude of the motor speed rpm
