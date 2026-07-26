@@ -150,6 +150,9 @@ static void can_get_unsigned_max(can_types_t type, uint32_t *max_out) {
 		case TYPE_UINT16:
 			*max_out = UINT16_MAX;
 			break;
+		case TYPE_UINT24:
+			*max_out = UINT24_MAX;
+			break;
 		case TYPE_UINT32:
 			*max_out = UINT32_MAX;
 			break;
@@ -160,7 +163,7 @@ static void can_get_unsigned_max(can_types_t type, uint32_t *max_out) {
 }
 
 static bool can_type_is_unsigned(can_types_t type) {
-	return ((type == TYPE_UINT16) || (type == TYPE_UINT32));
+	return ((type == TYPE_UINT16) || (type == TYPE_UINT24) || (type == TYPE_UINT32));
 }
 
 static w_status_t can_store_unsigned(can_types_t type, uint32_t value, void *out) {
@@ -174,6 +177,7 @@ static w_status_t can_store_unsigned(can_types_t type, uint32_t value, void *out
 			memcpy(out, &encoded, sizeof(encoded));
 			return W_SUCCESS;
 		}
+		case TYPE_UINT24: // using Uint32
 		case TYPE_UINT32: {
 			uint32_t encoded = (uint32_t)value;
 			memcpy(out, &encoded, sizeof(encoded));
