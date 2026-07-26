@@ -8,6 +8,11 @@
 #include "application/health_checks/health_checks.h"
 #include "rocketlib/include/common.h"
 
+// Offsets to map a signed scaled value into the unsigned CAN field:
+// int16: [-2^15, 2^15) -> [0, 2^16); int24: [-2^23, 2^23) -> [0, 2^24)
+static const uint16_t TELEMETRY_INT16_OFFSET = 32768;
+static const uint32_t TELEMETRY_INT24_OFFSET = 8388608;
+
 // Pass in any fuction your module desire to log data (had to be NON-BLOCKING and returns a status
 // code)
 typedef w_status_t (*telemetry_log_fn_t)(void);
