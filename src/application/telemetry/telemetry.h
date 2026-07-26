@@ -8,6 +8,9 @@
 #include "application/health_checks/health_checks.h"
 #include "rocketlib/include/common.h"
 
+static const uint16_t TELEM_INT16_OFFSET = 32768;
+static const uint32_t TELEM_INT32_OFFSET = 2147483748;
+
 // Pass in any fuction your module desire to log data (had to be NON-BLOCKING and returns a status
 // code)
 typedef w_status_t (*telemetry_log_fn_t)(void);

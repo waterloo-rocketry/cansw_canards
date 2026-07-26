@@ -41,6 +41,8 @@ typedef enum {
 	SCALE_MTI_EST_ANGULAR_VELOCITY,
 	SCALE_MTI_EST_VELOCITY,
 
+	SCALE_ADXRS649_GYROSCOPE,
+
 	SCALE_SERVO_ANGLE,
 	SCALE_SERVO_CURRENT,
 	SCALE_SERVO_TEMP,
@@ -72,6 +74,8 @@ static const can_scale_data_t can_scale_factor[SCALE_COUNT] = {
 	[SCALE_MTI_EST_QUATERNION] = {.type = TYPE_INT16, .scale = 10000},
 	[SCALE_MTI_EST_ANGULAR_VELOCITY] = {.type = TYPE_INT16, .scale = 10},
 	[SCALE_MTI_EST_VELOCITY] = {.type = TYPE_INT16, .scale = 10},
+
+	[SCALE_ADXRS649_GYROSCOPE] = {.type = TYPE_INT32, .scale = 10000},
 
 	[SCALE_SERVO_ANGLE] = {.type = TYPE_INT16, .scale = 1000},
 	[SCALE_SERVO_CURRENT] = {.type = TYPE_INT16, .scale = 1},
