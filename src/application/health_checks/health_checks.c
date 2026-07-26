@@ -10,6 +10,7 @@
 #include "application/telemetry/telemetry.h"
 #include "can.h"
 #include "drivers/adc/adc.h"
+#include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
@@ -43,7 +44,7 @@ static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MA
 	[CANARDS_MODULE_ID_ADC] = adc_get_status,
 	[CANARDS_MODULE_ID_ADXL380] = NULL,
 	[CANARDS_MODULE_ID_ADXRS649] = NULL,
-	[CANARDS_MODULE_ID_AK45] = NULL,
+	[CANARDS_MODULE_ID_AK45] = ak45_get_status,
 	[CANARDS_MODULE_ID_CAN_HANDLER] = can_handler_get_status,
 	[CANARDS_MODULE_ID_CONTROLLER] = controller_get_status,
 	[CANARDS_MODULE_ID_FLIGHT_PHASE] = flight_phase_get_status,
@@ -306,6 +307,7 @@ w_status_t health_check_exec() {
 
 	status_bitfield |= check_watchdog_tasks();
 	status_bitfield |= check_modules_status();
+	status_bitfield |= power_handler_get_board_status();
 
 	// send status CAN msg
 	can_msg_t msg = {0};
