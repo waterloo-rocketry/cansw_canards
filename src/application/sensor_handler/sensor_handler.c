@@ -150,56 +150,40 @@ static w_status_t board_imu_telemetry(void) {
 	int16_t accel_x = 0;
 	int16_t accel_y = 0;
 	int16_t accel_z = 0;
-	w_status_t accel_enc = W_SUCCESS;
-	accel_enc |=
-		can_encode_scaled_float(SCALE_BOARD_ACCEL, (float32_t)data.board_imu_accel.x, &accel_x);
-	accel_enc |=
-		can_encode_scaled_float(SCALE_BOARD_ACCEL, (float32_t)data.board_imu_accel.y, &accel_y);
-	accel_enc |=
-		can_encode_scaled_float(SCALE_BOARD_ACCEL, (float32_t)data.board_imu_accel.z, &accel_z);
+	w_status_t enc = W_SUCCESS;
+	enc |= can_encode_scaled_float(SCALE_BOARD_ACCEL, (float32_t)data.board_imu_accel.x, &accel_x);
+	enc |= can_encode_scaled_float(SCALE_BOARD_ACCEL, (float32_t)data.board_imu_accel.y, &accel_y);
+	enc |= can_encode_scaled_float(SCALE_BOARD_ACCEL, (float32_t)data.board_imu_accel.z, &accel_z);
 
-	if (W_SUCCESS == accel_enc) {
-		can_msg_t accel_msg = {0};
-		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-										 (uint16_t)ts_ms,
-										 DEM_3D_SENSOR_CANARD_LSM6DSV32X_ACCEL,
-										 (uint16_t)(accel_x + TELEM_INT16_OFFSET),
-										 (uint16_t)(accel_y + TELEM_INT16_OFFSET),
-										 (uint16_t)(accel_z + TELEM_INT16_OFFSET),
-										 &accel_msg);
-		status |= can_handler_transmit(&accel_msg);
-
-	} else {
-		status |= W_FAILURE;
-	}
+	can_msg_t accel_msg = {0};
+	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+									 (uint16_t)ts_ms,
+									 DEM_3D_SENSOR_CANARD_LSM6DSV32X_ACCEL,
+									 (uint16_t)(accel_x + TELEM_INT16_OFFSET),
+									 (uint16_t)(accel_y + TELEM_INT16_OFFSET),
+									 (uint16_t)(accel_z + TELEM_INT16_OFFSET),
+									 &accel_msg);
+	status |= can_handler_transmit(&accel_msg);
 
 	int16_t gyro_x = 0;
 	int16_t gyro_y = 0;
 	int16_t gyro_z = 0;
 	w_status_t gyro_enc = W_SUCCESS;
-	gyro_enc |=
-		can_encode_scaled_float(SCALE_BOARD_GYRO, (float32_t)data.board_imu_gyro.x, &gyro_x);
-	gyro_enc |=
-		can_encode_scaled_float(SCALE_BOARD_GYRO, (float32_t)data.board_imu_gyro.y, &gyro_y);
-	gyro_enc |=
-		can_encode_scaled_float(SCALE_BOARD_GYRO, (float32_t)data.board_imu_gyro.z, &gyro_z);
+	enc |= can_encode_scaled_float(SCALE_BOARD_GYRO, (float32_t)data.board_imu_gyro.x, &gyro_x);
+	enc |= can_encode_scaled_float(SCALE_BOARD_GYRO, (float32_t)data.board_imu_gyro.y, &gyro_y);
+	enc |= can_encode_scaled_float(SCALE_BOARD_GYRO, (float32_t)data.board_imu_gyro.z, &gyro_z);
 
-	if (W_SUCCESS == gyro_enc) {
-		can_msg_t gyro_msg = {0};
-		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-										 (uint16_t)ts_ms,
-										 DEM_3D_SENSOR_CANARD_LSM6DSV32X_GYRO,
-										 (uint16_t)(gyro_x + TELEM_INT16_OFFSET),
-										 (uint16_t)(gyro_y + TELEM_INT16_OFFSET),
-										 (uint16_t)(gyro_z + TELEM_INT16_OFFSET),
-										 &gyro_msg);
-		status |= can_handler_transmit(&gyro_msg);
+	can_msg_t gyro_msg = {0};
+	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+									 (uint16_t)ts_ms,
+									 DEM_3D_SENSOR_CANARD_LSM6DSV32X_GYRO,
+									 (uint16_t)(gyro_x + TELEM_INT16_OFFSET),
+									 (uint16_t)(gyro_y + TELEM_INT16_OFFSET),
+									 (uint16_t)(gyro_z + TELEM_INT16_OFFSET),
+									 &gyro_msg);
+	status |= can_handler_transmit(&gyro_msg);
 
-	} else {
-		status |= W_FAILURE;
-	}
-
-	return status;
+	return ((W_SUCCESS == status) && (W_SUCCESS == enc)) ? W_SUCCESS : W_FAILURE;
 }
 
 // MS5611 (board barometer): raw pressure (Pa). Thermometer half not wired yet, sending 0.
@@ -215,10 +199,8 @@ static w_status_t board_baro_telemetry(void) {
 	can_msg_t msg = {0};
 
 	uint32_t baro_pres = 0;
-	if (can_encode_scaled_int(
-			SCALE_BOARD_PRESSURE, (int64_t)data.board_baro_pressure_pa, &baro_pres) != W_SUCCESS) {
-		return W_FAILURE;
-	}
+	w_status_t enc = can_encode_scaled_int(
+		SCALE_BOARD_PRESSURE, (int64_t)data.board_baro_pressure_pa, &baro_pres);
 
 	build_2d_analog_sensor_24bit_msg(PRIO_LOW,
 									 (uint16_t)ts_ms,
@@ -226,7 +208,7 @@ static w_status_t board_baro_telemetry(void) {
 									 baro_pres,
 									 0, // TODO:temp is being sent as zero now as a placeholder
 									 &msg);
-	return can_handler_transmit(&msg);
+	return (W_SUCCESS == can_handler_transmit(&msg) && W_SUCCESS == enc) ? W_SUCCESS : W_FAILURE;
 }
 
 // MTi-630 (Movella) + IIS2MDC (board mag): both run at the same rate, sent together.
