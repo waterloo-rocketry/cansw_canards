@@ -566,14 +566,14 @@ w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config) {
 		ak45_health.hard_stop_cal_failed = true;
 		return W_FAILURE;
 	}
-	vTaskDelay(pdMS_TO_TICKS(5000)); // 10 seconds
+	vTaskDelay(pdMS_TO_TICKS(5000)); // 5 seconds
 	if (ak45_send_pos_velo_cmd(-10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
 		ak45_health.hard_stop_calibrated = false;
 		ak45_health.hard_stop_cal_failed = true;
 		return W_FAILURE;
 	}
-	vTaskDelay(pdMS_TO_TICKS(5000)); // 10 seconds
+	vTaskDelay(pdMS_TO_TICKS(5000)); // 5 seconds
 
 	// set to calibrated
 	ak45_health.hard_stop_calibrated = true;
