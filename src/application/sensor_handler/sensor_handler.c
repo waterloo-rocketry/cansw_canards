@@ -363,6 +363,125 @@ static w_status_t ad_telemetry(void) {
 	return status;
 }
 
+// ---------------------------------------------------------------------------
+// Per-sensor SD data-log functions registered with the telemetry module.
+// These write the same snapshot the CAN telemetry functions read,via log_data(). Timeout is 0 so
+// they stay non-blocking as telemetry callbacks require.
+// ---------------------------------------------------------------------------
+
+// Timeout for log_data() calls from telemetry callbacks: never block the telemetry task.
+#define SENSOR_LOG_TIMEOUT_MS 0
+
+// LSM6DSV32X (board IMU): accelerometer (m/s^2) + gyroscope (rad/s).
+static w_status_t board_imu_sd_log(void) {
+	sensor_can_telem_data_t data;
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	log_data_container_t container = {
+		.board_imu = {.accelerometer = {.x = (float)data.board_imu_accel.x,
+										.y = (float)data.board_imu_accel.y,
+										.z = (float)data.board_imu_accel.z},
+					  .gyroscope = {.x = (float)data.board_imu_gyro.x,
+									.y = (float)data.board_imu_gyro.y,
+									.z = (float)data.board_imu_gyro.z}}};
+
+	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_IMU, &container);
+}
+
+// MS5611 (board barometer): pressure in Pa.
+// TODO: thermometer is sent as 0 until the MS5611 temperature reading is wired into the snapshot.
+static w_status_t board_baro_sd_log(void) {
+	sensor_can_telem_data_t data;
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	log_data_container_t container = {
+		.board_barometer = {.barometer = (float)data.board_baro_pressure_pa, .thermometer = 0.0f}};
+
+	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_BAROMETER, &container);
+}
+
+// IIS2MDC (board magnetometer): magnetic field in gauss, paired with the board IMU accelerometer
+// reading the log format carries alongside it.
+static w_status_t board_mag_sd_log(void) {
+	sensor_can_telem_data_t data;
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	log_data_container_t container = {
+		.board_mag = {.accelerometer = {.x = (float)data.board_imu_accel.x,
+										.y = (float)data.board_imu_accel.y,
+										.z = (float)data.board_imu_accel.z},
+					  .magnetometer = {.x = (float)data.board_mag.x,
+									   .y = (float)data.board_mag.y,
+									   .z = (float)data.board_mag.z}}};
+
+	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_MAG, &container);
+}
+
+// MTi-630 (Movella) inertial half: accelerometer (m/s^2) + gyroscope (rad/s).
+static w_status_t mti_ahrs_sd_log(void) {
+	sensor_can_telem_data_t data;
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	log_data_container_t container = {
+		.movella_pt1 = {.accelerometer = {.x = (float)data.mti_accel.x,
+										  .y = (float)data.mti_accel.y,
+										  .z = (float)data.mti_accel.z},
+						.gyroscope = {.x = (float)data.mti_gyro.x,
+									  .y = (float)data.mti_gyro.y,
+									  .z = (float)data.mti_gyro.z}}};
+
+	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT1, &container);
+}
+
+// MTi-630 (Movella) environmental half: magnetometer (gauss) + barometer (Pa).
+static w_status_t mti_env_sd_log(void) {
+	sensor_can_telem_data_t data;
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	log_data_container_t container = {.movella_pt2 = {.magnetometer = {.x = (float)data.mti_mag.x,
+																	   .y = (float)data.mti_mag.y,
+																	   .z = (float)data.mti_mag.z},
+													  .barometer = data.mti_baro_pressure}};
+
+	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT2, &container);
+}
+
+// ADXL380 (AD breakout accelerometer): m/s^2.
+static w_status_t ad_accel_sd_log(void) {
+	sensor_can_telem_data_t data;
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	log_data_container_t container = {.ad_accel = {.accelerometer = {.x = (float)data.ad_accel.x,
+																	 .y = (float)data.ad_accel.y,
+																	 .z = (float)data.ad_accel.z}}};
+
+	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_AD_ACCEL, &container);
+}
+
+// ADXRS649 (AD high-rate single-axis gyro): rad/s.
+static w_status_t ad_gyro_sd_log(void) {
+	sensor_can_telem_data_t data;
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	log_data_container_t container = {.ad_gyro = {.gyroscope = data.ad_gyro}};
+
+	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_AD_GYRO, &container);
+}
+
 /**
  * @brief Read data from the board
  * @param ctx pointer to the ctx storing the previously updated times for the sensors
@@ -751,12 +870,39 @@ w_status_t sensor_handler_init(void) {
 		{"Board IMU", board_imu_telemetry, STATE_BOOST, 1000 / 10},
 		{"Board IMU", board_imu_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
 
+		// --- SD log group: 200/20/20/1 (LSM6DSV32X accel+gyro) ---
+		{"Board IMU", board_imu_sd_log, STATE_IDLE, 1000 / 1},
+		{"Board IMU", board_imu_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"Board IMU", board_imu_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"Board IMU", board_imu_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"Board IMU", board_imu_sd_log, STATE_PAD_NAV, 1000 / 200},
+		{"Board IMU", board_imu_sd_log, STATE_BOOST, 1000 / 200},
+		{"Board IMU", board_imu_sd_log, STATE_ACT_ALLOWED, 1000 / 200},
+
 		// MS5611 (board barometer + thermometer)
 		{"Board Baro", board_baro_telemetry, STATE_IDLE, 100},
 		{"Board Baro", board_baro_telemetry, STATE_PAD_FILTER, 100},
 		{"Board Baro", board_baro_telemetry, STATE_PAD_NAV, 100},
 		{"Board Baro", board_baro_telemetry, STATE_ACT_ALLOWED, 100},
 		{"Board Baro", board_baro_telemetry, STATE_BOOST, 100},
+
+		// --- SD log group: 50/20/20/1 (MS5611 barometer; thermometer rides along as 0 for now) ---
+		{"Board Baro", board_baro_sd_log, STATE_IDLE, 1000 / 1},
+		{"Board Baro", board_baro_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"Board Baro", board_baro_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"Board Baro", board_baro_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"Board Baro", board_baro_sd_log, STATE_PAD_NAV, 1000 / 50},
+		{"Board Baro", board_baro_sd_log, STATE_BOOST, 1000 / 50},
+		{"Board Baro", board_baro_sd_log, STATE_ACT_ALLOWED, 1000 / 50},
+
+		// --- SD log group: 50/20/20/1 (IIS2MDC board magnetometer) ---
+		{"Board Mag", board_mag_sd_log, STATE_IDLE, 1000 / 1},
+		{"Board Mag", board_mag_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"Board Mag", board_mag_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"Board Mag", board_mag_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"Board Mag", board_mag_sd_log, STATE_PAD_NAV, 1000 / 50},
+		{"Board Mag", board_mag_sd_log, STATE_BOOST, 1000 / 50},
+		{"Board Mag", board_mag_sd_log, STATE_ACT_ALLOWED, 1000 / 50},
 
 		// MTi-630 (Movella) accel+gyro+mag+baro plus LSM303AGR board mag (same rate),
 		// 2Hz on pad/flight, 1Hz idle.
@@ -766,12 +912,48 @@ w_status_t sensor_handler_init(void) {
 		{"MTI and board mag", mti_board_mag_telemetry, STATE_BOOST, 1000 / 2},
 		{"MTI and board mag", mti_board_mag_telemetry, STATE_ACT_ALLOWED, 1000 / 2},
 
+		// --- SD log group: 100/20/20/1 (MTi accel+gyro) ---
+		{"MTi AHRS", mti_ahrs_sd_log, STATE_IDLE, 1000 / 1},
+		{"MTi AHRS", mti_ahrs_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"MTi AHRS", mti_ahrs_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"MTi AHRS", mti_ahrs_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"MTi AHRS", mti_ahrs_sd_log, STATE_PAD_NAV, 1000 / 100},
+		{"MTi AHRS", mti_ahrs_sd_log, STATE_BOOST, 1000 / 100},
+		{"MTi AHRS", mti_ahrs_sd_log, STATE_ACT_ALLOWED, 1000 / 100},
+
+		// --- SD log group: 50/20/20/1 (MTi barometer + magnetometer) ---
+		{"MTi Env", mti_env_sd_log, STATE_IDLE, 1000 / 1},
+		{"MTi Env", mti_env_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"MTi Env", mti_env_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"MTi Env", mti_env_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"MTi Env", mti_env_sd_log, STATE_PAD_NAV, 1000 / 50},
+		{"MTi Env", mti_env_sd_log, STATE_BOOST, 1000 / 50},
+		{"MTi Env", mti_env_sd_log, STATE_ACT_ALLOWED, 1000 / 50},
+
 		// AD breakout: ADXL380 accel + ADXRS649 gyro together, 10Hz pad/flight, 1Hz idle.
 		{"AD", ad_telemetry, STATE_IDLE, 1000 / 1},
 		{"AD", ad_telemetry, STATE_PAD_FILTER, 1000 / 10},
 		{"AD", ad_telemetry, STATE_PAD_NAV, 1000 / 10},
 		{"AD", ad_telemetry, STATE_BOOST, 1000 / 10},
 		{"AD", ad_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
+
+		// --- SD log group: 50/20/20/1 (ADXL380 accel) ---
+		{"AD Accel", ad_accel_sd_log, STATE_IDLE, 1000 / 1},
+		{"AD Accel", ad_accel_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"AD Accel", ad_accel_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"AD Accel", ad_accel_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"AD Accel", ad_accel_sd_log, STATE_PAD_NAV, 1000 / 50},
+		{"AD Accel", ad_accel_sd_log, STATE_BOOST, 1000 / 50},
+		{"AD Accel", ad_accel_sd_log, STATE_ACT_ALLOWED, 1000 / 50},
+
+		// --- SD log group: 200/20/20/1 (ADXRS649 gyro) ---
+		{"AD Gyro", ad_gyro_sd_log, STATE_IDLE, 1000 / 1},
+		{"AD Gyro", ad_gyro_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"AD Gyro", ad_gyro_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"AD Gyro", ad_gyro_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"AD Gyro", ad_gyro_sd_log, STATE_PAD_NAV, 1000 / 200},
+		{"AD Gyro", ad_gyro_sd_log, STATE_BOOST, 1000 / 200},
+		{"AD Gyro", ad_gyro_sd_log, STATE_ACT_ALLOWED, 1000 / 200},
 	};
 
 	static const size_t telemetry_source_count =
