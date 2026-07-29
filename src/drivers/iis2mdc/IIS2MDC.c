@@ -539,18 +539,18 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 
 health_status_t iis2mdc_get_status(void) {
 	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_IIS2MDC, .error_bitfield = 0};
+		.severity = HEALTH_OK, .module_id = CANARDS_MODULE_ID_IIS2MDC, .error_bitfield = 0};
 
 	// I2C/DMA failure
 	if (W_IO_ERROR == iis2mdc_latest_status) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_COMM_FAILURE;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
 
 	// driver not initialized
 	if (iis2mdc_state != IIS2MDC_STATE_ASYNC_DMA_ACTIVE) {
 		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_NOT_INIT;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	log_text(10,
