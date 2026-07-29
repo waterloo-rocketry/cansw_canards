@@ -59,9 +59,9 @@ static w_status_t nav_can_telemetry(void) {
 		return W_FAILURE;
 	}
 	// scale quaternion x, y, z (orientation[1..3]) and offset into uint16
-	int16_t orientation_x;
-	int16_t orientation_y;
-	int16_t orientation_z;
+	int16_t orientation_x = 0;
+	int16_t orientation_y = 0;
+	int16_t orientation_z = 0;
 
 	if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
 											 nav_value_lastest_raw.orientation[1],
@@ -82,9 +82,9 @@ static w_status_t nav_can_telemetry(void) {
 	}
 
 	// quaternion w is signed (offset into uint16); altitude and varnorm are unsigned
-	int16_t orientation_w;
-	uint16_t altitude;
-	uint16_t varnorm;
+	int16_t orientation_w = 0;
+	uint16_t altitude = 0;
+	uint16_t varnorm = 0;
 
 	if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
 											 nav_value_lastest_raw.orientation[0],
@@ -102,14 +102,14 @@ static w_status_t nav_can_telemetry(void) {
 		log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for variance norm.");
 	}
 
-	uint32_t timestamp;
+	uint32_t timestamp = 0;
 
 	if (timer_get_ms(&timestamp) != W_SUCCESS) {
 		log_text(0, LOG_LVL_WARN, "navigator", "Failed to get timestamp for can msg tx");
 		return W_FAILURE;
 	}
 
-	can_msg_t msg_qxyz;
+	can_msg_t msg_qxyz = {0};
 	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)timestamp,
 									 DEM_3D_SENSOR_CANARD_NAV_ORI_QX_QY_QZ,
@@ -126,7 +126,7 @@ static w_status_t nav_can_telemetry(void) {
 		status = W_FAILURE;
 	}
 
-	can_msg_t msg_qw_alt_var;
+	can_msg_t msg_qw_alt_var = {0};
 	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)timestamp,
 									 DEM_3D_SENSOR_CANARD_NAV_ORI_QW_ALT_VARNORM,
@@ -167,7 +167,7 @@ static w_status_t nav_can_telemetry(void) {
 			status = W_FAILURE;
 		}
 
-		can_msg_t msg;
+		can_msg_t msg = {0};
 		build_2d_analog_sensor_24bit_msg(PRIO_LOW,
 										 (uint16_t)timestamp,
 										 axis_ids[axis],

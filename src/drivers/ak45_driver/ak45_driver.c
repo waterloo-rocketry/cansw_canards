@@ -221,7 +221,7 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 	int16_t current_scaled_int16 = 0;
 	if (can_encode_scaled_float(SCALE_SERVO_CURRENT, fb.current_a, &current_scaled_int16) !=
 		W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperture");
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale current");
 		status |= W_FAILURE;
 
 	} else {

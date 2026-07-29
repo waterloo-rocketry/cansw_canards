@@ -44,7 +44,7 @@ FORMATS = {
     ]),
     M(0x04): Spec("controller", "<fffff",
     [
-        "command", "roll_target", "canard_coeff", "body_coeff", "roll_rate_target",
+        "command", "canard_coeff", "body_coeff", "roll_angle_target", "roll_rate_target",
     ]),
 
     M(0x05): Spec("board_imu", "<ffffff",

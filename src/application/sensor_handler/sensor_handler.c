@@ -141,7 +141,7 @@ static w_status_t sensor_handler_get_latest(sensor_can_telem_data_t *out) {
 
 // LSM6DSV32X (board IMU): accelerometer + gyroscope
 static w_status_t board_imu_ad_can_telemetry(void) {
-	sensor_can_telem_data_t data;
+	sensor_can_telem_data_t data = {0};
 	w_status_t status = W_SUCCESS;
 
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
@@ -226,15 +226,16 @@ static w_status_t board_imu_ad_can_telemetry(void) {
 	}
 
 	can_msg_t gyro_msg = {0};
+	int32_t gyro_scaled = 0;
 	w_status_t ad_gyro_enc =
-		can_encode_scaled_float(SCALE_ADXRS649_GYROSCOPE, data.ad_gyro, &gyro_x);
+		can_encode_scaled_float(SCALE_ADXRS649_GYROSCOPE, data.ad_gyro, &gyro_scaled);
 
-	if (W_SUCCESS != ad_gyro_enc) {
+	if (W_SUCCESS == ad_gyro_enc) {
 		build_analog_sensor_32bit_msg(
 			PRIO_LOW,
 			(uint16_t)ts_ms,
 			SENSOR_CANARD_ADXRS649_GYRO,
-			(uint32_t)(gyro_x + TELEMETRY_INT32_OFFSET), // spans -+ 1000 so this is fine
+			(uint32_t)(gyro_scaled + TELEMETRY_INT32_OFFSET), // spans -+ 1000 so this is fine
 			&gyro_msg);
 		status |= can_handler_transmit(&gyro_msg);
 	} else {
@@ -246,7 +247,7 @@ static w_status_t board_imu_ad_can_telemetry(void) {
 
 // MS5611 (board barometer): raw pressure (Pa). Thermometer half not wired yet, sending 0.
 static w_status_t board_baro_can_telemetry(void) {
-	sensor_can_telem_data_t data;
+	sensor_can_telem_data_t data = {0};
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
 		return W_FAILURE;
 	}
@@ -273,7 +274,7 @@ static w_status_t board_baro_can_telemetry(void) {
 
 // MTi-630 (Movella) + IIS2MDC (board mag): both run at the same rate, sent together.
 static w_status_t mti_board_mag_can_telemetry(void) {
-	sensor_can_telem_data_t data;
+	sensor_can_telem_data_t data = {0};
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
 		return W_FAILURE;
 	}
@@ -369,12 +370,11 @@ static w_status_t mti_board_mag_can_telemetry(void) {
 // they stay non-blocking as telemetry callbacks require.
 // ---------------------------------------------------------------------------
 
-
 // This will be all of the high rate logging sensors
 // LSM6 Accel + Gyro
 // AD Gyro
 static w_status_t sensor_high_rate_sd_log(void) {
-	sensor_can_telem_data_t data;
+	sensor_can_telem_data_t data = {0};
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
 		return W_FAILURE;
 	}
@@ -385,7 +385,7 @@ static w_status_t sensor_high_rate_sd_log(void) {
 	container.board_imu.accelerometer.y = (float32_t)data.board_imu_accel.y;
 	container.board_imu.accelerometer.z = (float32_t)data.board_imu_accel.z;
 	container.board_imu.gyroscope.x = (float32_t)data.board_imu_gyro.x;
-	container.board_imu.gyroscope.y = (float32_t)data.board_imu_gyro.y,
+	container.board_imu.gyroscope.y = (float32_t)data.board_imu_gyro.y;
 	container.board_imu.gyroscope.z = (float32_t)data.board_imu_gyro.z;
 
 	w_status_t log_data_result = W_SUCCESS;
@@ -454,7 +454,7 @@ static w_status_t movella_state_sd_log(void) {
 	container.movella_pt3.orient_y = (float32_t)data.mti_quaternion.y;
 	container.movella_pt3.orient_z = (float32_t)data.mti_quaternion.z;
 
-	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_MAG_BARO, &container);
+	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT3, &container);
 }
 
 /**
@@ -468,7 +468,6 @@ static w_status_t movella_state_sd_log(void) {
 static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_meas_t *board_data,
 								  raw_board_meas_t *raw_data, const uint32_t curr_timestamp_ms) {
 	(void)curr_timestamp_ms;
-	bool is_dead = true;
 
 	w_status_t sensor_status = lsm6dsv32x_get_gyro_acc_data(&(board_data->board_imu.accel),
 															&(board_data->board_imu.gyro),
@@ -591,7 +590,6 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *ad_data,
 							   const uint32_t curr_timestamp_ms) {
 	(void)curr_timestamp_ms;
-	bool is_dead = true;
 
 	// get accel
 	uint32_t accel_timestamp_ms = 0;

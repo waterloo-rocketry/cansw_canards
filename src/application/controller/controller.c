@@ -19,7 +19,7 @@
 #define LOG_WAIT_MS 10
 static const float64_t MS_TO_SEC = 0.001;
 static const float64_t TENTH_MS_TO_MS = 0.1;
-static const uint32_t CTRL_LOG_DATA_TIMEOUT;
+static const uint32_t CTRL_LOG_DATA_TIMEOUT = 0;
 
 // TODO: send roll target angle through can and body lift coeff (need updated canlib)
 typedef struct {
@@ -118,7 +118,7 @@ static w_status_t ctrl_sd_telemetry(void) {
 	if (xQueuePeek(ctrl_value_queue, &ctrl_value_latest_raw, 0) != pdTRUE) {
 		log_text(0,
 				 LOG_LVL_WARN,
-				 "navigator",
+				 "controller",
 				 "Failed to peek mailbox queue while sending current nav values through can.");
 
 		return W_FAILURE;
