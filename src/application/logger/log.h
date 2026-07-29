@@ -153,10 +153,11 @@ typedef union __attribute__((packed)) {
 
 	// LOG_TYPE_CONTROLLER:
 	struct __attribute__((packed)) {
-		// the 3 vars in roll_state_t
-		float command; // deg
-		float roll_target; // deg
+		float command; // rad
 		float canard_coeff;
+		float body_coeff;
+		float roll_angle_target; // rad
+		float roll_rate_target; // rad/s
 	} controller;
 
 	// LOG_TYPE_BOARD_IMU:
@@ -200,7 +201,7 @@ typedef union __attribute__((packed)) {
 	// LOG_TYPE_SERVO_MOTOR:
 	struct __attribute__((packed)) {
 		float motor_angle; // deg
-		float motor_current; // mA
+		float motor_current; // A
 		float motor_temperature; // C
 	} servo_motor;
 

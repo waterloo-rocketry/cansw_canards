@@ -195,9 +195,11 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 			break;
 
-			// both act allowed and recovery will only run estimator and controller step
+		// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
+		// we will still run our controller and nav on the ground cause why not
+		case STATE_SLEEPY:
 #ifdef HIL
 			if (timestamp_tenth_ms % 50 == 0) {
 				gpio_toggle(GPIO_PIN_GREEN_LED, 0);
@@ -233,10 +235,6 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 				ak45_send_position_cmd(motor_angle_deg);
 				/****************************************************************/
 			}
-			break;
-
-			// etc for more cases...
-		case STATE_SLEEPY:
 			break;
 
 		default:
