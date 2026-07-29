@@ -484,27 +484,28 @@ void log_task(void *argument) {
 }
 
 health_status_t logger_get_status(void) {
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_LOGGER, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_LOGGER,
+							  .error_bitfield = 0};
 
 	if (!logger_health.is_init) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= (1 << ERR_NOT_INIT);
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	if (logger_health.buffer_is_full) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= (1 << ERR_OVERFLOW);
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= (1 << CANARDS_MODULE_E_OVERFLOW_OFFSET);
 	}
 
 	if (logger_health.timeout_occurred) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= (1 << ERR_TIMEOUT);
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= (1 << CANARDS_MODULE_E_TIMEOUT_OFFSET);
 	}
 
 	if ((logger_health.queue_send_fails > 0) || (logger_health.unsafe_buffer_flushes > 0)) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= (1 << ERR_OS);
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= (1 << CANARDS_MODULE_E_OS_OFFSET);
 	}
 
 	// reset error flags
