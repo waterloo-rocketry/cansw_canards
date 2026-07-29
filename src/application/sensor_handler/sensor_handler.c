@@ -63,6 +63,9 @@ static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.15;
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
 
+// Timeout for log_data() calls from telemetry callbacks: never block the telemetry task.
+#define SENSOR_LOG_TIMEOUT_MS 0
+
 typedef struct {
 	uint32_t success_count;
 	uint32_t failure_count;
@@ -137,7 +140,7 @@ static w_status_t sensor_handler_get_latest(sensor_can_telem_data_t *out) {
 // ---------------------------------------------------------------------------
 
 // LSM6DSV32X (board IMU): accelerometer + gyroscope
-static w_status_t board_imu_telemetry(void) {
+static w_status_t board_imu_ad_can_telemetry(void) {
 	sensor_can_telem_data_t data;
 	w_status_t status = W_SUCCESS;
 
@@ -360,57 +363,12 @@ static w_status_t mti_board_mag_can_telemetry(void) {
 	return ((W_SUCCESS == status) && (W_SUCCESS == enc)) ? W_SUCCESS : W_FAILURE;
 }
 
-// AD breakout: ADXL380 accelerometer + ADXRS649 high-rate 1-axis gyro sent together.
-// The driver exposes only converted floats, so we send exactly what sensor_handler has, cast
-// straight to the 16-bit field with scaling and offset applied.
-static w_status_t ad_telemetry(void) {
-	sensor_can_telem_data_t data;
-	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
-		return W_FAILURE;
-	}
-
-	uint32_t ts_ms = 0;
-	(void)timer_get_ms(&ts_ms);
-
-	can_msg_t accel_msg = {0};
-	w_status_t enc = W_SUCCESS;
-
-	int16_t accel_x = 0;
-	int16_t accel_y = 0;
-	int16_t accel_z = 0;
-	enc |= can_encode_scaled_float(SCALE_ADXL380_ACCEL, (float32_t)data.ad_accel.x, &accel_x);
-	enc |= can_encode_scaled_float(SCALE_ADXL380_ACCEL, (float32_t)data.ad_accel.y, &accel_y);
-	enc |= can_encode_scaled_float(SCALE_ADXL380_ACCEL, (float32_t)data.ad_accel.z, &accel_z);
-
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_ADXL380_ACCEL,
-									 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
-									 &accel_msg);
-	w_status_t status = can_handler_transmit(&accel_msg);
-
-	can_msg_t gyro_msg = {0};
-	int32_t gyro_scaled = 0;
-	enc |= can_encode_scaled_float(SCALE_ADXRS649_GYROSCOPE, data.ad_gyro, &gyro_scaled);
-	build_analog_sensor_32bit_msg(PRIO_LOW,
-								  (uint16_t)ts_ms,
-								  SENSOR_CANARD_ADXRS649_GYRO,
-								  (uint32_t)(gyro_scaled + TELEMETRY_INT32_OFFSET),
-								  &gyro_msg);
-	status |= can_handler_transmit(&gyro_msg);
-	return status;
-}
-
 // ---------------------------------------------------------------------------
 // Per-sensor SD data-log functions registered with the telemetry module.
 // These write the same snapshot the CAN telemetry functions read,via log_data(). Timeout is 0 so
 // they stay non-blocking as telemetry callbacks require.
 // ---------------------------------------------------------------------------
 
-// Timeout for log_data() calls from telemetry callbacks: never block the telemetry task.
-#define SENSOR_LOG_TIMEOUT_MS 0
 
 // This will be all of the high rate logging sensors
 // LSM6 Accel + Gyro
