@@ -200,6 +200,19 @@ protected:
     void TearDown() override {}
 };
 
+// NOTE: this must remain the first TEST_F in this file (declaration order == execution order
+// for a gtest fixture) since `is_initialized` is a file-static in ADXRS649.c that starts false
+// and is permanently flipped true by the first successful adxrs649_init() call below.
+TEST_F(ADXRS649, getStatusNotInitialized){
+    health_status_t status = adxrs649_get_status();
+
+    EXPECT_EQ(CANARDS_HEALTH_SEVERITY_HEALTH_ERROR, status.severity);
+    EXPECT_EQ(CANARDS_MODULE_ID_ADXRS649, status.module_id);
+    EXPECT_NE(0u, status.error_bitfield & (1 << CANARDS_MODULE_E_NOT_INIT_OFFSET));
+    EXPECT_EQ(0u, status.error_bitfield & (1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET));
+    EXPECT_EQ(0u, status.error_bitfield & (1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET));
+};
+
 TEST_F(ADXRS649, initSuccess){
 
     // set up function returns
@@ -625,4 +638,89 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorRegular){
     EXPECT_EQ(W_SUCCESS, status);
     EXPECT_FLOAT_EQ((global_adc_output_mv / 0.1), data);
     EXPECT_EQ(1, raw_data);
+};
+
+// From this point on in the file, `is_initialized` is guaranteed true (set by the very first
+// TEST_F above), so `adxrs649_get_status` will never report CANARDS_MODULE_E_NOT_INIT_OFFSET.
+// `adxrs649_health` counters are cumulative file-statics with no test-visible reset, so each
+// test below flushes any residual state with an initial call to adxrs649_get_status() (which
+// clears the "recent_*" counters as a side effect) before asserting on newly-triggered failures.
+
+TEST_F(ADXRS649, getStatusOkWhenHealthy){
+    successful_adxrs649_init();
+
+    // flush any residual error counters accumulated by earlier tests in this binary
+    adxrs649_get_status();
+
+    health_status_t status = adxrs649_get_status();
+
+    EXPECT_EQ(CANARDS_HEALTH_SEVERITY_HEALTH_OK, status.severity);
+    EXPECT_EQ(CANARDS_MODULE_ID_ADXRS649, status.module_id);
+    EXPECT_EQ(0u, status.error_bitfield);
+};
+
+TEST_F(ADXRS649, getStatusSetsCommFailureBitOnDataReadyCheckFailure){
+    successful_adxrs649_init();
+    adxrs649_get_status(); // flush residual state
+
+    // force both the GPIO and ADS1219 data-ready paths to fail
+    gpio_read_fake.return_val = W_FAILURE;
+    ads1219_conversion_ready_fake.return_val = W_FAILURE;
+
+    bool drdy = false;
+    w_status_t drdy_status = adxrs649_is_data_ready(&drdy);
+    EXPECT_EQ(W_IO_ERROR, drdy_status);
+
+    health_status_t status = adxrs649_get_status();
+    EXPECT_EQ(CANARDS_HEALTH_SEVERITY_HEALTH_ERROR, status.severity);
+    EXPECT_NE(0u, status.error_bitfield & (1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET));
+
+    // counters are cleared once read, so a subsequent call without new failures is healthy
+    health_status_t status_after = adxrs649_get_status();
+    EXPECT_EQ(CANARDS_HEALTH_SEVERITY_HEALTH_OK, status_after.severity);
+    EXPECT_EQ(0u, status_after.error_bitfield);
+};
+
+TEST_F(ADXRS649, getStatusSetsCommFailureBitOnReadValueFailure){
+    successful_adxrs649_init();
+    adxrs649_get_status(); // flush residual state
+
+    ads1219_read_value_fake.return_val = W_FAILURE;
+
+    float64_t data = 0;
+    uint32_t raw_data = 0;
+    w_status_t gyro_status = adxrs649_get_gyro_data(&data, &raw_data);
+    EXPECT_EQ(W_IO_ERROR, gyro_status);
+
+    health_status_t status = adxrs649_get_status();
+    EXPECT_EQ(CANARDS_HEALTH_SEVERITY_HEALTH_ERROR, status.severity);
+    EXPECT_NE(0u, status.error_bitfield & (1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET));
+};
+
+TEST_F(ADXRS649, getStatusSetsInvalidParamBitOnNullDrdyPtr){
+    successful_adxrs649_init();
+    adxrs649_get_status(); // flush residual state
+
+    w_status_t drdy_status = adxrs649_is_data_ready(NULL);
+    EXPECT_EQ(W_INVALID_PARAM, drdy_status);
+
+    health_status_t status = adxrs649_get_status();
+    EXPECT_EQ(CANARDS_HEALTH_SEVERITY_HEALTH_ERROR, status.severity);
+    EXPECT_NE(0u, status.error_bitfield & (1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET));
+
+    // counter clears after being read
+    health_status_t status_after = adxrs649_get_status();
+    EXPECT_EQ(0u, status_after.error_bitfield & (1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET));
+};
+
+TEST_F(ADXRS649, getStatusSetsInvalidParamBitOnNullGyroDataPtrs){
+    successful_adxrs649_init();
+    adxrs649_get_status(); // flush residual state
+
+    w_status_t gyro_status = adxrs649_get_gyro_data(NULL, NULL);
+    EXPECT_EQ(W_INVALID_PARAM, gyro_status);
+
+    health_status_t status = adxrs649_get_status();
+    EXPECT_EQ(CANARDS_HEALTH_SEVERITY_HEALTH_ERROR, status.severity);
+    EXPECT_NE(0u, status.error_bitfield & (1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET));
 };

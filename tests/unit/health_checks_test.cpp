@@ -29,6 +29,8 @@ FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *
 // Mock implementations for all the module get_status functions
 FAKE_VALUE_FUNC(health_status_t, i2c_get_status);
 FAKE_VALUE_FUNC(health_status_t, adc_get_status);
+FAKE_VALUE_FUNC(health_status_t, adxl380_get_status);
+FAKE_VALUE_FUNC(health_status_t, adxrs649_get_status);
 FAKE_VALUE_FUNC(health_status_t, can_handler_get_status);
 FAKE_VALUE_FUNC(health_status_t, estimator_get_status);
 FAKE_VALUE_FUNC(health_status_t, controller_get_status);
@@ -73,6 +75,8 @@ protected:
 		// Reset all the module status function fakes
 		RESET_FAKE(i2c_get_status);
 		RESET_FAKE(adc_get_status);
+		RESET_FAKE(adxl380_get_status);
+		RESET_FAKE(adxrs649_get_status);
 		RESET_FAKE(can_handler_get_status);
 		RESET_FAKE(estimator_get_status);
 		RESET_FAKE(controller_get_status);
@@ -92,6 +96,8 @@ protected:
 		// Set default return values for module status functions
 		health_status_t i2c_ok = {HEALTH_OK, MODULE_I2C, ERR_NONE};
 		health_status_t adc_ok = {HEALTH_OK, MODULE_ADC, ERR_NONE};
+		health_status_t adxl380_ok = {HEALTH_OK, MODULE_ADXL380, ERR_NONE};
+		health_status_t adxrs649_ok = {HEALTH_OK, MODULE_ADXRS649, ERR_NONE};
 		health_status_t can_ok = {HEALTH_OK, MODULE_CAN_HANDLER, ERR_NONE};
 		health_status_t est_ok = {HEALTH_OK, MODULE_ESTIMATOR, ERR_NONE};
 		health_status_t ctrl_ok = {HEALTH_OK, MODULE_CONTROLLER, ERR_NONE};
@@ -105,6 +111,8 @@ protected:
 
 		i2c_get_status_fake.return_val = i2c_ok;
 		adc_get_status_fake.return_val = adc_ok;
+		adxl380_get_status_fake.return_val = adxl380_ok;
+		adxrs649_get_status_fake.return_val = adxrs649_ok;
 		can_handler_get_status_fake.return_val = can_ok;
 		estimator_get_status_fake.return_val = est_ok;
 		controller_get_status_fake.return_val = ctrl_ok;
@@ -235,6 +243,50 @@ TEST_F(HealthChecksTest, FatalErrorTriggersSnprintf) {
 	// Arrange: Set a module to FATAL
 	health_status_t fatal_i2c = {HEALTH_FATAL, MODULE_I2C, ERR_COMM_FAILURE};
 	i2c_get_status_fake.return_val = fatal_i2c;
+
+	// Act
+	health_check_exec();
+
+	// Assert
+	EXPECT_EQ(snprintf_spy_fake.call_count, 1);
+	EXPECT_STREQ(snprintf_spy_fake.arg2_val, "%d:%d");
+}
+
+TEST_F(HealthChecksTest, AdBreakoutBoardStatusFnsAreInvokedDuringHealthCheck) {
+	// Arrange
+	SetTimerMs(1000);
+
+	// Act
+	w_status_t result = health_check_exec();
+
+	// Assert: previously these two module slots were NULL (and thus skipped), they must now
+	// be invoked once per health_check_exec call.
+	EXPECT_EQ(W_SUCCESS, result);
+	EXPECT_EQ(1, adxl380_get_status_fake.call_count);
+	EXPECT_EQ(1, adxrs649_get_status_fake.call_count);
+}
+
+TEST_F(HealthChecksTest, ADXL380ErrorStatusIsReportedAndDoesNotCrashHealthCheck) {
+	// Arrange
+	health_status_t error_adxl380 = {HEALTH_ERROR, MODULE_ADXL380, ERR_COMM_FAILURE};
+	adxl380_get_status_fake.return_val = error_adxl380;
+
+	// Act
+	w_status_t result = health_check_exec();
+
+	// Assert: health_check_exec's return only reflects timer/CAN-transmit success, so a
+	// non-OK module status does not itself flip the overall return value; instead it is
+	// reported as its own CAN message via process_module_status.
+	EXPECT_EQ(W_SUCCESS, result);
+	EXPECT_EQ(1, adxl380_get_status_fake.call_count);
+	// once for the ADXL380 error report, once for the overall board status message
+	EXPECT_EQ(2, can_handler_transmit_fake.call_count);
+}
+
+TEST_F(HealthChecksTest, ADXRS649FatalStatusTriggersFatalHandling) {
+	// Arrange
+	health_status_t fatal_adxrs649 = {HEALTH_FATAL, MODULE_ADXRS649, ERR_COMM_FAILURE};
+	adxrs649_get_status_fake.return_val = fatal_adxrs649;
 
 	// Act
 	health_check_exec();
