@@ -276,8 +276,9 @@ w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
  * @return the health status of the ADXRS649
  */
 health_status_t adxrs649_get_status(void) {
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_ADXRS649, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_ADXRS649,
+							  .error_bitfield = 0};
 
 	log_text(10,
 			 LOG_LVL_INFO,
@@ -297,21 +298,21 @@ health_status_t adxrs649_get_status(void) {
 			 adxrs649_health.recent_null_params);
 
 	if (!is_initialized) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_NOT_INIT;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	if (adxrs649_health.recent_null_params) {
 		adxrs649_health.recent_null_params = 0;
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_INVALID_PARAM;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
 	}
 
 	if (adxrs649_health.recent_data_read_fails || adxrs649_health.recent_data_ready_check_fails) {
 		adxrs649_health.recent_data_ready_check_fails = 0;
 		adxrs649_health.recent_data_read_fails = 0;
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_COMM_FAILURE;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
 
 	return status;

@@ -44,8 +44,8 @@ static uint32_t num_watchdog_tasks = 0;
 
 static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MAX] = {
 	[CANARDS_MODULE_ID_ADC] = adc_get_status,
-	[CANARDS_MODULE_ID_ADXL380] = NULL,
-	[CANARDS_MODULE_ID_ADXRS649] = NULL,
+	[CANARDS_MODULE_ID_ADXL380] = adxl380_get_status,
+	[CANARDS_MODULE_ID_ADXRS649] = adxrs649_get_status,
 	[CANARDS_MODULE_ID_AK45] = ak45_get_status,
 	[CANARDS_MODULE_ID_CAN_HANDLER] = can_handler_get_status,
 	[CANARDS_MODULE_ID_CONTROLLER] = controller_get_status,
