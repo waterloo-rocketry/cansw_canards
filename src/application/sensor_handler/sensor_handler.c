@@ -105,6 +105,8 @@ typedef struct {
 	vector3d_t mti_gyro; // rad/s
 	vector3d_t mti_mag; // gauss
 	float32_t mti_baro_pressure; // Pa
+	quaternion_f32_t mti_quaternion;
+
 	// ADXL380 (AD breakout accel)
 	vector3d_t ad_accel; // m/s^2
 	// ADXRS649 (AD high-rate gyro)
@@ -267,7 +269,7 @@ static w_status_t board_baro_can_telemetry(void) {
 }
 
 // MTi-630 (Movella) + IIS2MDC (board mag): both run at the same rate, sent together.
-static w_status_t mti_board_mag_telemetry(void) {
+static w_status_t mti_board_mag_can_telemetry(void) {
 	sensor_can_telem_data_t data;
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
 		return W_FAILURE;
@@ -480,6 +482,21 @@ static w_status_t sensor_low_rate_sd_log(void) {
 	log_data_result |= log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT2, &container);
 
 	return log_data_result;
+}
+
+static w_status_t movella_state_sd_log(void) {
+	sensor_can_telem_data_t data;
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	log_data_container_t container = {0};
+	container.movella_pt3.orient_w = (float32_t)data.mti_quaternion.w;
+	container.movella_pt3.orient_x = (float32_t)data.mti_quaternion.x;
+	container.movella_pt3.orient_y = (float32_t)data.mti_quaternion.y;
+	container.movella_pt3.orient_z = (float32_t)data.mti_quaternion.z;
+
+	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_MAG_BARO, &container);
 }
 
 /**
@@ -697,10 +714,12 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
  * @brief Read data from the Movella MTi-630 sensor
  * @param ctx pointer to the ctx storing the previously updated times for the sensors
  * @param imu_data Pointer to store the IMU data
+ * @param quaternion_output pointer to store quaternion output for logging
  * @param curr_timestamp_ms the current time stamp for freshness calculations TODO
  * @return Status of the read operation
  */
 static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas_t *imu_data,
+								   quaternion_f32_t *quaternion_output,
 								   const uint32_t curr_timestamp_ms) {
 	(void)curr_timestamp_ms;
 	// Read all data from Movella in one call
@@ -710,6 +729,7 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
 
 	if (W_SUCCESS == status) {
 		// Copy data from Movella
+		memcpy(quaternion_output, &movella_data.quaternion, sizeof(*quaternion_output));
 		// Apply orientation correction
 		imu_data->mti_accel.meas =
 			math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.acc);
@@ -879,11 +899,11 @@ w_status_t sensor_handler_init(void) {
 
 		// MTi-630 (Movella) accel+gyro+mag+baro plus LSM303AGR board mag (same rate),
 		// 2Hz on pad/flight, 1Hz idle.
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_IDLE, 1000 / 1},
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_PAD_FILTER, 1000 / 2},
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_PAD_NAV, 1000 / 2},
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_BOOST, 1000 / 2},
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_ACT_ALLOWED, 1000 / 2},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_IDLE, 1000 / 1},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_PAD_FILTER, 1000 / 2},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_PAD_NAV, 1000 / 2},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_BOOST, 1000 / 2},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_ACT_ALLOWED, 1000 / 2},
 
 		// --- SD log group: 200/20/20/1 (High Rate) ---
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_IDLE, 1000 / 1},
@@ -902,6 +922,15 @@ w_status_t sensor_handler_init(void) {
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_PAD_NAV, 1000 / 50},
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_BOOST, 1000 / 50},
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_ACT_ALLOWED, 1000 / 50},
+
+		// --- SD log group: 20/20/20/1 (Movella State) ---
+		{"Movella State", movella_state_sd_log, STATE_IDLE, 1000 / 1},
+		{"Movella State", movella_state_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"Movella State", movella_state_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"Movella State", movella_state_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"Movella State", movella_state_sd_log, STATE_PAD_NAV, 1000 / 20},
+		{"Movella State", movella_state_sd_log, STATE_BOOST, 1000 / 20},
+		{"Movella State", movella_state_sd_log, STATE_ACT_ALLOWED, 1000 / 20},
 	};
 
 	static const size_t telemetry_source_count =
@@ -946,6 +975,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	w_status_t status = W_SUCCESS;
 
 	// raw data
+	quaternion_f32_t mti_quaternion = {0};
 	raw_board_meas_t raw_board_meas = {0};
 
 	// Get current timestamp
@@ -960,7 +990,8 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	// Read from all IMUs and sensors
 	w_status_t board_status =
 		read_board_meas(ctx, &(imu_output->board_meas), &raw_board_meas, current_time_ms);
-	w_status_t movella_status = read_movella_imu(ctx, &(imu_output->mti_meas), current_time_ms);
+	w_status_t movella_status =
+		read_movella_imu(ctx, &(imu_output->mti_meas), &mti_quaternion, current_time_ms);
 	w_status_t ad_status = read_ad_meas(ctx, &(imu_output->ad_meas), current_time_ms);
 	w_status_t motor_status =
 		read_motor_meas(ctx, &(imu_output->motor_encoder_meas), current_time_ms);
@@ -989,10 +1020,13 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 		.board_baro_pressure_pa = raw_board_meas.raw_board_baro.pressure_centimbar,
 		// TODO: populate board barometer thermometer reading once wired
 		.board_mag = imu_output->board_meas.board_mag.meas,
+
 		.mti_accel = imu_output->mti_meas.mti_accel.meas,
 		.mti_gyro = imu_output->mti_meas.mti_gyro.meas,
 		.mti_mag = imu_output->mti_meas.mti_mag.meas,
 		.mti_baro_pressure = (float32_t)imu_output->mti_meas.mti_baro.meas,
+		.mti_quaternion = mti_quaternion,
+
 		.ad_accel = imu_output->ad_meas.ad_accel.meas,
 		.ad_gyro = (float32_t)imu_output->ad_meas.ad_gyro.meas,
 	};
