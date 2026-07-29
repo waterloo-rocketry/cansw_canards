@@ -143,8 +143,8 @@ static void system_init_task(void *arg) {
 	status |= ms5611_init();
 	status |= power_handler_init();
 	status |= iis2mdc_init();
-	status |= adxl380_init();
-	status |= adxrs649_init();
+	//status |= adxl380_init();
+	//status |= adxrs649_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {

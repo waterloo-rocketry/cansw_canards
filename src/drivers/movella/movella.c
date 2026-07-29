@@ -207,7 +207,7 @@ void movella_task(void *parameters) {
 
 health_status_t movella_get_status(void) {
 	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_MOVELLA, .error_bitfield = 0};
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK, .module_id = CANARDS_MODULE_ID_MOVELLA, .error_bitfield = 0};
 
 	log_text(10,
 			 LOG_LVL_INFO,
@@ -236,13 +236,13 @@ health_status_t movella_get_status(void) {
 
 	if (movella_health.recent_dead_data_count) {
 		movella_health.recent_dead_data_count = 0;
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_COMM_FAILURE;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
 
 	if (!s_movella.initialized) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= 1 << ERR_NOT_INIT;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	return status;
