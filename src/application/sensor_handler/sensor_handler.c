@@ -94,7 +94,7 @@ static sensor_handler_state_t sensor_handler_state = {0};
 typedef struct {
 	// LSM6DSV32X (board IMU)
 	vector3d_t board_imu_accel; // m/s^2
-	vector3d_t board_imu_gyro; // rad/2
+	vector3d_t board_imu_gyro; // rad/s^2
 	// MS5611 (board barometer)
 	int32_t board_baro_pressure_pa;
 	// TODO: add board barometer thermometer reading (board_baro_temp) once wired
@@ -129,13 +129,12 @@ static w_status_t sensor_handler_get_latest(sensor_can_telem_data_t *out) {
 }
 
 // ---------------------------------------------------------------------------
-// Per-sensor telemetry log functions registered with the telemetry module.
-// Board IMU / mag / baro send their raw register values and AD sends the float sensor_handler
-// already has, all cast straight into the CAN field with no scaling. Only the MTI readings are
-// scaled (real SCALE_MTI_* factors).
+// Values are scaled/encoded via can_encode_scaled_* with the relevant SCALE_* factor.
+// Encoded signed values are then biased into unsigned CAN payload fields using telemetry offsets.
+// (Board + AD are scaled too; MTI uses SCALE_MTI_* as well.)
 // ---------------------------------------------------------------------------
 
-// LSM6DSV32X (board IMU): accelerometer + gyroscope sent as raw register counts.
+// LSM6DSV32X (board IMU): accelerometer + gyroscop
 static w_status_t board_imu_telemetry(void) {
 	sensor_can_telem_data_t data;
 	w_status_t status = W_SUCCESS;
@@ -323,7 +322,7 @@ static w_status_t mti_board_mag_telemetry(void) {
 
 // AD breakout: ADXL380 accelerometer + ADXRS649 high-rate 1-axis gyro sent together.
 // The driver exposes only converted floats, so we send exactly what sensor_handler has, cast
-// straight to the 16-bit field with no scaling applied.
+// straight to the 16-bit field with scaling and offset applied.
 static w_status_t ad_telemetry(void) {
 	sensor_can_telem_data_t data;
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
@@ -355,12 +354,11 @@ static w_status_t ad_telemetry(void) {
 	can_msg_t gyro_msg = {0};
 	int32_t gyro_scaled = 0;
 	enc |= can_encode_scaled_float(SCALE_ADXRS649_GYROSCOPE, data.ad_gyro, &gyro_scaled);
-	build_analog_sensor_32bit_msg(
-		PRIO_LOW,
-		(uint16_t)ts_ms,
-		SENSOR_CANARD_ADXRS649_GYRO,
-		(uint32_t)(gyro_scaled + TELEMETRY_INT32_OFFSET), // spans -+ 1000 so this is fine
-		&gyro_msg);
+	build_analog_sensor_32bit_msg(PRIO_LOW,
+								  (uint16_t)ts_ms,
+								  SENSOR_CANARD_ADXRS649_GYRO,
+								  (uint32_t)(gyro_scaled + TELEMETRY_INT32_OFFSET),
+								  &gyro_msg);
 	status |= can_handler_transmit(&gyro_msg);
 	return status;
 }
@@ -855,7 +853,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 
 	// Publish the latest telemetry snapshot to the mailbox for the telemetry task to broadcast.
 	sensor_can_telem_data_t telem = {
-		// board IMU / mag / baro are sent as raw register values (no scaling)
+		// board IMU / mag / baro are sent as converted values
 		.board_imu_accel = imu_output->board_meas.board_imu.accel,
 		.board_imu_gyro = imu_output->board_meas.board_imu.gyro,
 		.board_baro_pressure_pa = raw_board_meas.raw_board_baro.pressure_centimbar,
