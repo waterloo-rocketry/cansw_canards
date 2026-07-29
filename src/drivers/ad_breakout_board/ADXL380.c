@@ -48,7 +48,6 @@ w_status_t adxl380_init() {
 		return W_FAILURE;
 	}
 
-	is_initialized = true;
 	// init the handle
 	g_adx380_handle.i2c_addr = ADXL_ADDRS;
 	g_adx380_handle.i2c_bus = I2C_BUS_2; // TODO: To be corrected

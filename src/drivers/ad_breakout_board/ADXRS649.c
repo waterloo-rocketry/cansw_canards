@@ -136,8 +136,6 @@ w_status_t adxrs649_init() {
 		return W_FAILURE;
 	}
 
-	is_initialized = true;
-
 	// reset both gpio pins to low to start
 
 	if (W_SUCCESS != ads1219_init(&g_ads_handle, I2C_BUS_2, ADS1219_ADDR)) {
