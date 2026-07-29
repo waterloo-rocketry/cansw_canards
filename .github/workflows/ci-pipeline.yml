@@ -33,9 +33,16 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
           
-      - name: Build and run unit tests
+      - name: Build and run unit tests for H733
         run: |
-          pio run -e release
+          pio run -e release_H733
+          chmod +x ./scripts/run_unit_tests.sh
+          ./scripts/run_unit_tests.sh cleanall
+          ./scripts/run_unit_tests.sh test
+          
+      - name: Build and run unit tests for H723
+        run: |
+          pio run -e release_H723
           chmod +x ./scripts/run_unit_tests.sh
           ./scripts/run_unit_tests.sh cleanall
           ./scripts/run_unit_tests.sh test
