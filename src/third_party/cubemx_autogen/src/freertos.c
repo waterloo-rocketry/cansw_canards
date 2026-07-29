@@ -26,7 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "application/health_checks/health_checks.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -90,6 +90,7 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
    /* Run time stack overflow checking is performed if
    configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
    called if a stack overflow is detected. */
+   proc_handle_fatal_error("FREERTOSOVERFLOW");
 }
 /* USER CODE END 4 */
 

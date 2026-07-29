@@ -64,6 +64,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
  * @retval W_SUCCESS Message read successfully
  * @retval W_INVALID_PARAM Invalid parameters
  * @retval W_IO_TIMEOUT No message received within timeout
+ * @retval W_IO_ERROR there is an unresolved hardware error
  * @note Message length will be truncated to UART_MAX_LEN if overflow occurs
  */
 w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
@@ -85,6 +86,13 @@ w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
  */
 w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
 					  uint32_t timeout_ms);
+
+/**
+ * @brief attempts to recover uart based on the channel
+ * @param channel UART channel to read from
+ * @param max_recovery_attempt max recover attempts
+ */
+w_status_t uart_recovery(uart_channel_t channel, uint32_t max_recovery_attempt);
 
 /**
  * @brief Gets the current status of all UART channels

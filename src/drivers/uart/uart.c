@@ -41,6 +41,7 @@ typedef struct {
 	uint32_t overflows; /**< Count of message size overflows */
 	uint32_t timeouts; /**< Count of operation timeouts */
 	uint32_t hw_errors; /**< Count of hardware errors */
+	uint32_t recover_attempts;
 	uint32_t messages_received; /**< Count of messages successfully received */
 	uint32_t messages_sent; /**< Count of messages successfully sent */
 	uint32_t restart_failed; /**< Count of times we failed to restart reception after error */
@@ -206,6 +207,11 @@ w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
 		return W_INVALID_PARAM;
 	}
 
+	// make sure we don't currently have an unresolved hardware error
+	if ((s_uart_stats[channel].recover_attempts) > 0) {
+		return W_IO_ERROR;
+	}
+
 	uart_handle_t *handle = &s_uart_handles[channel];
 	uart_msg_t *msg;
 
@@ -226,6 +232,30 @@ w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
 	*length = (uint16_t)msg->len;
 	msg->busy = false; // Buffer can be reused
 	s_uart_stats[channel].messages_received++;
+	return W_SUCCESS;
+}
+
+/**
+ * @brief attempts to recover uart based on the channel
+ * @param channel UART channel to read from
+ * @param max_recovery_attempt max recover attempts
+ */
+w_status_t uart_recovery(uart_channel_t channel, uint32_t max_recovery_attempt) {
+	if (max_recovery_attempt <= (s_uart_stats[channel].recover_attempts)) {
+		return W_IO_ERROR;
+	}
+	// Reset current buffer and restart reception
+	uart_handle_t *handle = &s_uart_handles[channel];
+	uart_msg_t *curr_msg = &handle->rx_msgs[handle->curr_buffer_num];
+	curr_msg->len = 0;
+	curr_msg->busy = false;
+	// Attempt to restart reception
+	if (HAL_UARTEx_ReceiveToIdle_DMA(s_uart_handles[channel].huart, curr_msg->data, UART_MAX_LEN) !=
+		HAL_OK) {
+		s_uart_stats[channel].restart_failed++;
+		return W_FAILURE;
+	}
+	s_uart_stats[channel].recover_attempts = 0;
 	return W_SUCCESS;
 }
 
@@ -281,16 +311,8 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 	for (ch = 0; ch < UART_CHANNEL_COUNT; ch++) {
 		if (s_uart_handles[ch].huart == huart) {
 			s_uart_stats[ch].hw_errors++;
+			s_uart_stats[ch].recover_attempts++;
 
-			// Reset current buffer and restart reception
-			uart_handle_t *handle = &s_uart_handles[ch];
-			uart_msg_t *curr_msg = &handle->rx_msgs[handle->curr_buffer_num];
-			curr_msg->len = 0;
-			curr_msg->busy = false;
-			// Attempt to restart reception
-			if (HAL_UARTEx_ReceiveToIdle_DMA(huart, curr_msg->data, UART_MAX_LEN) != HAL_OK) {
-				s_uart_stats[ch].restart_failed++;
-			}
 			portYIELD_FROM_ISR(higher_priority_task_woken);
 			break;
 		}

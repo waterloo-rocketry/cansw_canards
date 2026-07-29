@@ -17,6 +17,8 @@
 #define UART_RX_TIMEOUT_MS 10
 #define XSENS_ARR_ELEM 7
 
+static uint32_t MTI_UART_MAX_REOVERY_ATTEMPT = UINT32_MAX;
+
 typedef struct {
 	xsens_interface_t xsens_interface;
 	SemaphoreHandle_t data_mutex;
@@ -201,6 +203,15 @@ void movella_task(void *parameters) {
 		} else {
 			s_movella.latest_data.is_dead = true;
 			movella_health.recent_dead_data_count++;
+			// check if have to perform recovery
+			if (W_IO_ERROR == status) {
+				if (uart_recovery(UART_MOVELLA, MTI_UART_MAX_REOVERY_ATTEMPT) != W_SUCCESS) {
+					log_text(0, LOG_LVL_WARN, "MTI", "Failed to recover UART bus");
+					// since this error return will occur before waiting for the timeout so we will
+					// wait to make sure we just don't spam an error
+					vTaskDelay(UART_RX_TIMEOUT_MS);
+				}
+			}
 		}
 	}
 }

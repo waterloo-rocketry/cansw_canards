@@ -1,4 +1,4 @@
-#include "health_checks.h"
+#include "application/health_checks/health_checks.h"
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
@@ -257,11 +257,11 @@ static uint32_t check_modules_status(void) {
 //       are used directly from canlib/message_types.h
 
 void proc_handle_fatal_error(const char *errorMsg) {
+	__disable_irq();
 	static bool can_initialized = false;
 	// safe state - loop here forever and send CAN err msg repeatedly
 	while (1) {
 		can_initialized = can_initialized || stm32h7_can_init(&hfdcan3, can_handle_rx_message);
-		__disable_irq();
 
 		// let CAN still work
 		HAL_NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
