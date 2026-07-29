@@ -206,8 +206,9 @@ void movella_task(void *parameters) {
 }
 
 health_status_t movella_get_status(void) {
-	health_status_t status = {
-		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK, .module_id = CANARDS_MODULE_ID_MOVELLA, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_MOVELLA,
+							  .error_bitfield = 0};
 
 	log_text(10,
 			 LOG_LVL_INFO,
