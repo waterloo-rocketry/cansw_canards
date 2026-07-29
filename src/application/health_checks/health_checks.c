@@ -56,7 +56,7 @@ static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MA
 	[CANARDS_MODULE_ID_IIS2MDC] = NULL,
 	[CANARDS_MODULE_ID_LOGGER] = logger_get_status,
 	[CANARDS_MODULE_ID_LSM6DSV32X] = lsm6dsv32x_get_status,
-	[CANARDS_MODULE_ID_MOVELLA] = NULL,
+	[CANARDS_MODULE_ID_MOVELLA] = movella_get_status,
 	[CANARDS_MODULE_ID_MS5611] = NULL,
 	[CANARDS_MODULE_ID_NAVIGATOR] = navigator_get_status,
 	[CANARDS_MODULE_ID_POWER_HANDLER] = power_handler_get_status,
