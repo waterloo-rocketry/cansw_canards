@@ -126,6 +126,16 @@ static const uint8_t D2_CMD[OSR_COUNT] = {
 	[MS5611_OSR_4096] = MS5611_CMD_CONVERT_D2_OSR4096,
 };
 
+typedef struct {
+	bool semaphore_fail;
+	bool i2c_communication_fail;
+	bool crc_check_failure;
+	bool invalid_operation;
+	bool invalid_parameter;
+}ms5611_health_t;
+
+static ms5611_health_t ms5611_health = {0};
+
 static const int32_t SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES =
 	2000; /* temperature (in centidegrees) below which second-order compensation is applied */
 static const int32_t SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES =
@@ -170,7 +180,13 @@ static void delay_us(uint32_t us) {
  * @param cmd The command to read from the sensor.
  */
 static w_status_t baro_read(uint8_t reg, uint8_t *data, uint8_t len) {
-	return i2c_read_reg(handle.bus, (uint8_t)handle.addr, reg, data, len);
+	w_status_t status = i2c_read_reg(handle.bus, (uint8_t)handle.addr, reg, data, len);
+
+	if (W_SUCCESS != status) {
+		ms5611_health.i2c_communication_fail = true;
+	}
+
+	return status;
 }
 
 /**
@@ -178,7 +194,13 @@ static w_status_t baro_read(uint8_t reg, uint8_t *data, uint8_t len) {
  * @param cmd The command to write.
  */
 static w_status_t baro_write_cmd(uint8_t cmd) {
-	return i2c_write_data(handle.bus, (uint8_t)handle.addr, &cmd, 1);
+	w_status_t status = i2c_write_data(handle.bus, (uint8_t)handle.addr, &cmd, 1);
+
+	if (W_SUCCESS != status) {
+		ms5611_health.i2c_communication_fail = true;
+	}
+
+	return status;
 }
 
 /**
@@ -238,6 +260,7 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 
 	if (n_rem != crc) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
+		ms5611_health.crc_check_failure = true;
 		return W_FAILURE;
 	}
 
@@ -299,6 +322,7 @@ w_status_t ms5611_init(void) {
 	// make sure can't reinitialize the driver
 	if (handle.initialized) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "attempted to reinitialize driver.");
+		ms5611_health.invalid_operation = true;
 		return W_FAILURE;
 	}
 
@@ -306,6 +330,7 @@ w_status_t ms5611_init(void) {
 		s_data_mutex = xSemaphoreCreateMutex();
 		if (NULL == s_data_mutex) {
 			log_text(1, LOG_LVL_WARN, "ms5611", "Failed to create data mutex");
+			ms5611_health.semaphore_fail = true;
 			return W_FAILURE;
 		}
 	}
@@ -338,6 +363,7 @@ void ms5611_deinit(void) {
 				 LOG_LVL_WARN,
 				 "ms5611",
 				 "ERROR: attempted to uninitialize the driver before successful initialization");
+		ms5611_health.invalid_operation = true;
 		return;
 	}
 
@@ -379,11 +405,13 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 
 	if (NULL == result) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "NULL pointer passed to ms5611_get_pressure");
+		ms5611_health.invalid_parameter = true;
 		return W_INVALID_PARAM;
 	}
 
 	if (NULL == timestamp_ms) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "NULL pointer passed to ms5611_get_pressure");
+		ms5611_health.invalid_parameter = true;
 		return W_INVALID_PARAM;
 	}
 
@@ -392,6 +420,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 				 LOG_LVL_WARN,
 				 "ms5611",
 				 "attempted to read pressure before successful initialization");
+		ms5611_health.invalid_operation = true;
 		return W_FAILURE;
 	}
 
@@ -414,6 +443,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 
 	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "failed to get timestamp");
+		ms5611_health.invalid_operation = true;
 		return W_FAILURE;
 	}
 
@@ -485,6 +515,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
 	if ((NULL == result) || (NULL == timestamp_ms)) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "NULL pointer passed to ms5611_get_raw_pressure");
+		ms5611_health.invalid_parameter = true;
 		return W_INVALID_PARAM;
 	}
 
@@ -536,6 +567,9 @@ void ms5611_task(void *argument) {
 
 			xSemaphoreGive(s_data_mutex);
 		}
+		else {
+			ms5611_health.semaphore_fail = true;
+		}
 
 		// state switching logic (applies to the *next* loop)
 		if ((++count) >= MS5611_TEMP_CONV_STATE_SWITCH_COUNT) {
@@ -547,4 +581,47 @@ void ms5611_task(void *argument) {
 
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
 	}
+}
+
+health_status_t ms5611_get_status(void) {
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_MS5611,
+							  .error_bitfield = 0};
+
+	if (!handle.initialized) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+	}
+
+	if (ms5611_health.semaphore_fail) {
+		ms5611_health.semaphore_fail = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
+	}
+
+	if (ms5611_health.i2c_communication_fail) {
+		ms5611_health.i2c_communication_fail = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+	}
+
+	if (ms5611_health.crc_check_failure) {
+		ms5611_health.crc_check_failure = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_CRC_FAILED_OFFSET;
+	}
+
+	if (ms5611_health.invalid_operation) {
+		ms5611_health.invalid_operation = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
+	}
+
+	if (ms5611_health.invalid_parameter) {
+		ms5611_health.invalid_parameter = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+	}
+
+	return status;
 }

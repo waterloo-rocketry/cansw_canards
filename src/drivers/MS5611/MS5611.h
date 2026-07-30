@@ -29,4 +29,10 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
  */
 void ms5611_task(void *argument);
 
+/**
+ * @brief Report MS5611 (barometer) health check status.
+ * @return The health status of the module.
+ */
+health_status_t ms5611_get_status(void);
+
 #endif // MS5611_H
