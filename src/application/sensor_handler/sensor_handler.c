@@ -55,10 +55,15 @@ static const vector3d_t hard_iron_bias = {.x = 0, .y = 0, .z = 0};
 static const matrix3d_t soft_iron_correction_matrix = {
 	.array = {{1.0, 0, 0}, {0, 1.0, 0}, {0, 0, 1.0}}};
 
-// ad accel null bias offsets
-static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.61;
-static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.65;
-static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.15;
+// ad accel null bias offsets, board 1
+static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.49;
+static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.43;
+static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.12;
+
+// ad accel null bias offsets, board 2
+// static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.61;
+// static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.65;
+// static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.15;
 
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
