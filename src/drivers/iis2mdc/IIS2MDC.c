@@ -146,7 +146,7 @@ static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 	}
 
 	w_status_t status = i2c_read_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, data, len);
-	
+
 	if (W_SUCCESS != status) {
 		iis2mdc_health.communication_failure = true;
 	}
