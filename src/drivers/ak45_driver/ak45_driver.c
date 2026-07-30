@@ -214,7 +214,13 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 			(uint16_t)(temperature_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET),
 			&msg);
 
-		status |= can_handler_transmit(&msg);
+		if (can_handler_transmit(&msg) != W_SUCCESS) {
+			log_text(LOG_WAIT_MS,
+					 LOG_LVL_WARN,
+					 "ak45",
+					 "Failed to transmit motor temperature value through can.");
+			status |= W_FAILURE;
+		}
 	}
 
 	// TODO: change to use automatic telem scaling once merged
@@ -233,7 +239,13 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 			(uint16_t)(current_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET),
 			&msg);
 
-		status |= can_handler_transmit(&msg);
+		if (can_handler_transmit(&msg) != W_SUCCESS) {
+			log_text(LOG_WAIT_MS,
+					 LOG_LVL_WARN,
+					 "ak45",
+					 "Failed to transmit motor current value through can.");
+			status |= W_FAILURE;
+		}
 	}
 
 	return status;
@@ -245,6 +257,7 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
  */
 static w_status_t ak45_driver_angle_telemetry() {
 	ak45_feedback_t fb = {0};
+	w_status_t status = W_SUCCESS;
 	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get feedback failed for angle telemetry");
 		return W_FAILURE;
@@ -270,7 +283,15 @@ static w_status_t ak45_driver_angle_telemetry() {
 								  (uint16_t)(scaled_angle_int16 + AK45_TELEMETRY_INT16_OFFSET),
 								  &msg);
 
-	return can_handler_transmit(&msg);
+	if (can_handler_transmit(&msg) != W_SUCCESS) {
+		log_text(LOG_WAIT_MS,
+				 LOG_LVL_WARN,
+				 "ak45",
+				 "Failed to transmit motor angle value through can.");
+		status |= W_FAILURE;
+	}
+
+	return status;
 }
 
 static w_status_t ak45_sd_telemetry(void) {
@@ -288,7 +309,12 @@ static w_status_t ak45_sd_telemetry(void) {
 	log_container.servo_motor.motor_current = fb.current_a;
 	log_container.servo_motor.motor_temperature = (float32_t)fb.temperature_c;
 
-	return log_data(LOG_WAIT_MS, LOG_TYPE_SERVO_MOTOR, &log_container);
+	if (log_data(LOG_WAIT_MS, LOG_TYPE_SERVO_MOTOR, &log_container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "Controller", "Failed to log motor data.");
+		return W_FAILURE;
+	}
+	
+	return W_SUCCESS;
 }
 
 /************************************** TELEM **************************************/

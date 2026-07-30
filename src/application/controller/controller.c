@@ -82,7 +82,7 @@ static w_status_t ctrl_can_telemetry(void) {
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			log_text(
 				0, LOG_LVL_WARN, "controller", "Failed to transmit command value through can.");
-			status = W_FAILURE;
+			status |= W_FAILURE;
 		}
 
 		build_analog_sensor_16bit_msg(PRIO_LOW,
@@ -96,7 +96,7 @@ static w_status_t ctrl_can_telemetry(void) {
 					 LOG_LVL_WARN,
 					 "controller",
 					 "Failed to transmit canard lift coefficient value through can.");
-			status = W_FAILURE;
+			status |= W_FAILURE;
 		}
 
 		return status;
@@ -136,7 +136,11 @@ static w_status_t ctrl_sd_telemetry(void) {
 	log_container.controller.roll_angle_target = (float32_t)ctrl_value_latest_raw.ref_roll[0];
 	log_container.controller.roll_rate_target = (float32_t)ctrl_value_latest_raw.ref_roll[1];
 
-	return log_data(CTRL_LOG_DATA_TIMEOUT, LOG_TYPE_CONTROLLER, &log_container);
+	if (log_data(CTRL_LOG_DATA_TIMEOUT, LOG_TYPE_CONTROLLER, &log_container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "Controller", "Failed to log cntrl data.");
+		return W_FAILURE;
+	}
+	return W_SUCCESS;
 }
 
 /**
@@ -148,12 +152,10 @@ w_status_t controller_init(void) {
 	configASSERT(ctrl_value_queue != NULL);
 
 	static const telemetry_source_config_t telemetry_sources[] = {
-		{"Ctrl CAN", ctrl_can_telemetry, STATE_PAD_FILTER, 1000 / 5},
-		{"Ctrl CAN", ctrl_can_telemetry, STATE_PAD_NAV, 1000 / 5},
+		{"Ctrl CAN", ctrl_can_telemetry, STATE_PAD_NAV, 1000 / 10},
 		{"Ctrl CAN", ctrl_can_telemetry, STATE_BOOST, 1000 / 10},
 		{"Ctrl CAN", ctrl_can_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
 
-		{"Ctrl SD", ctrl_sd_telemetry, STATE_PAD_FILTER, 1000 / 20},
 		{"Ctrl SD", ctrl_sd_telemetry, STATE_PAD_NAV, 1000 / 200},
 		{"Ctrl SD", ctrl_sd_telemetry, STATE_BOOST, 1000 / 200},
 		{"Ctrl SD", ctrl_sd_telemetry, STATE_ACT_ALLOWED, 1000 / 200},

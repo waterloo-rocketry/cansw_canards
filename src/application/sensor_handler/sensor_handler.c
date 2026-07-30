@@ -279,89 +279,117 @@ static w_status_t mti_board_mag_can_telemetry(void) {
 		return W_FAILURE;
 	}
 
+	w_status_t status = W_SUCCESS;
+
 	uint32_t ts_ms = 0;
 	(void)timer_get_ms(&ts_ms);
-	w_status_t enc = W_SUCCESS;
+	w_status_t board_mag_enc = W_SUCCESS;
 
 	// IIS2MDC board magnetometer - raw register counts, unscaled
 	int16_t board_mag_x = 0;
 	int16_t board_mag_y = 0;
 	int16_t board_mag_z = 0;
 
-	enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.x, &board_mag_x);
-	enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.y, &board_mag_y);
-	enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.z, &board_mag_z);
-	can_msg_t board_mag_msg = {0};
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_IIS2MDC_MAG,
-									 (uint16_t)(board_mag_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(board_mag_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(board_mag_z + TELEMETRY_INT16_OFFSET),
-									 &board_mag_msg);
-	w_status_t status = can_handler_transmit(&board_mag_msg);
+	board_mag_enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.x, &board_mag_x);
+	board_mag_enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.y, &board_mag_y);
+	board_mag_enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.z, &board_mag_z);
+	if (W_SUCCESS == board_mag_enc) {
+		can_msg_t board_mag_msg = {0};
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										(uint16_t)ts_ms,
+										DEM_3D_SENSOR_CANARD_IIS2MDC_MAG,
+										(uint16_t)(board_mag_x + TELEMETRY_INT16_OFFSET),
+										(uint16_t)(board_mag_y + TELEMETRY_INT16_OFFSET),
+										(uint16_t)(board_mag_z + TELEMETRY_INT16_OFFSET),
+										&board_mag_msg);
+		status |= can_handler_transmit(&board_mag_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode board mag.");
+		status |= W_FAILURE;
+	}
 
 	// MTi-630 accel / gyro / mag: scale to int16, then bias into the unsigned field
 	int16_t accel_x = 0;
 	int16_t accel_y = 0;
 	int16_t accel_z = 0;
-	enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.x, &accel_x);
-	enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.y, &accel_y);
-	enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.z, &accel_z);
-	can_msg_t mti_accel_msg = {0};
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+	w_status_t mti_accel_enc = W_SUCCESS;
+	mti_accel_enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.x, &accel_x);
+	mti_accel_enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.y, &accel_y);
+	mti_accel_enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.z, &accel_z);
+	if (W_SUCCESS == mti_accel_enc) {
+		can_msg_t mti_accel_msg = {0};
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)ts_ms,
 									 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
 									 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
 									 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
 									 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
 									 &mti_accel_msg);
-	status |= can_handler_transmit(&mti_accel_msg);
+		status |= can_handler_transmit(&mti_accel_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI accel.");
+		status |= W_FAILURE;
+	}
 
 	int16_t gyro_x = 0;
 	int16_t gyro_y = 0;
 	int16_t gyro_z = 0;
-	enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.x, &gyro_x);
-	enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.y, &gyro_y);
-	enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.z, &gyro_z);
-	can_msg_t mti_gyro_msg = {0};
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+	w_status_t mti_gyro_enc = W_SUCCESS;
+	mti_gyro_enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.x, &gyro_x);
+	mti_gyro_enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.y, &gyro_y);
+	mti_gyro_enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.z, &gyro_z);
+	if (W_SUCCESS == mti_gyro_enc) {
+		can_msg_t mti_gyro_msg = {0};
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)ts_ms,
 									 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
 									 (uint16_t)(gyro_x + TELEMETRY_INT16_OFFSET),
 									 (uint16_t)(gyro_y + TELEMETRY_INT16_OFFSET),
 									 (uint16_t)(gyro_z + TELEMETRY_INT16_OFFSET),
 									 &mti_gyro_msg);
-	status |= can_handler_transmit(&mti_gyro_msg);
+		status |= can_handler_transmit(&mti_gyro_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI gyro.");
+		status |= W_FAILURE;
+	}
 
 	int16_t mag_x = 0;
 	int16_t mag_y = 0;
 	int16_t mag_z = 0;
-	enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.x, &mag_x);
-	enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.y, &mag_y);
-	enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.z, &mag_z);
-	can_msg_t mti_mag_msg = {0};
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+	w_status_t mti_mag_enc = W_SUCCESS;
+	mti_mag_enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.x, &mag_x);
+	mti_mag_enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.y, &mag_y);
+	mti_mag_enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.z, &mag_z);
+	if (W_SUCCESS == mti_mag_enc) {
+		can_msg_t mti_mag_msg = {0};
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 									 (uint16_t)ts_ms,
 									 DEM_3D_SENSOR_CANARD_MTI630_MAG,
 									 (uint16_t)(mag_x + TELEMETRY_INT16_OFFSET),
 									 (uint16_t)(mag_y + TELEMETRY_INT16_OFFSET),
 									 (uint16_t)(mag_z + TELEMETRY_INT16_OFFSET),
 									 &mti_mag_msg);
-	status |= can_handler_transmit(&mti_mag_msg);
+		status |= can_handler_transmit(&mti_mag_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI mag.");
+		status |= W_FAILURE;
+	}
 
 	// MTi-630 barometric pressure (scaled, uint32)
 	uint32_t baro_scaled = 0;
-	enc |= can_encode_scaled_float(SCALE_MTI_PRESSURE, data.mti_baro_pressure, &baro_scaled);
-	can_msg_t mti_baro_msg = {0};
-	build_analog_sensor_32bit_msg(
-		PRIO_LOW, (uint16_t)ts_ms, SENSOR_CANARD_MTI630_BARO_0, baro_scaled, &mti_baro_msg);
-	status |= can_handler_transmit(&mti_baro_msg);
-
-	if (W_SUCCESS != enc) {
-		log_text(0, LOG_LVL_WARN, "SensorHandler", "mti telem scale failed: %d", enc);
+	w_status_t mti_baro_enc =
+		can_encode_scaled_float(SCALE_MTI_PRESSURE, data.mti_baro_pressure, &baro_scaled);
+	if (W_SUCCESS == mti_baro_enc) {
+		can_msg_t mti_baro_msg = {0};
+		build_analog_sensor_32bit_msg(
+			PRIO_LOW, (uint16_t)ts_ms, SENSOR_CANARD_MTI630_BARO_0, baro_scaled, &mti_baro_msg);
+		status |= can_handler_transmit(&mti_baro_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI baro.");
+		status |= W_FAILURE;
 	}
-	return ((W_SUCCESS == status) && (W_SUCCESS == enc)) ? W_SUCCESS : W_FAILURE;
+
+	return status;
 }
 
 // ---------------------------------------------------------------------------
@@ -390,7 +418,10 @@ static w_status_t sensor_high_rate_sd_log(void) {
 
 	w_status_t log_data_result = W_SUCCESS;
 
-	log_data_result |= log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_IMU, &container);
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_IMU, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log board imu.");
+		log_data_result |= W_FAILURE;
+	}
 
 	// AD Gyro
 	container.ad_breakout.accelerometer.x = (float32_t)data.ad_accel.x;
@@ -398,17 +429,23 @@ static w_status_t sensor_high_rate_sd_log(void) {
 	container.ad_breakout.accelerometer.z = (float32_t)data.ad_accel.z;
 	container.ad_breakout.gyroscope = data.ad_gyro;
 
-	log_data_result |= log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_AD_BREAKOUT, &container);
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_AD_BREAKOUT, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log AD breakout.");
+		log_data_result |= W_FAILURE;
+	}
 
 	// MTI Accel + Gyro
 	container.movella_pt1.accelerometer.x = (float32_t)data.mti_accel.x;
 	container.movella_pt1.accelerometer.y = (float32_t)data.mti_accel.y;
 	container.movella_pt1.accelerometer.z = (float32_t)data.mti_accel.z;
 	container.movella_pt1.gyroscope.x = (float32_t)data.mti_gyro.x;
-	container.movella_pt1.gyroscope.y = (float32_t)data.mti_gyro.y,
+	container.movella_pt1.gyroscope.y = (float32_t)data.mti_gyro.y;
 	container.movella_pt1.gyroscope.z = (float32_t)data.mti_gyro.z;
 
-	log_data_result |= log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT1, &container);
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT1, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log movella pt1.");
+		log_data_result |= W_FAILURE;
+	}
 
 	return log_data_result;
 }
@@ -430,14 +467,20 @@ static w_status_t sensor_low_rate_sd_log(void) {
 
 	w_status_t log_data_result = W_SUCCESS;
 
-	log_data_result |= log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_MAG_BARO, &container);
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_MAG_BARO, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log board mag baro.");
+		log_data_result |= W_FAILURE;
+	}
 
 	container.movella_pt2.magnetometer.x = (float32_t)data.mti_mag.x;
 	container.movella_pt2.magnetometer.y = (float32_t)data.mti_mag.y;
 	container.movella_pt2.magnetometer.z = (float32_t)data.mti_mag.z;
 	container.movella_pt2.barometer = (float32_t)data.mti_baro_pressure;
 
-	log_data_result |= log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT2, &container);
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT2, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log movella pt2.");
+		log_data_result |= W_FAILURE;
+	}
 
 	return log_data_result;
 }
@@ -454,7 +497,13 @@ static w_status_t movella_state_sd_log(void) {
 	container.movella_pt3.orient_y = (float32_t)data.mti_quaternion.y;
 	container.movella_pt3.orient_z = (float32_t)data.mti_quaternion.z;
 
-	return log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT3, &container);
+	w_status_t status = W_SUCCESS;
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT3, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log movella pt3.");
+		status |= W_FAILURE;
+	}
+
+	return status;
 }
 
 /**
