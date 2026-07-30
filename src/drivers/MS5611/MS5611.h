@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
+
 #include "rocketlib/include/common.h"
 
 typedef struct {

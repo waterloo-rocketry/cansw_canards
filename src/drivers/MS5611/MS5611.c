@@ -132,7 +132,7 @@ typedef struct {
 	bool crc_check_failure;
 	bool invalid_operation;
 	bool invalid_parameter;
-}ms5611_health_t;
+} ms5611_health_t;
 
 static ms5611_health_t ms5611_health = {0};
 
@@ -566,8 +566,7 @@ void ms5611_task(void *argument) {
 			}
 
 			xSemaphoreGive(s_data_mutex);
-		}
-		else {
+		} else {
 			ms5611_health.semaphore_fail = true;
 		}
 
