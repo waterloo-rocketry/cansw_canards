@@ -111,12 +111,10 @@ typedef struct {
 	bool out_of_bounds_data;
 	bool timeout;
 	bool no_data_invalid_cache;
-	uint32_t i2c_after_callback_switch; // I2C functions called after callback switch
 	uint32_t dma_before_callback_switch; // DMA functions called before callback switch
 	uint32_t dma_read_fails; // DRDY interrupt triggered but DMA read failed
 	uint32_t dma_callback_error; // DMA error handler hit
 	uint32_t i2c_handle_mismatch; // I2C handle mismatch
-	uint32_t invalid_args; // NULL pointer passed to function
 	uint32_t get_data_invalid_cache; // iis2mdc_get_data called with invalid cache
 	uint32_t get_data_dma_busy; // iis2mdc_get_data called while DMA was busy
 } iis2mdc_health_t;
@@ -137,7 +135,6 @@ static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 				 LOG_LVL_FATAL,
 				 "iis2mdc",
 				 "ERROR: I2C register read attempted after async pipeline active");
-		iis2mdc_health.i2c_after_callback_switch++;
 		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
@@ -164,7 +161,6 @@ static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
 				 LOG_LVL_FATAL,
 				 "iis2mdc",
 				 "ERROR: I2C register write attempted after async pipeline active");
-		iis2mdc_health.i2c_after_callback_switch++;
 		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
@@ -205,7 +201,6 @@ static w_status_t self_test_wait_data_ready(void) {
 				 LOG_LVL_FATAL,
 				 "iis2mdc",
 				 "ERROR: wait_data_ready called after async DMA pipeline active");
-		iis2mdc_health.i2c_after_callback_switch++;
 		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
@@ -292,7 +287,6 @@ static w_status_t iis2mdc_self_test(void) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
 		log_text(
 			1, LOG_LVL_FATAL, "iis2mdc", "ERROR: self test attempted after async pipeline active");
-		iis2mdc_health.i2c_after_callback_switch++;
 		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
@@ -525,7 +519,6 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 				 LOG_LVL_WARN,
 				 "iis2mdc",
 				 "NULL pointer cannot be used as input to get_data function");
-		iis2mdc_health.invalid_args++;
 		iis2mdc_health.invalid_param = true;
 		return W_FAILURE;
 	}
@@ -614,32 +607,22 @@ health_status_t iis2mdc_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
-			 "state=%d, dma_callback_error=%" PRIu32 ", get_data_invalid_cache=%" PRIu32,
+			 "state=%d, dma_busy=%d, cache_valid=%d, dma_before_callback_switch=%" PRIu32
+			 ", dma_callback_error=%" PRIu32,
 			 iis2mdc_state,
-			 iis2mdc_health.dma_callback_error,
-			 iis2mdc_health.get_data_invalid_cache);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "dma_busy=%d, dma_before_callback_switch=%" PRIu32 ", get_data_dma_busy=%" PRIu32,
 			 iis2mdc_dma_busy,
-			 iis2mdc_health.dma_before_callback_switch,
-			 iis2mdc_health.get_data_dma_busy);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "cache_valid=%d, dma_read_fails=%" PRIu32 ", invalid_args=%" PRIu32,
 			 iis2mdc_cache.valid,
-			 iis2mdc_health.dma_read_fails,
-			 iis2mdc_health.invalid_args);
+			 iis2mdc_health.dma_before_callback_switch,
+			 iis2mdc_health.dma_callback_error);
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
-			 "i2c_after_callback_switch=%" PRIu32 ", i2c_handle_mismatch=%" PRIu32,
-			 iis2mdc_health.i2c_after_callback_switch,
+			 "get_data_dma_busy=%" PRIu32 ", get_data_invalid_cache=%" PRIu32
+			 ", dma_read_fails=%" PRIu32 ", i2c_handle_mismatch=%" PRIu32,
+			 iis2mdc_health.get_data_dma_busy,
+			 iis2mdc_health.get_data_invalid_cache,
+			 iis2mdc_health.dma_read_fails,
 			 iis2mdc_health.i2c_handle_mismatch);
 
 	return status;
