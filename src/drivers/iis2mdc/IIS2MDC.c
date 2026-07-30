@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <math.h>
 #include <string.h>
 
@@ -147,7 +148,7 @@ static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 	if (W_SUCCESS == i2c_read_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, data, len)) {
 		return W_SUCCESS;
 	}
-	
+
 	iis2mdc_health.communication_failure = true;
 	return W_FAILURE;
 }
@@ -170,7 +171,7 @@ static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
 	if (W_SUCCESS == i2c_write_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, &val, 1)) {
 		return W_SUCCESS;
 	}
-	
+
 	iis2mdc_health.communication_failure = true;
 	return W_FAILURE;
 }
@@ -411,6 +412,7 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
  */
 static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 	if (hi2c != &hi2c4) {
+		iis2mdc_health.invalid_param = true;
 		iis2mdc_health.i2c_handle_mismatch++;
 		return;
 	}
@@ -555,8 +557,9 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 }
 
 health_status_t iis2mdc_get_status(void) {
-	health_status_t status = {
-		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK, .module_id = CANARDS_MODULE_ID_IIS2MDC, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_IIS2MDC,
+							  .error_bitfield = 0};
 
 	// Driver not initialized
 	if (iis2mdc_state != IIS2MDC_STATE_ASYNC_DMA_ACTIVE) {
@@ -609,7 +612,7 @@ health_status_t iis2mdc_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
-			 "state=%u, dma_callback_error=%lu, get_data_invalid_cache=%lu",
+			 "state=%d, dma_callback_error=%" PRIu32 ", get_data_invalid_cache=%" PRIu32,
 			 iis2mdc_state,
 			 iis2mdc_health.dma_callback_error,
 			 iis2mdc_health.get_data_invalid_cache);
@@ -617,7 +620,7 @@ health_status_t iis2mdc_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
-			 "dma_busy=%d, dma_before_callback_switch=%lu, get_data_dma_busy=%lu",
+			 "dma_busy=%d, dma_before_callback_switch=%" PRIu32 ", get_data_dma_busy=%" PRIu32,
 			 iis2mdc_dma_busy,
 			 iis2mdc_health.dma_before_callback_switch,
 			 iis2mdc_health.get_data_dma_busy);
@@ -625,7 +628,7 @@ health_status_t iis2mdc_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
-			 "cache_valid=%d, dma_read_fails=%lu, invalid_args=%lu",
+			 "cache_valid=%d, dma_read_fails=%" PRIu32 ", invalid_args=%" PRIu32,
 			 iis2mdc_cache.valid,
 			 iis2mdc_health.dma_read_fails,
 			 iis2mdc_health.invalid_args);
@@ -633,7 +636,7 @@ health_status_t iis2mdc_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
-			 "i2c_after_callback_switch=%lu, i2c_handle_mismatch=%lu",
+			 "i2c_after_callback_switch=%" PRIu32 ", i2c_handle_mismatch=%" PRIu32,
 			 iis2mdc_health.i2c_after_callback_switch,
 			 iis2mdc_health.i2c_handle_mismatch);
 
