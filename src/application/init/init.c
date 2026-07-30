@@ -41,7 +41,7 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
-static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1; // 10 seconds
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -233,6 +233,10 @@ static void system_init_task(void *arg) {
 	}
 	// its blinky now
 	ak45_hard_stop_calibrate(&ak45_calibration_config);
+
+	vTaskDelay(20000);
+	flight_phase_send_event(EVENT_PAD_FILTER);
+	
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
