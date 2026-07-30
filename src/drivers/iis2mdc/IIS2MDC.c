@@ -145,12 +145,13 @@ static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 		reg |= IIS2MDC_SUB_AUTO_INC;
 	}
 
-	if (W_SUCCESS == i2c_read_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, data, len)) {
-		return W_SUCCESS;
+	w_status_t status = i2c_read_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, data, len);
+	
+	if (W_SUCCESS != status) {
+		iis2mdc_health.communication_failure = true;
 	}
 
-	iis2mdc_health.communication_failure = true;
-	return W_FAILURE;
+	return status;
 }
 
 /**
@@ -168,12 +169,13 @@ static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
 		return W_FAILURE;
 	}
 
-	if (W_SUCCESS == i2c_write_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, &val, 1)) {
-		return W_SUCCESS;
+	w_status_t status = i2c_write_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, &val, 1);
+
+	if (W_SUCCESS != status) {
+		iis2mdc_health.communication_failure = true;
 	}
 
-	iis2mdc_health.communication_failure = true;
-	return W_FAILURE;
+	return status;
 }
 
 /**
