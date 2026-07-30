@@ -242,6 +242,10 @@ w_status_t log_init(void) {
 
 w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
 					...) {
+
+	if (LOG_LVL_WARN == level) {
+		return W_SUCCESS;
+	}
 	// Get timestamp as close to time of call as possible
 	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log
 	// message anyway. We're trying to log as much as possible and a missing timestamp does not
