@@ -138,16 +138,18 @@ w_status_t adc_get_converted_val(adc_channel_t channel, float *output) {
 }
 
 health_status_t adc_get_status(void) {
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_ADC, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_ADC,
+							  .error_bitfield = 0};
 
 	if (adc_error_stats.is_overflow) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= (1 << ERR_OVERFLOW);
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_OVERFLOW_OFFSET;
 	}
 
 	if (!adc_error_stats.is_init) {
-		status.severity = HEALTH_ERROR;
-		status.error_bitfield |= (1 << ERR_NOT_INIT);
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	// Log error statistics

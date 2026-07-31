@@ -352,7 +352,9 @@ health_status_t uart_get_status(void) {
 				 stats->overflows);
 	}
 
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_UART, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_UART,
+							  .error_bitfield = 0};
 
 	return status;
 }
