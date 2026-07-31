@@ -63,6 +63,9 @@ static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.15;
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
 
+// Timeout for log_data() calls from telemetry callbacks: never block the telemetry task.
+#define SENSOR_LOG_TIMEOUT_MS 0
+
 typedef struct {
 	uint32_t success_count;
 	uint32_t failure_count;
@@ -105,6 +108,8 @@ typedef struct {
 	vector3d_t mti_gyro; // rad/s
 	vector3d_t mti_mag; // gauss
 	float32_t mti_baro_pressure; // Pa
+	quaternion_f32_t mti_quaternion;
+
 	// ADXL380 (AD breakout accel)
 	vector3d_t ad_accel; // m/s^2
 	// ADXRS649 (AD high-rate gyro)
@@ -134,9 +139,9 @@ static w_status_t sensor_handler_get_latest(sensor_can_telem_data_t *out) {
 // (Board + AD are scaled too; MTI uses SCALE_MTI_* as well.)
 // ---------------------------------------------------------------------------
 
-// LSM6DSV32X (board IMU): accelerometer + gyroscop
-static w_status_t board_imu_telemetry(void) {
-	sensor_can_telem_data_t data;
+// LSM6DSV32X (board IMU): accelerometer + gyroscope
+static w_status_t board_imu_ad_can_telemetry(void) {
+	sensor_can_telem_data_t data = {0};
 	w_status_t status = W_SUCCESS;
 
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
@@ -198,12 +203,51 @@ static w_status_t board_imu_telemetry(void) {
 		status |= W_FAILURE;
 	}
 
+	can_msg_t accel_msg = {0};
+	w_status_t ad_accel_enc = W_SUCCESS;
+
+	ad_accel_enc |=
+		can_encode_scaled_float(SCALE_ADXL380_ACCEL, (float32_t)data.ad_accel.x, &accel_x);
+	ad_accel_enc |=
+		can_encode_scaled_float(SCALE_ADXL380_ACCEL, (float32_t)data.ad_accel.y, &accel_y);
+	ad_accel_enc |=
+		can_encode_scaled_float(SCALE_ADXL380_ACCEL, (float32_t)data.ad_accel.z, &accel_z);
+	if (W_SUCCESS == ad_accel_enc) {
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 (uint16_t)ts_ms,
+										 DEM_3D_SENSOR_CANARD_ADXL380_ACCEL,
+										 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
+										 &accel_msg);
+		status |= can_handler_transmit(&accel_msg);
+	} else {
+		status |= W_FAILURE;
+	}
+
+	can_msg_t gyro_msg = {0};
+	int32_t gyro_scaled = 0;
+	w_status_t ad_gyro_enc =
+		can_encode_scaled_float(SCALE_ADXRS649_GYROSCOPE, data.ad_gyro, &gyro_scaled);
+
+	if (W_SUCCESS == ad_gyro_enc) {
+		build_analog_sensor_32bit_msg(
+			PRIO_LOW,
+			(uint16_t)ts_ms,
+			SENSOR_CANARD_ADXRS649_GYRO,
+			(uint32_t)(gyro_scaled + TELEMETRY_INT32_OFFSET), // spans -+ 1000 so this is fine
+			&gyro_msg);
+		status |= can_handler_transmit(&gyro_msg);
+	} else {
+		status |= W_FAILURE;
+	}
+
 	return status;
 }
 
 // MS5611 (board barometer): raw pressure (Pa). Thermometer half not wired yet, sending 0.
-static w_status_t board_baro_telemetry(void) {
-	sensor_can_telem_data_t data;
+static w_status_t board_baro_can_telemetry(void) {
+	sensor_can_telem_data_t data = {0};
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
 		return W_FAILURE;
 	}
@@ -229,137 +273,242 @@ static w_status_t board_baro_telemetry(void) {
 }
 
 // MTi-630 (Movella) + IIS2MDC (board mag): both run at the same rate, sent together.
-static w_status_t mti_board_mag_telemetry(void) {
-	sensor_can_telem_data_t data;
+static w_status_t mti_board_mag_can_telemetry(void) {
+	sensor_can_telem_data_t data = {0};
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
 		return W_FAILURE;
 	}
 
+	w_status_t status = W_SUCCESS;
+
 	uint32_t ts_ms = 0;
 	(void)timer_get_ms(&ts_ms);
-	w_status_t enc = W_SUCCESS;
+	w_status_t board_mag_enc = W_SUCCESS;
 
 	// IIS2MDC board magnetometer - raw register counts, unscaled
 	int16_t board_mag_x = 0;
 	int16_t board_mag_y = 0;
 	int16_t board_mag_z = 0;
 
-	enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.x, &board_mag_x);
-	enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.y, &board_mag_y);
-	enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.z, &board_mag_z);
-	can_msg_t board_mag_msg = {0};
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_IIS2MDC_MAG,
-									 (uint16_t)(board_mag_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(board_mag_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(board_mag_z + TELEMETRY_INT16_OFFSET),
-									 &board_mag_msg);
-	w_status_t status = can_handler_transmit(&board_mag_msg);
+	board_mag_enc |=
+		can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.x, &board_mag_x);
+	board_mag_enc |=
+		can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.y, &board_mag_y);
+	board_mag_enc |=
+		can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.z, &board_mag_z);
+	if (W_SUCCESS == board_mag_enc) {
+		can_msg_t board_mag_msg = {0};
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 (uint16_t)ts_ms,
+										 DEM_3D_SENSOR_CANARD_IIS2MDC_MAG,
+										 (uint16_t)(board_mag_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(board_mag_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(board_mag_z + TELEMETRY_INT16_OFFSET),
+										 &board_mag_msg);
+		status |= can_handler_transmit(&board_mag_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode board mag.");
+		status |= W_FAILURE;
+	}
 
 	// MTi-630 accel / gyro / mag: scale to int16, then bias into the unsigned field
 	int16_t accel_x = 0;
 	int16_t accel_y = 0;
 	int16_t accel_z = 0;
-	enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.x, &accel_x);
-	enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.y, &accel_y);
-	enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.z, &accel_z);
-	can_msg_t mti_accel_msg = {0};
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
-									 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
-									 &mti_accel_msg);
-	status |= can_handler_transmit(&mti_accel_msg);
+	w_status_t mti_accel_enc = W_SUCCESS;
+	mti_accel_enc |=
+		can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.x, &accel_x);
+	mti_accel_enc |=
+		can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.y, &accel_y);
+	mti_accel_enc |=
+		can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.z, &accel_z);
+	if (W_SUCCESS == mti_accel_enc) {
+		can_msg_t mti_accel_msg = {0};
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 (uint16_t)ts_ms,
+										 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
+										 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
+										 &mti_accel_msg);
+		status |= can_handler_transmit(&mti_accel_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI accel.");
+		status |= W_FAILURE;
+	}
 
 	int16_t gyro_x = 0;
 	int16_t gyro_y = 0;
 	int16_t gyro_z = 0;
-	enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.x, &gyro_x);
-	enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.y, &gyro_y);
-	enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.z, &gyro_z);
-	can_msg_t mti_gyro_msg = {0};
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
-									 (uint16_t)(gyro_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(gyro_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(gyro_z + TELEMETRY_INT16_OFFSET),
-									 &mti_gyro_msg);
-	status |= can_handler_transmit(&mti_gyro_msg);
+	w_status_t mti_gyro_enc = W_SUCCESS;
+	mti_gyro_enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.x, &gyro_x);
+	mti_gyro_enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.y, &gyro_y);
+	mti_gyro_enc |= can_encode_scaled_float(SCALE_MTI_GYRO, (float32_t)data.mti_gyro.z, &gyro_z);
+	if (W_SUCCESS == mti_gyro_enc) {
+		can_msg_t mti_gyro_msg = {0};
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 (uint16_t)ts_ms,
+										 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
+										 (uint16_t)(gyro_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(gyro_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(gyro_z + TELEMETRY_INT16_OFFSET),
+										 &mti_gyro_msg);
+		status |= can_handler_transmit(&mti_gyro_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI gyro.");
+		status |= W_FAILURE;
+	}
 
 	int16_t mag_x = 0;
 	int16_t mag_y = 0;
 	int16_t mag_z = 0;
-	enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.x, &mag_x);
-	enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.y, &mag_y);
-	enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.z, &mag_z);
-	can_msg_t mti_mag_msg = {0};
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_MTI630_MAG,
-									 (uint16_t)(mag_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(mag_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(mag_z + TELEMETRY_INT16_OFFSET),
-									 &mti_mag_msg);
-	status |= can_handler_transmit(&mti_mag_msg);
+	w_status_t mti_mag_enc = W_SUCCESS;
+	mti_mag_enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.x, &mag_x);
+	mti_mag_enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.y, &mag_y);
+	mti_mag_enc |= can_encode_scaled_float(SCALE_MTI_MAG, (float32_t)data.mti_mag.z, &mag_z);
+	if (W_SUCCESS == mti_mag_enc) {
+		can_msg_t mti_mag_msg = {0};
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 (uint16_t)ts_ms,
+										 DEM_3D_SENSOR_CANARD_MTI630_MAG,
+										 (uint16_t)(mag_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(mag_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(mag_z + TELEMETRY_INT16_OFFSET),
+										 &mti_mag_msg);
+		status |= can_handler_transmit(&mti_mag_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI mag.");
+		status |= W_FAILURE;
+	}
 
 	// MTi-630 barometric pressure (scaled, uint32)
 	uint32_t baro_scaled = 0;
-	enc |= can_encode_scaled_float(SCALE_MTI_PRESSURE, data.mti_baro_pressure, &baro_scaled);
-	can_msg_t mti_baro_msg = {0};
-	build_analog_sensor_32bit_msg(
-		PRIO_LOW, (uint16_t)ts_ms, SENSOR_CANARD_MTI630_BARO_0, baro_scaled, &mti_baro_msg);
-	status |= can_handler_transmit(&mti_baro_msg);
-
-	if (W_SUCCESS != enc) {
-		log_text(0, LOG_LVL_WARN, "SensorHandler", "mti telem scale failed: %d", enc);
+	w_status_t mti_baro_enc =
+		can_encode_scaled_float(SCALE_MTI_PRESSURE, data.mti_baro_pressure, &baro_scaled);
+	if (W_SUCCESS == mti_baro_enc) {
+		can_msg_t mti_baro_msg = {0};
+		build_analog_sensor_32bit_msg(
+			PRIO_LOW, (uint16_t)ts_ms, SENSOR_CANARD_MTI630_BARO_0, baro_scaled, &mti_baro_msg);
+		status |= can_handler_transmit(&mti_baro_msg);
+	} else {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI baro.");
+		status |= W_FAILURE;
 	}
-	return ((W_SUCCESS == status) && (W_SUCCESS == enc)) ? W_SUCCESS : W_FAILURE;
+
+	return status;
 }
 
-// AD breakout: ADXL380 accelerometer + ADXRS649 high-rate 1-axis gyro sent together.
-// The driver exposes only converted floats, so we send exactly what sensor_handler has, cast
-// straight to the 16-bit field with scaling and offset applied.
-static w_status_t ad_telemetry(void) {
+// ---------------------------------------------------------------------------
+// Per-sensor SD data-log functions registered with the telemetry module.
+// These write the same snapshot the CAN telemetry functions read,via log_data(). Timeout is 0 so
+// they stay non-blocking as telemetry callbacks require.
+// ---------------------------------------------------------------------------
+
+// This will be all of the high rate logging sensors
+// LSM6 Accel + Gyro
+// AD Gyro
+static w_status_t sensor_high_rate_sd_log(void) {
+	sensor_can_telem_data_t data = {0};
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	// LSM6
+	log_data_container_t container = {0};
+	container.board_imu.accelerometer.x = (float32_t)data.board_imu_accel.x;
+	container.board_imu.accelerometer.y = (float32_t)data.board_imu_accel.y;
+	container.board_imu.accelerometer.z = (float32_t)data.board_imu_accel.z;
+	container.board_imu.gyroscope.x = (float32_t)data.board_imu_gyro.x;
+	container.board_imu.gyroscope.y = (float32_t)data.board_imu_gyro.y;
+	container.board_imu.gyroscope.z = (float32_t)data.board_imu_gyro.z;
+
+	w_status_t log_data_result = W_SUCCESS;
+
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_IMU, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log board imu.");
+		log_data_result |= W_FAILURE;
+	}
+
+	// AD Gyro
+	container.ad_breakout.accelerometer.x = (float32_t)data.ad_accel.x;
+	container.ad_breakout.accelerometer.y = (float32_t)data.ad_accel.y;
+	container.ad_breakout.accelerometer.z = (float32_t)data.ad_accel.z;
+	container.ad_breakout.gyroscope = data.ad_gyro;
+
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_AD_BREAKOUT, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log AD breakout.");
+		log_data_result |= W_FAILURE;
+	}
+
+	// MTI Accel + Gyro
+	container.movella_pt1.accelerometer.x = (float32_t)data.mti_accel.x;
+	container.movella_pt1.accelerometer.y = (float32_t)data.mti_accel.y;
+	container.movella_pt1.accelerometer.z = (float32_t)data.mti_accel.z;
+	container.movella_pt1.gyroscope.x = (float32_t)data.mti_gyro.x;
+	container.movella_pt1.gyroscope.y = (float32_t)data.mti_gyro.y;
+	container.movella_pt1.gyroscope.z = (float32_t)data.mti_gyro.z;
+
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT1, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log movella pt1.");
+		log_data_result |= W_FAILURE;
+	}
+
+	return log_data_result;
+}
+
+// Low rate data logging
+// Board/MTI Baro/Mag
+static w_status_t sensor_low_rate_sd_log(void) {
 	sensor_can_telem_data_t data;
 	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
 		return W_FAILURE;
 	}
 
-	uint32_t ts_ms = 0;
-	(void)timer_get_ms(&ts_ms);
+	log_data_container_t container = {0};
+	container.board_mag_baro.magnetometer.x = (float32_t)data.board_mag.x;
+	container.board_mag_baro.magnetometer.y = (float32_t)data.board_mag.y;
+	container.board_mag_baro.magnetometer.z = (float32_t)data.board_mag.z;
+	container.board_mag_baro.barometer = (float32_t)data.board_baro_pressure_pa;
+	container.board_mag_baro.thermometer = 0.0f;
 
-	can_msg_t accel_msg = {0};
-	w_status_t enc = W_SUCCESS;
+	w_status_t log_data_result = W_SUCCESS;
 
-	int16_t accel_x = 0;
-	int16_t accel_y = 0;
-	int16_t accel_z = 0;
-	enc |= can_encode_scaled_float(SCALE_ADXL380_ACCEL, (float32_t)data.ad_accel.x, &accel_x);
-	enc |= can_encode_scaled_float(SCALE_ADXL380_ACCEL, (float32_t)data.ad_accel.y, &accel_y);
-	enc |= can_encode_scaled_float(SCALE_ADXL380_ACCEL, (float32_t)data.ad_accel.z, &accel_z);
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_BOARD_MAG_BARO, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log board mag baro.");
+		log_data_result |= W_FAILURE;
+	}
 
-	build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_ADXL380_ACCEL,
-									 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
-									 &accel_msg);
-	w_status_t status = can_handler_transmit(&accel_msg);
+	container.movella_pt2.magnetometer.x = (float32_t)data.mti_mag.x;
+	container.movella_pt2.magnetometer.y = (float32_t)data.mti_mag.y;
+	container.movella_pt2.magnetometer.z = (float32_t)data.mti_mag.z;
+	container.movella_pt2.barometer = (float32_t)data.mti_baro_pressure;
 
-	can_msg_t gyro_msg = {0};
-	int32_t gyro_scaled = 0;
-	enc |= can_encode_scaled_float(SCALE_ADXRS649_GYROSCOPE, data.ad_gyro, &gyro_scaled);
-	build_analog_sensor_32bit_msg(PRIO_LOW,
-								  (uint16_t)ts_ms,
-								  SENSOR_CANARD_ADXRS649_GYRO,
-								  (uint32_t)(gyro_scaled + TELEMETRY_INT32_OFFSET),
-								  &gyro_msg);
-	status |= can_handler_transmit(&gyro_msg);
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT2, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log movella pt2.");
+		log_data_result |= W_FAILURE;
+	}
+
+	return log_data_result;
+}
+
+static w_status_t movella_state_sd_log(void) {
+	sensor_can_telem_data_t data;
+	if (W_SUCCESS != sensor_handler_get_latest(&data)) {
+		return W_FAILURE;
+	}
+
+	log_data_container_t container = {0};
+	container.movella_pt3.orient_w = (float32_t)data.mti_quaternion.w;
+	container.movella_pt3.orient_x = (float32_t)data.mti_quaternion.x;
+	container.movella_pt3.orient_y = (float32_t)data.mti_quaternion.y;
+	container.movella_pt3.orient_z = (float32_t)data.mti_quaternion.z;
+
+	w_status_t status = W_SUCCESS;
+	if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MOVELLA_PT3, &container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SensorHandler", "Failed to log movella pt3.");
+		status |= W_FAILURE;
+	}
+
 	return status;
 }
 
@@ -374,7 +523,6 @@ static w_status_t ad_telemetry(void) {
 static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_meas_t *board_data,
 								  raw_board_meas_t *raw_data, const uint32_t curr_timestamp_ms) {
 	(void)curr_timestamp_ms;
-	bool is_dead = true;
 
 	w_status_t sensor_status = lsm6dsv32x_get_gyro_acc_data(&(board_data->board_imu.accel),
 															&(board_data->board_imu.gyro),
@@ -497,7 +645,6 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *ad_data,
 							   const uint32_t curr_timestamp_ms) {
 	(void)curr_timestamp_ms;
-	bool is_dead = true;
 
 	// get accel
 	uint32_t accel_timestamp_ms = 0;
@@ -578,10 +725,12 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
  * @brief Read data from the Movella MTi-630 sensor
  * @param ctx pointer to the ctx storing the previously updated times for the sensors
  * @param imu_data Pointer to store the IMU data
+ * @param quaternion_output pointer to store quaternion output for logging
  * @param curr_timestamp_ms the current time stamp for freshness calculations TODO
  * @return Status of the read operation
  */
 static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas_t *imu_data,
+								   quaternion_f32_t *quaternion_output,
 								   const uint32_t curr_timestamp_ms) {
 	(void)curr_timestamp_ms;
 	// Read all data from Movella in one call
@@ -591,6 +740,7 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
 
 	if (W_SUCCESS == status) {
 		// Copy data from Movella
+		memcpy(quaternion_output, &movella_data.quaternion, sizeof(*quaternion_output));
 		// Apply orientation correction
 		imu_data->mti_accel.meas =
 			math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.acc);
@@ -745,33 +895,56 @@ w_status_t sensor_handler_init(void) {
 	static const telemetry_source_config_t telemetry_sources[] = {
 		// LSM6DSV32X (board IMU): accel + gyro together, 20Hz on pad filter, 10Hz in flight, 1hz
 		// for idle
-		{"Board IMU", board_imu_telemetry, STATE_IDLE, 1000 / 1},
-		{"Board IMU", board_imu_telemetry, STATE_PAD_FILTER, 1000 / 20},
-		{"Board IMU", board_imu_telemetry, STATE_PAD_NAV, 1000 / 10},
-		{"Board IMU", board_imu_telemetry, STATE_BOOST, 1000 / 10},
-		{"Board IMU", board_imu_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
+		{"Board IMU", board_imu_ad_can_telemetry, STATE_IDLE, 1000 / 1},
+		{"Board IMU", board_imu_ad_can_telemetry, STATE_PAD_FILTER, 1000 / 20},
+		{"Board IMU", board_imu_ad_can_telemetry, STATE_PAD_NAV, 1000 / 10},
+		{"Board IMU", board_imu_ad_can_telemetry, STATE_BOOST, 1000 / 10},
+		{"Board IMU", board_imu_ad_can_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
 
 		// MS5611 (board barometer + thermometer)
-		{"Board Baro", board_baro_telemetry, STATE_IDLE, 100},
-		{"Board Baro", board_baro_telemetry, STATE_PAD_FILTER, 100},
-		{"Board Baro", board_baro_telemetry, STATE_PAD_NAV, 100},
-		{"Board Baro", board_baro_telemetry, STATE_ACT_ALLOWED, 100},
-		{"Board Baro", board_baro_telemetry, STATE_BOOST, 100},
+		{"Board Baro", board_baro_can_telemetry, STATE_IDLE, 100},
+		{"Board Baro", board_baro_can_telemetry, STATE_PAD_FILTER, 100},
+		{"Board Baro", board_baro_can_telemetry, STATE_PAD_NAV, 100},
+		{"Board Baro", board_baro_can_telemetry, STATE_ACT_ALLOWED, 100},
+		{"Board Baro", board_baro_can_telemetry, STATE_BOOST, 100},
 
 		// MTi-630 (Movella) accel+gyro+mag+baro plus LSM303AGR board mag (same rate),
 		// 2Hz on pad/flight, 1Hz idle.
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_IDLE, 1000 / 1},
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_PAD_FILTER, 1000 / 2},
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_PAD_NAV, 1000 / 2},
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_BOOST, 1000 / 2},
-		{"MTI and board mag", mti_board_mag_telemetry, STATE_ACT_ALLOWED, 1000 / 2},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_IDLE, 1000 / 1},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_PAD_FILTER, 1000 / 2},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_PAD_NAV, 1000 / 2},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_BOOST, 1000 / 2},
+		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_ACT_ALLOWED, 1000 / 2},
 
-		// AD breakout: ADXL380 accel + ADXRS649 gyro together, 10Hz pad/flight, 1Hz idle.
-		{"AD", ad_telemetry, STATE_IDLE, 1000 / 1},
-		{"AD", ad_telemetry, STATE_PAD_FILTER, 1000 / 10},
-		{"AD", ad_telemetry, STATE_PAD_NAV, 1000 / 10},
-		{"AD", ad_telemetry, STATE_BOOST, 1000 / 10},
-		{"AD", ad_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
+		// --- SD log group: 200/20/20/1 (High Rate) ---
+		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_IDLE, 1000 / 1},
+		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_PAD_NAV, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_BOOST, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Sensor High Rate",
+		 sensor_high_rate_sd_log,
+		 STATE_ACT_ALLOWED,
+		 1000 / MAX_LOGGING_RATE_HZ},
+
+		// --- SD log group: 50/20/20/1 (Low Rate) ---
+		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_IDLE, 1000 / 1},
+		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_PAD_NAV, 1000 / 50},
+		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_BOOST, 1000 / 50},
+		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_ACT_ALLOWED, 1000 / 50},
+
+		// --- SD log group: 20/20/20/1 (Movella State) ---
+		{"Movella State", movella_state_sd_log, STATE_IDLE, 1000 / 1},
+		{"Movella State", movella_state_sd_log, STATE_SLEEPY, 1000 / 1},
+		{"Movella State", movella_state_sd_log, STATE_RECOVERY, 1000 / 20},
+		{"Movella State", movella_state_sd_log, STATE_PAD_FILTER, 1000 / 20},
+		{"Movella State", movella_state_sd_log, STATE_PAD_NAV, 1000 / 20},
+		{"Movella State", movella_state_sd_log, STATE_BOOST, 1000 / 20},
+		{"Movella State", movella_state_sd_log, STATE_ACT_ALLOWED, 1000 / 20},
 	};
 
 	static const size_t telemetry_source_count =
@@ -816,6 +989,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	w_status_t status = W_SUCCESS;
 
 	// raw data
+	quaternion_f32_t mti_quaternion = {0};
 	raw_board_meas_t raw_board_meas = {0};
 
 	// Get current timestamp
@@ -830,7 +1004,8 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	// Read from all IMUs and sensors
 	w_status_t board_status =
 		read_board_meas(ctx, &(imu_output->board_meas), &raw_board_meas, current_time_ms);
-	w_status_t movella_status = read_movella_imu(ctx, &(imu_output->mti_meas), current_time_ms);
+	w_status_t movella_status =
+		read_movella_imu(ctx, &(imu_output->mti_meas), &mti_quaternion, current_time_ms);
 	w_status_t ad_status = read_ad_meas(ctx, &(imu_output->ad_meas), current_time_ms);
 	w_status_t motor_status =
 		read_motor_meas(ctx, &(imu_output->motor_encoder_meas), current_time_ms);
@@ -859,10 +1034,13 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 		.board_baro_pressure_pa = raw_board_meas.raw_board_baro.pressure_centimbar,
 		// TODO: populate board barometer thermometer reading once wired
 		.board_mag = imu_output->board_meas.board_mag.meas,
+
 		.mti_accel = imu_output->mti_meas.mti_accel.meas,
 		.mti_gyro = imu_output->mti_meas.mti_gyro.meas,
 		.mti_mag = imu_output->mti_meas.mti_mag.meas,
 		.mti_baro_pressure = (float32_t)imu_output->mti_meas.mti_baro.meas,
+		.mti_quaternion = mti_quaternion,
+
 		.ad_accel = imu_output->ad_meas.ad_accel.meas,
 		.ad_gyro = (float32_t)imu_output->ad_meas.ad_gyro.meas,
 	};

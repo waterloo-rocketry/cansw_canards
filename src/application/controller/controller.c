@@ -19,11 +19,18 @@
 #define LOG_WAIT_MS 10
 static const float64_t MS_TO_SEC = 0.001;
 static const float64_t TENTH_MS_TO_MS = 0.1;
+static const uint32_t CTRL_LOG_DATA_TIMEOUT = 0;
 
 // TODO: send roll target angle through can and body lift coeff (need updated canlib)
 typedef struct {
 	float64_t command;
-	double coefficient_of_roll_control[2]; // body lift coeff (coefficient_of_roll_control[1])
+	// canard lift coeff (coefficient_of_roll_control[0])
+	// body lift coeff (coefficient_of_roll_control[1])
+	float64_t coefficient_of_roll_control[2];
+	// Roll Angle Target ref_roll[0]
+	// Roll Rate Target ref_roll[1]
+	float64_t ref_roll[2];
+
 	// omitted from sending through can since we dont have a
 	// sensor id for it...
 } ctrl_value_handle_t;
@@ -34,7 +41,107 @@ static QueueHandle_t ctrl_value_queue;
 static controller_t controller_state = {0};
 static controller_error_data_t controller_error_stats = {0};
 
-static w_status_t ctrl_ctx_telemetry(void);
+static w_status_t ctrl_can_telemetry(void) {
+	ctrl_value_handle_t ctrl_value_latest_raw;
+
+	if (xQueuePeek(ctrl_value_queue, &ctrl_value_latest_raw, 0) == pdTRUE) {
+		int16_t cmd;
+		int16_t coef_canard_lift;
+
+		if (W_SUCCESS !=
+			can_encode_scaled_float(SCALE_CTRL_CMD, ctrl_value_latest_raw.command, &cmd)) {
+			log_text(0, LOG_LVL_WARN, "controller", "Can encode failed for command.");
+			return W_FAILURE;
+		}
+
+		if (W_SUCCESS !=
+			can_encode_scaled_float(SCALE_CTRL_COEF_OF_ROLL_CTRL,
+									ctrl_value_latest_raw.coefficient_of_roll_control[0],
+									&coef_canard_lift)) {
+			log_text(
+				0, LOG_LVL_WARN, "controller", "Can encode failed for canard lift coefficient.");
+			return W_FAILURE;
+		}
+
+		uint32_t timestamp;
+
+		if (timer_get_ms(&timestamp) != W_SUCCESS) {
+			log_text(0, LOG_LVL_WARN, "controller", "Failed to get timestamp for can msg tx");
+			return W_FAILURE;
+		}
+
+		w_status_t status = W_SUCCESS;
+
+		can_msg_t msg;
+		build_analog_sensor_16bit_msg(PRIO_LOW,
+									  (uint16_t)timestamp,
+									  SENSOR_CANARD_CTRL_CMD_ANGLE,
+									  (uint16_t)(cmd + TELEMETRY_INT16_OFFSET),
+									  &msg);
+
+		if (can_handler_transmit(&msg) != W_SUCCESS) {
+			log_text(
+				0, LOG_LVL_WARN, "controller", "Failed to transmit command value through can.");
+			status |= W_FAILURE;
+		}
+
+		build_analog_sensor_16bit_msg(PRIO_LOW,
+									  (uint16_t)timestamp,
+									  SENSOR_CANARD_CTRL_COEFF_LIFT,
+									  (uint16_t)(coef_canard_lift + TELEMETRY_INT16_OFFSET),
+									  &msg);
+
+		if (can_handler_transmit(&msg) != W_SUCCESS) {
+			log_text(0,
+					 LOG_LVL_WARN,
+					 "controller",
+					 "Failed to transmit canard lift coefficient value through can.");
+			status |= W_FAILURE;
+		}
+
+		return status;
+	} else {
+		log_text(0,
+				 LOG_LVL_WARN,
+				 "controller",
+				 "Failed to peek mailbox queue while sending current ctrl values through can.");
+
+		return W_FAILURE;
+	}
+}
+
+static w_status_t ctrl_sd_telemetry(void) {
+	ctrl_value_handle_t ctrl_value_latest_raw;
+
+	w_status_t status = W_SUCCESS;
+
+	if (xQueuePeek(ctrl_value_queue, &ctrl_value_latest_raw, 0) != pdTRUE) {
+		log_text(0,
+				 LOG_LVL_WARN,
+				 "controller",
+				 "Failed to peek mailbox queue while sending current nav values through can.");
+
+		return W_FAILURE;
+	}
+
+	// set up the log data
+	log_data_container_t log_container = {0};
+
+	// ctrl
+	log_container.controller.command = (float32_t)ctrl_value_latest_raw.command;
+	log_container.controller.canard_coeff =
+		(float32_t)ctrl_value_latest_raw.coefficient_of_roll_control[0];
+	log_container.controller.body_coeff =
+		(float32_t)ctrl_value_latest_raw.coefficient_of_roll_control[1];
+	log_container.controller.roll_angle_target = (float32_t)ctrl_value_latest_raw.ref_roll[0];
+	log_container.controller.roll_rate_target = (float32_t)ctrl_value_latest_raw.ref_roll[1];
+
+	if (log_data(CTRL_LOG_DATA_TIMEOUT, LOG_TYPE_CONTROLLER, &log_container) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "Controller", "Failed to log cntrl data.");
+		return W_FAILURE;
+	}
+	return W_SUCCESS;
+}
 
 /**
  * Initialize controller module
@@ -45,10 +152,15 @@ w_status_t controller_init(void) {
 	configASSERT(ctrl_value_queue != NULL);
 
 	static const telemetry_source_config_t telemetry_sources[] = {
-		{"Controller context", ctrl_ctx_telemetry, STATE_PAD_FILTER, 1000 / 5},
-		{"Controller context", ctrl_ctx_telemetry, STATE_PAD_NAV, 1000 / 5},
-		{"Controller context", ctrl_ctx_telemetry, STATE_BOOST, 1000 / 10},
-		{"Controller context", ctrl_ctx_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
+		{"Ctrl CAN", ctrl_can_telemetry, STATE_PAD_NAV, 1000 / 10},
+		{"Ctrl CAN", ctrl_can_telemetry, STATE_BOOST, 1000 / 10},
+		{"Ctrl CAN", ctrl_can_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
+
+		{"Ctrl SD", ctrl_sd_telemetry, STATE_PAD_NAV, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Ctrl SD", ctrl_sd_telemetry, STATE_BOOST, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Ctrl SD", ctrl_sd_telemetry, STATE_ACT_ALLOWED, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Ctrl SD", ctrl_sd_telemetry, STATE_RECOVERY, 1000 / 20},
+		{"Ctrl SD", ctrl_sd_telemetry, STATE_SLEEPY, 1000 / 1},
 	};
 
 	static const size_t telemetry_source_count =
@@ -122,6 +234,10 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 			p_ctx->gnc_controller_ctx.coeffs[0]; // canard lift
 		ctrl_latest_values.coefficient_of_roll_control[1] =
 			p_ctx->gnc_controller_ctx.coeffs[1]; // body lift (not send through can)
+
+		ctrl_latest_values.ref_roll[0] = p_output->ref_roll[0]; // target roll angle
+		ctrl_latest_values.ref_roll[1] = p_output->ref_roll[1]; // target roll rate
+
 		ctrl_latest_values.command = p_output->canard_command_angle_rad;
 
 		xQueueOverwrite(ctrl_value_queue, &ctrl_latest_values);
@@ -162,73 +278,4 @@ health_status_t controller_get_status(void) {
 							  .error_bitfield = 0};
 
 	return status;
-}
-
-static w_status_t ctrl_ctx_telemetry(void) {
-	ctrl_value_handle_t ctrl_value_latest_raw;
-
-	if (xQueuePeek(ctrl_value_queue, &ctrl_value_latest_raw, 0) == pdTRUE) {
-		int16_t cmd;
-		int16_t coef_canard_lift;
-
-		if (W_SUCCESS !=
-			can_encode_scaled_float(SCALE_CTRL_CMD, ctrl_value_latest_raw.command, &cmd)) {
-			log_text(0, LOG_LVL_WARN, "controller", "Can encode failed for command.");
-			return W_FAILURE;
-		}
-
-		if (W_SUCCESS !=
-			can_encode_scaled_float(SCALE_CTRL_COEF_OF_ROLL_CTRL,
-									ctrl_value_latest_raw.coefficient_of_roll_control[0],
-									&coef_canard_lift)) {
-			log_text(
-				0, LOG_LVL_WARN, "controller", "Can encode failed for canard lift coefficient.");
-			return W_FAILURE;
-		}
-
-		uint32_t timestamp;
-
-		if (timer_get_ms(&timestamp) != W_SUCCESS) {
-			log_text(0, LOG_LVL_WARN, "controller", "Failed to get timestamp for can msg tx");
-			return W_FAILURE;
-		}
-
-		w_status_t status = W_SUCCESS;
-
-		can_msg_t msg;
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  (uint16_t)timestamp,
-									  SENSOR_CANARD_CTRL_CMD_ANGLE,
-									  (uint16_t)(cmd + TELEMETRY_INT16_OFFSET),
-									  &msg);
-
-		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(
-				0, LOG_LVL_WARN, "controller", "Failed to transmit command value through can.");
-			status = W_FAILURE;
-		}
-
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  (uint16_t)timestamp,
-									  SENSOR_CANARD_CTRL_COEFF_LIFT,
-									  (uint16_t)(coef_canard_lift + TELEMETRY_INT16_OFFSET),
-									  &msg);
-
-		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0,
-					 LOG_LVL_WARN,
-					 "controller",
-					 "Failed to transmit canard lift coefficient value through can.");
-			status = W_FAILURE;
-		}
-
-		return status;
-	} else {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "controller",
-				 "Failed to peek mailbox queue while sending current ctrl values through can.");
-
-		return W_FAILURE;
-	}
 }

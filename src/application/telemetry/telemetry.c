@@ -6,6 +6,7 @@
 #include "drivers/timer/timer.h"
 #include "task.h"
 
+// Currently registered: sensor_handler 69, ak45 15, navigator 8, controller 4 = 96.
 #define TELEMETRY_MAX_SOURCES 100 // TODO: find out real value for this
 #define TELEMETRY_TASK_PERIOD_MS 1 // 1000hz
 
