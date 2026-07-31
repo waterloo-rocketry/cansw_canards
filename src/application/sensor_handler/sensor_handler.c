@@ -290,18 +290,21 @@ static w_status_t mti_board_mag_can_telemetry(void) {
 	int16_t board_mag_y = 0;
 	int16_t board_mag_z = 0;
 
-	board_mag_enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.x, &board_mag_x);
-	board_mag_enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.y, &board_mag_y);
-	board_mag_enc |= can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.z, &board_mag_z);
+	board_mag_enc |=
+		can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.x, &board_mag_x);
+	board_mag_enc |=
+		can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.y, &board_mag_y);
+	board_mag_enc |=
+		can_encode_scaled_float(SCALE_BOARD_MAG, (float32_t)data.board_mag.z, &board_mag_z);
 	if (W_SUCCESS == board_mag_enc) {
 		can_msg_t board_mag_msg = {0};
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-										(uint16_t)ts_ms,
-										DEM_3D_SENSOR_CANARD_IIS2MDC_MAG,
-										(uint16_t)(board_mag_x + TELEMETRY_INT16_OFFSET),
-										(uint16_t)(board_mag_y + TELEMETRY_INT16_OFFSET),
-										(uint16_t)(board_mag_z + TELEMETRY_INT16_OFFSET),
-										&board_mag_msg);
+										 (uint16_t)ts_ms,
+										 DEM_3D_SENSOR_CANARD_IIS2MDC_MAG,
+										 (uint16_t)(board_mag_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(board_mag_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(board_mag_z + TELEMETRY_INT16_OFFSET),
+										 &board_mag_msg);
 		status |= can_handler_transmit(&board_mag_msg);
 	} else {
 		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode board mag.");
@@ -313,18 +316,21 @@ static w_status_t mti_board_mag_can_telemetry(void) {
 	int16_t accel_y = 0;
 	int16_t accel_z = 0;
 	w_status_t mti_accel_enc = W_SUCCESS;
-	mti_accel_enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.x, &accel_x);
-	mti_accel_enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.y, &accel_y);
-	mti_accel_enc |= can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.z, &accel_z);
+	mti_accel_enc |=
+		can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.x, &accel_x);
+	mti_accel_enc |=
+		can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.y, &accel_y);
+	mti_accel_enc |=
+		can_encode_scaled_float(SCALE_MTI_ACCEL, (float32_t)data.mti_accel.z, &accel_z);
 	if (W_SUCCESS == mti_accel_enc) {
 		can_msg_t mti_accel_msg = {0};
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
-									 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
-									 &mti_accel_msg);
+										 (uint16_t)ts_ms,
+										 DEM_3D_SENSOR_CANARD_MTI630_ACCEL,
+										 (uint16_t)(accel_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(accel_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(accel_z + TELEMETRY_INT16_OFFSET),
+										 &mti_accel_msg);
 		status |= can_handler_transmit(&mti_accel_msg);
 	} else {
 		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI accel.");
@@ -341,12 +347,12 @@ static w_status_t mti_board_mag_can_telemetry(void) {
 	if (W_SUCCESS == mti_gyro_enc) {
 		can_msg_t mti_gyro_msg = {0};
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
-									 (uint16_t)(gyro_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(gyro_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(gyro_z + TELEMETRY_INT16_OFFSET),
-									 &mti_gyro_msg);
+										 (uint16_t)ts_ms,
+										 DEM_3D_SENSOR_CANARD_MTI630_GYRO,
+										 (uint16_t)(gyro_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(gyro_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(gyro_z + TELEMETRY_INT16_OFFSET),
+										 &mti_gyro_msg);
 		status |= can_handler_transmit(&mti_gyro_msg);
 	} else {
 		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI gyro.");
@@ -363,12 +369,12 @@ static w_status_t mti_board_mag_can_telemetry(void) {
 	if (W_SUCCESS == mti_mag_enc) {
 		can_msg_t mti_mag_msg = {0};
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-									 (uint16_t)ts_ms,
-									 DEM_3D_SENSOR_CANARD_MTI630_MAG,
-									 (uint16_t)(mag_x + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(mag_y + TELEMETRY_INT16_OFFSET),
-									 (uint16_t)(mag_z + TELEMETRY_INT16_OFFSET),
-									 &mti_mag_msg);
+										 (uint16_t)ts_ms,
+										 DEM_3D_SENSOR_CANARD_MTI630_MAG,
+										 (uint16_t)(mag_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(mag_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(mag_z + TELEMETRY_INT16_OFFSET),
+										 &mti_mag_msg);
 		status |= can_handler_transmit(&mti_mag_msg);
 	} else {
 		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to encode MTI mag.");
@@ -917,7 +923,10 @@ w_status_t sensor_handler_init(void) {
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_PAD_FILTER, 1000 / 20},
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_PAD_NAV, 1000 / MAX_LOGGING_RATE_HZ},
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_BOOST, 1000 / MAX_LOGGING_RATE_HZ},
-		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_ACT_ALLOWED, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Sensor High Rate",
+		 sensor_high_rate_sd_log,
+		 STATE_ACT_ALLOWED,
+		 1000 / MAX_LOGGING_RATE_HZ},
 
 		// --- SD log group: 50/20/20/1 (Low Rate) ---
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_IDLE, 1000 / 1},

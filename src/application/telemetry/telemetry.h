@@ -10,11 +10,11 @@
 
 // Offsets to map a signed scaled value into the unsigned CAN field:
 // int16: [-2^15, 2^15) -> [0, 2^16); int24: [-2^23, 2^23) -> [0, 2^24)
-static const uint16_t TELEMETRY_INT16_OFFSET = 32768;
-static const uint32_t TELEMETRY_INT24_OFFSET = 8388608;
-static const uint32_t TELEMETRY_INT32_OFFSET = 2147483648;
+#define TELEMETRY_INT16_OFFSET 32768
+#define TELEMETRY_INT24_OFFSET 8388608
+#define TELEMETRY_INT32_OFFSET 147483648
 
-static const uint32_t MAX_LOGGING_RATE_HZ = 50;
+#define MAX_LOGGING_RATE_HZ 50
 
 // Pass in any fuction your module desire to log data (had to be NON-BLOCKING and returns a status
 // code)

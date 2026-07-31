@@ -284,10 +284,8 @@ static w_status_t ak45_driver_angle_telemetry() {
 								  &msg);
 
 	if (can_handler_transmit(&msg) != W_SUCCESS) {
-		log_text(LOG_WAIT_MS,
-				 LOG_LVL_WARN,
-				 "ak45",
-				 "Failed to transmit motor angle value through can.");
+		log_text(
+			LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to transmit motor angle value through can.");
 		status |= W_FAILURE;
 	}
 
@@ -313,7 +311,7 @@ static w_status_t ak45_sd_telemetry(void) {
 		log_text(0, LOG_LVL_WARN, "ak45", "Failed to log motor data.");
 		return W_FAILURE;
 	}
-	
+
 	return W_SUCCESS;
 }
 
