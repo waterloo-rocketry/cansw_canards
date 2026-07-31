@@ -2,6 +2,7 @@
 #define HEALTH_CHECKS_H
 
 #include "FreeRTOS.h"
+#include "message_types.h"
 #include "rocketlib/include/common.h"
 #include "task.h"
 #include <stdbool.h>
@@ -61,8 +62,8 @@ typedef enum {
  * Standard structure returned by all module health check functions
  */
 typedef struct {
-	health_severity_t severity;
-	module_id_t module_id;
+	can_canards_health_severity_t severity;
+	can_canards_module_id_t module_id;
 	uint32_t error_bitfield;
 } health_status_t;
 
