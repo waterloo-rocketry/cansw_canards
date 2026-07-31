@@ -26,6 +26,9 @@
  */
 typedef struct {
 	bool initialized; /**< Initialization status flag */
+	bool empty_queue; /**< Empty can bus tx queue flag */
+	bool timedout_rx; /**< RX timeout flag */
+	bool dropped_tx; /**< Dropped TX flag */
 	uint32_t dropped_rx_counter; /**< Number of dropped RX messages from rx isr */
 	uint32_t dropped_tx_counter; /**< Number of dropped TX messages from tx queue */
 	uint32_t tx_failures; /**< Number of transmission failures */
@@ -269,7 +272,7 @@ w_status_t can_handler_register_callback(can_msg_type_t msg_type, can_callback_t
 
 w_status_t can_handler_transmit(const can_msg_t *message) {
 	if (pdPASS != xQueueSend(bus_queue_tx, message, 0)) {
-		log_text(1, LOG_LVL_WARN, "CANHandler", "Failed to queue message for TX. Queue full?");
+		can_error_stats.dropped_tx = true; 
 		can_error_stats.dropped_tx_counter++; // Track dropped TX messages
 		return W_FAILURE;
 	}
@@ -299,7 +302,7 @@ void can_handler_task_rx(void *argument) {
 			// timed out waiting; log once per second
 			TickType_t now = xTaskGetTickCount();
 			if ((now - last_rx_warn_tick) >= pdMS_TO_TICKS(1000)) {
-				log_text(1, LOG_LVL_WARN, "CANHandlerRX", "Timed out waiting for RX message.");
+				can_error_stats.timedout_rx = true; // Track RX timeouts
 				can_error_stats.rx_timeouts++; // Track RX timeouts
 				last_rx_warn_tick = now; // update last warning time
 			}
@@ -318,7 +321,6 @@ void can_handler_task_tx(void *argument) {
 			// send to CAN bus; log errors
 			if (!stm32h7_can_send(&tx_msg)) {
 				can_error_stats.tx_failures++;
-				log_text(3, LOG_LVL_WARN, "CAN tx", "CAN send failed!");
 			}
 			// hardware limitation stm32 backtoback tx fifo queue has 2 msgs..
 			// but trying to do 2 in a row didnt work so just delay between every tx
@@ -328,7 +330,8 @@ void can_handler_task_tx(void *argument) {
 			// expect we send at least 1 message every 1.5sec
 			TickType_t now = xTaskGetTickCount();
 			if ((now - last_tx_warn_tick) >= pdMS_TO_TICKS(1500)) {
-				log_text(1, LOG_LVL_WARN, "CANHandlerTX", "no tx msg in queue");
+				can_error_stats.tx_failures++;
+				can_error_stats.empty_queue = true;
 				last_tx_warn_tick = now;
 			}
 		}
@@ -437,10 +440,25 @@ health_status_t can_handler_get_status(void) {
 			 can_error_stats.rx_callback_errors,
 			 can_error_stats.rx_timeouts,
 			 can_error_stats.tx_timeouts);
+	
+	if (can_error_stats.dropped_tx) {
+		log_text(1, LOG_LVL_WARN, "CANHandler", "Failed to queue message for TX. Queue full?");
+	}
+
+	if (can_error_stats.timedout_rx) {
+		log_text(0, LOG_LVL_WARN, "CAN", "RX queue timeout");
+	}
+
+	if (can_error_stats.empty_queue) {
+		log_text(0, LOG_LVL_WARN, "CAN", "TX queue empty");
+	}
 
 	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
 							  .module_id = CANARDS_MODULE_ID_CAN_HANDLER,
 							  .error_bitfield = status_bitfield};
+
+	can_error_stats.timedout_rx = false;
+	can_error_stats.empty_queue = false; 
 
 	return status;
 }
