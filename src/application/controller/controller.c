@@ -156,9 +156,9 @@ w_status_t controller_init(void) {
 		{"Ctrl CAN", ctrl_can_telemetry, STATE_BOOST, 1000 / 10},
 		{"Ctrl CAN", ctrl_can_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
 
-		{"Ctrl SD", ctrl_sd_telemetry, STATE_PAD_NAV, 1000 / 200},
-		{"Ctrl SD", ctrl_sd_telemetry, STATE_BOOST, 1000 / 200},
-		{"Ctrl SD", ctrl_sd_telemetry, STATE_ACT_ALLOWED, 1000 / 200},
+		{"Ctrl SD", ctrl_sd_telemetry, STATE_PAD_NAV, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Ctrl SD", ctrl_sd_telemetry, STATE_BOOST, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Ctrl SD", ctrl_sd_telemetry, STATE_ACT_ALLOWED, 1000 / MAX_LOGGING_RATE_HZ},
 		{"Ctrl SD", ctrl_sd_telemetry, STATE_RECOVERY, 1000 / 20},
 		{"Ctrl SD", ctrl_sd_telemetry, STATE_SLEEPY, 1000 / 1},
 	};

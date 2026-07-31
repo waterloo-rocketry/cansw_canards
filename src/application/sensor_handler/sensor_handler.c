@@ -915,9 +915,9 @@ w_status_t sensor_handler_init(void) {
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_SLEEPY, 1000 / 1},
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_RECOVERY, 1000 / 20},
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_PAD_FILTER, 1000 / 20},
-		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_PAD_NAV, 1000 / 200},
-		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_BOOST, 1000 / 200},
-		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_ACT_ALLOWED, 1000 / 200},
+		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_PAD_NAV, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_BOOST, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_ACT_ALLOWED, 1000 / MAX_LOGGING_RATE_HZ},
 
 		// --- SD log group: 50/20/20/1 (Low Rate) ---
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_IDLE, 1000 / 1},

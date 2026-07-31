@@ -14,6 +14,8 @@ static const uint16_t TELEMETRY_INT16_OFFSET = 32768;
 static const uint32_t TELEMETRY_INT24_OFFSET = 8388608;
 static const uint32_t TELEMETRY_INT32_OFFSET = 2147483648;
 
+static const uint32_t MAX_LOGGING_RATE_HZ = 50;
+
 // Pass in any fuction your module desire to log data (had to be NON-BLOCKING and returns a status
 // code)
 typedef w_status_t (*telemetry_log_fn_t)(void);
