@@ -119,7 +119,7 @@ static w_status_t ctrl_sd_telemetry(void) {
 		log_text(0,
 				 LOG_LVL_WARN,
 				 "controller",
-				 "Failed to peek mailbox queue while sending current nav values through can.");
+				 "Failed to peek mailbox queue while sending current ctrl values through can.");
 
 		return W_FAILURE;
 	}

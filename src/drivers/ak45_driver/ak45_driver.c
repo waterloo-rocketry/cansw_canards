@@ -473,9 +473,9 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 
 		{"Motor SD", ak45_sd_telemetry, STATE_IDLE, 1000 / 1},
 		{"Motor SD", ak45_sd_telemetry, STATE_PAD_FILTER, 1000 / 10},
-		{"Motor SD", ak45_sd_telemetry, STATE_PAD_NAV, 1000 / 100},
-		{"Motor SD", ak45_sd_telemetry, STATE_BOOST, 1000 / 100},
-		{"Motor SD", ak45_sd_telemetry, STATE_ACT_ALLOWED, 1000 / 100},
+		{"Motor SD", ak45_sd_telemetry, STATE_PAD_NAV, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Motor SD", ak45_sd_telemetry, STATE_BOOST, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Motor SD", ak45_sd_telemetry, STATE_ACT_ALLOWED, 1000 / MAX_LOGGING_RATE_HZ},
 		{"Motor SD", ak45_sd_telemetry, STATE_RECOVERY, 1000 / 10},
 		{"Motor SD", ak45_sd_telemetry, STATE_SLEEPY, 1000 / 1},
 
