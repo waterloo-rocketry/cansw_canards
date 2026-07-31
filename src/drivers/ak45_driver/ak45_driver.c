@@ -310,7 +310,7 @@ static w_status_t ak45_sd_telemetry(void) {
 	log_container.servo_motor.motor_temperature = (float32_t)fb.temperature_c;
 
 	if (log_data(LOG_WAIT_MS, LOG_TYPE_SERVO_MOTOR, &log_container) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "Controller", "Failed to log motor data.");
+		log_text(0, LOG_LVL_WARN, "ak45", "Failed to log motor data.");
 		return W_FAILURE;
 	}
 	
