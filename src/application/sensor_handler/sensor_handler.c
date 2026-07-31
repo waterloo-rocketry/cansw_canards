@@ -97,7 +97,7 @@ static sensor_handler_state_t sensor_handler_state = {0};
 typedef struct {
 	// LSM6DSV32X (board IMU)
 	vector3d_t board_imu_accel; // m/s^2
-	vector3d_t board_imu_gyro; // rad/s^2
+	vector3d_t board_imu_gyro; // rad/s
 	// MS5611 (board barometer)
 	int32_t board_baro_pressure_pa;
 	// TODO: add board barometer thermometer reading (board_baro_temp) once wired

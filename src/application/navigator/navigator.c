@@ -144,7 +144,7 @@ static w_status_t nav_can_telemetry(void) {
 			status |= W_FAILURE;
 		}
 	} else {
-		log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion x y z.");
+		log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientation x y z.");
 		status = W_FAILURE;
 	}
 
