@@ -1,3 +1,6 @@
+#ifndef TELEMETRY_H
+#define TELEMETRY_H
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -5,24 +8,29 @@
 #include "application/health_checks/health_checks.h"
 #include "rocketlib/include/common.h"
 
+// Offsets to map a signed scaled value into the unsigned CAN field:
+// int16: [-2^15, 2^15) -> [0, 2^16); int24: [-2^23, 2^23) -> [0, 2^24)
+#define TELEMETRY_INT16_OFFSET 32768
+#define TELEMETRY_INT24_OFFSET 8388608
+#define TELEMETRY_INT32_OFFSET 2147483648
+
+#define MAX_LOGGING_RATE_HZ 50
+
 // Pass in any fuction your module desire to log data (had to be NON-BLOCKING and returns a status
 // code)
 typedef w_status_t (*telemetry_log_fn_t)(void);
 
 // struct for telemetry source configuration
 typedef struct {
-	const char *name; // for status/debug logging
+	const char *name; // source name for debugging
 
 	telemetry_log_fn_t log_fn; // function to call periodically to log data
 	fsm_state_t flight_phase_state; // the flight phase state in which this source should be logged
 
-	uint32_t period_ms; // the period in ms between logs, derived from desired_frequency_hz
-	uint32_t
-		last_logged_ms; // the last ms timestamp when this source was logged (for health checks)
-	uint32_t due_date_ms; // the next ms timestamp when this source should be logged
+	uint32_t period_ms; // the period in ms at which log_fn will get called by telemetry module
 } telemetry_source_config_t;
 
-/*
+/**
  * @brief Initialize the telemetry module
  * @return Status of initialization
  */
@@ -31,8 +39,9 @@ w_status_t telemetry_init(void);
 /**
  * @brief Register a new telemetry source
  * @param config Pointer to the telemetry source configuration
- * @note Initializes the config with name, log_function, flight_phase_state, and period_ms with
- * specified values. Initializes last_logged_ms and due_date_ms to 0.
+ * @note Caller supplies name, log_fn, flight_phase_state, and period_ms. The last_logged_ms and
+ * due_date_ms fields are managed internally and should be left zero-initialized.
+ * @note Must be called before telemetry_task starts running (call it in your init!!).
  * @return Status of registration
  */
 w_status_t telemetry_register(const telemetry_source_config_t *config);
@@ -47,3 +56,5 @@ void telemetry_task(void *argument);
  * @return telemetry status bitfield
  */
 health_status_t telemetry_get_status(void);
+
+#endif // TELEMETRY_H

@@ -151,7 +151,9 @@ health_status_t adc_get_status(void) {
 			 adc_error_stats.invalid_channels,
 			 adc_error_stats.overflow_errors);
 
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_ADC, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_ADC,
+							  .error_bitfield = 0};
 
 	return status;
 }
