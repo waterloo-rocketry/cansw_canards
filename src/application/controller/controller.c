@@ -78,8 +78,7 @@ static w_status_t ctrl_can_telemetry(void) {
 									  &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(
-				0, LOG_LVL_WARN, "controller", "Failed to transmit command value through can.");
+			log_text(0, LOG_LVL_WARN, "controller", "can tx cmd val fail.");
 			status |= W_FAILURE;
 		}
 
@@ -90,19 +89,13 @@ static w_status_t ctrl_can_telemetry(void) {
 									  &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0,
-					 LOG_LVL_WARN,
-					 "controller",
-					 "Failed to transmit canard lift coefficient value through can.");
+			log_text(0, LOG_LVL_WARN, "controller", "canard lift coefficient can tx fail.");
 			status |= W_FAILURE;
 		}
 
 		return status;
 	} else {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "controller",
-				 "Failed to peek mailbox queue while sending current ctrl values through can.");
+		log_text(0, LOG_LVL_WARN, "controller", "queuepeek fail while can tx ctrl values.");
 
 		return W_FAILURE;
 	}
@@ -112,10 +105,7 @@ static w_status_t ctrl_sd_telemetry(void) {
 	ctrl_value_handle_t ctrl_value_latest_raw;
 
 	if (xQueuePeek(ctrl_value_queue, &ctrl_value_latest_raw, 0) != pdTRUE) {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "controller",
-				 "Failed to peek mailbox queue while sending current ctrl values through sd card.");
+		log_text(0, LOG_LVL_WARN, "controller", "queuepeek fail while sd tx ctrl values.");
 
 		return W_FAILURE;
 	}
@@ -242,7 +232,7 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 		xQueueOverwrite(ctrl_value_queue, &ctrl_latest_values);
 
 	} else {
-		log_text(0, LOG_LVL_WARN, "controller", "Controller was not run");
+		log_text(0, LOG_LVL_WARN, "controller", "Cntrler not run");
 		controller_error_stats.controller_not_run_count++;
 		controller_error_stats.controller_not_run = true;
 	}
