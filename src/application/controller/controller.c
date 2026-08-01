@@ -113,13 +113,11 @@ static w_status_t ctrl_can_telemetry(void) {
 static w_status_t ctrl_sd_telemetry(void) {
 	ctrl_value_handle_t ctrl_value_latest_raw;
 
-	w_status_t status = W_SUCCESS;
-
 	if (xQueuePeek(ctrl_value_queue, &ctrl_value_latest_raw, 0) != pdTRUE) {
 		log_text(0,
 				 LOG_LVL_WARN,
 				 "controller",
-				 "Failed to peek mailbox queue while sending current ctrl values through can.");
+				 "Failed to peek mailbox queue while sending current ctrl values through sd card.");
 
 		return W_FAILURE;
 	}
@@ -149,8 +147,12 @@ static w_status_t ctrl_sd_telemetry(void) {
  */
 w_status_t controller_init(void) {
 	ctrl_value_queue = xQueueCreate(1, sizeof(ctrl_value_handle_t));
-	configASSERT(ctrl_value_queue != NULL);
+	if (NULL == ctrl_value_queue) {
+		log_text(0, LOG_LVL_FATAL, "controller", "unable to allocate memory for queue.");
+		return W_FAILURE;
+	}
 
+	// TODO: double check with Tristan about controller behaviour for pad nav
 	static const telemetry_source_config_t telemetry_sources[] = {
 		{"Ctrl CAN", ctrl_can_telemetry, STATE_PAD_NAV, 1000 / 10},
 		{"Ctrl CAN", ctrl_can_telemetry, STATE_BOOST, 1000 / 10},
@@ -200,8 +202,6 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "controller", "Invalid context ptr.");
 		return W_INVALID_PARAM;
 	}
-
-	// TODO: check with Tristan
 
 	float64_t flight_time_sec = ((float64_t)((uint32_t)(timestamp_tenth_ms * TENTH_MS_TO_MS) -
 											 (p_input->launch_timestamp_ms))) *

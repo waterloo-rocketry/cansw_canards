@@ -215,7 +215,7 @@ static w_status_t nav_sd_telemetry(void) {
 	log_container.navigator_pt1.orient_y = (float32_t)nav_value_lastest_raw.orientation[2];
 	log_container.navigator_pt1.orient_z = (float32_t)nav_value_lastest_raw.orientation[3];
 	log_container.navigator_pt1.altitude = (float32_t)nav_value_lastest_raw.altitude;
-	log_container.navigator_pt1.variance_norm = nav_value_lastest_raw.variance_norm;
+	log_container.navigator_pt1.variance_norm = (float32_t)nav_value_lastest_raw.variance_norm;
 
 	if (log_data(NAV_LOG_DATA_TIMEOUT, LOG_TYPE_NAVIGATOR_PT1, &log_container) != W_SUCCESS) {
 		log_text(0, LOG_LVL_WARN, "navigator", "Failed to log nav pt 1.");
@@ -250,7 +250,10 @@ w_status_t navigator_init(void) {
 
 	// create mailbox queue for nav values
 	nav_value_queue = xQueueCreate(1, sizeof(nav_value_handle_t));
-	configASSERT(nav_value_queue != NULL);
+	if (NULL == nav_value_queue) {
+		log_text(0, LOG_LVL_FATAL, "navigator", "unable to allocate memory for queue.");
+		return W_FAILURE;
+	}
 
 	static const telemetry_source_config_t telemetry_sources[] = {
 

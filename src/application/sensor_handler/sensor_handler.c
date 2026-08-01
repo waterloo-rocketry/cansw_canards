@@ -99,7 +99,7 @@ typedef struct {
 	vector3d_t board_imu_accel; // m/s^2
 	vector3d_t board_imu_gyro; // rad/s
 	// MS5611 (board barometer)
-	int32_t board_baro_pressure_pa;
+	int32_t board_baro_pressure_centimbar;
 	// TODO: add board barometer thermometer reading (board_baro_temp) once wired
 	// LSM303AGR (board mag)
 	vector3d_t board_mag;
@@ -149,7 +149,10 @@ static w_status_t board_imu_ad_can_telemetry(void) {
 	}
 
 	uint32_t ts_ms = 0;
-	(void)timer_get_ms(&ts_ms);
+	if (timer_get_ms(&ts_ms) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to get timestamp for can msg tx");
+		return W_FAILURE;
+	}
 
 	int16_t accel_x = 0;
 	int16_t accel_y = 0;
@@ -253,13 +256,17 @@ static w_status_t board_baro_can_telemetry(void) {
 	}
 
 	uint32_t ts_ms = 0;
-	(void)timer_get_ms(&ts_ms);
+	if (timer_get_ms(&ts_ms) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to get timestamp for can msg tx");
+		return W_FAILURE;
+	}
 
 	can_msg_t msg = {0};
 
 	uint32_t baro_pres = 0;
-	if (can_encode_scaled_int(
-			SCALE_BOARD_PRESSURE, (int64_t)data.board_baro_pressure_pa, &baro_pres) != W_SUCCESS) {
+	if (can_encode_scaled_int(SCALE_BOARD_PRESSURE,
+							  (int64_t)data.board_baro_pressure_centimbar,
+							  &baro_pres) != W_SUCCESS) {
 		return W_FAILURE;
 	}
 
@@ -282,7 +289,11 @@ static w_status_t mti_board_mag_can_telemetry(void) {
 	w_status_t status = W_SUCCESS;
 
 	uint32_t ts_ms = 0;
-	(void)timer_get_ms(&ts_ms);
+	if (timer_get_ms(&ts_ms) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "Sensor Handler", "Failed to get timestamp for can msg tx");
+		return W_FAILURE;
+	}
+
 	w_status_t board_mag_enc = W_SUCCESS;
 
 	// IIS2MDC board magnetometer - raw register counts, unscaled
@@ -468,7 +479,8 @@ static w_status_t sensor_low_rate_sd_log(void) {
 	container.board_mag_baro.magnetometer.x = (float32_t)data.board_mag.x;
 	container.board_mag_baro.magnetometer.y = (float32_t)data.board_mag.y;
 	container.board_mag_baro.magnetometer.z = (float32_t)data.board_mag.z;
-	container.board_mag_baro.barometer = (float32_t)data.board_baro_pressure_pa;
+	container.board_mag_baro.barometer =
+		(float32_t)(data.board_baro_pressure_centimbar * PA_PER_CENTIMBAR);
 	container.board_mag_baro.thermometer = 0.0f;
 
 	w_status_t log_data_result = W_SUCCESS;
@@ -893,7 +905,7 @@ w_status_t sensor_handler_init(void) {
 	// TODO: flight_phase_state and period_ms are placeholders — fill in the real phases and rates
 	// (register a row per phase, as ak45_driver does).
 	static const telemetry_source_config_t telemetry_sources[] = {
-		// LSM6DSV32X (board IMU): accel + gyro together, 20Hz on pad filter, 10Hz in flight, 1hz
+		// LSM6DSV32X (board IMU)
 		// for idle
 		{"Board IMU", board_imu_ad_can_telemetry, STATE_IDLE, 1000 / 1},
 		{"Board IMU", board_imu_ad_can_telemetry, STATE_PAD_FILTER, 1000 / 20},
@@ -908,15 +920,14 @@ w_status_t sensor_handler_init(void) {
 		{"Board Baro", board_baro_can_telemetry, STATE_ACT_ALLOWED, 100},
 		{"Board Baro", board_baro_can_telemetry, STATE_BOOST, 100},
 
-		// MTi-630 (Movella) accel+gyro+mag+baro plus LSM303AGR board mag (same rate),
-		// 2Hz on pad/flight, 1Hz idle.
+		// MTi-630 (Movella)
 		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_IDLE, 1000 / 1},
 		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_PAD_FILTER, 1000 / 2},
 		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_PAD_NAV, 1000 / 2},
 		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_BOOST, 1000 / 2},
 		{"MTI and board mag", mti_board_mag_can_telemetry, STATE_ACT_ALLOWED, 1000 / 2},
 
-		// --- SD log group: 200/20/20/1 (High Rate) ---
+		// --- SD log group(High Rate) ---
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_IDLE, 1000 / 1},
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_SLEEPY, 1000 / 1},
 		{"Sensor High Rate", sensor_high_rate_sd_log, STATE_RECOVERY, 1000 / 20},
@@ -928,7 +939,7 @@ w_status_t sensor_handler_init(void) {
 		 STATE_ACT_ALLOWED,
 		 1000 / MAX_LOGGING_RATE_HZ},
 
-		// --- SD log group: 50/20/20/1 (Low Rate) ---
+		// --- SD log group (Low Rate) ---
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_IDLE, 1000 / 1},
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_SLEEPY, 1000 / 1},
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_RECOVERY, 1000 / 20},
@@ -937,7 +948,7 @@ w_status_t sensor_handler_init(void) {
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_BOOST, 1000 / 50},
 		{"Sensor Low Rate", sensor_low_rate_sd_log, STATE_ACT_ALLOWED, 1000 / 50},
 
-		// --- SD log group: 20/20/20/1 (Movella State) ---
+		// --- SD log group (Movella State) ---
 		{"Movella State", movella_state_sd_log, STATE_IDLE, 1000 / 1},
 		{"Movella State", movella_state_sd_log, STATE_SLEEPY, 1000 / 1},
 		{"Movella State", movella_state_sd_log, STATE_RECOVERY, 1000 / 20},
@@ -1031,7 +1042,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 		// board IMU / mag / baro are sent as converted values
 		.board_imu_accel = imu_output->board_meas.board_imu.accel,
 		.board_imu_gyro = imu_output->board_meas.board_imu.gyro,
-		.board_baro_pressure_pa = raw_board_meas.raw_board_baro.pressure_centimbar,
+		.board_baro_pressure_centimbar = raw_board_meas.raw_board_baro.pressure_centimbar,
 		// TODO: populate board barometer thermometer reading once wired
 		.board_mag = imu_output->board_meas.board_mag.meas,
 
