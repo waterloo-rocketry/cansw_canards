@@ -241,24 +241,6 @@ static void system_init_task(void *arg) {
 			// TODO: TEST ONLY
 			ak45_hard_stop_calibrate(&ak45_calibration_config);
 		}
-
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
-		log_text(1, LOG_LVL_INFO, "ainf", "iuasnfvoiasnffvpoasnfub[0qwhrhrgo9u]");
 	}
 }
 
