@@ -67,6 +67,19 @@ void unblock_fsm_hil() {
 	unblock_fsm_loop(&htim5);
 }
 
+typedef struct {
+	bool is_init;
+	uint32_t init_timer_failures;
+	uint32_t init_timer_start_failures;
+	uint32_t loop_timeouts;
+	uint32_t get_timer_failures;
+	uint32_t unknown_state_errors;
+
+	bool loop_timer_failed;
+	bool get_timer_failed;
+	bool is_in_unknown_state;
+} fsm_health_t;
+
 static fsm_health_t fsm_health = {0};
 
 w_status_t fsm_init() {
@@ -323,6 +336,7 @@ void fsm_task(void *args) {
 		fsm_state_t new_state =
 			flight_phase_update_state(next_event, g_ctx.curr_state, g_ctx.p_flight_phase_context);
 		g_ctx.curr_state = new_state;
+		g_ctx.curr_state = 7;
 
 		// run actions based on new curr state
 		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
@@ -336,30 +350,27 @@ health_status_t fsm_get_status(void) {
 							  .error_bitfield = 0};
 
 	if (fsm_health.loop_timer_failed) {
-		log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_LOOP_TIMING_OFFSET;
+		fsm_health.loop_timer_failed = false;
 	}
 
 	if (fsm_health.get_timer_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
+		fsm_health.get_timer_failed = false;
 	}
 
 	if (fsm_health.is_in_unknown_state) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		fsm_health.is_in_unknown_state = false;
 	}
 
 	if (!fsm_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
-
-	// clear flags
-	fsm_health.loop_timer_failed = false;
-	fsm_health.get_timer_failed = false;
-	fsm_health.is_in_unknown_state = false;
 
 	log_text(10,
 			 LOG_LVL_INFO,

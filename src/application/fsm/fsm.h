@@ -22,19 +22,6 @@ typedef struct {
 	all_sensors_data_t *p_sensor_data;
 } fsm_input_t;
 
-typedef struct {
-	bool is_init;
-	uint32_t init_timer_failures;
-	uint32_t init_timer_start_failures;
-	uint32_t loop_timeouts;
-	uint32_t get_timer_failures;
-	uint32_t unknown_state_errors;
-
-	bool loop_timer_failed;
-	bool get_timer_failed;
-	bool is_in_unknown_state;
-} fsm_health_t;
-
 /**
  * @brief init fsm
  */
