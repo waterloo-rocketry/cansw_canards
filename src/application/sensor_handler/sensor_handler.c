@@ -845,7 +845,7 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 			sensor_handler_state.motor_encoder_stats.failure_count++;
 		}
 
-		// track fault codes without logging every loop iteration a fault is active
+		// check for motor fault code
 		if (motor_feedback.fault_code != AK45_FAULT_NONE) {
 			sensor_handler_state.motor_encoder_stats.failure_count++;
 			sensor_handler_state.motor_fault_code = motor_feedback.fault_code;

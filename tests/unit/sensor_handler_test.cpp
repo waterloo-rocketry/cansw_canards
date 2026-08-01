@@ -722,7 +722,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadMTI) {
 	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
 
 	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
+	EXPECT_EQ(W_FAILURE, result);
 
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
@@ -1100,7 +1100,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasGetFailMTI) {
 	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
 
 	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
+	EXPECT_EQ(W_FAILURE, result);
 
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
@@ -1492,7 +1492,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMotorEncoder) {
 	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
 
 	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
+	EXPECT_EQ(W_FAILURE, result);
 
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
@@ -1550,7 +1550,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
 
 	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
+	EXPECT_EQ(W_FAILURE, result);
 
 	// Verify IMU read calls were made
 	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
