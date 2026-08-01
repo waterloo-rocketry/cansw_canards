@@ -3,6 +3,7 @@
 
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/health_checks/health_checks.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
@@ -31,6 +32,16 @@ w_status_t fsm_init();
  * @return the current fsm state
  */
 fsm_state_t fsm_get_state();
+
+/**
+ * @brief Report FSM module health status
+ *
+ * Retrieves and reports FSM error statistics and initialization status
+ * through log messages.
+ *
+ * @return CAN board specific health status
+ */
+health_status_t fsm_get_status(void);
 
 /**
  * run in 500 hz freertos task
