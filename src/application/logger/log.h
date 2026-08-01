@@ -82,19 +82,16 @@ typedef enum {
 
 	LOG_TYPE_BOARD_IMU = M(0x05),
 
-	LOG_TYPE_BOARD_BAROMETER = M(0x06),
+	LOG_TYPE_BOARD_MAG_BARO = M(0x06),
 
-	LOG_TYPE_BOARD_MAG = M(0x07),
+	LOG_TYPE_MOVELLA_PT1 = M(0x07),
+	LOG_TYPE_MOVELLA_PT2 = M(0x08),
+	LOG_TYPE_MOVELLA_PT3 = M(0x09),
+	LOG_TYPE_MOVELLA_PT4 = M(0x0A),
 
-	LOG_TYPE_MOVELLA_PT1 = M(0x08),
-	LOG_TYPE_MOVELLA_PT2 = M(0x09),
-	LOG_TYPE_MOVELLA_PT3 = M(0x0A),
-	LOG_TYPE_MOVELLA_PT4 = M(0x0B),
+	LOG_TYPE_AD_BREAKOUT = M(0x0B),
 
-	LOG_TYPE_AD_ACCEL = M(0x0C),
-	LOG_TYPE_AD_GYRO = M(0x0D),
-
-	LOG_TYPE_SERVO_MOTOR = M(0x0E)
+	LOG_TYPE_SERVO_MOTOR = M(0x0C)
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -156,10 +153,11 @@ typedef union __attribute__((packed)) {
 
 	// LOG_TYPE_CONTROLLER:
 	struct __attribute__((packed)) {
-		// the 3 vars in roll_state_t
-		float command; // deg
-		float roll_target; // deg
+		float command; // rad
 		float canard_coeff;
+		float body_coeff;
+		float roll_angle_target; // rad
+		float roll_rate_target; // rad/s
 	} controller;
 
 	// LOG_TYPE_BOARD_IMU:
@@ -168,17 +166,12 @@ typedef union __attribute__((packed)) {
 		vector3d_f32_packed_t gyroscope; // rad/s
 	} board_imu;
 
-	// LOG_TYPE_BOARD_BAROMETER:
+	// LOG_TYPE_BOARD_MAG_BARO:
 	struct __attribute__((packed)) {
+		vector3d_f32_packed_t magnetometer; // Gauss
 		float barometer; // Pa
 		float thermometer; // C
-	} board_barometer;
-
-	// LOG_TYPE_BOARD_MAG:
-	struct __attribute__((packed)) {
-		vector3d_f32_packed_t accelerometer; // m/s^2
-		vector3d_f32_packed_t magnetometer; // Gauss
-	} board_mag;
+	} board_mag_baro;
 
 	// LOG_TYPE_MOVELLA
 	// note: dont use the all_imus_input_t struct here because packing isn't recursive
@@ -202,17 +195,13 @@ typedef union __attribute__((packed)) {
 	// LOG_TYPE_AD_ACCEL:
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
-	} ad_accel;
-
-	// LOG_TYPE_AD_GYRO:
-	struct __attribute__((packed)) {
 		float gyroscope; // rad/s
-	} ad_gyro;
+	} ad_breakout;
 
 	// LOG_TYPE_SERVO_MOTOR:
 	struct __attribute__((packed)) {
 		float motor_angle; // deg
-		float motor_current; // mA
+		float motor_current; // A
 		float motor_temperature; // C
 	} servo_motor;
 

@@ -1,23 +1,35 @@
 #include "fff.h"
 #include <gtest/gtest.h>
+#include <string.h>
 
 extern "C" {
 #include "FreeRTOS.h"
 #include "ak45_driver_test_helpers.h"
 #include "application/logger/log.h"
+#include "application/telemetry/telemetry.h"
+#include "can.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "hal_fdcan_mock.h"
+#include "application/can_handler/can_telemetry_scaling.h"
 #include "queue.h"
 #include "task.h"
 
 FDCAN_HandleTypeDef hfdcan1;
 
 DEFINE_FFF_GLOBALS;
-FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...);
+FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *,
+					   ...);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
+FAKE_VOID_FUNC(build_analog_sensor_16bit_msg, can_msg_prio_t, uint16_t, can_analog_sensor_id_t,
+			   uint16_t, can_msg_t *);
+FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
+FAKE_VALUE_FUNC(w_status_t, telemetry_register, const telemetry_source_config_t *);
+FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_int, can_scaling_types_t, int64_t, void *);
+FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_float, can_scaling_types_t, float32_t, void *);
+    FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t*);
 }
 
-// There is a while loop in ak45_driver initialization which waits for messages to be received.
+// There is a while loop in ak45_driver initialization which waits for messages to be received.il
 // Calling this function set the variable it check to true and avoids the actualy time wait.
 void vTaskDelay_custom_bypass_while(const TickType_t ticks) {
 	HAL_FDCAN_RxFifo1Callback(&hfdcan1, 0);
@@ -33,6 +45,14 @@ void vTaskDelay_custom_fail_timer(const TickType_t ticks) {
 w_status_t timer_get_ms_custom_exceed_time(uint32_t *time) {
 	(*time)++;
 	return W_SUCCESS;
+}
+
+// Customizable feedback returned by xQueuePeek_custom_feedback
+static ak45_feedback_t g_test_feedback = {0};
+
+BaseType_t xQueuePeek_custom_feedback(QueueHandle_t queue, void *buffer, TickType_t ticks) {
+	memcpy(buffer, &g_test_feedback, sizeof(ak45_feedback_t));
+	return pdPASS;
 }
 
 class AK45DriverTest : public ::testing::Test {
@@ -52,8 +72,13 @@ protected:
 		RESET_FAKE(vTaskDelay);
 		RESET_FAKE(log_text);
 		RESET_FAKE(timer_get_ms);
+		RESET_FAKE(build_analog_sensor_16bit_msg);
+		RESET_FAKE(can_handler_transmit);
+		RESET_FAKE(telemetry_register);
 
 		FFF_RESET_HISTORY();
+
+		g_test_feedback = {0};
 
 		// default happy-path return values
 		HAL_FDCAN_ConfigFilter_fake.return_val = HAL_OK;
@@ -62,6 +87,8 @@ protected:
 		HAL_FDCAN_ActivateNotification_fake.return_val = HAL_OK;
 		HAL_FDCAN_AddMessageToTxFifoQ_fake.return_val = HAL_OK;
 		HAL_FDCAN_GetRxMessage_fake.return_val = HAL_OK;
+		can_handler_transmit_fake.return_val = W_SUCCESS;
+		telemetry_register_fake.return_val = W_SUCCESS;
 		xQueueCreate_fake.return_val = (QueueHandle_t)1;
 	}
 
@@ -190,6 +217,19 @@ TEST_F(AK45DriverTest, InitFailsIfDoubleInit) {
 	EXPECT_EQ(status, W_FAILURE);
 }
 
+TEST_F(AK45DriverTest, InitFailsIfTelemetryRegisterFails) {
+	// Arrange
+	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
+	telemetry_register_fake.return_val = W_FAILURE;
+
+	// Act
+	w_status_t status = ak45_driver_init(&hfdcan1, 0);
+
+	// Assert
+	EXPECT_EQ(status, W_FAILURE);
+	EXPECT_EQ(HAL_FDCAN_Stop_fake.call_count, 1);
+}
+
 TEST_F(AK45DriverTest, InitSucceeds) {
 	// Arrange
 	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
@@ -202,6 +242,9 @@ TEST_F(AK45DriverTest, InitSucceeds) {
 
 	// Assert
 	EXPECT_EQ(status, W_SUCCESS);
+	for (size_t i = 0; i < telemetry_register_fake.call_count; i++) {
+		EXPECT_EQ(telemetry_register_fake.return_val_history[i], W_SUCCESS);
+	}
 	EXPECT_EQ(ak45_get_tx_errors(), 0);
 }
 
@@ -294,4 +337,49 @@ TEST_F(AK45DriverTest, GetLatestFeedbackSucceeds) {
 
 	// Assert
 	EXPECT_EQ(status, W_SUCCESS);
+}
+
+TEST_F(AK45DriverTest, SendTelemetryFailsIfGetLatestFeedbackFails) {
+	// Init
+	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
+	ak45_driver_init(&hfdcan1, 0);
+
+	// Arrange
+	xQueuePeek_fake.return_val = pdFAIL;
+
+	// Ensure all telemetry fails.
+	EXPECT_EQ(ak45_test_angle_telemetry(), W_FAILURE);
+	EXPECT_EQ(ak45_test_temp_curr_telemetry(), W_FAILURE);
+	EXPECT_EQ(can_handler_transmit_fake.call_count, 0);
+}
+
+TEST_F(AK45DriverTest, SendTelemetryFailsIfTimerFails) {
+	// Init
+	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
+	ak45_driver_init(&hfdcan1, 0);
+
+	// Arrange
+	xQueuePeek_fake.return_val = pdPASS;
+	timer_get_ms_fake.return_val = W_FAILURE;
+
+	// Ensure all telemetry fails.
+	EXPECT_EQ(ak45_test_angle_telemetry(), W_FAILURE);
+	EXPECT_EQ(ak45_test_temp_curr_telemetry(), W_FAILURE);
+	EXPECT_EQ(can_handler_transmit_fake.call_count, 0);
+}
+
+TEST_F(AK45DriverTest, SendTelemetryFailsIfCanHandlerTransmitFails) {
+	// Init
+	vTaskDelay_fake.custom_fake = vTaskDelay_custom_bypass_while;
+	ak45_driver_init(&hfdcan1, 0);
+
+	// Arrange
+	xQueuePeek_fake.return_val = pdPASS;
+	timer_get_ms_fake.return_val = W_SUCCESS;
+	can_handler_transmit_fake.return_val = W_FAILURE;
+
+	// Ensure can handler fails
+	EXPECT_EQ(ak45_test_angle_telemetry(), W_FAILURE);
+	EXPECT_EQ(ak45_test_temp_curr_telemetry(), W_FAILURE);
+	EXPECT_EQ(can_handler_transmit_fake.call_count, 3);
 }

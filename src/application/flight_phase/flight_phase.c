@@ -79,7 +79,11 @@ w_status_t flight_phase_init(void) {
 	event_queue = xQueueCreate(3, sizeof(flight_phase_event_t));
 
 	if ((NULL == event_queue) ||
-		(W_SUCCESS != can_handler_register_callback(MSG_ACTUATOR_CMD, act_cmd_callback))) {
+		(W_SUCCESS !=
+		 can_handler_act_cmd_register_callback(ACTUATOR_OX_INJECTOR_VALVE, act_cmd_callback)) ||
+		(W_SUCCESS != can_handler_act_cmd_register_callback(ACTUATOR_IGNITION, act_cmd_callback)) ||
+		(W_SUCCESS !=
+		 can_handler_act_cmd_register_callback(ACTUATOR_CANARD_PAD_FILTER, act_cmd_callback))) {
 		log_text(
 			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
 		return W_FAILURE;
@@ -87,6 +91,47 @@ w_status_t flight_phase_init(void) {
 
 	flight_phase_status.initialized = true;
 	log_text(10, LOG_LVL_INFO, "FlightPhase", "Flight Phase Initialized Successfully.");
+	return W_SUCCESS;
+}
+
+/**
+ * Send a flight phase event to the state machine
+ * ISR safe
+ */
+w_status_t flight_phase_send_event_isr(flight_phase_event_t event) {
+	// Update event statistics
+	switch (event) {
+		case EVENT_PAD_FILTER:
+			flight_phase_status.event_counts.pad_filter++;
+			break;
+		case EVENT_IGNITOR:
+			flight_phase_status.event_counts.ignitor++;
+			break;
+		case EVENT_INJ_OPEN:
+			flight_phase_status.event_counts.inj_open++;
+			break;
+		case EVENT_LAUNCH_ACCEL:
+			flight_phase_status.event_counts.launch_accel++;
+			break;
+		case EVENT_ACT_DELAY_ELAPSED:
+			flight_phase_status.event_counts.act_delay_elapsed++;
+			break;
+		case EVENT_RECOVERY_START:
+			flight_phase_status.event_counts.recovery_rate++;
+			break;
+		case EVENT_SLEEP_START:
+			flight_phase_status.event_counts.sleep_rate++;
+			break;
+		default:
+			// Unexpected event type
+			break;
+	}
+
+	// Allow sending from ISR
+	if (xQueueSendFromISR(event_queue, &event, 0) != pdPASS) {
+		flight_phase_status.event_queue_full_count++;
+		return W_FAILURE;
+	}
 	return W_SUCCESS;
 }
 
@@ -313,6 +358,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 	// Only count as a transition if the state actually changed
 	if (new_state != curr_state) {
+		log_text(
+			1, LOG_LVL_INFO, "FlightPhase", "State transition: %d -> %d", curr_state, new_state);
 		flight_phase_status.state_transitions++;
 	}
 
@@ -330,8 +377,9 @@ health_status_t flight_phase_get_status(void) {
 			 flight_phase_status.initialized ? "INIT" : "NOT INIT",
 			 flight_phase_status.event_queue_full_count);
 
-	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_FLIGHT_PHASE, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_FLIGHT_PHASE,
+							  .error_bitfield = 0};
 
 	return status;
 }
