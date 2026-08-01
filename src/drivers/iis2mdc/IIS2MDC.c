@@ -118,21 +118,6 @@ typedef struct {
 	uint32_t get_data_invalid_cache; // iis2mdc_get_data called with invalid cache
 	uint32_t get_data_dma_busy; // iis2mdc_get_data called while DMA was busy
 	uint32_t get_data_null_param; // iis2mdc_get_data called with a NULL out-param
-	uint32_t async_active_reject; // I2C op or self-test rejected because async DMA pipeline active
-	uint32_t init_soft_reset_fail; // init: soft reset write failed
-	uint32_t init_cfg_write_fail; // init: configuration register write failed
-	uint32_t init_sanity_check_fail; // init: sanity check failed
-	uint32_t init_cb_register_fail; // init: DMA callback registration failed
-	uint32_t init_clear_irq_fail; // init: failed to clear interrupt after enabling DMA
-	uint32_t init_invalid_state; // init called from a non-UNINIT state
-	uint32_t sanity_invalid_state; // sanity check called from a non-UNINIT state
-	uint32_t sanity_whoami_read_fail; // sanity check: WHO_AM_I read failed
-	uint32_t sanity_whoami_mismatch; // sanity check: WHO_AM_I value mismatch
-	uint32_t sanity_self_test_fail; // sanity check: self-test failed
-	uint32_t selftest_baseline_fail; // self-test: baseline average read failed
-	uint32_t selftest_enable_fail; // self-test: failed to enable self-test mode
-	uint32_t selftest_restore_fail; // self-test: failed to restore normal config
-	uint32_t selftest_read_fail; // self-test: on-state average read failed
 } iis2mdc_health_t;
 
 static volatile iis2mdc_state_t iis2mdc_state = IIS2MDC_STATE_UNINIT;
@@ -148,7 +133,6 @@ static iis2mdc_health_t iis2mdc_health = {0};
 static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
 		iis2mdc_health.internal_error = true;
-		iis2mdc_health.async_active_reject++;
 		return W_FAILURE;
 	}
 	if (len > 1) {
@@ -171,7 +155,6 @@ static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
 		iis2mdc_health.internal_error = true;
-		iis2mdc_health.async_active_reject++;
 		return W_FAILURE;
 	}
 
@@ -208,7 +191,6 @@ static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, 
 static w_status_t self_test_wait_data_ready(void) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
 		iis2mdc_health.internal_error = true;
-		iis2mdc_health.async_active_reject++;
 		return W_FAILURE;
 	}
 	uint32_t start_ms = 0;
@@ -293,20 +275,17 @@ static w_status_t iis2mdc_self_test(void) {
 
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
 		iis2mdc_health.internal_error = true;
-		iis2mdc_health.async_active_reject++;
 		return W_FAILURE;
 	}
 
 	// discard the first sample, then average with self-test disabled
 	if (W_SUCCESS != self_test_collect_average(&avg_off)) {
-		iis2mdc_health.selftest_baseline_fail++;
 		return W_FAILURE;
 	}
 
 	// enable self-test and wait 60ms for field to settle (specified in AN 5080)
 	if (W_SUCCESS !=
 		iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C | IIS2MDC_CFG_C_SELF_TEST)) {
-		iis2mdc_health.selftest_enable_fail++;
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_SETTLE_MS));
@@ -315,11 +294,9 @@ static w_status_t iis2mdc_self_test(void) {
 
 	// restore normal config regardless of the read outcome
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
-		iis2mdc_health.selftest_restore_fail++;
 		return W_FAILURE;
 	}
 	if (W_SUCCESS != read_status) {
-		iis2mdc_health.selftest_read_fail++;
 		return W_FAILURE;
 	}
 
@@ -349,7 +326,6 @@ static w_status_t iis2mdc_sanity_check(void) {
 	// active.
 	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
 		iis2mdc_health.internal_error = true;
-		iis2mdc_health.sanity_invalid_state++;
 		return W_FAILURE;
 	}
 
@@ -358,14 +334,11 @@ static w_status_t iis2mdc_sanity_check(void) {
 	iis2mdc_state = IIS2MDC_STATE_CHECKING;
 
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
-		iis2mdc_health.sanity_whoami_read_fail++;
 		status = W_FAILURE;
 	} else if (IIS2MDC_WHO_AM_I_VAL != id) {
-		iis2mdc_health.sanity_whoami_mismatch++;
 		iis2mdc_health.communication_failure = true;
 		status = W_FAILURE;
 	} else if (W_SUCCESS != iis2mdc_self_test()) {
-		iis2mdc_health.sanity_self_test_fail++;
 		status = W_FAILURE;
 	}
 
@@ -455,7 +428,6 @@ w_status_t iis2mdc_init(void) {
 	// reject reinitialization
 	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
 		iis2mdc_health.internal_error = true;
-		iis2mdc_health.init_invalid_state++;
 		return W_FAILURE;
 	}
 
@@ -467,7 +439,6 @@ w_status_t iis2mdc_init(void) {
 
 	// soft reset clears config registers
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
-		iis2mdc_health.init_soft_reset_fail++;
 		return W_FAILURE;
 	}
 
@@ -477,12 +448,10 @@ w_status_t iis2mdc_init(void) {
 	if ((W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C))) {
-		iis2mdc_health.init_cfg_write_fail++;
 		return W_FAILURE;
 	}
 
 	if (W_SUCCESS != iis2mdc_sanity_check()) {
-		iis2mdc_health.init_sanity_check_fail++;
 		return W_FAILURE;
 	}
 
@@ -494,14 +463,12 @@ w_status_t iis2mdc_init(void) {
 	if ((HAL_OK !=
 		 HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) ||
 		(HAL_OK != HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_ERROR_CB_ID, iis2mdc_dma_error))) {
-		iis2mdc_health.init_cb_register_fail++;
 		return W_FAILURE;
 	}
 
 	iis2mdc_state = IIS2MDC_STATE_ASYNC_DMA_ACTIVE;
 
 	if (W_SUCCESS != iis2mdc_handle_drdy_irq()) {
-		iis2mdc_health.init_clear_irq_fail++;
 		return W_FAILURE;
 	}
 
@@ -600,11 +567,10 @@ health_status_t iis2mdc_get_status(void) {
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
-			 "state=%d, dma_busy=%d, cache_valid=%d, async_active_reject=%" PRIu32,
+			 "state=%d, dma_busy=%d, cache_valid=%d",
 			 iis2mdc_state,
 			 iis2mdc_dma_busy,
-			 iis2mdc_cache.valid,
-			 iis2mdc_health.async_active_reject);
+			 iis2mdc_cache.valid);
 
 	log_text(1,
 			 LOG_LVL_INFO,
@@ -628,55 +594,6 @@ health_status_t iis2mdc_get_status(void) {
 			 "get_data_invalid_cache=%" PRIu32 ", get_data_null_param=%" PRIu32,
 			 iis2mdc_health.get_data_invalid_cache,
 			 iis2mdc_health.get_data_null_param);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "init_soft_reset_fail=%" PRIu32 ", init_cfg_write_fail=%" PRIu32,
-			 iis2mdc_health.init_soft_reset_fail,
-			 iis2mdc_health.init_cfg_write_fail);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "init_sanity_check_fail=%" PRIu32 ", init_cb_register_fail=%" PRIu32,
-			 iis2mdc_health.init_sanity_check_fail,
-			 iis2mdc_health.init_cb_register_fail);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "init_clear_irq_fail=%" PRIu32 ", init_invalid_state=%" PRIu32,
-			 iis2mdc_health.init_clear_irq_fail,
-			 iis2mdc_health.init_invalid_state);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "sanity_invalid_state=%" PRIu32 ", sanity_whoami_read_fail=%" PRIu32,
-			 iis2mdc_health.sanity_invalid_state,
-			 iis2mdc_health.sanity_whoami_read_fail);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "sanity_whoami_mismatch=%" PRIu32 ", sanity_self_test_fail=%" PRIu32,
-			 iis2mdc_health.sanity_whoami_mismatch,
-			 iis2mdc_health.sanity_self_test_fail);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "selftest_baseline_fail=%" PRIu32 ", selftest_enable_fail=%" PRIu32,
-			 iis2mdc_health.selftest_baseline_fail,
-			 iis2mdc_health.selftest_enable_fail);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "selftest_restore_fail=%" PRIu32 ", selftest_read_fail=%" PRIu32,
-			 iis2mdc_health.selftest_restore_fail,
-			 iis2mdc_health.selftest_read_fail);
 
 	return status;
 }
