@@ -1011,10 +1011,12 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	w_status_t motor_status =
 		read_motor_meas(ctx, &(imu_output->motor_encoder_meas), current_time_ms);
 
-	status |= movella_status;
-	status |= board_status;
-	status |= ad_status;
-	status |= motor_status;
+	if ((movella_status != W_SUCCESS) && (board_status != W_SUCCESS) && (ad_status != W_SUCCESS) &&
+		(motor_status != W_SUCCESS)) {
+		status = W_FAILURE;
+	} else {
+		status = W_SUCCESS;
+	}
 
 	// Publish the latest telemetry snapshot to the mailbox for the telemetry task to broadcast.
 	sensor_can_telem_data_t telem = {
@@ -1106,7 +1108,7 @@ health_status_t sensor_handler_get_status(void) {
 		log_text(0,
 				 LOG_LVL_WARN,
 				 "SensorHandler",
-				 "Motor fault code: %lu",
+				 "Motor fault code: %d",
 				 sensor_handler_state.motor_fault_code);
 	}
 
