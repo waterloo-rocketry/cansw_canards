@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <stdint.h>
 
 #include "FreeRTOS.h"
@@ -490,49 +491,6 @@ health_status_t flight_phase_get_status(void) {
 							  .module_id = CANARDS_MODULE_ID_FLIGHT_PHASE,
 							  .error_bitfield = 0};
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "init=%d, failed_init=%lu, null_ctx=%lu",
-			 flight_phase_status.initialized,
-			 flight_phase_status.failed_init_count,
-			 flight_phase_status.null_ctx_count);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "state_transitions=%lu, invalid_event=%lu, dead_imu=%lu",
-			 flight_phase_status.state_transitions,
-			 flight_phase_status.invalid_event_count,
-			 flight_phase_status.dead_imu_count);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "invalid_act_data=%lu, timer_send_fail=%lu, sensor_send_fail=%lu, queue_full=%lu",
-			 flight_phase_status.invalid_actuator_data_count,
-			 flight_phase_status.timer_event_send_fail_count,
-			 flight_phase_status.sensor_event_send_fail_count,
-			 flight_phase_status.queue_full_count);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "pad_filter=%lu, ignitor=%lu, inj_open=%lu, launch_accel=%lu",
-			 flight_phase_status.event_counts.pad_filter,
-			 flight_phase_status.event_counts.ignitor,
-			 flight_phase_status.event_counts.inj_open,
-			 flight_phase_status.event_counts.launch_accel);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "act_delay_elapsed=%lu, recovery_rate=%lu, sleep_rate=%lu, reset=%lu",
-			 flight_phase_status.event_counts.act_delay_elapsed,
-			 flight_phase_status.event_counts.recovery_rate,
-			 flight_phase_status.event_counts.sleep_rate,
-			 flight_phase_status.event_counts.reset);
-
 	// Null context pointer
 	if (flight_phase_status.ctx_is_null) {
 		flight_phase_status.ctx_is_null = false;
@@ -580,6 +538,52 @@ health_status_t flight_phase_get_status(void) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "init=%d, failed_init=%" PRIu32 ", null_ctx=%" PRIu32 ", queue_full=%" PRIu32,
+			 flight_phase_status.initialized,
+			 flight_phase_status.failed_init_count,
+			 flight_phase_status.null_ctx_count,
+			 flight_phase_status.queue_full_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "state_transitions=%" PRIu32 ", invalid_event=%" PRIu32 ", dead_imu=%" PRIu32,
+			 flight_phase_status.state_transitions,
+			 flight_phase_status.invalid_event_count,
+			 flight_phase_status.dead_imu_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "invalid_act_data=%" PRIu32 ", timer_send_fail=%" PRIu32 ", sensor_send_fail=%" PRIu32,
+			 flight_phase_status.invalid_actuator_data_count,
+			 flight_phase_status.timer_event_send_fail_count,
+			 flight_phase_status.sensor_event_send_fail_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "pad_filter=%" PRIu32 ", ignitor=%" PRIu32 ", inj_open=%" PRIu32
+			 ", launch_accel=%" PRIu32,
+			 flight_phase_status.event_counts.pad_filter,
+			 flight_phase_status.event_counts.ignitor,
+			 flight_phase_status.event_counts.inj_open,
+			 flight_phase_status.event_counts.launch_accel);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "act_delay_elapsed=%" PRIu32 ", recovery_rate=%" PRIu32 ", sleep_rate=%" PRIu32,
+			 flight_phase_status.event_counts.act_delay_elapsed,
+			 flight_phase_status.event_counts.recovery_rate,
+			 flight_phase_status.event_counts.sleep_rate);
+
+	log_text(
+		10, LOG_LVL_INFO, "FlightPhase", "reset=%" PRIu32, flight_phase_status.event_counts.reset);
 
 	return status;
 }
