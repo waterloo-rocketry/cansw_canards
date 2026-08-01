@@ -12,7 +12,6 @@ void ak45_set_tx_errors(uint32_t count);
 
 // Exposing the driver's static telemetry functions for testing
 w_status_t ak45_test_angle_telemetry(void);
-w_status_t ak45_test_temperature_telemetry(void);
-w_status_t ak45_test_current_telemetry(void);
+w_status_t ak45_test_temp_curr_telemetry(void);
 
 #endif // AK45_DRIVER_TEST_HELPERS
