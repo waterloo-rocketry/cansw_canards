@@ -137,7 +137,6 @@ typedef struct {
 	uint32_t semaphore_fail_count; // mutex create (init) or take (task) failed
 	uint32_t i2c_read_fail_count; // any I2C read failed (PROM coefficients, ADC values)
 	uint32_t i2c_write_fail_count; // any I2C write failed (reset, D1/D2 conversion commands)
-	uint32_t crc_check_fail_count; // PROM CRC check failed
 	uint32_t reinit_attempt; // ms5611_init called while already initialized
 	uint32_t deinit_before_init; // ms5611_deinit called before successful initialization
 	uint32_t read_before_init; // ms5611_read_raw_pressure called before successful initialization
@@ -275,7 +274,6 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	if (n_rem != crc) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
 		ms5611_health.crc_check_failure = true;
-		ms5611_health.crc_check_fail_count++;
 		return W_FAILURE;
 	}
 
@@ -617,28 +615,23 @@ health_status_t ms5611_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "ms5611",
-			 "i2c_write_fail_count=%" PRIu32 ", crc_check_fail_count=%" PRIu32,
+			 "i2c_write_fail_count=%" PRIu32 ", reinit_attempt=%" PRIu32,
 			 ms5611_health.i2c_write_fail_count,
-			 ms5611_health.crc_check_fail_count);
+			 ms5611_health.reinit_attempt);
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "ms5611",
-			 "reinit_attempt=%" PRIu32 ", deinit_before_init=%" PRIu32,
-			 ms5611_health.reinit_attempt,
-			 ms5611_health.deinit_before_init);
+			 "deinit_before_init=%" PRIu32 ", read_before_init=%" PRIu32,
+			 ms5611_health.deinit_before_init,
+			 ms5611_health.read_before_init);
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "ms5611",
-			 "read_before_init=%" PRIu32 ", timer_read_fail=%" PRIu32,
-			 ms5611_health.read_before_init,
-			 ms5611_health.timer_read_fail);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "ms5611",
-			 "null_param_count=%" PRIu32 ", stale_pressure_read=%" PRIu32,
+			 "timer_read_fail=%" PRIu32 ", null_param_count=%" PRIu32
+			 ", stale_pressure_read=%" PRIu32,
+			 ms5611_health.timer_read_fail,
 			 ms5611_health.null_param_count,
 			 ms5611_health.stale_pressure_read);
 
