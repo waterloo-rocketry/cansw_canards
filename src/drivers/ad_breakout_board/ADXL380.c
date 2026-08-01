@@ -261,7 +261,7 @@ health_status_t adxl380_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "ADXL380",
 			 "init=%u, not_init_calls=%" PRIu32 ", data_ready_check_fails=%" PRIu32,
@@ -269,7 +269,7 @@ health_status_t adxl380_get_status(void) {
 			 adxl380_health.not_initialized_calls,
 			 adxl380_health.data_ready_check_fails);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "ADXL380",
 			 "read_fails=%" PRIu32 ", get_accel_fails=%" PRIu32 ", null_params=%" PRIu32,
@@ -277,14 +277,14 @@ health_status_t adxl380_get_status(void) {
 			 adxl380_health.get_raw_accel_fails,
 			 adxl380_health.null_params);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "AD BREAKBOARD TASK",
 			 "accel_read_fails=%" PRIu32 ", accel_invalid_params=%" PRIu32,
 			 adxl380_health.read_fails,
 			 adxl380_health.invalid_params);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "AD BREAKBOARD TASK",
 			 "accel_data_logging_fails=%" PRIu32,

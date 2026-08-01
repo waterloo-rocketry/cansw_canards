@@ -287,7 +287,7 @@ health_status_t adxrs649_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "ADXRS649",
 			 "init=%d, not_init_calls=%" PRIu32 ", millivolt_conversion_fails=%" PRIu32,
@@ -295,7 +295,7 @@ health_status_t adxrs649_get_status(void) {
 			 adxrs649_health.not_initialized_calls,
 			 adxrs649_health.millivolt_conversion_fails);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "ADXRS649",
 			 "data_read_check_fails=%" PRIu32 ", data_read_fails=%" PRIu32
@@ -304,7 +304,7 @@ health_status_t adxrs649_get_status(void) {
 			 adxrs649_health.data_read_fails,
 			 adxrs649_health.null_params);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "AD BREAKBOARD TASK",
 			 "gyro_read_fails=%" PRIu32 ", gyro_invalid_params=%" PRIu32,
