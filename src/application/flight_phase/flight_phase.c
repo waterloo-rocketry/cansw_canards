@@ -49,9 +49,15 @@ typedef struct {
 	bool invalid_actuator_data_format;
 	bool dead_imu;
 
-	uint32_t loop_run_errs;
 	uint32_t state_transitions;
 	uint32_t null_ctx_count;
+	uint32_t failed_init_count;
+	uint32_t invalid_event_count;
+	uint32_t invalid_actuator_data_count;
+	uint32_t dead_imu_count;
+	uint32_t timer_event_send_fail_count;
+	uint32_t sensor_event_send_fail_count;
+	uint32_t queue_full_count;
 
 	// Per-event counters
 	struct {
@@ -89,13 +95,11 @@ w_status_t flight_phase_init(void) {
 		(W_SUCCESS != can_handler_act_cmd_register_callback(ACTUATOR_IGNITION, act_cmd_callback)) ||
 		(W_SUCCESS !=
 		 can_handler_act_cmd_register_callback(ACTUATOR_CANARD_PAD_FILTER, act_cmd_callback))) {
-		log_text(
-			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
+		flight_phase_status.failed_init_count++;
 		return W_FAILURE;
 	}
 
 	flight_phase_status.initialized = true;
-	log_text(10, LOG_LVL_INFO, "FlightPhase", "Flight Phase Initialized Successfully.");
 	return W_SUCCESS;
 }
 
@@ -129,12 +133,14 @@ w_status_t flight_phase_send_event_isr(flight_phase_event_t event) {
 			break;
 		default:
 			flight_phase_status.invalid_event = true;
+			flight_phase_status.invalid_event_count++;
 			break;
 	}
 
 	// Allow sending from ISR
 	if (xQueueSendFromISR(event_queue, &event, 0) != pdPASS) {
 		flight_phase_status.is_queue_full = true;
+		flight_phase_status.queue_full_count++;
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
@@ -170,17 +176,13 @@ w_status_t flight_phase_send_event(flight_phase_event_t event) {
 			break;
 		default:
 			flight_phase_status.invalid_event = true;
-			log_text(1, LOG_LVL_WARN, "FlightPhase", "Unexpected event type %d", event);
+			flight_phase_status.invalid_event_count++;
 			break;
 	}
 
 	if (xQueueSend(event_queue, &event, 0) != pdPASS) {
-		log_text(0,
-				 LOG_LVL_FATAL,
-				 "FlightPhase",
-				 "Failed to send event %d to queue. Queue full?",
-				 event);
 		flight_phase_status.is_queue_full = true;
+		flight_phase_status.queue_full_count++;
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
@@ -196,8 +198,8 @@ static w_status_t act_cmd_callback(const can_msg_t *msg) {
 
 	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
 		(get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
-		log_text(1, LOG_LVL_WARN, "FlightPhase", "invalid actuator data");
 		flight_phase_status.invalid_actuator_data_format = true;
+		flight_phase_status.invalid_actuator_data_count++;
 		return W_FAILURE;
 	}
 
@@ -228,7 +230,6 @@ flight_phase_event_t flight_phase_get_next_event(void) {
 fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t curr_state,
 									  flight_phase_ctx_t *p_ctx) {
 	if (NULL == p_ctx) {
-		log_text(5, LOG_LVL_FATAL, "FlightPhase", "Invalid ptrs in update states");
 		flight_phase_status.null_ctx_count++;
 		flight_phase_status.ctx_is_null = true;
 		// just return the current state if invalid
@@ -298,12 +299,10 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 		// deprecate time?
 		case STATE_ERROR:
-			// Stay in error state, log repeated invalid event
-			log_text(1, LOG_LVL_FATAL, "FlightPhase", "Invalid event %d in STATE_ERROR", event);
+			// Stay in error state, count repeated invalid event
 			flight_phase_status.is_in_error_state = true;
 			break;
 		default:
-			log_text(10, LOG_LVL_FATAL, "FlightPhase", "Unhandled state %d", curr_state);
 			flight_phase_status.is_in_error_state = true;
 			new_state = curr_state; // return the same state
 			break;
@@ -311,8 +310,6 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 	// Only count as a transition if the state actually changed
 	if (new_state != curr_state) {
-		log_text(
-			1, LOG_LVL_INFO, "FlightPhase", "State transition: %d -> %d", curr_state, new_state);
 		flight_phase_status.state_transitions++;
 	}
 
@@ -330,7 +327,7 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
 														 const fsm_state_t curr_state,
 														 const uint32_t timestamp_ms) {
 	if (NULL == p_ctx) {
-		log_text(5, LOG_LVL_FATAL, "FlightPhase", "Invalid ptrs in timer detection");
+		flight_phase_status.null_ctx_count++;
 		flight_phase_status.ctx_is_null = true;
 		// just return the current state if invalid
 		return EVENT_NONE;
@@ -381,9 +378,9 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
 static void process_imu_meas(bool is_new, const vector3d_t *accel, uint8_t *num_consec_detection,
 							 const char *imu_name) {
 	if (!is_new) {
-		log_text(
-			5, LOG_LVL_WARN, "FlightPhaseSensorDetection", "WARNING: %s IMU is dead", imu_name);
+		(void)imu_name;
 		flight_phase_status.dead_imu = true;
+		flight_phase_status.dead_imu_count++;
 		(*num_consec_detection) = 0;
 		return;
 	}
@@ -444,8 +441,6 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 		p_ctx->num_consec_board = 0;
 		p_ctx->num_consec_movella = 0;
 		p_ctx->num_consec_ad = 0;
-		log_text(
-			5, LOG_LVL_INFO, "FlightPhaseSensorDetection", "%d Event Trigger", EVENT_LAUNCH_ACCEL);
 		return EVENT_LAUNCH_ACCEL;
 	}
 
@@ -471,7 +466,7 @@ w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_sta
 
 	if (EVENT_NONE != timer_event) {
 		if (flight_phase_send_event(timer_event) != W_SUCCESS) {
-			log_text(1, LOG_LVL_FATAL, "flight_phase", "timer send event failed.");
+			flight_phase_status.timer_event_send_fail_count++;
 			status = W_FAILURE;
 		}
 	}
@@ -482,7 +477,7 @@ w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_sta
 
 	if (EVENT_NONE != sensor_event) {
 		if (flight_phase_send_event(sensor_event) != W_SUCCESS) {
-			log_text(1, LOG_LVL_FATAL, "flight_phase", "sensor send event failed.");
+			flight_phase_status.sensor_event_send_fail_count++;
 			status = W_FAILURE;
 		}
 	}
@@ -494,6 +489,49 @@ health_status_t flight_phase_get_status(void) {
 	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
 							  .module_id = CANARDS_MODULE_ID_FLIGHT_PHASE,
 							  .error_bitfield = 0};
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "init=%d, failed_init=%lu, null_ctx=%lu",
+			 flight_phase_status.initialized,
+			 flight_phase_status.failed_init_count,
+			 flight_phase_status.null_ctx_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "state_transitions=%lu, invalid_event=%lu, dead_imu=%lu",
+			 flight_phase_status.state_transitions,
+			 flight_phase_status.invalid_event_count,
+			 flight_phase_status.dead_imu_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "invalid_act_data=%lu, timer_send_fail=%lu, sensor_send_fail=%lu, queue_full=%lu",
+			 flight_phase_status.invalid_actuator_data_count,
+			 flight_phase_status.timer_event_send_fail_count,
+			 flight_phase_status.sensor_event_send_fail_count,
+			 flight_phase_status.queue_full_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "pad_filter=%lu, ignitor=%lu, inj_open=%lu, launch_accel=%lu",
+			 flight_phase_status.event_counts.pad_filter,
+			 flight_phase_status.event_counts.ignitor,
+			 flight_phase_status.event_counts.inj_open,
+			 flight_phase_status.event_counts.launch_accel);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "FlightPhase",
+			 "act_delay_elapsed=%lu, recovery_rate=%lu, sleep_rate=%lu, reset=%lu",
+			 flight_phase_status.event_counts.act_delay_elapsed,
+			 flight_phase_status.event_counts.recovery_rate,
+			 flight_phase_status.event_counts.sleep_rate,
+			 flight_phase_status.event_counts.reset);
 
 	// Null context pointer
 	if (flight_phase_status.ctx_is_null) {
