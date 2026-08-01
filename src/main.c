@@ -113,7 +113,6 @@ int main(void) {
 	MX_BDMA_Init();
 	MX_CORDIC_Init();
 	MX_FMAC_Init();
-	MX_FDCAN2_Init();
 	MX_FDCAN3_Init();
 	MX_I2C1_Init();
 	MX_I2C4_Init();
