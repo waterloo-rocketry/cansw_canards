@@ -1063,9 +1063,9 @@ health_status_t sensor_handler_get_status(void) {
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "SensorHandler",
-			 "Board IMU fail cnt: %lu, "
-			 "Board Mag fail cnt %lu, "
-			 "Board Baro fail cnt %lu",
+			 "Board IMU fail: %lu, "
+			 "Board Mag fail: %lu, "
+			 "Board Baro fail: %lu",
 			 sensor_handler_state.board_imu_stats.failure_count,
 			 sensor_handler_state.board_mag_stats.failure_count,
 			 sensor_handler_state.board_baro_stats.failure_count);
@@ -1073,18 +1073,18 @@ health_status_t sensor_handler_get_status(void) {
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "SensorHandler",
-			 "AD Accel fail cnt: %lu, "
-			 "AD Gyro fail cnt: %lu",
+			 "AD Accel fail: %lu, "
+			 "AD Gyro fail: %lu",
 			 sensor_handler_state.ad_accel_stats.failure_count,
 			 sensor_handler_state.ad_gyro_stats.failure_count);
 
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "SensorHandler",
-			 "MTI Accel fail cnt: %lu, "
-			 "MTI Gyro fail cnt: %lu, "
-			 "MTI Mag fail cnt: %lu, "
-			 "MTI Baro fail cnt: %lu",
+			 "MTI Accel fail: %lu, "
+			 "MTI Gyro fail: %lu, "
+			 "MTI Mag fail: %lu, "
+			 "MTI Baro fail: %lu",
 			 sensor_handler_state.mti_accel_stats.failure_count,
 			 sensor_handler_state.mti_gyro_stats.failure_count,
 			 sensor_handler_state.mti_mag_stats.failure_count,
@@ -1093,13 +1093,13 @@ health_status_t sensor_handler_get_status(void) {
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "SensorHandler",
-			 "Motor fail cnt: %lu",
+			 "Motor fail: %lu",
 			 sensor_handler_state.motor_encoder_stats.failure_count);
 
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "SensorHandler",
-			 "Log data fail cnt: %lu",
+			 "Log data fail: %lu",
 			 sensor_handler_state.log_data_fail_count);
 
 	if (sensor_handler_state.motor_fault_code != AK45_FAULT_NONE) {
