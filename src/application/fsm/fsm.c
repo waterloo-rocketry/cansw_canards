@@ -195,7 +195,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 			break;
 
-			// both act allowed and recovery will only run estimator and controller step
+		// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
 #ifdef HIL
@@ -235,7 +235,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			}
 			break;
 
-			// etc for more cases...
+		// TODO Implement
 		case STATE_SLEEPY:
 			break;
 

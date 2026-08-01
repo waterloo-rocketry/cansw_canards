@@ -14,6 +14,8 @@
 /* Static buffer pool for all channels */
 static uint8_t s_buffer_pool[UART_CHANNEL_COUNT][UART_MAX_LEN * UART_NUM_RX_BUFFERS];
 
+static uint16_t MAX_UART_ATTEMPTS = 5;
+
 /**
  * @brief Internal handle structure for UART channel state
  */
@@ -41,6 +43,7 @@ typedef struct {
 	uint32_t overflows; /**< Count of message size overflows */
 	uint32_t timeouts; /**< Count of operation timeouts */
 	uint32_t hw_errors; /**< Count of hardware errors */
+	uint32_t retry_attempts;
 	uint32_t messages_received; /**< Count of messages successfully received */
 	uint32_t messages_sent; /**< Count of messages successfully sent */
 	uint32_t restart_failed; /**< Count of times we failed to restart reception after error */
@@ -282,14 +285,19 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 		if (s_uart_handles[ch].huart == huart) {
 			s_uart_stats[ch].hw_errors++;
 
-			// Reset current buffer and restart reception
-			uart_handle_t *handle = &s_uart_handles[ch];
-			uart_msg_t *curr_msg = &handle->rx_msgs[handle->curr_buffer_num];
-			curr_msg->len = 0;
-			curr_msg->busy = false;
-			// Attempt to restart reception
-			if (HAL_UARTEx_ReceiveToIdle_DMA(huart, curr_msg->data, UART_MAX_LEN) != HAL_OK) {
-				s_uart_stats[ch].restart_failed++;
+			if (s_uart_stats[ch].retry_attempts < MAX_UART_ATTEMPTS) {
+				s_uart_stats[ch].retry_attempts++;
+
+				// Reset current buffer and restart reception
+				uart_handle_t *handle = &s_uart_handles[ch];
+				uart_msg_t *curr_msg = &handle->rx_msgs[handle->curr_buffer_num];
+				curr_msg->len = 0;
+				curr_msg->busy = false;
+				// Attempt to restart reception
+				if (HAL_UARTEx_ReceiveToIdle_DMA(huart, curr_msg->data, UART_MAX_LEN) != HAL_OK) {
+					s_uart_stats[ch].restart_failed++;
+				}
+				s_uart_stats[ch].retry_attempts = 0;
 			}
 			portYIELD_FROM_ISR(higher_priority_task_woken);
 			break;
