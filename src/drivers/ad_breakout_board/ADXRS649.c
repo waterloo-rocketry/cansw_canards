@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -38,20 +39,11 @@ static const uint8_t INIT_DELAY_MS = 10;
 static float64_t V_EXTERNAL_REF_P_mV = 2048.0;
 static float64_t V_EXTERNAL_REF_N_mV = 0.0;
 
-typedef struct {
-	uint32_t self_test_fails;
-	uint32_t adc_sanity_check_fails;
-	uint32_t recent_data_ready_check_fails;
-	uint32_t recent_data_read_fails;
-	uint32_t recent_null_params;
-	uint32_t millivolt_conversion_fails;
-} adxrs649_health_t;
-
 // global adc handle
 static ads1219_handle_t g_ads_handle = {};
 static bool is_initialized = false;
 
-static adxrs649_health_t adxrs649_health = {0};
+adxrs649_health_t adxrs649_health = {0};
 
 /**
  * @brief perform the self-test on the ADXRS649
@@ -168,7 +160,6 @@ w_status_t adxrs649_init() {
 	// perform sanity check
 	if (ads1219_sanity_check(&g_ads_handle, ADS1219_CONFIG_SETTINGS) != W_SUCCESS) {
 		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed ADC sanity check.");
-		adxrs649_health.adc_sanity_check_fails++;
 		return W_FAILURE;
 	}
 
@@ -182,7 +173,6 @@ w_status_t adxrs649_init() {
 		}
 
 		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed gyro self-test.");
-		adxrs649_health.self_test_fails++;
 		return W_FAILURE;
 	}
 
@@ -205,13 +195,13 @@ w_status_t adxrs649_init() {
 w_status_t adxrs649_is_data_ready(bool *p_drdy) {
 	if (!is_initialized) {
 #ifndef HIL
-		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed initialized.");
+		adxrs649_health.not_initialized_calls++;
 #endif
 		return W_FAILURE;
 	}
 	if ((NULL == p_drdy)) {
-		log_text(0, LOG_LVL_WARN, "ADXRS649", "Invalid return ptr.");
-		adxrs649_health.recent_null_params++;
+		adxrs649_health.invalid_param = true;
+		adxrs649_health.null_params++;
 		return W_INVALID_PARAM;
 	}
 
@@ -224,7 +214,8 @@ w_status_t adxrs649_is_data_ready(bool *p_drdy) {
 	} else {
 		// use I2C to get value
 		if (ads1219_conversion_ready(&g_ads_handle, p_drdy) != W_SUCCESS) {
-			adxrs649_health.recent_data_ready_check_fails++;
+			adxrs649_health.comm_failure = true;
+			adxrs649_health.data_ready_check_fails++;
 			return W_IO_ERROR;
 		}
 	}
@@ -242,19 +233,20 @@ w_status_t adxrs649_is_data_ready(bool *p_drdy) {
 w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 	if (!is_initialized) {
 #ifndef HIL
-		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed initialized.");
+		adxrs649_health.not_initialized_calls++;
 #endif
 		return W_FAILURE;
 	}
 
 	if ((NULL == p_data) || (NULL == p_raw_data)) {
-		log_text(0, LOG_LVL_WARN, "ADXRS649", "Invalid return ptrs.");
-		adxrs649_health.recent_null_params++;
+		adxrs649_health.invalid_param = true;
+		adxrs649_health.null_params++;
 		return W_INVALID_PARAM;
 	}
 
 	if (ads1219_read_value(&g_ads_handle, p_raw_data) != W_SUCCESS) {
-		adxrs649_health.recent_data_read_fails++;
+		adxrs649_health.comm_failure = true;
+		adxrs649_health.data_read_fails++;
 		return W_IO_ERROR;
 	}
 
@@ -278,40 +270,46 @@ health_status_t adxrs649_get_status(void) {
 							  .module_id = CANARDS_MODULE_ID_ADXRS649,
 							  .error_bitfield = 0};
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "ADXRS649",
-			 "init=%d, st_fail=%u, adc_sanity_fails=%u, millivolt_conversion_fails=%u",
-			 is_initialized,
-			 adxrs649_health.self_test_fails,
-			 adxrs649_health.adc_sanity_check_fails,
-			 adxrs649_health.millivolt_conversion_fails);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "ADXRS649",
-			 "data_read_check_fails=%u, data_read_fails=%u, null_param=%u",
-			 adxrs649_health.recent_data_ready_check_fails,
-			 adxrs649_health.recent_data_read_fails,
-			 adxrs649_health.recent_null_params);
-
 	if (!is_initialized) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
-	if (adxrs649_health.recent_null_params) {
-		adxrs649_health.recent_null_params = 0;
+	if (adxrs649_health.invalid_param) {
+		adxrs649_health.invalid_param = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
 	}
 
-	if (adxrs649_health.recent_data_read_fails || adxrs649_health.recent_data_ready_check_fails) {
-		adxrs649_health.recent_data_ready_check_fails = 0;
-		adxrs649_health.recent_data_read_fails = 0;
+	if (adxrs649_health.comm_failure) {
+		adxrs649_health.comm_failure = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "ADXRS649",
+			 "init=%d, not_init_calls=%" PRIu32 ", millivolt_conversion_fails=%" PRIu32,
+			 is_initialized,
+			 adxrs649_health.not_initialized_calls,
+			 adxrs649_health.millivolt_conversion_fails);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "ADXRS649",
+			 "data_read_check_fails=%" PRIu32 ", data_read_fails=%" PRIu32
+			 ", null_params=%" PRIu32,
+			 adxrs649_health.data_ready_check_fails,
+			 adxrs649_health.data_read_fails,
+			 adxrs649_health.null_params);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "AD BREAKBOARD TASK",
+			 "gyro_read_fails=%" PRIu32 ", gyro_invalid_params=%" PRIu32,
+			 adxrs649_health.read_fails,
+			 adxrs649_health.invalid_params);
 
 	return status;
 }

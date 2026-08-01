@@ -6,7 +6,6 @@
 #include "task.h"
 
 #include "application/flight_phase/flight_phase.h"
-#include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
@@ -87,7 +86,8 @@ void ad_breakout_board_task(void *argument) {
 				if (adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas),
 										   &raw_gyro) != W_SUCCESS) {
 					g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-					log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read gyro.");
+					adxrs649_health.comm_failure = true;
+					adxrs649_health.read_fails++;
 				}
 			}
 
@@ -95,7 +95,8 @@ void ad_breakout_board_task(void *argument) {
 			update_gyro_data = true;
 			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
 #ifndef HIL
-			log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read gyro drdy.");
+			adxrs649_health.comm_failure = true;
+			adxrs649_health.read_fails++;
 #endif
 		}
 
@@ -115,7 +116,8 @@ void ad_breakout_board_task(void *argument) {
 										   &raw_accel) != W_SUCCESS) {
 					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
 #ifndef HIL
-					log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read accel.");
+					adxl380_health.comm_failure = true;
+					adxl380_health.read_fails++;
 #endif
 				}
 			}
@@ -124,7 +126,8 @@ void ad_breakout_board_task(void *argument) {
 			update_accel_data = true;
 			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
 #ifndef HIL
-			log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to read accel drdy.");
+			adxl380_health.comm_failure = true;
+			adxl380_health.read_fails++;
 #endif
 		}
 
@@ -149,7 +152,8 @@ void ad_breakout_board_task(void *argument) {
 
 		// LOG/TELEMETRY
 		if (W_SUCCESS != ad_breakout_board_data_logging(loop_count, raw_gyro, &raw_accel)) {
-			log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Failed to complete data logging.");
+			adxl380_health.comm_failure = true;
+			adxl380_health.data_logging_fails++;
 		}
 
 		loop_count++;
@@ -166,7 +170,8 @@ void ad_breakout_board_task(void *argument) {
  */
 w_status_t ad_breakout_board_get_accel_data(vector3d_t *p_accel_data, uint32_t *timestamp_ms) {
 	if ((NULL == p_accel_data) || (NULL == timestamp_ms)) {
-		log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Invalid return ptrs.");
+		adxl380_health.invalid_param = true;
+		adxl380_health.invalid_params++;
 		return W_INVALID_PARAM;
 	}
 
@@ -188,7 +193,8 @@ w_status_t ad_breakout_board_get_accel_data(vector3d_t *p_accel_data, uint32_t *
  */
 w_status_t ad_breakout_board_get_gyro_data(float64_t *p_gyro_data, uint32_t *timestamp_ms) {
 	if ((NULL == p_gyro_data) || (NULL == timestamp_ms)) {
-		log_text(0, LOG_LVL_WARN, "AD BREAKBOARD TASK", "Invalid return ptrs.");
+		adxrs649_health.invalid_param = true;
+		adxrs649_health.invalid_params++;
 		return W_INVALID_PARAM;
 	}
 

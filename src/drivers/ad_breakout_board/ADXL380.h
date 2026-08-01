@@ -14,6 +14,26 @@ typedef struct {
 	uint16_t z;
 } adxl380_raw_accel_data_t;
 
+typedef struct {
+	bool comm_failure;
+	bool invalid_param;
+
+	uint32_t not_initialized_calls;
+	uint32_t get_raw_accel_fails;
+	uint32_t null_params;
+	uint32_t invalid_params;
+	uint32_t data_ready_check_fails;
+	uint32_t data_read_fails;
+	uint32_t read_fails;
+	uint32_t data_logging_fails;
+} adxl380_health_t;
+
+/**
+ * @brief health struct for the ADXL380, also updated directly by the ad_breakout_board task
+ * for accel-related task-level failures (read/drdy fails, invalid ptrs, data logging fails)
+ */
+extern adxl380_health_t adxl380_health;
+
 /**
  * @brief this is initializes the ADXL380
  * @return the status of the function call
