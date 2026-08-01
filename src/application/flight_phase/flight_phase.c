@@ -52,7 +52,6 @@ typedef struct {
 
 	uint32_t state_transitions;
 	uint32_t null_ctx_count;
-	uint32_t failed_init_count;
 	uint32_t invalid_event_count;
 	uint32_t invalid_actuator_data_count;
 	uint32_t dead_imu_count;
@@ -96,7 +95,6 @@ w_status_t flight_phase_init(void) {
 		(W_SUCCESS != can_handler_act_cmd_register_callback(ACTUATOR_IGNITION, act_cmd_callback)) ||
 		(W_SUCCESS !=
 		 can_handler_act_cmd_register_callback(ACTUATOR_CANARD_PAD_FILTER, act_cmd_callback))) {
-		flight_phase_status.failed_init_count++;
 		return W_FAILURE;
 	}
 
@@ -542,27 +540,27 @@ health_status_t flight_phase_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
-			 "init=%d, failed_init=%" PRIu32 ", null_ctx=%" PRIu32 ", queue_full=%" PRIu32,
+			 "init=%d, null_ctx=%" PRIu32 ", queue_full=%" PRIu32 ", state_transitions=%" PRIu32,
 			 flight_phase_status.initialized,
-			 flight_phase_status.failed_init_count,
 			 flight_phase_status.null_ctx_count,
-			 flight_phase_status.queue_full_count);
+			 flight_phase_status.queue_full_count,
+			 flight_phase_status.state_transitions);
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
-			 "state_transitions=%" PRIu32 ", invalid_event=%" PRIu32 ", dead_imu=%" PRIu32,
-			 flight_phase_status.state_transitions,
+			 "invalid_event=%" PRIu32 ", dead_imu=%" PRIu32 ", invalid_act_data=%" PRIu32,
 			 flight_phase_status.invalid_event_count,
-			 flight_phase_status.dead_imu_count);
+			 flight_phase_status.dead_imu_count,
+			 flight_phase_status.invalid_actuator_data_count);
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
-			 "invalid_act_data=%" PRIu32 ", timer_send_fail=%" PRIu32 ", sensor_send_fail=%" PRIu32,
-			 flight_phase_status.invalid_actuator_data_count,
+			 "timer_send_fail=%" PRIu32 ", sensor_send_fail=%" PRIu32 ", reset=%" PRIu32,
 			 flight_phase_status.timer_event_send_fail_count,
-			 flight_phase_status.sensor_event_send_fail_count);
+			 flight_phase_status.sensor_event_send_fail_count,
+			 flight_phase_status.event_counts.reset);
 
 	log_text(10,
 			 LOG_LVL_INFO,
@@ -581,9 +579,6 @@ health_status_t flight_phase_get_status(void) {
 			 flight_phase_status.event_counts.act_delay_elapsed,
 			 flight_phase_status.event_counts.recovery_rate,
 			 flight_phase_status.event_counts.sleep_rate);
-
-	log_text(
-		10, LOG_LVL_INFO, "FlightPhase", "reset=%" PRIu32, flight_phase_status.event_counts.reset);
 
 	return status;
 }
