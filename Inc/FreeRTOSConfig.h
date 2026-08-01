@@ -72,8 +72,8 @@ extern unsigned long getRunTimeCounterValue(void);
 #define configMAX_PRIORITIES                     ( 56 )
 #define configUSE_SB_COMPLETED_CALLBACK          ( 0 )
 #define configUSE_MINI_LIST_ITEM                ( 1 )
-#define configMINIMAL_STACK_SIZE                 ((uint16_t)256)
-#define configTOTAL_HEAP_SIZE                    ((size_t)90000)
+#define configMINIMAL_STACK_SIZE                 ((uint16_t)128)
+#define configTOTAL_HEAP_SIZE                    ((size_t)70000)
 #define configMAX_TASK_NAME_LEN                  ( 16 )
 #define configGENERATE_RUN_TIME_STATS            1
 #define configHEAP_CLEAR_MEMORY_ON_FREE          0
@@ -83,6 +83,7 @@ extern unsigned long getRunTimeCounterValue(void);
 #define configQUEUE_REGISTRY_SIZE                8
 #define configCHECK_FOR_STACK_OVERFLOW           2
 #define configUSE_RECURSIVE_MUTEXES              1
+#define configUSE_MALLOC_FAILED_HOOK             1
 #define configUSE_COUNTING_SEMAPHORES            1
 #define configENABLE_BACKWARD_COMPATIBILITY      0
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION  0
@@ -98,17 +99,17 @@ extern unsigned long getRunTimeCounterValue(void);
 #define configMAX_CO_ROUTINE_PRIORITIES          ( 2 )
 
 /* Software timer definitions. */
-#define configUSE_TIMERS                         0
-#define configTIMER_TASK_PRIORITY                ( 0 )
-#define configTIMER_QUEUE_LENGTH                 0
-#define configTIMER_TASK_STACK_DEPTH             1
+#define configUSE_TIMERS                         1
+#define configTIMER_TASK_PRIORITY                ( 2 )
+#define configTIMER_QUEUE_LENGTH                 1
+#define configTIMER_TASK_STACK_DEPTH             128
 
 /* CMSIS-RTOS V2 flags */
 #define configUSE_OS2_THREAD_SUSPEND_RESUME  1
 #define configUSE_OS2_THREAD_ENUMERATE       1
-#define configUSE_OS2_EVENTFLAGS_FROM_ISR    0
+#define configUSE_OS2_EVENTFLAGS_FROM_ISR    1
 #define configUSE_OS2_THREAD_FLAGS           1
-#define configUSE_OS2_TIMER                  0
+#define configUSE_OS2_TIMER                  1
 #define configUSE_OS2_MUTEX                  1
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */
@@ -120,7 +121,7 @@ to exclude the API function. */
 #define INCLUDE_xTaskDelayUntil              1
 #define INCLUDE_vTaskDelay                   1
 #define INCLUDE_xTaskGetSchedulerState       1
-#define INCLUDE_xTimerPendFunctionCall       0
+#define INCLUDE_xTimerPendFunctionCall       1
 #define INCLUDE_xQueueGetMutexHolder         1
 #define INCLUDE_uxTaskGetStackHighWaterMark  1
 #define INCLUDE_xTaskGetCurrentTaskHandle    1
