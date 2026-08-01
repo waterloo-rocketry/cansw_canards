@@ -459,6 +459,9 @@ w_status_t iis2mdc_init(void) {
 		return W_FAILURE;
 	}
 
+	// .sram4 placement means static initializer isn't copied at startup; clear explicitly
+	memset(&iis2mdc_cache, 0, sizeof(iis2mdc_cache));
+
 	// wait for stable output after power-up before any access to registers
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_POWERUP_MS));
 
@@ -514,6 +517,7 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 	}
 
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
+		iis2mdc_health.internal_error = true;
 		iis2mdc_health.dma_before_callback_switch++;
 		return W_IO_ERROR;
 	}
@@ -529,7 +533,6 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 	if (iis2mdc_dma_busy) {
 		taskEXIT_CRITICAL();
 		iis2mdc_health.get_data_dma_busy++;
-		iis2mdc_health.communication_failure = true;
 		return W_IO_ERROR;
 	}
 	memcpy(local_buf, iis2mdc_cache.raw_buf, sizeof(local_buf));
@@ -594,7 +597,7 @@ health_status_t iis2mdc_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
 	}
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "state=%d, dma_busy=%d, cache_valid=%d, async_active_reject=%" PRIu32,
@@ -603,14 +606,14 @@ health_status_t iis2mdc_get_status(void) {
 			 iis2mdc_cache.valid,
 			 iis2mdc_health.async_active_reject);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "dma_before_callback_switch=%" PRIu32 ", dma_read_fails=%" PRIu32,
 			 iis2mdc_health.dma_before_callback_switch,
 			 iis2mdc_health.dma_read_fails);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "dma_callback_error=%" PRIu32 ", i2c_handle_mismatch=%" PRIu32
@@ -619,61 +622,61 @@ health_status_t iis2mdc_get_status(void) {
 			 iis2mdc_health.i2c_handle_mismatch,
 			 iis2mdc_health.get_data_dma_busy);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "get_data_invalid_cache=%" PRIu32 ", get_data_null_param=%" PRIu32,
 			 iis2mdc_health.get_data_invalid_cache,
 			 iis2mdc_health.get_data_null_param);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "init_soft_reset_fail=%" PRIu32 ", init_cfg_write_fail=%" PRIu32,
 			 iis2mdc_health.init_soft_reset_fail,
 			 iis2mdc_health.init_cfg_write_fail);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "init_sanity_check_fail=%" PRIu32 ", init_cb_register_fail=%" PRIu32,
 			 iis2mdc_health.init_sanity_check_fail,
 			 iis2mdc_health.init_cb_register_fail);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "init_clear_irq_fail=%" PRIu32 ", init_invalid_state=%" PRIu32,
 			 iis2mdc_health.init_clear_irq_fail,
 			 iis2mdc_health.init_invalid_state);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "sanity_invalid_state=%" PRIu32 ", sanity_whoami_read_fail=%" PRIu32,
 			 iis2mdc_health.sanity_invalid_state,
 			 iis2mdc_health.sanity_whoami_read_fail);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "sanity_whoami_mismatch=%" PRIu32 ", sanity_self_test_fail=%" PRIu32,
 			 iis2mdc_health.sanity_whoami_mismatch,
 			 iis2mdc_health.sanity_self_test_fail);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "selftest_baseline_fail=%" PRIu32 ", selftest_enable_fail=%" PRIu32,
 			 iis2mdc_health.selftest_baseline_fail,
 			 iis2mdc_health.selftest_enable_fail);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
 			 "selftest_restore_fail=%" PRIu32 ", selftest_read_fail=%" PRIu32,
 			 iis2mdc_health.selftest_restore_fail,
 			 iis2mdc_health.selftest_read_fail);
-
+			 
 	return status;
 }
