@@ -3,6 +3,7 @@
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
@@ -48,7 +49,7 @@ static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MA
 	[CANARDS_MODULE_ID_CAN_HANDLER] = can_handler_get_status,
 	[CANARDS_MODULE_ID_CONTROLLER] = controller_get_status,
 	[CANARDS_MODULE_ID_FLIGHT_PHASE] = flight_phase_get_status,
-	[CANARDS_MODULE_ID_FSM] = NULL,
+	[CANARDS_MODULE_ID_FSM] = fsm_get_status,
 	[CANARDS_MODULE_ID_GPIO] = gpio_get_status,
 	[CANARDS_MODULE_ID_I2C] = i2c_get_status,
 	[CANARDS_MODULE_ID_IIS2MDC] = NULL,
