@@ -131,7 +131,8 @@ typedef struct {
 	bool semaphore_fail; // semaphore take/give fail
 	bool i2c_communication_fail; // I2C read/write fail
 	bool crc_check_failure; // PROM CRC check fail
-	bool invalid_operation; // reinit while already initialized, deinit/read before init, or timer read failed
+	bool invalid_operation; // reinit while already initialized, deinit/read before init, or timer
+							// read failed
 	bool invalid_parameter; // NULL parameter passed in
 	uint32_t semaphore_fail_count; // mutex create (init) or take (task) failed
 	uint32_t i2c_read_fail_count; // any I2C read failed (PROM coefficients, ADC values)
@@ -591,7 +592,8 @@ health_status_t ms5611_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_CRC_FAILED_OFFSET;
 	}
 
-	// Reinitialized while already initialized, deinitialized before init, Read attempted before init, or timer read failed
+	// Reinitialized while already initialized, deinitialized before init, Read attempted before
+	// init, or timer read failed
 	if (ms5611_health.invalid_operation) {
 		ms5611_health.invalid_operation = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
