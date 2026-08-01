@@ -232,7 +232,6 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 		xQueueOverwrite(ctrl_value_queue, &ctrl_latest_values);
 
 	} else {
-		log_text(0, LOG_LVL_WARN, "controller", "Cntrler not run");
 		controller_error_stats.controller_not_run_count++;
 		controller_error_stats.controller_not_run = true;
 	}
@@ -248,17 +247,18 @@ health_status_t controller_get_status(void) {
 
 	if (controller_error_stats.ctx_is_null) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NULL_CTX;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
 	}
 
 	if (controller_error_stats.controller_not_run) {
+		log_text(0, LOG_LVL_WARN, "controller", "Controller not run");
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_RUN;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_LOOP_TIMING_OFFSET;
 	}
 
 	if (controller_error_stats.is_init == false) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
-		status.error_bitfield |= 1 << MODULE_ERR_NOT_INIT;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
 	if (controller_error_stats.ctx_is_null) {

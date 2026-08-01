@@ -9,54 +9,6 @@
 #include <stdint.h>
 
 /**
- * @brief Health severity levels
- */
-typedef enum {
-	HEALTH_OK = 0, /**< No issues */
-	HEALTH_ERROR, /**< Something is wrong, but can still fly safely */
-	HEALTH_FATAL /**< Unrecoverable failure, unsafe flight */
-} health_severity_t;
-
-typedef enum {
-	MODULE_I2C = 0,
-	MODULE_ADC = 1,
-	MODULE_CAN_HANDLER = 2,
-	MODULE_ESTIMATOR = 3,
-	MODULE_CONTROLLER = 4,
-	MODULE_SD_CARD = 5,
-	MODULE_TIMER = 6,
-	MODULE_GPIO = 7,
-	MODULE_FLIGHT_PHASE = 8,
-	MODULE_SENSOR_HANDLER = 9,
-	MODULE_UART = 10,
-	MODULE_LOGGER = 11,
-	MODULE_POWER_HANDLER = 12,
-	MODULE_LSM6DSV32X = 13,
-	MODULE_TELEMETRY = 14,
-	MODULE_COUNT = 15, // number of modules
-	MODULE_MAX = 31
-} module_id_t;
-
-// Any module can add more error codes
-typedef enum {
-	MODULE_ERR_NONE = 0,
-	MODULE_ERR_NOT_INIT = 1,
-	MODULE_ERR_I2C_FAIL = 2,
-	MODULE_POWER_HANDLER_FAULT_BAT1_VOLT = 3,
-	MODULE_POWER_HANDLER_FAULT_BAT2_VOLT = 4,
-	MODULE_POWER_HANDLER_FAULT_RKT_VOLT = 5,
-	MODULE_POWER_HANDLER_FAULT_CHG_VOLT = 6,
-	MODULE_POWER_HANDLER_FAULT_5V_CURR = 7,
-	MODULE_POWER_HANDLER_FAULT_5V_EXT_OUTPUT = 8,
-	MODULE_POWER_HANDLER_FAULT_3V3_CURR = 9,
-	MODULE_POWER_HANDLER_FAULT_BAT1_CURR = 10,
-	MODULE_POWER_HANDLER_FAULT_BAT2_CURR = 11,
-	MODULE_ERR_NULL_CTX = 12,
-	MODULE_ERR_NOT_RUN = 13,
-	MODULE_ERR_MAX = 31
-} module_error_code_t;
-
-/**
  * @brief Health check result from a module
  *
  * Standard structure returned by all module health check functions
