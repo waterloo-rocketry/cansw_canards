@@ -143,8 +143,8 @@ static void system_init_task(void *arg) {
 	status |= ms5611_init();
 	status |= power_handler_init();
 	status |= iis2mdc_init();
-	//status |= adxl380_init();
-	//status |= adxrs649_init();
+	status |= adxl380_init();
+	status |= adxrs649_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -235,7 +235,7 @@ static void system_init_task(void *arg) {
 	ak45_hard_stop_calibrate(&ak45_calibration_config);
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(50);
+		vTaskDelay(500);
 
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
 			// TODO: TEST ONLY

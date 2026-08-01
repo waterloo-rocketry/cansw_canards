@@ -677,6 +677,6 @@ health_status_t iis2mdc_get_status(void) {
 			 "selftest_restore_fail=%" PRIu32 ", selftest_read_fail=%" PRIu32,
 			 iis2mdc_health.selftest_restore_fail,
 			 iis2mdc_health.selftest_read_fail);
-			 
+
 	return status;
 }
