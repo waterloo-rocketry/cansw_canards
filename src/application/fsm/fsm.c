@@ -336,7 +336,6 @@ void fsm_task(void *args) {
 		fsm_state_t new_state =
 			flight_phase_update_state(next_event, g_ctx.curr_state, g_ctx.p_flight_phase_context);
 		g_ctx.curr_state = new_state;
-		g_ctx.curr_state = 7;
 
 		// run actions based on new curr state
 		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
