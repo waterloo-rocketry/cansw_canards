@@ -13,18 +13,6 @@
 /* Enums/Types */
 
 /**
- * @brief Structure to track controller errors and status
- */
-typedef struct {
-	bool is_init; /**< Initialization status flag */
-	uint32_t null_ctx_count;
-	uint32_t controller_not_run_count;
-
-	bool ctx_is_null;
-	bool controller_not_run;
-} controller_error_data_t;
-
-/**
  * state of a controller instance.
  */
 typedef struct {

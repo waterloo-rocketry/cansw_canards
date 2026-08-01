@@ -35,6 +35,24 @@ typedef struct {
 	// sensor id for it...
 } ctrl_value_handle_t;
 
+/**
+ * @brief Structure to track controller errors and status
+ */
+typedef struct {
+	bool is_init; /**< Initialization status flag */
+	uint32_t null_ctx_count;
+	uint32_t controller_not_run_count;
+	uint32_t can_telem_tx_fail_count;
+	uint32_t can_encode_fail_count;
+	uint32_t timestamp_fail_count;
+	uint32_t log_data_fail_count;
+
+	bool can_telem_tx_fail;
+	bool ctx_is_null;
+	bool queue_is_empty;
+	bool controller_not_run;
+} controller_error_data_t;
+
 static QueueHandle_t ctrl_value_queue;
 
 static controller_error_data_t controller_error_stats = {0};
@@ -48,7 +66,8 @@ static w_status_t ctrl_can_telemetry(void) {
 
 		if (W_SUCCESS !=
 			can_encode_scaled_float(SCALE_CTRL_CMD, ctrl_value_latest_raw.command, &cmd)) {
-			log_text(0, LOG_LVL_WARN, "controller", "Can encode failed for command.");
+			controller_error_stats.can_encode_fail_count++;
+			controller_error_stats.can_telem_tx_fail = true;
 			return W_FAILURE;
 		}
 
@@ -56,15 +75,16 @@ static w_status_t ctrl_can_telemetry(void) {
 			can_encode_scaled_float(SCALE_CTRL_COEF_OF_ROLL_CTRL,
 									ctrl_value_latest_raw.coefficient_of_roll_control[0],
 									&coef_canard_lift)) {
-			log_text(
-				0, LOG_LVL_WARN, "controller", "Can encode failed for canard lift coefficient.");
+			controller_error_stats.can_encode_fail_count++;
+			controller_error_stats.can_telem_tx_fail = true;
 			return W_FAILURE;
 		}
 
 		uint32_t timestamp;
 
 		if (timer_get_ms(&timestamp) != W_SUCCESS) {
-			log_text(0, LOG_LVL_WARN, "controller", "Failed to get timestamp for can msg tx");
+			controller_error_stats.timestamp_fail_count++;
+			controller_error_stats.can_telem_tx_fail = true;
 			return W_FAILURE;
 		}
 
@@ -78,7 +98,8 @@ static w_status_t ctrl_can_telemetry(void) {
 									  &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0, LOG_LVL_WARN, "controller", "can tx cmd val fail.");
+			controller_error_stats.can_telem_tx_fail_count++;
+			controller_error_stats.can_telem_tx_fail = true;
 			status |= W_FAILURE;
 		}
 
@@ -89,14 +110,14 @@ static w_status_t ctrl_can_telemetry(void) {
 									  &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0, LOG_LVL_WARN, "controller", "canard lift coefficient can tx fail.");
+			controller_error_stats.can_telem_tx_fail_count++;
+			controller_error_stats.can_telem_tx_fail = true;
 			status |= W_FAILURE;
 		}
 
 		return status;
 	} else {
-		log_text(0, LOG_LVL_WARN, "controller", "queuepeek fail while can tx ctrl values.");
-
+		controller_error_stats.queue_is_empty = true;
 		return W_FAILURE;
 	}
 }
@@ -105,8 +126,7 @@ static w_status_t ctrl_sd_telemetry(void) {
 	ctrl_value_handle_t ctrl_value_latest_raw;
 
 	if (xQueuePeek(ctrl_value_queue, &ctrl_value_latest_raw, 0) != pdTRUE) {
-		log_text(0, LOG_LVL_WARN, "controller", "queuepeek fail while sd tx ctrl values.");
-
+		controller_error_stats.queue_is_empty = true;
 		return W_FAILURE;
 	}
 
@@ -123,7 +143,7 @@ static w_status_t ctrl_sd_telemetry(void) {
 	log_container.controller.roll_rate_target = (float32_t)ctrl_value_latest_raw.ref_roll[1];
 
 	if (log_data(CTRL_LOG_DATA_TIMEOUT, LOG_TYPE_CONTROLLER, &log_container) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "Controller", "Failed to log cntrl data.");
+		controller_error_stats.log_data_fail_count++;
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
@@ -248,12 +268,25 @@ health_status_t controller_get_status(void) {
 	if (controller_error_stats.ctx_is_null) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
+		controller_error_stats.ctx_is_null = false;
 	}
 
 	if (controller_error_stats.controller_not_run) {
-		log_text(0, LOG_LVL_WARN, "controller", "Controller not run");
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_LOOP_TIMING_OFFSET;
+		controller_error_stats.controller_not_run = false;
+	}
+
+	if (controller_error_stats.can_telem_tx_fail) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
+		controller_error_stats.can_telem_tx_fail = false;
+	}
+
+	if (controller_error_stats.queue_is_empty) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
+		controller_error_stats.queue_is_empty = false;
 	}
 
 	if (controller_error_stats.is_init == false) {
@@ -261,20 +294,23 @@ health_status_t controller_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
-	if (controller_error_stats.ctx_is_null) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "controller", "Invalid context ptr.");
-	}
-	// reset flags
-	controller_error_stats.ctx_is_null = false;
-	controller_error_stats.controller_not_run = false;
-
 	// Log all error statistics
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "controller",
-			 "init=%d, null_ctx=%d, not_run=%d",
+			 "init=%d, null_ctx=%d, not_run=%d, tx_fail=%d",
 			 controller_error_stats.is_init,
 			 controller_error_stats.null_ctx_count,
-			 controller_error_stats.controller_not_run_count);
+			 controller_error_stats.controller_not_run_count,
+			 controller_error_stats.can_telem_tx_fail_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "controller",
+			 "encode_fail=%d, timestamp_fail=%d, log_data_fail=%d",
+			 controller_error_stats.can_encode_fail_count,
+			 controller_error_stats.timestamp_fail_count,
+			 controller_error_stats.log_data_fail_count);
+
 	return status;
 }
