@@ -49,8 +49,9 @@ typedef struct {
 	bool invalid_event;
 	bool invalid_actuator_data_format;
 	bool dead_imu;
+	bool is_queue_full;
 
-	uint32_t state_transitions;
+	uint32_t error_state_count;
 	uint32_t null_ctx_count;
 	uint32_t invalid_event_count;
 	uint32_t invalid_actuator_data_count;
@@ -70,8 +71,6 @@ typedef struct {
 		uint32_t sleep_rate;
 		uint32_t reset;
 	} event_counts;
-
-	bool is_queue_full;
 } flight_phase_status_t;
 
 // static members
@@ -241,6 +240,9 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 	fsm_state_t new_state = curr_state;
 
+	// Reset error state, only set to error if currently in error
+	flight_phase_status.is_in_error_state = false;
+
 	switch (curr_state) {
 		case STATE_IDLE:
 			if (EVENT_PAD_FILTER == event) {
@@ -300,16 +302,13 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 		case STATE_ERROR:
 			// Stay in error state, count repeated invalid event
 			flight_phase_status.is_in_error_state = true;
+			flight_phase_status.error_state_count++;
 			break;
 		default:
 			flight_phase_status.is_in_error_state = true;
+			flight_phase_status.error_state_count++;
 			new_state = curr_state; // return the same state
 			break;
-	}
-
-	// Only count as a transition if the state actually changed
-	if (new_state != curr_state) {
-		flight_phase_status.state_transitions++;
 	}
 
 	return new_state;
@@ -374,10 +373,8 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
  * @param num_consec_detection pointer to this IMU's number of consecutive launch detections
  * @param imu_name name of the IMU for logging purposes
  */
-static void process_imu_meas(bool is_new, const vector3d_t *accel, uint8_t *num_consec_detection,
-							 const char *imu_name) {
+static void process_imu_meas(bool is_new, const vector3d_t *accel, uint8_t *num_consec_detection) {
 	if (!is_new) {
-		(void)imu_name;
 		flight_phase_status.dead_imu = true;
 		flight_phase_status.dead_imu_count++;
 		(*num_consec_detection) = 0;
@@ -413,16 +410,11 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 	bool mti_imu_new = p_sensor_data->mti_meas.mti_accel.is_new;
 	bool ad_imu_new = p_sensor_data->ad_meas.ad_accel.is_new;
 
-	process_imu_meas(board_imu_new,
-					 &p_sensor_data->board_meas.board_imu.accel,
-					 &p_ctx->num_consec_board,
-					 "board");
-	process_imu_meas(mti_imu_new,
-					 &p_sensor_data->mti_meas.mti_accel.meas,
-					 &p_ctx->num_consec_movella,
-					 "movella");
 	process_imu_meas(
-		ad_imu_new, &p_sensor_data->ad_meas.ad_accel.meas, &p_ctx->num_consec_ad, "ad");
+		board_imu_new, &p_sensor_data->board_meas.board_imu.accel, &p_ctx->num_consec_board);
+	process_imu_meas(
+		mti_imu_new, &p_sensor_data->mti_meas.mti_accel.meas, &p_ctx->num_consec_movella);
+	process_imu_meas(ad_imu_new, &p_sensor_data->ad_meas.ad_accel.meas, &p_ctx->num_consec_ad);
 
 	uint32_t num_imu_detect_launch = 0;
 
@@ -489,17 +481,10 @@ health_status_t flight_phase_get_status(void) {
 							  .module_id = CANARDS_MODULE_ID_FLIGHT_PHASE,
 							  .error_bitfield = 0};
 
-	// Null context pointer
-	if (flight_phase_status.ctx_is_null) {
-		flight_phase_status.ctx_is_null = false;
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
-	}
-
 	// Full event queue
 	if (flight_phase_status.is_queue_full) {
 		flight_phase_status.is_queue_full = false;
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
 	}
 
@@ -510,23 +495,16 @@ health_status_t flight_phase_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_NO_DATA_OFFSET;
 	}
 
-	// Not initialized
-	if (!flight_phase_status.initialized) {
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
-	}
-
 	// Invalid event sent
 	if (flight_phase_status.invalid_event) {
 		flight_phase_status.invalid_event = false;
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_UNEXPECTED_EVENT_OFFSET;
 	}
 
 	// Error state flight phase
 	if (flight_phase_status.is_in_error_state) {
-		flight_phase_status.is_in_error_state = false;
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_ERROR_STATE_OFFSET;
 	}
 
@@ -537,16 +515,29 @@ health_status_t flight_phase_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
 
-	log_text(10,
+	// Not initialized
+	if (!flight_phase_status.initialized) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+	}
+
+	// Null context pointer
+	if (flight_phase_status.ctx_is_null) {
+		flight_phase_status.ctx_is_null = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+	}
+
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
-			 "init=%d, null_ctx=%" PRIu32 ", queue_full=%" PRIu32 ", state_transitions=%" PRIu32,
+			 "init=%d, null_ctx=%" PRIu32 ", queue_full=%" PRIu32 ", error_state=%" PRIu32,
 			 flight_phase_status.initialized,
 			 flight_phase_status.null_ctx_count,
 			 flight_phase_status.queue_full_count,
-			 flight_phase_status.state_transitions);
+			 flight_phase_status.error_state_count);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
 			 "invalid_event=%" PRIu32 ", dead_imu=%" PRIu32 ", invalid_act_data=%" PRIu32,
@@ -554,7 +545,7 @@ health_status_t flight_phase_get_status(void) {
 			 flight_phase_status.dead_imu_count,
 			 flight_phase_status.invalid_actuator_data_count);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
 			 "timer_send_fail=%" PRIu32 ", sensor_send_fail=%" PRIu32 ", reset=%" PRIu32,
@@ -562,7 +553,7 @@ health_status_t flight_phase_get_status(void) {
 			 flight_phase_status.sensor_event_send_fail_count,
 			 flight_phase_status.event_counts.reset);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
 			 "pad_filter=%" PRIu32 ", ignitor=%" PRIu32 ", inj_open=%" PRIu32
@@ -572,7 +563,7 @@ health_status_t flight_phase_get_status(void) {
 			 flight_phase_status.event_counts.inj_open,
 			 flight_phase_status.event_counts.launch_accel);
 
-	log_text(10,
+	log_text(1,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
 			 "act_delay_elapsed=%" PRIu32 ", recovery_rate=%" PRIu32 ", sleep_rate=%" PRIu32,
