@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
@@ -85,6 +86,10 @@ typedef struct {
 	uint32_t init_fdcan_start_fails; // count of failures to start FDCAN bus
 	uint32_t init_fdcan_filter_cfg_fails; // count of failures to configure FDCAN filter during init
 	uint32_t timer_get_ms_fails; // count of failures to get ms timestamp during feedback parsing
+	uint32_t hard_stop_cal_fail_count; // count of failed hard stop calibration attempts
+	uint32_t telemetry_scale_fails; // count of failures to scale a telemetry value
+	uint32_t telemetry_can_tx_fails; // count of failures to transmit telemetry over CAN
+	uint32_t sd_log_data_fails; // count of failures to log motor data to SD
 } ak45_health_t;
 
 static ak45_health_t ak45_health = {0};
@@ -99,7 +104,6 @@ static ak45_health_t ak45_health = {0};
  */
 static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, uint8_t len) {
 	if ((NULL == g_ak45_hfdcan) || (NULL == data) || (len > 8)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointer");
 		ak45_health.invalid_args++;
 		return W_FAILURE;
 	}
@@ -123,7 +127,6 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
 	tx_header.DataLength = len;
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(g_ak45_hfdcan, &tx_header, data) != HAL_OK) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Unable to add CAN message");
 		ak45_health.tx_errors++;
 		ak45_health.cmd_tx_failed = true;
 		return W_FAILURE;
@@ -139,10 +142,6 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
  */
 static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) {
 	if ((NULL == data) || (NULL == fb)) {
-		log_text(LOG_WAIT_MS,
-				 LOG_LVL_WARN,
-				 "ak45",
-				 "Invalid pointers or not initialized for Parse Feedback");
 		ak45_health.invalid_args++;
 		return W_FAILURE;
 	}
@@ -173,7 +172,6 @@ static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) 
 static void ak45_stop_can() {
 	// turn off fdcan so can restart
 	if (HAL_FDCAN_Stop(g_ak45_hfdcan) != HAL_OK) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "FDCAN stop failed");
 		ak45_health.fdcan_stop_fails++;
 	}
 }
@@ -186,13 +184,11 @@ static void ak45_stop_can() {
 static w_status_t ak45_driver_temp_curr_telemetry() {
 	ak45_feedback_t fb = {0};
 	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get feedback failed for temp telemetry");
 		return W_FAILURE;
 	}
 
 	uint32_t timestamp_ms = 0;
 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get timestamp failed for temp telemetry");
 		return W_FAILURE;
 	}
 
@@ -202,7 +198,7 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 
 	if (can_encode_scaled_int(SCALE_SERVO_TEMP, fb.temperature_c, &temperature_scaled_int16) !=
 		W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale temperature");
+		ak45_health.telemetry_scale_fails++;
 		status |= W_FAILURE;
 
 	} else {
@@ -215,10 +211,7 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 			&msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(LOG_WAIT_MS,
-					 LOG_LVL_WARN,
-					 "ak45",
-					 "Failed to transmit motor temperature value through can.");
+			ak45_health.telemetry_can_tx_fails++;
 			status |= W_FAILURE;
 		}
 	}
@@ -227,7 +220,7 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 	int16_t current_scaled_int16 = 0;
 	if (can_encode_scaled_float(SCALE_SERVO_CURRENT, fb.current_a, &current_scaled_int16) !=
 		W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale current");
+		ak45_health.telemetry_scale_fails++;
 		status |= W_FAILURE;
 
 	} else {
@@ -240,10 +233,7 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 			&msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(LOG_WAIT_MS,
-					 LOG_LVL_WARN,
-					 "ak45",
-					 "Failed to transmit motor current value through can.");
+			ak45_health.telemetry_can_tx_fails++;
 			status |= W_FAILURE;
 		}
 	}
@@ -259,20 +249,18 @@ static w_status_t ak45_driver_angle_telemetry() {
 	ak45_feedback_t fb = {0};
 	w_status_t status = W_SUCCESS;
 	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get feedback failed for angle telemetry");
 		return W_FAILURE;
 	}
 
 	uint32_t timestamp_ms = 0;
 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get timestamp failed for angle telemetry");
 		return W_FAILURE;
 	}
 
 	int16_t scaled_angle_int16 = 0;
 	if (can_encode_scaled_float(SCALE_SERVO_ANGLE, fb.position_deg, &scaled_angle_int16) !=
 		W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale the value");
+		ak45_health.telemetry_scale_fails++;
 		return W_FAILURE;
 	}
 
@@ -284,8 +272,7 @@ static w_status_t ak45_driver_angle_telemetry() {
 								  &msg);
 
 	if (can_handler_transmit(&msg) != W_SUCCESS) {
-		log_text(
-			LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to transmit motor angle value through can.");
+		ak45_health.telemetry_can_tx_fails++;
 		status |= W_FAILURE;
 	}
 
@@ -295,7 +282,6 @@ static w_status_t ak45_driver_angle_telemetry() {
 static w_status_t ak45_sd_telemetry(void) {
 	ak45_feedback_t fb = {0};
 	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Get feedback failed for angle telemetry");
 		return W_FAILURE;
 	}
 
@@ -308,7 +294,7 @@ static w_status_t ak45_sd_telemetry(void) {
 	log_container.servo_motor.motor_temperature = (float32_t)fb.temperature_c;
 
 	if (log_data(LOG_WAIT_MS, LOG_TYPE_SERVO_MOTOR, &log_container) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "ak45", "Failed to log motor data.");
+		ak45_health.sd_log_data_fails++;
 		return W_FAILURE;
 	}
 
@@ -365,7 +351,6 @@ w_status_t ak45_send_pos_velo_cmd(float32_t angle_deg, uint16_t mag_speed_rpm,
 w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms) {
 	// check if the driver has inited
 	if (ak45_health.is_init) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "attempting to reinit ak45 driver");
 		ak45_health.reinit_attempts++;
 		return W_FAILURE;
 	}
@@ -511,7 +496,6 @@ w_status_t ak45_send_disable_cmd(void) {
 
 w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
 	if (NULL == fb) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointers or not initialized");
 		ak45_health.invalid_args++;
 		return W_FAILURE;
 	}
@@ -593,22 +577,21 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 // TODO: test version which 5 degrees on both side with
 w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config) {
 	if (NULL == config) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointers or not initialized");
 		ak45_health.invalid_args++;
 		return W_FAILURE;
 	}
 
 	if (ak45_send_pos_velo_cmd(10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
 		ak45_health.hard_stop_calibrated = false;
 		ak45_health.hard_stop_cal_failed = true;
+		ak45_health.hard_stop_cal_fail_count++;
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(5000)); // 5 seconds
 	if (ak45_send_pos_velo_cmd(-10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
 		ak45_health.hard_stop_calibrated = false;
 		ak45_health.hard_stop_cal_failed = true;
+		ak45_health.hard_stop_cal_fail_count++;
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(5000)); // 5 seconds
@@ -682,6 +665,21 @@ health_status_t ak45_get_status(void) {
 			 ak45_health.init_fdcan_start_fails,
 			 ak45_health.init_fdcan_filter_cfg_fails,
 			 ak45_health.fdcan_stop_fails);
+
+	log_text(LOG_WAIT_MS,
+			 LOG_LVL_INFO,
+			 "ak45",
+			 "cal_fail_count=%" PRIu32,
+			 ak45_health.hard_stop_cal_fail_count);
+
+	log_text(LOG_WAIT_MS,
+			 LOG_LVL_INFO,
+			 "ak45",
+			 "telemetry_scale_fails=%" PRIu32 ", telemetry_can_tx_fails=%" PRIu32
+			 ", sd_log_data_fails=%" PRIu32,
+			 ak45_health.telemetry_scale_fails,
+			 ak45_health.telemetry_can_tx_fails,
+			 ak45_health.sd_log_data_fails);
 
 	ak45_health.cmd_tx_failed = false;
 	ak45_health.feedback_rx_failed = false;
