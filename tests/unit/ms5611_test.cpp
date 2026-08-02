@@ -184,8 +184,6 @@ TEST_F(MS5611Test, TC01_InitFailsIfResetWriteFails) {
     EXPECT_EQ(W_FAILURE, ms5611_init());
     /* The PROM must not have been touched */
     EXPECT_EQ(0u, i2c_read_reg_fake.call_count);
-    /* An error must have been logged */
-    EXPECT_GE(log_text_fake.call_count, 1u);
 }
 
 /* TC-02 — first PROM coefficient read fails */

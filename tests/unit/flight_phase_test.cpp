@@ -30,6 +30,7 @@ FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_
 // w_status_t get_cmd_actuator_state(const can_msg_t *msg, can_actuator_state_t *cmd_actuator_state);
 FAKE_VALUE_FUNC(w_status_t, get_cmd_actuator_state, const can_msg_t *, can_actuator_state_t *);
 FAKE_VALUE_FUNC(double, math_vector3d_norm, const vector3d_t *);
+FAKE_VALUE_FUNC(fsm_state_t, fsm_get_state);
 
 BaseType_t
 xQueuePeek_state_pad(QueueHandle_t xQueue, void *const pvBuffer, TickType_t xTicksToWait) {
@@ -61,6 +62,7 @@ protected:
         RESET_FAKE(get_cmd_actuator_state);
         RESET_FAKE(timer_get_ms);
         RESET_FAKE(math_vector3d_norm);
+        RESET_FAKE(fsm_get_state);
         FFF_RESET_HISTORY();
         queue_send_event = EVENT_NONE;
     }
