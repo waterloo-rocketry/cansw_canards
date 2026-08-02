@@ -612,7 +612,7 @@ health_status_t ak45_get_status(void) {
 	if (ak45_health.hard_stop_cal_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_FAILED_CALIBRATION_OFFSET);
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed calibration.");
 	}
 
 	if (ak45_health.cmd_tx_failed) {
@@ -626,7 +626,7 @@ health_status_t ak45_get_status(void) {
 	}
 
 	if (!ak45_health.is_init) {
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
