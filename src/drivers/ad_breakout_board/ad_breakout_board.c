@@ -50,7 +50,6 @@ static const size_t AD_ACCEL_RAW_MEASUREMENT_SIZE = sizeof(adxl380_raw_accel_dat
 
 static ad_task_ctx_t g_task_ctx = {};
 
-
 /**
  * @brief health struct for the ADXRS649, also updated directly by the ad_breakout_board task
  * for gyro-related task-level failures (read/drdy fails, invalid ptrs)

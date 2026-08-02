@@ -295,7 +295,8 @@ health_status_t adxrs649_get_status(void) {
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "ADXRS649",
-			 "data_ready_check_fails=%" PRIu32 ", data_read_fails=%" PRIu32 ", null_params=%" PRIu32,
+			 "data_ready_check_fails=%" PRIu32 ", data_read_fails=%" PRIu32
+			 ", null_params=%" PRIu32,
 			 adxrs649_health.data_ready_check_fails,
 			 adxrs649_health.data_read_fails,
 			 adxrs649_health.null_params);
