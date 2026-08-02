@@ -194,9 +194,7 @@ w_status_t adxrs649_init() {
  */
 w_status_t adxrs649_is_data_ready(bool *p_drdy) {
 	if (!is_initialized) {
-#ifndef HIL
 		adxrs649_health.not_initialized_calls++;
-#endif
 		return W_FAILURE;
 	}
 	if ((NULL == p_drdy)) {
@@ -232,9 +230,7 @@ w_status_t adxrs649_is_data_ready(bool *p_drdy) {
  */
 w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 	if (!is_initialized) {
-#ifndef HIL
 		adxrs649_health.not_initialized_calls++;
-#endif
 		return W_FAILURE;
 	}
 
@@ -252,6 +248,7 @@ w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 
 	float64_t data_mv = 0;
 	if (ads1219_millivolts(&g_ads_handle, (int32_t)*p_raw_data, &data_mv) != W_SUCCESS) {
+		adxrs649_health.comm_failure = true;
 		adxrs649_health.millivolt_conversion_fails++;
 		return W_FAILURE;
 	}
@@ -298,7 +295,7 @@ health_status_t adxrs649_get_status(void) {
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "ADXRS649",
-			 "data_read_check_fails=%" PRIu32 ", data_read_fails=%" PRIu32 ", null_params=%" PRIu32,
+			 "data_ready_check_fails=%" PRIu32 ", data_read_fails=%" PRIu32 ", null_params=%" PRIu32,
 			 adxrs649_health.data_ready_check_fails,
 			 adxrs649_health.data_read_fails,
 			 adxrs649_health.null_params);

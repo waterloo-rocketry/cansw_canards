@@ -22,12 +22,6 @@ typedef struct {
 } adxrs649_health_t;
 
 /**
- * @brief health struct for the ADXRS649, also updated directly by the ad_breakout_board task
- * for gyro-related task-level failures (read/drdy fails, invalid ptrs)
- */
-extern adxrs649_health_t adxrs649_health;
-
-/**
  * @brief initialize and start up the ADXRS649 AD Gyro and ADS1219
  * @return the status at which the ADXRS649 initalization goes
  */

@@ -50,6 +50,19 @@ static const size_t AD_ACCEL_RAW_MEASUREMENT_SIZE = sizeof(adxl380_raw_accel_dat
 
 static ad_task_ctx_t g_task_ctx = {};
 
+
+/**
+ * @brief health struct for the ADXRS649, also updated directly by the ad_breakout_board task
+ * for gyro-related task-level failures (read/drdy fails, invalid ptrs)
+ */
+extern adxrs649_health_t adxrs649_health;
+
+/**
+ * @brief health struct for the ADXL380, also updated directly by the ad_breakout_board task
+ * for accel-related task-level failures (read/drdy fails, invalid ptrs, data logging fails)
+ */
+extern adxl380_health_t adxl380_health;
+
 static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, const uint32_t raw_gyro,
 												 const adxl380_raw_accel_data_t *g_raw_accel) {
 	return W_SUCCESS;
@@ -94,10 +107,8 @@ void ad_breakout_board_task(void *argument) {
 		} else {
 			update_gyro_data = true;
 			g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-#ifndef HIL
 			adxrs649_health.comm_failure = true;
 			adxrs649_health.read_fails++;
-#endif
 		}
 
 		// if new gyro data update the timestamp
@@ -115,20 +126,16 @@ void ad_breakout_board_task(void *argument) {
 				if (adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
 										   &raw_accel) != W_SUCCESS) {
 					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-#ifndef HIL
 					adxl380_health.comm_failure = true;
 					adxl380_health.read_fails++;
-#endif
 				}
 			}
 
 		} else {
 			update_accel_data = true;
 			g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
-#ifndef HIL
 			adxl380_health.comm_failure = true;
 			adxl380_health.read_fails++;
-#endif
 		}
 
 		// if new gyro data update the timestamp

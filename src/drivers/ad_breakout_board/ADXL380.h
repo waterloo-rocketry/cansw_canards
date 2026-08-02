@@ -29,12 +29,6 @@ typedef struct {
 } adxl380_health_t;
 
 /**
- * @brief health struct for the ADXL380, also updated directly by the ad_breakout_board task
- * for accel-related task-level failures (read/drdy fails, invalid ptrs, data logging fails)
- */
-extern adxl380_health_t adxl380_health;
-
-/**
  * @brief this is initializes the ADXL380
  * @return the status of the function call
  */

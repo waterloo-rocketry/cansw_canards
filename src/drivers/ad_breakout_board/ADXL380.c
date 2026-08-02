@@ -169,9 +169,7 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
  */
 w_status_t adxl380_is_data_ready(bool *p_drdy) {
 	if (!is_initialized) {
-#ifndef HIL
 		adxl380_health.not_initialized_calls++;
-#endif
 		return W_FAILURE;
 	}
 	if (NULL == p_drdy) {
