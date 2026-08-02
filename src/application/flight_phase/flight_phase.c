@@ -93,7 +93,7 @@ w_status_t flight_phase_init(void) {
 		(W_SUCCESS != can_handler_act_cmd_register_callback(ACTUATOR_IGNITION, act_cmd_callback)) ||
 		(W_SUCCESS !=
 		 can_handler_act_cmd_register_callback(ACTUATOR_CANARD_PAD_FILTER, act_cmd_callback))) {
-			log_text(
+		log_text(
 			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
 		return W_FAILURE;
 	}
