@@ -24,6 +24,9 @@ static const uint32_t NAV_LOG_DATA_TIMEOUT = 0;
 
 static const uint8_t NUM_VEL_AXIS = 3;
 
+// maximum number of times that nav can fail to run before error is reported
+static const uint8_t MAXIMUM_NAV_NOT_RUN_COUNT = 3;
+
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 // TODO: if kept change to static const
 #define ESTIMATOR_CAN_TX_PERIOD_MS 100
@@ -53,18 +56,15 @@ static w_status_t nav_can_telemetry(void) {
 	w_status_t status = W_SUCCESS;
 
 	if (xQueuePeek(nav_value_queue, &nav_value_lastest_raw, 0) != pdTRUE) {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "navigator",
-				 "Failed to peek mailbox queue while sending current nav values through can.");
-
+		navigator_error_stats.queue_is_empty = true;
 		return W_FAILURE;
 	}
 
 	uint32_t timestamp = 0;
 
 	if (timer_get_ms(&timestamp) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "navigator", "Failed to get timestamp for can msg tx");
+		navigator_error_stats.timestamp_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
 		return W_FAILURE;
 	}
 
@@ -95,19 +95,14 @@ static w_status_t nav_can_telemetry(void) {
 										 &msg_qw_alt_var);
 
 		if (can_handler_transmit(&msg_qw_alt_var) != W_SUCCESS) {
-			log_text(
-				0,
-				LOG_LVL_WARN,
-				"navigator",
-				"Failed to transmit orientation w, altitude, variance norm values through can.");
+			navigator_error_stats.can_telem_tx_fail_count++;
+			navigator_error_stats.can_telem_tx_fail = true;
 			status |= W_FAILURE;
 		}
 
 	} else {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "navigator",
-				 "Can encode failed for orientation w, altitude, variance norm.");
+		navigator_error_stats.can_encode_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
 		status = W_FAILURE;
 	}
 
@@ -137,14 +132,13 @@ static w_status_t nav_can_telemetry(void) {
 										 &msg_qxyz);
 
 		if (can_handler_transmit(&msg_qxyz) != W_SUCCESS) {
-			log_text(0,
-					 LOG_LVL_WARN,
-					 "navigator",
-					 "Failed to transmit orientation x y z values through can.");
+			navigator_error_stats.can_telem_tx_fail_count++;
+			navigator_error_stats.can_telem_tx_fail = true;
 			status |= W_FAILURE;
 		}
 	} else {
-		log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientation x y z.");
+		navigator_error_stats.can_encode_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
 		status = W_FAILURE;
 	}
 
@@ -177,14 +171,13 @@ static w_status_t nav_can_telemetry(void) {
 											 &msg);
 
 			if (can_handler_transmit(&msg) != W_SUCCESS) {
-				log_text(0,
-						 LOG_LVL_WARN,
-						 "navigator",
-						 "Failed to transmit velocity/angular velocity values through can.");
+				navigator_error_stats.can_telem_tx_fail_count++;
+				navigator_error_stats.can_telem_tx_fail = true;
 				status |= W_FAILURE;
 			}
 		} else {
-			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for angular velocity.");
+			navigator_error_stats.can_encode_fail_count++;
+			navigator_error_stats.can_telem_tx_fail = true;
 			status = W_FAILURE;
 		}
 	}
@@ -198,11 +191,7 @@ static w_status_t nav_sd_telemetry(void) {
 	w_status_t status = W_SUCCESS;
 
 	if (xQueuePeek(nav_value_queue, &nav_value_lastest_raw, 0) != pdTRUE) {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "navigator",
-				 "Failed to peek mailbox queue while sending current nav values to SD.");
-
+		navigator_error_stats.queue_is_empty = true;
 		return W_FAILURE;
 	}
 
@@ -218,7 +207,8 @@ static w_status_t nav_sd_telemetry(void) {
 	log_container.navigator_pt1.variance_norm = (float32_t)nav_value_lastest_raw.variance_norm;
 
 	if (log_data(NAV_LOG_DATA_TIMEOUT, LOG_TYPE_NAVIGATOR_PT1, &log_container) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "navigator", "Failed to log nav pt 1.");
+		navigator_error_stats.log_data_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
 		status |= W_FAILURE;
 	}
 
@@ -235,7 +225,8 @@ static w_status_t nav_sd_telemetry(void) {
 		(float32_t)nav_value_lastest_raw.angular_velocity[2];
 
 	if (log_data(NAV_LOG_DATA_TIMEOUT, LOG_TYPE_NAVIGATOR_PT2, &log_container) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "navigator", "Failed to log nav pt 2.");
+		navigator_error_stats.log_data_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
 		status |= W_FAILURE;
 	}
 
@@ -246,7 +237,7 @@ static w_status_t nav_sd_telemetry(void) {
 
 w_status_t navigator_init(void) {
 	// Initialize error tracking
-	navigator_error_stats = (navigator_error_data_t){.is_init = true};
+	navigator_error_stats = (navigator_error_data_t){0};
 
 	// create mailbox queue for nav values
 	nav_value_queue = xQueueCreate(1, sizeof(nav_value_handle_t));
@@ -284,13 +275,14 @@ w_status_t navigator_init(void) {
 		return W_FAILURE;
 	}
 
+	navigator_error_stats.is_init = true;
+
 	return W_SUCCESS;
 }
 
 w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t timestamp_tenth_ms,
 						  navigator_ctx_t *p_ctx, navigator_output_t *p_output) {
 	if ((NULL == p_input) || (NULL == p_ctx) || (NULL == p_output)) {
-		log_text(0, LOG_LVL_WARN, "navigator", "Invalid context ptr.");
 		navigator_error_stats.null_ctx_count++;
 		navigator_error_stats.ctx_is_null = true;
 		return W_INVALID_PARAM;
@@ -303,7 +295,7 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 	// construct sensor inputs
 	gnc_navigator_sensor_input_t codegen_sensor_input = {0};
 
-	// status repersents if this sensor should be used in this cycle of nav
+	// status represents if this sensor should be used in this cycle of nav
 	// lsm6
 	memcpy(codegen_sensor_input.board_accel.meas,
 		   p_input->sensor_data->board_meas.board_imu.accel.array,
@@ -372,7 +364,11 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 	if (is_run) { // if nav ran
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
-		log_text(0, LOG_LVL_WARN, "Navigator", "Nav failed to run");
+		navigator_error_stats.nav_not_run_count++;
+		if (navigator_error_stats.nav_not_run_count > MAXIMUM_NAV_NOT_RUN_COUNT) {
+			navigator_error_stats.nav_not_run = true;
+			navigator_error_stats.nav_not_run_count = 0;
+		}
 	}
 
 	nav_value_handle_t nav_latest_values;
@@ -399,7 +395,8 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 
 w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_data) {
 	if ((NULL == p_ctx) || (NULL == p_sensor_data)) {
-		log_text(0, LOG_LVL_WARN, "navigator", "Invalid context ptr.");
+		navigator_error_stats.null_ctx_count++;
+		navigator_error_stats.ctx_is_null = true;
 		return W_INVALID_PARAM;
 	}
 
@@ -461,12 +458,26 @@ health_status_t navigator_get_status(void) {
 
 	if (navigator_error_stats.ctx_is_null) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		navigator_error_stats.ctx_is_null = false;
+	}
+
+	if (navigator_error_stats.can_telem_tx_fail) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
+		navigator_error_stats.can_telem_tx_fail = false;
 	}
 
 	if (navigator_error_stats.nav_not_run) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_LOOP_TIMING_OFFSET;
+		navigator_error_stats.nav_not_run = false;
+	}
+
+	if (navigator_error_stats.queue_is_empty) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
+		navigator_error_stats.queue_is_empty = false;
 	}
 
 	if (!navigator_error_stats.is_init) {
@@ -474,19 +485,24 @@ health_status_t navigator_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
-	// reset flags
-	navigator_error_stats.ctx_is_null = false;
-	navigator_error_stats.nav_not_run = false;
-
 	// Log all error statistics
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "navigator",
-			 "init=%d, null_ctx=%d, nav_not_run=%d",
+			 "init=%lu, null_ctx=%lu, nav_not_run=%lu, can_encode_fail=%lu",
 			 navigator_error_stats.is_init,
 			 navigator_error_stats.null_ctx_count,
-			 navigator_error_stats.nav_not_run_count);
+			 navigator_error_stats.nav_not_run_count,
+			 navigator_error_stats.can_encode_fail_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "navigator",
+			 "timestamp_fail=%lu, log_data_fail=%lu, can_telem_tx_fail=%lu",
+			 navigator_error_stats.timestamp_fail_count,
+			 navigator_error_stats.log_data_fail_count,
+			 navigator_error_stats.can_telem_tx_fail_count);
 
 	return status;
 }
