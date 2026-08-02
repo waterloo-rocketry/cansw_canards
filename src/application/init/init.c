@@ -228,18 +228,19 @@ static void system_init_task(void *arg) {
 	// register motor calibration
 	if (can_handler_act_cmd_register_callback(ACTUATOR_CANARD_MOTOR_CALIBRATION,
 											  &ak45_motor_calibration) != W_SUCCESS) {
-		log_text(0, LOG_LVL_FATAL, "ak45", "failed to add calibration callback");
+		log_text(0, LOG_LVL_FATAL, "SystemInit", "failed to add calibration callback");
 		ak45_send_disable_cmd();
 	}
 	// its blinky now
-	ak45_hard_stop_calibrate(&ak45_calibration_config);
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
 
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
 			// TODO: TEST ONLY
-			ak45_hard_stop_calibrate(&ak45_calibration_config);
+			if (ak45_hard_stop_calibrate(&ak45_calibration_config) != W_SUCCESS) {
+				log_text(0, LOG_LVL_FATAL, "SystemInit", "failed motor calibration");
+			}
 		}
 	}
 }
