@@ -36,29 +36,22 @@ static const float32_t AK45_POS_FB_TO_DEG = 0.1f; // Feedback position: raw * 0.
 static const float32_t AK45_SPEED_FB_TO_ERPM = 10.0f; // speed feedback: raw * 10.0 = ERPM
 static const float32_t AK45_CURRENT_FB_TO_A = 0.01f; // current feedback: raw * 0.01 = Amps
 
-static const uint16_t AK45_TELEMETRY_INT16_OFFSET = 32768; // convert signed int to unsigned
-
 static FDCAN_HandleTypeDef *g_ak45_hfdcan = NULL;
 static QueueHandle_t g_feedback_queue = NULL;
 static volatile bool received_can_msg = false;
 
+static const uint32_t AK45_UPDATE_PERIOD = 5;
+
 const ak45_calibration_config_t ak45_calibration_config = {
 	.seek_target_deg = 50.0f,
-	.backoff_deg = 3.0f,
-	.backoff_settle_ms = 300,
-	.stall_speed_erpm_max = 50.0f,
-	.stall_current_a_min = 0.2f,
-	.stall_hold_ms = 200,
-	.stall_sample_count = 5,
+	.backoff_deg = 20.0f,
+	.settle_ms = 2000,
+
+	.stall_current_a_min = 2.0f,
+
+	.stablize_ms = 1000,
 	.max_tap_delta_deg = 1.0f,
 	.seek_timeout_ms = 40000,
-	.settle_timeout_ms = 3000,
-	.position_tolerance_deg = 0.5f,
-	.min_span_deg = 30.0f,
-	.max_span_deg = 60.0f,
-
-	.cal_speed_rpm = 200,
-	.cal_accel_rpm_s2 = 32767,
 };
 
 /**
@@ -207,12 +200,11 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 
 	} else {
 		can_msg_t msg = {0};
-		build_analog_sensor_16bit_msg(
-			PRIO_LOW,
-			(uint16_t)timestamp_ms,
-			SENSOR_CANARD_SERVO_TEMP,
-			(uint16_t)(temperature_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET),
-			&msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW,
+									  (uint16_t)timestamp_ms,
+									  SENSOR_CANARD_SERVO_TEMP,
+									  (uint16_t)(temperature_scaled_int16 + TELEMETRY_INT16_OFFSET),
+									  &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			log_text(LOG_WAIT_MS,
@@ -232,12 +224,11 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 
 	} else {
 		can_msg_t msg = {0};
-		build_analog_sensor_16bit_msg(
-			PRIO_LOW,
-			(uint16_t)timestamp_ms,
-			SENSOR_CANARD_SERVO_CURR,
-			(uint16_t)(current_scaled_int16 + AK45_TELEMETRY_INT16_OFFSET),
-			&msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW,
+									  (uint16_t)timestamp_ms,
+									  SENSOR_CANARD_SERVO_CURR,
+									  (uint16_t)(current_scaled_int16 + TELEMETRY_INT16_OFFSET),
+									  &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			log_text(LOG_WAIT_MS,
@@ -269,18 +260,18 @@ static w_status_t ak45_driver_angle_telemetry() {
 		return W_FAILURE;
 	}
 
-	int16_t scaled_angle_int16 = 0;
-	if (can_encode_scaled_float(SCALE_SERVO_ANGLE, fb.position_deg, &scaled_angle_int16) !=
+	int32_t scaled_angle_int32 = 0;
+	if (can_encode_scaled_float(SCALE_SERVO_ANGLE, fb.position_deg, &scaled_angle_int32) !=
 		W_SUCCESS) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed to scale the value");
 		return W_FAILURE;
 	}
 
 	can_msg_t msg = {0};
-	build_analog_sensor_16bit_msg(PRIO_LOW,
+	build_analog_sensor_32bit_msg(PRIO_LOW,
 								  (uint16_t)timestamp_ms,
 								  SENSOR_CANARD_SERVO_ANGLE,
-								  (uint16_t)(scaled_angle_int16 + AK45_TELEMETRY_INT16_OFFSET),
+								  (uint32_t)(scaled_angle_int32 + TELEMETRY_INT32_OFFSET),
 								  &msg);
 
 	if (can_handler_transmit(&msg) != W_SUCCESS) {
@@ -590,35 +581,6 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	}
 }
 
-// TODO: test version which 5 degrees on both side with
-w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config) {
-	if (NULL == config) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Invalid pointers or not initialized");
-		ak45_health.invalid_args++;
-		return W_FAILURE;
-	}
-
-	if (ak45_send_pos_velo_cmd(10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
-		ak45_health.hard_stop_calibrated = false;
-		ak45_health.hard_stop_cal_failed = true;
-		return W_FAILURE;
-	}
-	vTaskDelay(pdMS_TO_TICKS(5000)); // 5 seconds
-	if (ak45_send_pos_velo_cmd(-10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
-		ak45_health.hard_stop_calibrated = false;
-		ak45_health.hard_stop_cal_failed = true;
-		return W_FAILURE;
-	}
-	vTaskDelay(pdMS_TO_TICKS(5000)); // 5 seconds
-
-	// set to calibrated
-	ak45_health.hard_stop_calibrated = true;
-	ak45_health.hard_stop_cal_failed = false;
-	return W_SUCCESS;
-}
-
 health_status_t ak45_get_status(void) {
 	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
 							  .module_id = CANARDS_MODULE_ID_AK45,
@@ -687,4 +649,226 @@ health_status_t ak45_get_status(void) {
 	ak45_health.feedback_rx_failed = false;
 
 	return status;
+}
+
+static w_status_t ak45_detect_hard_stop(const ak45_calibration_config_t *config,
+										bool check_pos_side, float32_t *hard_stop_angle_deg) {
+	if (NULL == config) {
+		ak45_health.invalid_args++;
+		return W_FAILURE;
+	}
+
+	float32_t increment_deg = check_pos_side ? 0.1 : -0.1;
+
+	uint32_t start_time_ms = 0;
+	if (timer_get_ms(&start_time_ms) != W_SUCCESS) {
+		ak45_health.timer_get_ms_fails++;
+		return W_FAILURE;
+	}
+
+	// move to max
+	// if (ak45_send_pos_velo_cmd(max_angle, config->cal_speed_rpm, config->cal_accel_rpm_s2) !=
+	// W_SUCCESS) { 	return W_FAILURE;
+	// }
+
+	uint32_t curr_time_ms = start_time_ms;
+
+	ak45_feedback_t fb = {0};
+
+	if (ak45_get_latest_feedback(&fb) != W_SUCCESS) {
+		// bring back to zero
+		ak45_send_position_cmd(0); // no success checks since this is an emergency cmd
+		return W_FAILURE;
+	}
+
+	float32_t cur_angle_deg = fb.position_deg;
+
+	while ((start_time_ms + config->seek_timeout_ms) >= curr_time_ms) {
+		if (ak45_get_latest_feedback(&fb) != W_SUCCESS) {
+			// bring back to zero
+			ak45_send_position_cmd(0); // no success checks since this is an emergency cmd
+			return W_FAILURE;
+		}
+		if ((fb.current_a) > (config->stall_current_a_min)) {
+			break;
+		}
+		// ak45_send_pos_velo_cmd(max_angle, config->cal_speed_rpm, config->cal_accel_rpm_s2);
+		ak45_send_position_cmd(cur_angle_deg);
+		cur_angle_deg += increment_deg;
+		if (fabsf(cur_angle_deg) > config->seek_target_deg) {
+			break;
+		}
+		vTaskDelay(AK45_UPDATE_PERIOD);
+
+		if (timer_get_ms(&curr_time_ms) != W_SUCCESS) {
+			ak45_send_position_cmd(0); // no success checks since this is an emergency cmd
+			return W_FAILURE;
+		}
+	}
+
+	// check if timed out
+	if (((start_time_ms + config->seek_timeout_ms) < curr_time_ms) ||
+		(fabsf(cur_angle_deg) > config->seek_target_deg)) {
+		ak45_send_position_cmd(0); // no success checks since this is an emergency cmd
+		return W_FAILURE;
+	}
+
+	// // use current mode to hold position
+	// float32_t hold_current_mA = 1000 * (check_pos_side ? config->hold_current_a : -1 *
+	// config->hold_current_a); if (ak45_send_current_cmd(hold_current_mA) != W_SUCCESS) {
+	// 	ak45_send_position_cmd(0); // no success checks since this is an emergency cmd
+	// 	return W_FAILURE;
+	// }
+
+	// wait to stablize
+	vTaskDelay(config->stablize_ms);
+
+	// grab the position
+	// if (ak45_get_latest_feedback(&fb) != W_SUCCESS) {
+	// 	// bring back to zero
+	// 	ak45_send_position_cmd(0); // no success checks since this is an emergency cmd
+	// 	return W_FAILURE;
+	// }
+
+	*hard_stop_angle_deg = fb.position_deg;
+
+	return W_SUCCESS;
+}
+
+// TODO: test version which 5 degrees on both side with
+w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config) {
+	if (NULL == config) {
+		ak45_health.invalid_args++;
+		return W_FAILURE;
+	}
+
+	// reset to zero
+	if (ak45_send_position_cmd(0) != W_SUCCESS) {
+		return W_FAILURE;
+	}
+
+	// postive
+	// tap 1
+	float32_t pos_tap_1_deg = 0;
+	if (ak45_detect_hard_stop(config, true, &pos_tap_1_deg) != W_SUCCESS) {
+		// reset to zero and
+		ak45_send_position_cmd(0);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive tap 1 calibration.");
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	// bring our self back a bit
+	if (ak45_send_position_cmd(pos_tap_1_deg - config->backoff_deg) != W_SUCCESS) {
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	vTaskDelay(pdMS_TO_TICKS(config->settle_ms));
+
+	// tap 2
+	float32_t pos_tap_2_deg = 0;
+	if (ak45_detect_hard_stop(config, true, &pos_tap_2_deg) != W_SUCCESS) {
+		// reset to zero and
+		ak45_send_position_cmd(0);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive tap 2 calibration.");
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	// make sure with range and set positive side
+	if (fabsf(pos_tap_1_deg - pos_tap_2_deg) > config->max_tap_delta_deg) {
+		ak45_send_position_cmd(0);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	float32_t pos_hardstops_deg = (pos_tap_1_deg + pos_tap_2_deg) / 2;
+
+	// find negative hardstops
+	// reset to zero
+	if (ak45_send_position_cmd(0) != W_SUCCESS) {
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	vTaskDelay(pdMS_TO_TICKS(config->settle_ms));
+
+	// negative
+	// tap 1
+	float32_t neg_tap_1_deg = 0;
+	if (ak45_detect_hard_stop(config, false, &neg_tap_1_deg) != W_SUCCESS) {
+		// reset to zero
+		ak45_send_position_cmd(0);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive tap 1 calibration.");
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	// bring our self back a bit
+	if (ak45_send_position_cmd(neg_tap_1_deg + config->backoff_deg) != W_SUCCESS) {
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	vTaskDelay(pdMS_TO_TICKS(config->settle_ms));
+
+	// tap 2
+	float32_t neg_tap_2_deg = 0;
+	if (ak45_detect_hard_stop(config, false, &neg_tap_2_deg) != W_SUCCESS) {
+		// reset to zero and
+		ak45_send_position_cmd(0);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive tap 2 calibration.");
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	// make sure with range and set positive side
+	if (fabsf(neg_tap_1_deg - neg_tap_2_deg) > config->max_tap_delta_deg) {
+		ak45_send_position_cmd(0);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	// reset to zero
+	if (ak45_send_position_cmd(0) != W_SUCCESS) {
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	vTaskDelay(pdMS_TO_TICKS(config->settle_ms));
+
+	// go to new zero
+	float32_t neg_hardstops_deg = (neg_tap_1_deg + neg_tap_2_deg) / 2;
+
+	if (ak45_send_position_cmd((pos_hardstops_deg + neg_hardstops_deg) / 2) != W_SUCCESS) {
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	vTaskDelay(pdMS_TO_TICKS(config->settle_ms));
+
+	if (ak45_send_set_origin() != W_SUCCESS) {
+		ak45_health.hard_stop_calibrated = false;
+		ak45_health.hard_stop_cal_failed = true;
+		return W_FAILURE;
+	}
+
+	// set to calibrated
+	ak45_health.hard_stop_calibrated = true;
+	ak45_health.hard_stop_cal_failed = false;
+	return W_SUCCESS;
 }
