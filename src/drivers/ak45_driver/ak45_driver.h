@@ -43,7 +43,6 @@ typedef struct {
 	float32_t max_tap_delta_deg;
 
 	uint32_t seek_timeout_ms;
-	uint32_t stablize_ms;
 } ak45_calibration_config_t;
 
 extern const ak45_calibration_config_t ak45_calibration_config;
