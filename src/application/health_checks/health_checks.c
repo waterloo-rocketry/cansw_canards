@@ -1,4 +1,4 @@
-#include "health_checks.h"
+#include "application/health_checks/health_checks.h"
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
