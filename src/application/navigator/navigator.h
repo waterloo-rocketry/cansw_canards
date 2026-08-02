@@ -20,24 +20,6 @@ typedef struct {
 } navigator_ctx_t;
 
 /**
- * @brief Structure to track navigator errors and status
- */
-typedef struct {
-	bool is_init; /**< Initialization status flag */
-	uint32_t null_ctx_count;
-	uint32_t nav_not_run_count;
-	uint32_t can_encode_fail_count;
-	uint32_t timestamp_fail_count;
-	uint32_t log_data_fail_count;
-	uint32_t can_telem_tx_fail_count;
-
-	bool can_telem_tx_fail;
-	bool queue_is_empty;
-	bool ctx_is_null;
-	bool nav_not_run;
-} navigator_error_data_t;
-
-/**
  * @brief initialize navigator module
  */
 w_status_t navigator_init();

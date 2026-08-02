@@ -35,6 +35,26 @@ static const uint8_t MAXIMUM_NAV_NOT_RUN_COUNT = 3;
 #define DATA_WAIT_MS 10
 
 // Error tracking
+
+/**
+ * @brief Structure to track navigator errors and status
+ */
+typedef struct {
+	bool is_init; /**< Initialization status flag */
+	uint32_t null_ctx_count;
+	uint32_t total_nav_not_run_count;
+	uint8_t nav_not_run_count;
+	uint32_t can_encode_fail_count;
+	uint32_t timestamp_fail_count;
+	uint32_t log_data_fail_count;
+	uint32_t can_telem_tx_fail_count;
+
+	bool can_telem_tx_fail;
+	bool queue_is_empty;
+	bool ctx_is_null;
+	bool nav_not_run;
+} navigator_error_data_t;
+
 static navigator_error_data_t navigator_error_stats = {0};
 
 // Latest nav state, stored unscaled as raw floats. Scaling + offset into the
@@ -365,6 +385,7 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
 		navigator_error_stats.nav_not_run_count++;
+		navigator_error_stats.total_nav_not_run_count++;
 		if (navigator_error_stats.nav_not_run_count > MAXIMUM_NAV_NOT_RUN_COUNT) {
 			navigator_error_stats.nav_not_run = true;
 			navigator_error_stats.nav_not_run_count = 0;
@@ -493,7 +514,7 @@ health_status_t navigator_get_status(void) {
 			 "init=%lu, null_ctx=%lu, nav_not_run=%lu, can_encode_fail=%lu",
 			 navigator_error_stats.is_init,
 			 navigator_error_stats.null_ctx_count,
-			 navigator_error_stats.nav_not_run_count,
+			 navigator_error_stats.total_nav_not_run_count,
 			 navigator_error_stats.can_encode_fail_count);
 
 	log_text(10,
