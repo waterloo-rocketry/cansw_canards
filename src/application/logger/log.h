@@ -10,8 +10,8 @@
 #include "drivers/altimu-10/altimu-10.h"
 
 /* Size of a single buffer (bytes) */
-// #define LOG_BUFFER_SIZE 32768
-#define LOG_BUFFER_SIZE 16384
+#define LOG_BUFFER_SIZE 32768
+// #define LOG_BUFFER_SIZE 16384
 /* Size of each message region in text buffers (bytes) */
 #define MAX_TEXT_MSG_LENGTH 128
 /**
@@ -32,9 +32,11 @@
 #endif
 
 /* Number of text log buffers */
-#define NUM_TEXT_LOG_BUFFERS 3
+#define NUM_TEXT_LOG_BUFFERS 2
+// #define NUM_TEXT_LOG_BUFFERS 2
 /* Number of data log buffers */
-#define NUM_DATA_LOG_BUFFERS 10
+#define NUM_DATA_LOG_BUFFERS 4
+// #define NUM_DATA_LOG_BUFFERS 11
 
 /**
  * Version number to identify post-flight how to parse data log messages.
