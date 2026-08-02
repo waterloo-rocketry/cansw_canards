@@ -6,6 +6,7 @@
 
 #include "application/can_handler/can_handler.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "canlib.h"
 #include "common/gnc/gnc_types.h"
@@ -48,17 +49,15 @@ typedef struct {
 	bool ctx_is_null;
 	bool invalid_event;
 	bool invalid_actuator_data_format;
-	bool dead_imu;
 	bool is_queue_full;
 
 	uint32_t error_state_count;
 	uint32_t null_ctx_count;
 	uint32_t invalid_event_count;
 	uint32_t invalid_actuator_data_count;
-	uint32_t dead_imu_count;
-	uint32_t timer_event_send_fail_count;
-	uint32_t sensor_event_send_fail_count;
+	uint32_t event_send_fail_count;
 	uint32_t queue_full_count;
+	uint32_t state_transitions;
 
 	// Per-event counters
 	struct {
@@ -94,10 +93,13 @@ w_status_t flight_phase_init(void) {
 		(W_SUCCESS != can_handler_act_cmd_register_callback(ACTUATOR_IGNITION, act_cmd_callback)) ||
 		(W_SUCCESS !=
 		 can_handler_act_cmd_register_callback(ACTUATOR_CANARD_PAD_FILTER, act_cmd_callback))) {
+			log_text(
+			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
 		return W_FAILURE;
 	}
 
 	flight_phase_status.initialized = true;
+	log_text(10, LOG_LVL_INFO, "FlightPhase", "Flight Phase Initialized Successfully.");
 	return W_SUCCESS;
 }
 
@@ -311,6 +313,13 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 			break;
 	}
 
+	// Only count as a transition if the state actually changed
+	if (new_state != curr_state) {
+		log_text(
+			1, LOG_LVL_INFO, "FlightPhase", "State transition: %d -> %d", curr_state, new_state);
+		flight_phase_status.state_transitions++;
+	}
+
 	return new_state;
 }
 
@@ -375,8 +384,6 @@ static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_
  */
 static void process_imu_meas(bool is_new, const vector3d_t *accel, uint8_t *num_consec_detection) {
 	if (!is_new) {
-		flight_phase_status.dead_imu = true;
-		flight_phase_status.dead_imu_count++;
 		(*num_consec_detection) = 0;
 		return;
 	}
@@ -457,7 +464,7 @@ w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_sta
 
 	if (EVENT_NONE != timer_event) {
 		if (flight_phase_send_event(timer_event) != W_SUCCESS) {
-			flight_phase_status.timer_event_send_fail_count++;
+			flight_phase_status.event_send_fail_count++;
 			status = W_FAILURE;
 		}
 	}
@@ -468,7 +475,7 @@ w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_sta
 
 	if (EVENT_NONE != sensor_event) {
 		if (flight_phase_send_event(sensor_event) != W_SUCCESS) {
-			flight_phase_status.sensor_event_send_fail_count++;
+			flight_phase_status.event_send_fail_count++;
 			status = W_FAILURE;
 		}
 	}
@@ -486,13 +493,6 @@ health_status_t flight_phase_get_status(void) {
 		flight_phase_status.is_queue_full = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
-	}
-
-	// One of the IMU's sent old data
-	if (flight_phase_status.dead_imu) {
-		flight_phase_status.dead_imu = false;
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NO_DATA_OFFSET;
 	}
 
 	// Invalid event sent
@@ -540,17 +540,17 @@ health_status_t flight_phase_get_status(void) {
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
-			 "invalid_event=%" PRIu32 ", dead_imu=%" PRIu32 ", invalid_act_data=%" PRIu32,
+			 "invalid_event=%" PRIu32 ", invalid_act_data=%" PRIu32 ", state_transitions=%" PRIu32,
 			 flight_phase_status.invalid_event_count,
-			 flight_phase_status.dead_imu_count,
-			 flight_phase_status.invalid_actuator_data_count);
+			 flight_phase_status.invalid_actuator_data_count,
+			 flight_phase_status.state_transitions);
 
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
-			 "timer_send_fail=%" PRIu32 ", sensor_send_fail=%" PRIu32 ", reset=%" PRIu32,
-			 flight_phase_status.timer_event_send_fail_count,
-			 flight_phase_status.sensor_event_send_fail_count,
+			 "curr_state=%d, event_send_fail=%" PRIu32 ", reset=%" PRIu32,
+			 fsm_get_state(),
+			 flight_phase_status.event_send_fail_count,
 			 flight_phase_status.event_counts.reset);
 
 	log_text(1,
