@@ -161,14 +161,14 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(fsm_task,
 							   "fsm",
-							   8192, // TODO: set the correct size
+							   6144, // TODO: set the correct size
 							   NULL,
 							   fsm_task_priority,
 							   &fsm_task_handle);
 
 	task_status &= xTaskCreate(health_check_task,
 							   "health",
-							   512,
+							   384,
 							   NULL,
 							   health_checks_task_priority,
 							   &health_checks_task_handle);
@@ -188,11 +188,11 @@ static void system_init_task(void *arg) {
 							   &can_handler_handle_tx);
 
 	task_status &= xTaskCreate(
-		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+		movella_task, "movella", 512, NULL, movella_task_priority, &movella_task_handle);
 
 	task_status &= xTaskCreate(ms5611_task,
 							   "ms5611",
-							   512,
+							   256,
 							   NULL,
 							   ms5611_task_priority,
 							   &ms5611_task_handle); // TODO: set the correct size
@@ -201,13 +201,13 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(ad_breakout_board_task,
 							   "ad board task",
-							   2560, // TODO: set when sure of size
+							   256, // TODO: set when sure of size
 							   NULL,
 							   ad_breakout_task_priority,
 							   &ad_breakout_task_handle);
 
 	task_status &= xTaskCreate(
-		telemetry_task, "telem module", 512, NULL, telem_task_priority, &telem_task_handle);
+		telemetry_task, "telem module", 336, NULL, telem_task_priority, &telem_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -228,18 +228,19 @@ static void system_init_task(void *arg) {
 	// register motor calibration
 	if (can_handler_act_cmd_register_callback(ACTUATOR_CANARD_MOTOR_CALIBRATION,
 											  &ak45_motor_calibration) != W_SUCCESS) {
-		log_text(0, LOG_LVL_FATAL, "ak45", "failed to add calibration callback");
+		log_text(0, LOG_LVL_FATAL, "SystemInit", "failed to add calibration callback");
 		ak45_send_disable_cmd();
 	}
 	// its blinky now
-	ak45_hard_stop_calibrate(&ak45_calibration_config);
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
 
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
 			// TODO: TEST ONLY
-			ak45_hard_stop_calibrate(&ak45_calibration_config);
+			if (ak45_hard_stop_calibrate(&ak45_calibration_config) != W_SUCCESS) {
+				log_text(0, LOG_LVL_FATAL, "SystemInit", "failed motor calibration");
+			}
 		}
 	}
 }
