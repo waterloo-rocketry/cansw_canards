@@ -86,7 +86,6 @@ typedef struct {
 	uint32_t init_fdcan_start_fails; // count of failures to start FDCAN bus
 	uint32_t init_fdcan_filter_cfg_fails; // count of failures to configure FDCAN filter during init
 	uint32_t timer_get_ms_fails; // count of failures to get ms timestamp during feedback parsing
-	uint32_t hard_stop_cal_fail_count; // count of failed hard stop calibration attempts
 	uint32_t telemetry_scale_fails; // count of failures to scale a telemetry value
 	uint32_t telemetry_can_tx_fails; // count of failures to transmit telemetry over CAN
 	uint32_t sd_log_data_fails; // count of failures to log motor data to SD
@@ -584,14 +583,12 @@ w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config) {
 	if (ak45_send_pos_velo_cmd(10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
 		ak45_health.hard_stop_calibrated = false;
 		ak45_health.hard_stop_cal_failed = true;
-		ak45_health.hard_stop_cal_fail_count++;
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(5000)); // 5 seconds
 	if (ak45_send_pos_velo_cmd(-10, config->cal_speed_rpm, config->cal_accel_rpm_s2) != W_SUCCESS) {
 		ak45_health.hard_stop_calibrated = false;
 		ak45_health.hard_stop_cal_failed = true;
-		ak45_health.hard_stop_cal_fail_count++;
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(5000)); // 5 seconds
@@ -615,6 +612,7 @@ health_status_t ak45_get_status(void) {
 	if (ak45_health.hard_stop_cal_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_FAILED_CALIBRATION_OFFSET);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed positive calibration.");
 	}
 
 	if (ak45_health.cmd_tx_failed) {
@@ -665,12 +663,6 @@ health_status_t ak45_get_status(void) {
 			 ak45_health.init_fdcan_start_fails,
 			 ak45_health.init_fdcan_filter_cfg_fails,
 			 ak45_health.fdcan_stop_fails);
-
-	log_text(LOG_WAIT_MS,
-			 LOG_LVL_INFO,
-			 "ak45",
-			 "cal_fail_count=%" PRIu32,
-			 ak45_health.hard_stop_cal_fail_count);
 
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
