@@ -17,6 +17,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
@@ -54,7 +55,7 @@ static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MA
 	[CANARDS_MODULE_ID_FSM] = fsm_get_status,
 	[CANARDS_MODULE_ID_GPIO] = gpio_get_status,
 	[CANARDS_MODULE_ID_I2C] = i2c_get_status,
-	[CANARDS_MODULE_ID_IIS2MDC] = NULL,
+	[CANARDS_MODULE_ID_IIS2MDC] = iis2mdc_get_status,
 	[CANARDS_MODULE_ID_LOGGER] = logger_get_status,
 	[CANARDS_MODULE_ID_LSM6DSV32X] = lsm6dsv32x_get_status,
 	[CANARDS_MODULE_ID_MOVELLA] = movella_get_status,
