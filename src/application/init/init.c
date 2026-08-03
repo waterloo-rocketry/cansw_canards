@@ -93,6 +93,42 @@ static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
 	return W_SUCCESS;
 }
 
+#define LOG_TEST_ITER_DELAY_MS (1)
+
+void logger_write_test(void)
+{
+    HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);
+
+    uint32_t iter = 0;
+    uint32_t last_log_ms = 0;
+
+    for (int i = 0; i < 50; i++)
+    {
+        HAL_GPIO_TogglePin(LED_G_GPIO_Port, LED_G_Pin);
+
+        uint32_t start = 0;
+        timer_get_ms(&start);
+
+        log_text(0, 10, "hi", "LOGGER WRITE TEST\r\n"
+                 "ITERATION: %lu\r\n"
+                 "PREVIOUS_LOG_MS: %lu\r\n"
+                 "--------------------------------\r\n",
+                 iter,
+                 last_log_ms);
+
+        uint32_t end = 0;
+        timer_get_ms(&end);
+
+        last_log_ms = end - start;
+
+        iter++;
+
+    }
+    vTaskDelay(2);
+}
+
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -117,7 +153,7 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("sysinit");
 	}
 
-	if (ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS) != W_SUCCESS) {
+	if (ak45_driver_init(&hfdcan1, 10) != W_SUCCESS) {
 		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail (motor)", non_crit_status);
 	}
 
@@ -133,7 +169,7 @@ static void system_init_task(void *arg) {
 	status |= adc_init(&hadc1, &hadc2, &hadc3);
 	status |= navigator_init();
 	status |= health_check_init();
-	status |= movella_init();
+	// status |= movella_init();
 	status |= flight_phase_init();
 	status |= sensor_handler_init();
 	status |= can_handler_init(&hfdcan3);
@@ -143,8 +179,8 @@ static void system_init_task(void *arg) {
 	status |= ms5611_init();
 	status |= power_handler_init();
 	status |= iis2mdc_init();
-	status |= adxl380_init();
-	status |= adxrs649_init();
+	// status |= adxl380_init();
+	// status |= adxrs649_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -233,8 +269,9 @@ static void system_init_task(void *arg) {
 	}
 	// its blinky now
 	while (1) {
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+        gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
+        logger_write_test();
 
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
 			// TODO: TEST ONLY

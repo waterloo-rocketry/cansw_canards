@@ -413,6 +413,11 @@ void log_task(void *argument) {
 	(void)argument;
 
 	log_buffer_t *buffer_to_print = NULL;
+
+
+    w_status_t sts = sd_card_file_open(text_log_filename);
+    (void)sts;
+
 	for (;;) {
 		if (xQueueReceive(full_buffers_queue, &buffer_to_print, 5000) == pdPASS) {
 			// Retrieve number of completed log messages in the received buffer
@@ -422,6 +427,7 @@ void log_task(void *argument) {
 			if (!buffer_to_print->is_text) {
 				max_msgs = DATA_MSGS_PER_BUFFER;
 				filename = data_log_filename;
+                (void)filename;
 			}
 			while (msgs_done < max_msgs) {
 				if (xSemaphoreTake(buffer_to_print->msgs_done_semaphore, 10) == pdPASS) {
@@ -435,9 +441,21 @@ void log_task(void *argument) {
 			// try several times to buffer to SD card
 			uint32_t size = 0;
 			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
-				if (sd_card_file_write(
-						filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
+				// if (sd_card_file_write(
+				// 		filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
+				// 	W_SUCCESS) {
+                //         gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+				// 	break; // Successfully wrote the buffer
+				// } else {
+				// 	// TODO: log err
+				// 	gpio_toggle(GPIO_PIN_RED_LED, 0);
+				// }
+				if (sd_card_file_write_open(buffer_to_print->data,
+                        LOG_BUFFER_SIZE,
+                        &size) ==
 					W_SUCCESS) {
+                        sd_card_file_sync();
+                        gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 					break; // Successfully wrote the buffer
 				} else {
 					// TODO: log err

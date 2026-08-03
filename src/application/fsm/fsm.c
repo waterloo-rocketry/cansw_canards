@@ -107,7 +107,7 @@ w_status_t fsm_init() {
 	g_ctx.p_imu_context = &g_imu_context;
 
 	// initialize fsm state
-	g_ctx.curr_state = STATE_IDLE;
+	g_ctx.curr_state = STATE_ACT_ALLOWED;
 #ifndef HIL
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, &unblock_fsm_loop);
 

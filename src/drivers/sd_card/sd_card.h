@@ -103,4 +103,55 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *p_sd_handle);
  */
 health_status_t sd_card_get_status(void);
 
+
+/**
+ * @brief Open a file for persistent writing.
+ *
+ * Acquires the SD card mutex, opens the file in append mode, and keeps the
+ * file handle open for future writes. Must be paired with
+ * sd_card_file_close().
+ *
+ * This avoids repeated file open/close overhead during logging.
+ *
+ * @param[in] file_name Name/path of the file to open.
+ *
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
+ */
+w_status_t sd_card_file_open(const char *file_name);
+
+/**
+ * @brief Write data to the currently opened SD card file.
+ *
+ * Requires a previous successful call to sd_card_file_open().
+ * The file remains open after writing.
+ *
+ * @param[in] buffer Pointer to the data to be written.
+ * @param[in] num_bytes Number of bytes from buffer to write.
+ * @param[out] bytes_written Actual number of bytes written.
+ *
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
+ */
+w_status_t sd_card_file_write_open(const char *buffer, uint32_t num_bytes,
+								   uint32_t *bytes_written);
+
+/**
+ * @brief Sync the currently opened SD card file.
+ *
+ * Forces buffered filesystem data to be written to the SD card.
+ * Requires a previous successful call to sd_card_file_open().
+ *
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
+ */
+w_status_t sd_card_file_sync(void);
+
+/**
+ * @brief Close the currently opened SD card file.
+ *
+ * Releases the SD card mutex and closes the file.
+ * Requires a previous successful call to sd_card_file_open().
+ *
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
+ */
+w_status_t sd_card_file_close(void);
+
 #endif // SD_CARD_H

@@ -191,6 +191,115 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 	}
 }
 
+static FIL open_log_file;
+static bool open_log_file_valid = false;
+
+w_status_t sd_card_file_open(const char *file_name) {
+	if ((!sd_card_health.is_init) || (NULL == file_name)) {
+		return W_INVALID_PARAM;
+	}
+
+	if (open_log_file_valid) {
+		return W_FAILURE;
+	}
+
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+	FRESULT res = f_open(&open_log_file,
+						 file_name,
+						 FA_WRITE | FA_OPEN_APPEND);
+
+	if (res != FR_OK) {
+		xSemaphoreGive(sd_mutex);
+		sd_card_health.err_count++;
+		return W_FAILURE;
+	}
+
+	open_log_file_valid = true;
+
+	xSemaphoreGive(sd_mutex);
+
+	return W_SUCCESS;
+}
+
+w_status_t sd_card_file_write_open(const char *buffer,
+								   uint32_t num_bytes,
+								   uint32_t *bytes_written) {
+	if ((!sd_card_health.is_init) ||
+		(!open_log_file_valid) ||
+		(NULL == buffer) ||
+		(NULL == bytes_written)) {
+		return W_INVALID_PARAM;
+	}
+
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+	FRESULT res = f_write(&open_log_file,
+						  buffer,
+						  num_bytes,
+						  (UINT *)bytes_written);
+
+	xSemaphoreGive(sd_mutex);
+
+	if ((res != FR_OK) || (*bytes_written != num_bytes)) {
+		sd_card_health.err_count++;
+		return W_FAILURE;
+	}
+
+	sd_card_health.write_count++;
+	return W_SUCCESS;
+}
+
+w_status_t sd_card_file_sync(void) {
+	if ((!sd_card_health.is_init) ||
+		(!open_log_file_valid)) {
+		return W_FAILURE;
+	}
+
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+	FRESULT res = f_sync(&open_log_file);
+
+	xSemaphoreGive(sd_mutex);
+
+	if (res != FR_OK) {
+		sd_card_health.err_count++;
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}
+
+w_status_t sd_card_file_close(void) {
+	if ((!sd_card_health.is_init) ||
+		(!open_log_file_valid)) {
+		return W_FAILURE;
+	}
+
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+	FRESULT res = f_close(&open_log_file);
+
+	open_log_file_valid = false;
+
+	xSemaphoreGive(sd_mutex);
+
+	if (res != FR_OK) {
+		sd_card_health.err_count++;
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}
+
 health_status_t sd_card_get_status(void) {
 	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
 							  .module_id = CANARDS_MODULE_ID_SD_CARD,
