@@ -13,6 +13,9 @@ FATFS g_fs_obj;
  */
 typedef struct {
 	bool is_init;
+	bool invalid_param;
+	bool semaphore_take_fail;
+	bool file_error;
 	uint32_t file_create_count;
 	uint32_t read_count;
 	uint32_t write_count;
@@ -20,9 +23,6 @@ typedef struct {
 	uint32_t file_write_error;
 	uint32_t file_create_error;
 	uint32_t not_writable;
-	bool invalid_param; /**< Flag indicating a NULL/invalid argument was passed */
-	bool semaphore_take_fail; /**< Flag indicating the SD mutex could not be acquired */
-	bool file_error; /**< Flag indicating a file open/read/write/seek operation failed */
 } sd_card_health_t;
 
 sd_card_health_t sd_card_health = {0};
