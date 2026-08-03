@@ -273,7 +273,7 @@ health_status_t controller_get_status(void) {
 
 	if (controller_error_stats.controller_not_run) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_LOOP_TIMING_OFFSET;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
 		controller_error_stats.controller_not_run = false;
 	}
 
