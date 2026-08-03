@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <math.h>
 #include <string.h>
 
@@ -100,7 +101,29 @@ typedef enum {
 	IIS2MDC_STATE_ASYNC_DMA_ACTIVE = 2
 } iis2mdc_state_t;
 
+/**
+ * Status variables describing the current health of the magnetometer module.
+ */
+typedef struct {
+	bool internal_error;
+	bool invalid_param;
+	bool communication_failure;
+	bool out_of_bounds_data;
+	bool timeout;
+	bool no_data_invalid_cache;
+	uint32_t dma_before_callback_switch; // DMA functions called before callback switch
+	uint32_t dma_read_fails; // DRDY interrupt triggered but DMA read failed
+	uint32_t dma_callback_error; // DMA error handler hit
+	uint32_t i2c_handle_mismatch; // I2C handle mismatch
+	uint32_t get_data_invalid_cache; // iis2mdc_get_data called with invalid cache
+	uint32_t get_data_dma_busy; // iis2mdc_get_data called while DMA was busy
+	uint32_t get_data_null_param; // iis2mdc_get_data called with a NULL out-param
+} iis2mdc_health_t;
+
 static volatile iis2mdc_state_t iis2mdc_state = IIS2MDC_STATE_UNINIT;
+
+// Running tally of in-flight failures.
+static iis2mdc_health_t iis2mdc_health = {0};
 
 /**
  * @brief Helper function to read one or more consecutive bytes over I2C
@@ -109,16 +132,20 @@ static volatile iis2mdc_state_t iis2mdc_state = IIS2MDC_STATE_UNINIT;
  */
 static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
-		log_text(1,
-				 LOG_LVL_FATAL,
-				 "iis2mdc",
-				 "ERROR: I2C register read attempted after async pipeline active");
+		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
 	if (len > 1) {
 		reg |= IIS2MDC_SUB_AUTO_INC;
 	}
-	return i2c_read_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, data, len);
+
+	w_status_t status = i2c_read_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, data, len);
+
+	if (W_SUCCESS != status) {
+		iis2mdc_health.communication_failure = true;
+	}
+
+	return status;
 }
 
 /**
@@ -127,13 +154,17 @@ static w_status_t iis2mdc_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
  */
 static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
-		log_text(1,
-				 LOG_LVL_FATAL,
-				 "iis2mdc",
-				 "ERROR: I2C register write attempted after async pipeline active");
+		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
-	return i2c_write_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, &val, 1);
+
+	w_status_t status = i2c_write_reg(IIS2MDC_BUS, IIS2MDC_I2C_ADDR, reg, &val, 1);
+
+	if (W_SUCCESS != status) {
+		iis2mdc_health.communication_failure = true;
+	}
+
+	return status;
 }
 
 /**
@@ -159,15 +190,12 @@ static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, 
  */
 static w_status_t self_test_wait_data_ready(void) {
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
-		log_text(1,
-				 LOG_LVL_FATAL,
-				 "iis2mdc",
-				 "ERROR: wait_data_ready called after async DMA pipeline active");
+		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
-
 	uint32_t start_ms = 0;
 	if (W_SUCCESS != timer_get_ms(&start_ms)) {
+		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
 
@@ -180,9 +208,12 @@ static w_status_t self_test_wait_data_ready(void) {
 		vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_POLLING_PERIOD_MS));
 
 		if (W_SUCCESS != timer_get_ms(&now_ms)) {
+			iis2mdc_health.internal_error = true;
 			return W_FAILURE;
 		}
 	}
+
+	iis2mdc_health.timeout = true;
 	return W_IO_TIMEOUT; // no new sample within the timeout
 }
 
@@ -242,16 +273,19 @@ static w_status_t self_test_collect_average(vector3d_t *avg) {
 static w_status_t iis2mdc_self_test(void) {
 	vector3d_t avg_off, avg_on;
 
+	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE == iis2mdc_state) {
+		iis2mdc_health.internal_error = true;
+		return W_FAILURE;
+	}
+
 	// discard the first sample, then average with self-test disabled
 	if (W_SUCCESS != self_test_collect_average(&avg_off)) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test baseline read failed");
 		return W_FAILURE;
 	}
 
 	// enable self-test and wait 60ms for field to settle (specified in AN 5080)
 	if (W_SUCCESS !=
 		iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C | IIS2MDC_CFG_C_SELF_TEST)) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to enable self-test");
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_SETTLE_MS));
@@ -260,11 +294,9 @@ static w_status_t iis2mdc_self_test(void) {
 
 	// restore normal config regardless of the read outcome
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C)) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to restore configs after self-test");
 		return W_FAILURE;
 	}
 	if (W_SUCCESS != read_status) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test read failed");
 		return W_FAILURE;
 	}
 
@@ -277,6 +309,7 @@ static w_status_t iis2mdc_self_test(void) {
 		(dy < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dy > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
 		(dz < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dz > IIS2MDC_SELF_TEST_MAX_GAUSS)) {
 		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test out of range: x=%f y=%f z=%f", dx, dy, dz);
+		iis2mdc_health.out_of_bounds_data = true;
 		return W_FAILURE;
 	}
 
@@ -292,11 +325,7 @@ static w_status_t iis2mdc_sanity_check(void) {
 	// Checks to make sure sanity check is not already in progress or that async DMA is not already
 	// active.
 	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
-		log_text(1,
-				 LOG_LVL_FATAL,
-				 "iis2mdc",
-				 "ERROR: sanity check called from invalid state %u",
-				 iis2mdc_state);
+		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
 
@@ -305,18 +334,11 @@ static w_status_t iis2mdc_sanity_check(void) {
 	iis2mdc_state = IIS2MDC_STATE_CHECKING;
 
 	if (W_SUCCESS != iis2mdc_read_reg(IIS2MDC_REG_WHO_AM_I, &id, 1)) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "ERROR: failed to read WHO_AM_I");
 		status = W_FAILURE;
 	} else if (IIS2MDC_WHO_AM_I_VAL != id) {
-		log_text(1,
-				 LOG_LVL_FATAL,
-				 "iis2mdc",
-				 "WHO_AM_I mismatch: expected %u, got %u",
-				 IIS2MDC_WHO_AM_I_VAL,
-				 id);
+		iis2mdc_health.communication_failure = true;
 		status = W_FAILURE;
 	} else if (W_SUCCESS != iis2mdc_self_test()) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "ERROR: self-test failed");
 		status = W_FAILURE;
 	}
 
@@ -327,6 +349,7 @@ static w_status_t iis2mdc_sanity_check(void) {
 w_status_t iis2mdc_handle_drdy_irq(void) {
 	// stand down unless ASYNC_DMA_ACTIVE
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
+		iis2mdc_health.dma_before_callback_switch++;
 		return W_FAILURE;
 	}
 	// stand down if last DMA is still in progress
@@ -341,6 +364,8 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
 									   I2C_MEMADD_SIZE_8BIT,
 									   iis2mdc_cache.raw_buf,
 									   sizeof(iis2mdc_cache.raw_buf))) {
+		iis2mdc_health.dma_read_fails++;
+		iis2mdc_health.communication_failure = true;
 		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
 	}
 	return W_SUCCESS;
@@ -353,10 +378,14 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
  */
 static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 	if (hi2c != &hi2c4) {
+		iis2mdc_health.invalid_param = true;
+		iis2mdc_health.i2c_handle_mismatch++;
 		return;
 	}
 	// this function needs DMA to be active
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
+		iis2mdc_health.dma_before_callback_switch++;
+		iis2mdc_health.internal_error = true;
 		return;
 	}
 
@@ -366,6 +395,7 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 
 	uint32_t timestamp_ms = 0;
 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
+		iis2mdc_health.internal_error = true;
 		return;
 	}
 
@@ -378,33 +408,37 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
  */
 static void iis2mdc_dma_error(I2C_HandleTypeDef *hi2c) {
 	if (hi2c != &hi2c4) {
+		iis2mdc_health.i2c_handle_mismatch++;
+		iis2mdc_health.invalid_param = true;
 		return;
 	}
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
+		iis2mdc_health.dma_before_callback_switch++;
+		iis2mdc_health.internal_error = true;
 		return;
 	}
 
 	iis2mdc_dma_busy = false;
 	iis2mdc_cache.valid = false; // error
+	iis2mdc_health.communication_failure = true;
+	iis2mdc_health.dma_callback_error++;
 }
 
 w_status_t iis2mdc_init(void) {
 	// reject reinitialization
 	if (IIS2MDC_STATE_UNINIT != iis2mdc_state) {
-		log_text(1,
-				 LOG_LVL_FATAL,
-				 "iis2mdc",
-				 "ERROR: init called from non-UNINIT state %u",
-				 iis2mdc_state);
+		iis2mdc_health.internal_error = true;
 		return W_FAILURE;
 	}
+
+	// .sram4 placement means static initializer isn't copied at startup; clear explicitly
+	memset(&iis2mdc_cache, 0, sizeof(iis2mdc_cache));
 
 	// wait for stable output after power-up before any access to registers
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_POWERUP_MS));
 
 	// soft reset clears config registers
 	if (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_CFG_A_SOFT_RESET)) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "soft reset failed");
 		return W_FAILURE;
 	}
 
@@ -414,12 +448,10 @@ w_status_t iis2mdc_init(void) {
 	if ((W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B)) ||
 		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C))) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to write configuration registers");
 		return W_FAILURE;
 	}
 
 	if (W_SUCCESS != iis2mdc_sanity_check()) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "sanity check failed");
 		return W_FAILURE;
 	}
 
@@ -431,30 +463,35 @@ w_status_t iis2mdc_init(void) {
 	if ((HAL_OK !=
 		 HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) ||
 		(HAL_OK != HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_ERROR_CB_ID, iis2mdc_dma_error))) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to register I2C DMA callbacks");
 		return W_FAILURE;
 	}
 
 	iis2mdc_state = IIS2MDC_STATE_ASYNC_DMA_ACTIVE;
 
 	if (W_SUCCESS != iis2mdc_handle_drdy_irq()) {
-		log_text(1, LOG_LVL_FATAL, "iis2mdc", "failed to clear interrupt");
 		return W_FAILURE;
 	}
+
 	return W_SUCCESS;
 }
 
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 							uint32_t *timestamp_ms) {
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "iis2mdc",
-				 "NULL pointer cannot be used as input to get_data function");
+		iis2mdc_health.invalid_param = true;
+		iis2mdc_health.get_data_null_param++;
 		return W_FAILURE;
 	}
 
-	if ((IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) || !(iis2mdc_cache.valid)) {
+	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
+		iis2mdc_health.internal_error = true;
+		iis2mdc_health.dma_before_callback_switch++;
+		return W_IO_ERROR;
+	}
+
+	if (!iis2mdc_cache.valid) {
+		iis2mdc_health.no_data_invalid_cache = true;
+		iis2mdc_health.get_data_invalid_cache++;
 		return W_IO_ERROR;
 	}
 
@@ -462,6 +499,7 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 	taskENTER_CRITICAL();
 	if (iis2mdc_dma_busy) {
 		taskEXIT_CRITICAL();
+		iis2mdc_health.get_data_dma_busy++;
 		return W_IO_ERROR;
 	}
 	memcpy(local_buf, iis2mdc_cache.raw_buf, sizeof(local_buf));
@@ -471,4 +509,91 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 	iis2mdc_convert_sample(local_buf, raw_data, data);
 
 	return W_SUCCESS;
+}
+
+health_status_t iis2mdc_get_status(void) {
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_IIS2MDC,
+							  .error_bitfield = 0};
+
+	// Driver not initialized
+	if (iis2mdc_state != IIS2MDC_STATE_ASYNC_DMA_ACTIVE) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+	}
+
+	// I2C/DMA failure
+	if (iis2mdc_health.communication_failure) {
+		iis2mdc_health.communication_failure = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+	}
+
+	// Invalid operation
+	if (iis2mdc_health.internal_error) {
+		iis2mdc_health.internal_error = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
+	}
+
+	// Out of bounds data
+	if (iis2mdc_health.out_of_bounds_data) {
+		iis2mdc_health.out_of_bounds_data = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_OUT_OF_BOUNDS_OFFSET;
+	}
+
+	// Self test timeout
+	if (iis2mdc_health.timeout) {
+		iis2mdc_health.timeout = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_TIMEOUT_OFFSET;
+	}
+
+	// Get data on invalid cache
+	if (iis2mdc_health.no_data_invalid_cache) {
+		iis2mdc_health.no_data_invalid_cache = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NO_DATA_OFFSET;
+	}
+
+	// I2C mismatch or null param
+	if (iis2mdc_health.invalid_param) {
+		iis2mdc_health.invalid_param = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+	}
+
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "iis2mdc",
+			 "state=%d, dma_busy=%d, cache_valid=%d",
+			 iis2mdc_state,
+			 iis2mdc_dma_busy,
+			 iis2mdc_cache.valid);
+
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "iis2mdc",
+			 "dma_before_callback_switch=%" PRIu32 ", dma_read_fails=%" PRIu32,
+			 iis2mdc_health.dma_before_callback_switch,
+			 iis2mdc_health.dma_read_fails);
+
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "iis2mdc",
+			 "dma_callback_error=%" PRIu32 ", i2c_handle_mismatch=%" PRIu32
+			 ", get_data_dma_busy=%" PRIu32,
+			 iis2mdc_health.dma_callback_error,
+			 iis2mdc_health.i2c_handle_mismatch,
+			 iis2mdc_health.get_data_dma_busy);
+
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "iis2mdc",
+			 "get_data_invalid_cache=%" PRIu32 ", get_data_null_param=%" PRIu32,
+			 iis2mdc_health.get_data_invalid_cache,
+			 iis2mdc_health.get_data_null_param);
+
+	return status;
 }

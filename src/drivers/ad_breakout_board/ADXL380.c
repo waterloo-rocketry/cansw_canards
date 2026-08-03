@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -24,6 +25,8 @@ static const int32_t ADXL_MICRO_G_G = 1000000;
 static adxl38x_dev_t g_adx380_handle = {0};
 
 static bool is_initialized = false;
+
+adxl380_health_t adxl380_health = {0};
 
 /**
  * @brief this is initializes the ADXL380
@@ -139,7 +142,7 @@ w_status_t adxl380_init() {
 w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
 	// make sure have initialized
 	if (!is_initialized) {
-		log_text(0, LOG_LVL_WARN, "ADXL380", "Not initialized.");
+		adxl380_health.not_initialized_calls++;
 		return W_FAILURE;
 	}
 
@@ -147,7 +150,8 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
 
 	if (W_SUCCESS !=
 		adxl38x_read_device_data(&g_adx380_handle, ADXL38X_XDATA_H, 6, (uint8_t *)raw_data_array)) {
-		log_text(0, LOG_LVL_WARN, "ADXL380", "Failed to read data from I2C.");
+		adxl380_health.comm_failure = true;
+		adxl380_health.data_read_fails++;
 		return W_FAILURE;
 	}
 
@@ -165,11 +169,12 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
  */
 w_status_t adxl380_is_data_ready(bool *p_drdy) {
 	if (!is_initialized) {
-		log_text(0, LOG_LVL_WARN, "ADXL380", "Failed initialized.");
+		adxl380_health.not_initialized_calls++;
 		return W_FAILURE;
 	}
 	if (NULL == p_drdy) {
-		log_text(0, LOG_LVL_WARN, "ADXL380", "Invalid return ptr.");
+		adxl380_health.invalid_param = true;
+		adxl380_health.null_params++;
 		return W_INVALID_PARAM;
 	}
 
@@ -184,6 +189,8 @@ w_status_t adxl380_is_data_ready(bool *p_drdy) {
 		// use I2C to get value
 		if (adxl38x_read_device_data(&g_adx380_handle, ADXL38X_STATUS3, 1, &reg_drdy) !=
 			W_SUCCESS) {
+			adxl380_health.comm_failure = true;
+			adxl380_health.data_ready_check_fails++;
 			return W_IO_ERROR;
 		}
 
@@ -202,16 +209,17 @@ w_status_t adxl380_is_data_ready(bool *p_drdy) {
 w_status_t adxl380_get_accel_data(vector3d_t *p_data, adxl380_raw_accel_data_t *p_raw_data) {
 	// make sure have initialized
 	if (!is_initialized) {
-		log_text(0, LOG_LVL_WARN, "ADXL380", "Not initialized.");
+		adxl380_health.not_initialized_calls++;
 		return W_FAILURE;
 	}
 	if ((NULL == p_data) || (NULL == p_raw_data)) {
-		log_text(0, LOG_LVL_WARN, "ADXL380", "Invalid return ptr.");
+		adxl380_health.invalid_param = true;
+		adxl380_health.null_params++;
 		return W_INVALID_PARAM;
 	}
 
 	if (W_SUCCESS != adxl380_get_raw_accel(p_raw_data)) {
-		log_text(0, LOG_LVL_WARN, "ADXL380", "Failed to get raw acceleration.");
+		adxl380_health.get_raw_accel_fails++;
 		return W_FAILURE;
 	}
 
@@ -223,4 +231,62 @@ w_status_t adxl380_get_accel_data(vector3d_t *p_data, adxl380_raw_accel_data_t *
 		((float64_t)((int16_t)p_raw_data->z)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 
 	return W_SUCCESS;
+}
+
+/**
+ * @brief gets the health status of the ADXL380 accelerometer and logs info
+ * @return the health status of the ADXL380
+ */
+health_status_t adxl380_get_status(void) {
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_ADXL380,
+							  .error_bitfield = 0};
+
+	if (!is_initialized) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+	}
+
+	if (adxl380_health.invalid_param) {
+		adxl380_health.invalid_param = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+	}
+
+	if (adxl380_health.comm_failure) {
+		adxl380_health.comm_failure = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+	}
+
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "ADXL380",
+			 "init=%u, not_init_calls=%" PRIu32 ", data_ready_check_fails=%" PRIu32,
+			 is_initialized,
+			 adxl380_health.not_initialized_calls,
+			 adxl380_health.data_ready_check_fails);
+
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "ADXL380",
+			 "read_fails=%" PRIu32 ", get_accel_fails=%" PRIu32 ", null_params=%" PRIu32,
+			 adxl380_health.data_read_fails,
+			 adxl380_health.get_raw_accel_fails,
+			 adxl380_health.null_params);
+
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "AD BREAKBOARD TASK",
+			 "accel_read_fails=%" PRIu32 ", accel_invalid_params=%" PRIu32,
+			 adxl380_health.read_fails,
+			 adxl380_health.invalid_params);
+
+	log_text(1,
+			 LOG_LVL_INFO,
+			 "AD BREAKBOARD TASK",
+			 "accel_data_logging_fails=%" PRIu32,
+			 adxl380_health.data_logging_fails);
+
+	return status;
 }

@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
+
 // Servo fault codes
 typedef enum {
 	AK45_FAULT_NONE = 0,
@@ -30,6 +32,21 @@ typedef struct {
 	uint32_t timestamp_ms; // Time of last received feedback
 } ak45_feedback_t;
 
+typedef struct {
+	float32_t seek_target_deg;
+	float32_t backoff_deg;
+
+	uint32_t settle_ms;
+
+	float32_t stall_current_a_min;
+
+	float32_t max_tap_delta_deg;
+
+	uint32_t seek_timeout_ms;
+} ak45_calibration_config_t;
+
+extern const ak45_calibration_config_t ak45_calibration_config;
+
 /**
  * @brief Initialize the servo driver
  *
@@ -50,11 +67,40 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 w_status_t ak45_send_position_cmd(float32_t angle_deg);
 
 /**
+ * @brief Send a cuurrent command to the servo
+ *
+ * @param[in] current_mA  Target current in mA
+ * @return W_SUCCESS on success, W_FAILURE on error
+ */
+w_status_t ak45_send_current_cmd(int32_t current_mA);
+
+/**
+ * @brief Send a position and velocity command to the servo
+ *
+ * @param[in] angle_deg  Target position in degrees
+ * @param[in] mag_speed_rpm  the target magnitude of the motor speed rpm
+ * @param[in] accel_rpm_s2  the target magnitude of the motor acceleration rpm/s2
+ * @return W_SUCCESS on success, W_FAILURE on error
+ */
+w_status_t ak45_send_pos_velo_cmd(float32_t angle_deg, uint16_t mag_speed_rpm,
+								  int16_t accel_rpm_s2);
+
+/**
  * @brief Send a disable command to the servo
  *
  * @return W_SUCCESS on success, W_FAILURE on error
  */
 w_status_t ak45_send_disable_cmd(void);
+
+/**
+ * @brief Set encoder origin at the motor's current position
+ *
+ * Sends CAN_PACKET_SET_ORIGIN_HERE. Used at boot after first feedback and
+ * on-demand after hard-stop calibration.
+ *
+ * @return W_SUCCESS on success, W_FAILURE on error
+ */
+w_status_t ak45_send_set_origin(void);
 
 /**
  * @brief Get the latest motor feedback
@@ -70,5 +116,22 @@ w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb);
  * @return Number of transmission failures
  */
 uint32_t ak45_get_tx_errors(void);
+
+/**
+ * @brief Drive to both hard stops (double-tap each), move to midpoint, and re-zero encoder.
+ *
+ * @param[in] config Calibration parameters; must not be NULL.
+ * @return W_SUCCESS on success, W_FAILURE on error.
+ */
+w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config);
+
+/**
+ * @brief Get and report the AK45 motor driver status for the health check system
+ *
+ * Follows the module_get_status naming convention used by health_checks.
+ *
+ * @return CAN board status bitfield
+ */
+health_status_t ak45_get_status(void);
 
 #endif // AK45_DRIVER_H

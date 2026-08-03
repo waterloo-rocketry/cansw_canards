@@ -18,6 +18,7 @@
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
+#include "application/telemetry/telemetry.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
@@ -51,6 +52,8 @@ TaskHandle_t health_checks_task_handle = NULL;
 TaskHandle_t movella_task_handle = NULL;
 TaskHandle_t ms5611_task_handle = NULL;
 TaskHandle_t ad_breakout_task_handle = NULL;
+TaskHandle_t telem_task_handle = NULL;
+TaskHandle_t init_task_handle = NULL;
 
 // Task priorities
 // TODO: set fsm priority
@@ -68,6 +71,28 @@ const uint32_t log_task_priority = 15;
 // should be lowest prio above default task
 const uint32_t health_checks_task_priority = 10;
 
+bool done_sys_init = false;
+const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
+
+// Motor calibration callback.
+// Run this in init to avoid blocking other tasks for too long, so blinky will survive.
+static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
+	can_actuator_id_t msg_id;
+	can_actuator_state_t msg_state;
+
+	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
+		(get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
+		log_text(1, LOG_LVL_WARN, "ak45", "invalid actuator data");
+		return W_FAILURE;
+	}
+	// make sure it is the correct message
+	if ((ACTUATOR_CANARD_MOTOR_CALIBRATION == msg_id) && (ACT_STATE_ON == msg_state)) {
+		xTaskNotifyGive(init_task_handle);
+	}
+	// default return
+	return W_SUCCESS;
+}
+
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -82,10 +107,18 @@ static void system_init_task(void *arg) {
 	// INIT NON-CRITICAL MODULES; try to do logger first
 	w_status_t non_crit_status = sd_card_init();
 	non_crit_status |= log_init();
-	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
-		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx", non_crit_status);
+		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx (log)", non_crit_status);
+	}
+
+	if (telemetry_init() != W_SUCCESS) {
+		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (telem).");
+		proc_handle_fatal_error("sysinit");
+	}
+
+	if (ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS) != W_SUCCESS) {
+		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail (motor)", non_crit_status);
 	}
 
 	w_status_t status = W_SUCCESS;
@@ -106,12 +139,12 @@ static void system_init_task(void *arg) {
 	status |= can_handler_init(&hfdcan3);
 	status |= controller_init();
 	status |= fsm_init();
-	status |= adxl380_init();
 	status |= lsm6dsv32x_init();
-	status |= adxrs649_init();
 	status |= ms5611_init();
-	status |= iis2mdc_init();
 	status |= power_handler_init();
+	status |= iis2mdc_init();
+	status |= adxl380_init();
+	status |= adxrs649_init();
 
 	// cannot continue if any of the above fail
 	if (status != W_SUCCESS) {
@@ -121,19 +154,21 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("sysinit");
 	}
 
+	done_sys_init = true;
+
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
 	task_status &= xTaskCreate(fsm_task,
 							   "fsm",
-							   8192, // TODO: set the correct size
+							   6144, // TODO: set the correct size
 							   NULL,
 							   fsm_task_priority,
 							   &fsm_task_handle);
 
 	task_status &= xTaskCreate(health_check_task,
 							   "health",
-							   512,
+							   384,
 							   NULL,
 							   health_checks_task_priority,
 							   &health_checks_task_handle);
@@ -153,11 +188,11 @@ static void system_init_task(void *arg) {
 							   &can_handler_handle_tx);
 
 	task_status &= xTaskCreate(
-		movella_task, "movella", 2560, NULL, movella_task_priority, &movella_task_handle);
+		movella_task, "movella", 512, NULL, movella_task_priority, &movella_task_handle);
 
 	task_status &= xTaskCreate(ms5611_task,
 							   "ms5611",
-							   512,
+							   256,
 							   NULL,
 							   ms5611_task_priority,
 							   &ms5611_task_handle); // TODO: set the correct size
@@ -166,10 +201,13 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(ad_breakout_board_task,
 							   "ad board task",
-							   2560, // TODO: set when sure of size
+							   256, // TODO: set when sure of size
 							   NULL,
 							   ad_breakout_task_priority,
 							   &ad_breakout_task_handle);
+
+	task_status &= xTaskCreate(
+		telemetry_task, "telem module", 336, NULL, telem_task_priority, &telem_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -180,14 +218,30 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
+	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
+	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
+	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
 
+	// grab the task handle
+	init_task_handle = xTaskGetCurrentTaskHandle();
+
+	// register motor calibration
+	if (can_handler_act_cmd_register_callback(ACTUATOR_CANARD_MOTOR_CALIBRATION,
+											  &ak45_motor_calibration) != W_SUCCESS) {
+		log_text(0, LOG_LVL_FATAL, "SystemInit", "failed to add calibration callback");
+		ak45_send_disable_cmd();
+	}
 	// its blinky now
-	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 1);
-	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 1);
-	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 1);
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
+
+		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
+			// TODO: TEST ONLY
+			if (ak45_hard_stop_calibrate(&ak45_calibration_config) != W_SUCCESS) {
+				log_text(0, LOG_LVL_FATAL, "SystemInit", "failed motor calibration");
+			}
+		}
 	}
 }
 

@@ -20,19 +20,6 @@ typedef struct {
 } navigator_ctx_t;
 
 /**
- * @brief Structure to track navigator errors and status
- */
-typedef struct {
-	bool is_init; /**< Initialization status flag */
-	uint32_t imu_data_timeouts; /**< Count of IMU data receive timeouts */
-	uint32_t encoder_data_fails; /**< Count of encoder data receive failures */
-	uint32_t controller_data_fails; /**< Count of controller output retrieval failures */
-	uint32_t pad_filter_fails; /**< Count of pad filter run failures */
-	uint32_t can_log_fails; /**< Count of CAN logging failures */
-	uint32_t invalid_phase_errors; /**< Count of invalid flight phase errors */
-} navigator_error_data_t;
-
-/**
  * @brief initialize navigator module
  */
 w_status_t navigator_init();
@@ -69,5 +56,13 @@ health_status_t navigator_get_status(void);
  */
 w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t timestamp_tenth_ms,
 						  navigator_ctx_t *p_ctx, navigator_output_t *p_output);
+
+/**
+ * @brief init pad filter with alive sensors. Must call before pad filter starts. Can call this
+ * multiple times to overwrite with new sensor values. Dead sensors will persist previous values.
+ * @param p_ctx pointer to navigator context
+ * @param p_sensor_data sensor data
+ */
+w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_data);
 
 #endif

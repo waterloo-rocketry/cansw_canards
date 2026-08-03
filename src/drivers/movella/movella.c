@@ -17,15 +17,6 @@
 #define UART_RX_TIMEOUT_MS 10
 #define XSENS_ARR_ELEM 7
 
-// sensor ranges. these must be selected using the i2c init regs
-static const double MOVELLA_ACC_RANGE = 10.0 * 9.81; // m/s^2
-static const double MOVELLA_GYRO_RANGE = 2000.0 * DEG_PER_RAD; // rad/s
-static const double MOVELLA_MAG_RANGE = 1.0; // "arbitrary units" normalized to 1, so shouldnt be >1
-// mti-630 baro range is actually smaller than this, but we deemed better to "extend" the range and
-// gamble on possible undefined values, as thats better than saturating for estimator
-static const double MOVELLA_BARO_MAX = 110000; // conservative max Pa at sea level
-static const double MOVELLA_BARO_MIN = 6000; // min Pa we can possibly reach (60000 ft apogee)
-
 typedef struct {
 	xsens_interface_t xsens_interface;
 	SemaphoreHandle_t data_mutex;
@@ -35,7 +26,19 @@ typedef struct {
 	bool configured;
 } movella_state_t;
 
+typedef struct {
+	uint32_t init_double_init;
+	uint32_t init_null_mutex;
+	uint32_t recent_dead_data_count;
+	uint32_t get_data_null_out_param;
+	uint32_t get_data_not_init;
+	uint32_t get_data_failed_take_mutex;
+	uint32_t event_callback_timer_fail;
+} movella_health_t;
+
 static movella_state_t s_movella = {0};
+
+static movella_health_t movella_health = {0};
 
 static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtdata) {
 	if (xSemaphoreTake(s_movella.data_mutex, 0) == pdTRUE) {
@@ -100,6 +103,7 @@ static void movella_event_callback(XsensEventFlag_t event, XsensEventData_t *mtd
 					break;
 			}
 		} else {
+			movella_health.event_callback_timer_fail++;
 			log_text(0, LOG_LVL_WARN, "MTI", "Unable to get timestamp");
 		}
 
@@ -113,12 +117,14 @@ static void movella_uart_send(uint8_t *data, uint16_t length) {
 
 w_status_t movella_init(void) {
 	if (s_movella.initialized) {
+		movella_health.init_double_init++;
 		return W_SUCCESS;
 	}
 
 	s_movella.data_mutex = xSemaphoreCreateMutex();
 
 	if (s_movella.data_mutex == NULL) {
+		movella_health.init_null_mutex++;
 		return W_FAILURE;
 	}
 
@@ -131,55 +137,13 @@ w_status_t movella_init(void) {
 
 w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
 	if (NULL == out_data) {
+		movella_health.get_data_null_out_param++;
 		return W_INVALID_PARAM;
 	}
 
 	if (!s_movella.initialized) {
+		movella_health.get_data_not_init++;
 		return W_FAILURE;
-	}
-
-	// if saturated, set val to min/max instead of fail. prefer saturated values over nothing
-	if (fabs(s_movella.latest_data.acc.x) > MOVELLA_ACC_RANGE) {
-		s_movella.latest_data.acc.x =
-			(s_movella.latest_data.acc.x > 0) ? MOVELLA_ACC_RANGE : -MOVELLA_ACC_RANGE;
-	}
-	if (fabs(s_movella.latest_data.acc.y) > MOVELLA_ACC_RANGE) {
-		s_movella.latest_data.acc.y =
-			(s_movella.latest_data.acc.y > 0) ? MOVELLA_ACC_RANGE : -MOVELLA_ACC_RANGE;
-	}
-	if (fabs(s_movella.latest_data.acc.z) > MOVELLA_ACC_RANGE) {
-		s_movella.latest_data.acc.z =
-			(s_movella.latest_data.acc.z > 0) ? MOVELLA_ACC_RANGE : -MOVELLA_ACC_RANGE;
-	}
-	if (fabs(s_movella.latest_data.gyr.x) > MOVELLA_GYRO_RANGE) {
-		s_movella.latest_data.gyr.x =
-			(s_movella.latest_data.gyr.x > 0) ? MOVELLA_GYRO_RANGE : -MOVELLA_GYRO_RANGE;
-	}
-	if (fabs(s_movella.latest_data.gyr.y) > MOVELLA_GYRO_RANGE) {
-		s_movella.latest_data.gyr.y =
-			(s_movella.latest_data.gyr.y > 0) ? MOVELLA_GYRO_RANGE : -MOVELLA_GYRO_RANGE;
-	}
-	if (fabs(s_movella.latest_data.gyr.z) > MOVELLA_GYRO_RANGE) {
-		s_movella.latest_data.gyr.z =
-			(s_movella.latest_data.gyr.z > 0) ? MOVELLA_GYRO_RANGE : -MOVELLA_GYRO_RANGE;
-	}
-	if (fabs(s_movella.latest_data.mag.x) > MOVELLA_MAG_RANGE) {
-		s_movella.latest_data.mag.x =
-			(s_movella.latest_data.mag.x > 0) ? MOVELLA_MAG_RANGE : -MOVELLA_MAG_RANGE;
-	}
-	if (fabs(s_movella.latest_data.mag.y) > MOVELLA_MAG_RANGE) {
-		s_movella.latest_data.mag.y =
-			(s_movella.latest_data.mag.y > 0) ? MOVELLA_MAG_RANGE : -MOVELLA_MAG_RANGE;
-	}
-	if (fabs(s_movella.latest_data.mag.z) > MOVELLA_MAG_RANGE) {
-		s_movella.latest_data.mag.z =
-			(s_movella.latest_data.mag.z > 0) ? MOVELLA_MAG_RANGE : -MOVELLA_MAG_RANGE;
-	}
-	if (s_movella.latest_data.pres > MOVELLA_BARO_MAX) {
-		s_movella.latest_data.pres = MOVELLA_BARO_MAX;
-	}
-	if (s_movella.latest_data.pres < MOVELLA_BARO_MIN) {
-		s_movella.latest_data.pres = MOVELLA_BARO_MIN;
 	}
 
 	if (pdTRUE == xSemaphoreTake(s_movella.data_mutex, pdMS_TO_TICKS(timeout_ms))) {
@@ -188,6 +152,7 @@ w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms) {
 		return W_SUCCESS;
 	}
 
+	movella_health.get_data_failed_take_mutex++;
 	return W_FAILURE;
 }
 
@@ -235,6 +200,51 @@ void movella_task(void *parameters) {
 			s_movella.latest_data.is_dead = false;
 		} else {
 			s_movella.latest_data.is_dead = true;
+			movella_health.recent_dead_data_count++;
 		}
 	}
+}
+
+health_status_t movella_get_status(void) {
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_MOVELLA,
+							  .error_bitfield = 0};
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "init=%d, configured=%d, dead_data=%d, recent_dead_data_count=%d",
+			 s_movella.initialized,
+			 s_movella.configured,
+			 s_movella.latest_data.is_dead,
+			 movella_health.recent_dead_data_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "init_double_init=%d, init_null_mutex=%d, get_data_not_init=%d",
+			 movella_health.init_double_init,
+			 movella_health.init_null_mutex,
+			 movella_health.get_data_not_init);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "movella",
+			 "get_data_null_out=%d, get_data_failed_take_mutex=%d, cb_timer_fail=%d",
+			 movella_health.get_data_null_out_param,
+			 movella_health.get_data_failed_take_mutex,
+			 movella_health.event_callback_timer_fail);
+
+	if (movella_health.recent_dead_data_count) {
+		movella_health.recent_dead_data_count = 0;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+	}
+
+	if (!s_movella.initialized) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+	}
+
+	return status;
 }
