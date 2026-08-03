@@ -438,6 +438,7 @@ void log_task(void *argument) {
 				if (sd_card_file_write(
 						filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
 					W_SUCCESS) {
+                        gpio_toggle(GPIO_PIN_GREEN_LED, 0);
 					break; // Successfully wrote the buffer
 				} else {
 					// TODO: log err

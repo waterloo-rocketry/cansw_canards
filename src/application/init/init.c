@@ -117,7 +117,7 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("sysinit");
 	}
 
-	if (ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS) != W_SUCCESS) {
+	if (ak45_driver_init(&hfdcan1, 10) != W_SUCCESS) {
 		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail (motor)", non_crit_status);
 	}
 
