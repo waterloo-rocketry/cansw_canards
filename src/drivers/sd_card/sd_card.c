@@ -271,7 +271,7 @@ health_status_t sd_card_get_status(void) {
 	log_text(0,
 			 LOG_LVL_INFO,
 			 "sd_card",
-			 "%s files_created=%" PRIu32 ", reads=%" PRIu32 ", writes=%" PRIu32,
+			 "%s, files_created=%" PRIu32 ", reads=%" PRIu32 ", writes=%" PRIu32,
 			 sd_card_health.is_init ? "init" : "not init",
 			 sd_card_health.file_create_count,
 			 sd_card_health.read_count,
