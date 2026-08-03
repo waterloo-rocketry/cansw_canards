@@ -15,7 +15,8 @@
 #include "third_party/printf/printf.h"
 
 // number of times to try writing a log message in case fails once
-#define LOG_WRITE_TRY_COUNT 2
+#define DATA_WRITE_TRY_COUNT 50
+#define TEXT_WRITE_TRY_COUNT 20
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
@@ -41,7 +42,8 @@ static SemaphoreHandle_t log_text_write_mutex = NULL;
 /* Mutex that protects access of current_data_buf_num */
 static SemaphoreHandle_t log_data_write_mutex = NULL;
 /* Queue of full log buffers sent to the task to be flushed */
-static QueueHandle_t full_buffers_queue = NULL;
+static QueueHandle_t data_buffers_queue = NULL;
+static QueueHandle_t text_buffers_queue = NULL;
 /* Count of data buffers initialized, for buffer header index value */
 static uint32_t total_data_log_buffers = 0;
 
@@ -108,7 +110,7 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 	xSemaphoreGive(buffer->msgs_done_semaphore);
 	// If last message in buffer, send buffer to queue
 	if (msg_num == DATA_MSGS_PER_BUFFER - 1) {
-		if (xQueueSendToBack(full_buffers_queue, &buffer, 0) != pdPASS) {
+		if (xQueueSendToBack(data_buffers_queue, &buffer, 0) != pdPASS) {
 			// This should never be reached as the queue should have space for all buffers
 			logger_health.crit_errs++;
 			return W_FAILURE;
@@ -156,9 +158,11 @@ w_status_t log_init(void) {
 		return W_SUCCESS;
 	}
 
-	full_buffers_queue =
-		xQueueCreate(NUM_TEXT_LOG_BUFFERS + NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
-	if (NULL == full_buffers_queue) {
+	data_buffers_queue =
+		xQueueCreate(NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
+	text_buffers_queue =
+		xQueueCreate(NUM_TEXT_LOG_BUFFERS, sizeof(log_buffer_t *));
+	if ((NULL == data_buffers_queue) || (NULL == text_buffers_queue)) {
 		return W_FAILURE;
 	}
 
@@ -346,7 +350,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	xSemaphoreGive(buffer->msgs_done_semaphore);
 	// If last message in buffer, send buffer to queue
 	if (msg_num == TEXT_MSGS_PER_BUFFER - 1) {
-		if (xQueueSendToBack(full_buffers_queue, &buffer, 0) != pdPASS) {
+		if (xQueueSendToBack(text_buffers_queue, &buffer, 0) != pdPASS) {
 			// This should never be reached as the queue should have space for all buffers
 			logger_health.crit_errs++;
 			return W_FAILURE;
@@ -414,15 +418,23 @@ void log_task(void *argument) {
 
 	log_buffer_t *buffer_to_print = NULL;
 	for (;;) {
-		if (xQueueReceive(full_buffers_queue, &buffer_to_print, 5000) == pdPASS) {
-			// Retrieve number of completed log messages in the received buffer
-			uint32_t msgs_done = 0;
-			uint32_t max_msgs = TEXT_MSGS_PER_BUFFER;
-			char *filename = text_log_filename;
-			if (!buffer_to_print->is_text) {
-				max_msgs = DATA_MSGS_PER_BUFFER;
-				filename = data_log_filename;
-			}
+		bool have_msg = false;
+		uint32_t msgs_done = 0;
+		uint32_t max_msgs = DATA_MSGS_PER_BUFFER;
+		char *filename = data_log_filename;
+		uint32_t log_write_try_count = 0;
+		// check data
+		if (xQueueReceive(data_buffers_queue, &buffer_to_print, 4900) == pdPASS) {
+			log_write_try_count = DATA_WRITE_TRY_COUNT;
+			have_msg = true;
+		} else if (xQueueReceive(text_buffers_queue, &buffer_to_print, 100) == pdPASS) {
+			log_write_try_count = TEXT_WRITE_TRY_COUNT;
+			max_msgs = TEXT_MSGS_PER_BUFFER;
+			filename = text_log_filename;
+			have_msg = true;
+		}
+		
+		if (have_msg) {
 			while (msgs_done < max_msgs) {
 				if (xSemaphoreTake(buffer_to_print->msgs_done_semaphore, 10) == pdPASS) {
 					msgs_done++;
@@ -434,7 +446,7 @@ void log_task(void *argument) {
 
 			// try several times to buffer to SD card
 			uint32_t size = 0;
-			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
+			for (uint32_t i = 0; i < log_write_try_count; i++) {
 				if (sd_card_file_write(
 						filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
 					W_SUCCESS) {
@@ -443,7 +455,7 @@ void log_task(void *argument) {
 					// TODO: log err
 					gpio_toggle(GPIO_PIN_RED_LED, 0);
 				}
-				if ((LOG_WRITE_TRY_COUNT - 1) == i) {
+				if ((log_write_try_count - 1) == i) {
 					logger_health.buffer_flush_fails++;
 					break; // Failed to write after all attempts
 				} else {

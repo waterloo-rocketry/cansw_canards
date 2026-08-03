@@ -26,7 +26,7 @@
 #include "printf.h"
 #include "task.h"
 
-#define TASK_DELAY_MS 1000
+#define TASK_DELAY_MS 5000
 #define MAX_WATCHDOG_TASKS 10
 
 // struct for watchdog
