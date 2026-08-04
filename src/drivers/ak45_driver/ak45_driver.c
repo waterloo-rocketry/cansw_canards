@@ -590,7 +590,7 @@ health_status_t ak45_get_status(void) {
 	}
 
 	if (!ak45_health.is_init) {
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
