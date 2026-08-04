@@ -48,7 +48,7 @@ typedef struct {
 	uint32_t null_param_count;
 	bool buffer_is_full; // flag for full buffer since last health check
 	bool timeout_occurred; // flag for timeout since last health check
-	bool os_error_occurred; // flag for queue send fail / unsafe buffer flush since last health check
+	bool os_error_occurred; // flag for queue send fail
 	bool invalid_param; // flag for NULL/bad-arg call since last health check
 	bool region_overflow; // flag for invalid msg region index since last health check
 } logger_health_t;
