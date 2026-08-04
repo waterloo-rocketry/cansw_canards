@@ -19,6 +19,19 @@
 w_status_t power_handler_init(void);
 
 /**
+ * @brief 5V external power rail via a GPIO pin.
+ * Prevents enabling when CHG is active or low power mode is enabled.
+ * @param bool enabled -> false for turning off 5v external; true for turning on 5v external
+ */
+w_status_t power_handler_set_5V_external(bool enabled);
+
+/**
+ * @brief LiPo power on or off
+ * @note will make decision for how to work with 5v external
+ */
+w_status_t power_handler_set_lipo_state(bool enabled);
+
+/**
  * Reports power-handler MODULE health.
  * The returned error_bitfield uses can_canards_module_error_bitfield_offset_t (CANARDS_MODULE_E_*)
  * and is carried by MSG_CANARD_FIRMWARE_ERROR. Reports module/software faults only (battery fault

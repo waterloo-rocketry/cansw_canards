@@ -5,11 +5,11 @@
 
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
+#include "application/power_handler/power_handler.h"
 #include "canlib/message_types.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
-#include "power_handler.h"
 #include "rocketlib/include/common.h"
 
 /**
@@ -509,7 +509,7 @@ uint32_t power_handler_get_board_status(void) {
  * Prevents enabling when CHG is active or low power mode is enabled.
  * @param bool enabled -> false for turning off 5v external; true for turning on 5v external
  */
-static w_status_t power_handler_set_5V_external(bool enabled) {
+w_status_t power_handler_set_5V_external(bool enabled) {
 	w_status_t gpio_status = W_SUCCESS;
 
 	if (enabled) {
@@ -548,7 +548,7 @@ static w_status_t power_handler_set_5V_external(bool enabled) {
  * @brief LiPo power on or off
  * @note will make decision for how to work with 5v external
  */
-static w_status_t power_handler_set_lipo_state(bool enabled) {
+w_status_t power_handler_set_lipo_state(bool enabled) {
 	w_status_t gpio_status = W_SUCCESS;
 
 	gpio_level_t lipo_gpio_state = enabled ? GPIO_LEVEL_LOW : GPIO_LEVEL_HIGH;
