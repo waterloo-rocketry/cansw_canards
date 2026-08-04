@@ -162,7 +162,7 @@ void UsageFault_Handler(void)
   {
     /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
     #ifndef HARD_FAULT_TEST
-      proc_handle_fatal_error("MUSE");
+      proc_handle_fatal_error("USAGE");
     #endif
     /* USER CODE END W1_UsageFault_IRQn 0 */
   }
