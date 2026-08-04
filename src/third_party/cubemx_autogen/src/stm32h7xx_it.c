@@ -143,6 +143,9 @@ void BusFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_BusFault_IRQn 0 */
+    #ifndef HARD_FAULT_TEST
+      proc_handle_fatal_error("BUS");
+    #endif
     /* USER CODE END W1_BusFault_IRQn 0 */
   }
 }
@@ -158,6 +161,9 @@ void UsageFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
+    #ifndef HARD_FAULT_TEST
+      proc_handle_fatal_error("USAGE");
+    #endif
     /* USER CODE END W1_UsageFault_IRQn 0 */
   }
 }
