@@ -50,15 +50,39 @@ static const matrix3d_t g_board_mag_correction_matrix = {
 static const matrix3d_t g_ad_accel_correction_matrix = {
 	.array = {{0, 0, 1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 
+#ifdef CANARDBOARD_1
+// mag hard iron and soft iron calibration values
+static const vector3d_t hard_iron_bias = {.x = 0.17, .y = 0.27, .z = 0.07};
+static const matrix3d_t soft_iron_correction_matrix = {
+	.array = {{1.03, -0.02, -0.03}, {0.03, 1.02, 0.00}, {-0.02, 0.00, 0.95}}};
+
+#else
 // mag hard iron and soft iron calibration values
 static const vector3d_t hard_iron_bias = {.x = 0, .y = 0, .z = 0};
 static const matrix3d_t soft_iron_correction_matrix = {
 	.array = {{1.0, 0, 0}, {0, 1.0, 0}, {0, 0, 1.0}}};
+#endif
 
-// ad accel null bias offsets
+#if defined(ADBREAKOUT_1) && defined(CANARDBOARD_1)
+// canardboard 1 ad accel 1 null bias offsets
+static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.49;
+static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.43;
+static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.12;
+
+#elif defined(ADBREAKOUT_1) && defined(CANARDBOARD_2)
+// canardboard 2 ad accel 1 null bias offsets
 static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.61;
 static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.65;
 static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.15;
+
+#else
+// Default null bias offsets
+// TODO: Add more combinations
+static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = 0.0;
+static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = 0.0;
+static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.0;
+
+#endif
 
 // set to true once calibrated, initialized to false to prevent use before calibration
 static bool orientation_calibrated = false;
