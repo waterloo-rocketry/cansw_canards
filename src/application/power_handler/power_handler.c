@@ -530,8 +530,6 @@ w_status_t power_handler_set_5V_external(bool enabled) {
 		gpio_status |= gpio_write(GPIO_PIN_CHG_MUX_EN, GPIO_LEVEL_HIGH, 5);
 	}
 
-	power_handler_status.external_5v_enabled = enabled;
-
 	if (W_SUCCESS != gpio_status) {
 		log_text(1,
 				 LOG_LVL_WARN,
@@ -540,6 +538,8 @@ w_status_t power_handler_set_5V_external(bool enabled) {
 				 gpio_status);
 		return gpio_status;
 	}
+
+	power_handler_status.external_5v_enabled = enabled;
 
 	return W_SUCCESS;
 }
