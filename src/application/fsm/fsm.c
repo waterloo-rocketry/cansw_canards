@@ -67,12 +67,28 @@ void unblock_fsm_hil() {
 	unblock_fsm_loop(&htim5);
 }
 
+typedef struct {
+	bool is_init;
+	uint32_t init_timer_failures;
+	uint32_t init_timer_start_failures;
+	uint32_t loop_timeouts;
+	uint32_t get_timer_failures;
+	uint32_t unknown_state_errors;
+
+	bool loop_timer_failed;
+	bool get_timer_failed;
+	bool is_in_unknown_state;
+} fsm_health_t;
+
+static fsm_health_t fsm_health = {0};
+
 w_status_t fsm_init() {
 	// init estimator context
 	// initialize ctx timestamp to current time
 	uint32_t init_time_tenth_ms = 0;
 	if (timer_get_tenth_ms(&init_time_tenth_ms) != W_SUCCESS) {
 		// TODO how to deal with error
+		fsm_health.init_timer_failures++;
 		return W_FAILURE;
 	}
 
@@ -97,9 +113,9 @@ w_status_t fsm_init() {
 
 	// start tim
 	if (HAL_TIM_Base_Start_IT(&htim5) != HAL_OK) {
+		fsm_health.init_timer_start_failures++;
 		return W_FAILURE;
 	}
-
 #else
 	// init hil here to keep all hil changes in fsm.c
 	if (hil_init() != W_SUCCESS) {
@@ -109,6 +125,7 @@ w_status_t fsm_init() {
 #endif
 
 	controller_codegen_init(g_ctx.p_controller_context);
+	fsm_health.is_init = true;
 
 	return W_SUCCESS;
 }
@@ -195,7 +212,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 
 			break;
 
-			// both act allowed and recovery will only run estimator and controller step
+		// both act allowed and recovery will only run estimator and controller step
 		case STATE_ACT_ALLOWED:
 		case STATE_RECOVERY:
 #ifdef HIL
@@ -235,12 +252,14 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			}
 			break;
 
-			// etc for more cases...
+		// TODO Implement
 		case STATE_SLEEPY:
 			break;
 
 		default:
 			// TODO: how to deal with the other cases
+			fsm_health.unknown_state_errors++;
+			fsm_health.is_in_unknown_state = true;
 			break;
 	}
 
@@ -277,13 +296,15 @@ void fsm_task(void *args) {
 	while (1) {
 		// Unblock once we receive the notification to unblock fsm
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(MAX_FSM_DELAY_MS)) == 0) {
-			log_text(0, LOG_LVL_WARN, "FSM", "FSM loop wait timed out");
+			fsm_health.loop_timeouts++;
+			fsm_health.loop_timer_failed = true;
 		}
 
 		uint32_t timestamp_tenth_ms = 0;
 
 		if (W_SUCCESS != timer_get_tenth_ms(&timestamp_tenth_ms)) {
-			// TODO: error handling
+			fsm_health.get_timer_failures++;
+			fsm_health.get_timer_failed = true;
 		}
 
 		uint32_t timestamp_ms = timestamp_tenth_ms / MS_TO_TENTH_MS;
@@ -320,4 +341,44 @@ void fsm_task(void *args) {
 		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
 		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
 	}
+}
+
+health_status_t fsm_get_status(void) {
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_FSM,
+							  .error_bitfield = 0};
+
+	if (fsm_health.loop_timer_failed) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_LOOP_TIMING_OFFSET;
+		fsm_health.loop_timer_failed = false;
+	}
+
+	if (fsm_health.get_timer_failed) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
+		fsm_health.get_timer_failed = false;
+	}
+
+	if (fsm_health.is_in_unknown_state) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		fsm_health.is_in_unknown_state = false;
+	}
+
+	if (!fsm_health.is_init) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+	}
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "fsm",
+			 "init=%d, loop_timeouts=%d, get_timer_failures=%d, unknown_state_errors=%d",
+			 fsm_health.is_init,
+			 fsm_health.loop_timeouts,
+			 fsm_health.get_timer_failures,
+			 fsm_health.unknown_state_errors);
+
+	return status;
 }

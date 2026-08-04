@@ -1,19 +1,23 @@
-#include "health_checks.h"
+#include "application/health_checks/health_checks.h"
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/telemetry/telemetry.h"
 #include "can.h"
+#include "drivers/ad_breakout_board/ADXL380.h"
+#include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
@@ -42,20 +46,20 @@ static uint32_t num_watchdog_tasks = 0;
 
 static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MAX] = {
 	[CANARDS_MODULE_ID_ADC] = adc_get_status,
-	[CANARDS_MODULE_ID_ADXL380] = NULL,
-	[CANARDS_MODULE_ID_ADXRS649] = NULL,
+	[CANARDS_MODULE_ID_ADXL380] = adxl380_get_status,
+	[CANARDS_MODULE_ID_ADXRS649] = adxrs649_get_status,
 	[CANARDS_MODULE_ID_AK45] = ak45_get_status,
 	[CANARDS_MODULE_ID_CAN_HANDLER] = can_handler_get_status,
 	[CANARDS_MODULE_ID_CONTROLLER] = controller_get_status,
 	[CANARDS_MODULE_ID_FLIGHT_PHASE] = flight_phase_get_status,
-	[CANARDS_MODULE_ID_FSM] = NULL,
+	[CANARDS_MODULE_ID_FSM] = fsm_get_status,
 	[CANARDS_MODULE_ID_GPIO] = gpio_get_status,
 	[CANARDS_MODULE_ID_I2C] = i2c_get_status,
-	[CANARDS_MODULE_ID_IIS2MDC] = NULL,
+	[CANARDS_MODULE_ID_IIS2MDC] = iis2mdc_get_status,
 	[CANARDS_MODULE_ID_LOGGER] = logger_get_status,
 	[CANARDS_MODULE_ID_LSM6DSV32X] = lsm6dsv32x_get_status,
-	[CANARDS_MODULE_ID_MOVELLA] = NULL,
-	[CANARDS_MODULE_ID_MS5611] = NULL,
+	[CANARDS_MODULE_ID_MOVELLA] = movella_get_status,
+	[CANARDS_MODULE_ID_MS5611] = ms5611_get_status,
 	[CANARDS_MODULE_ID_NAVIGATOR] = navigator_get_status,
 	[CANARDS_MODULE_ID_POWER_HANDLER] = power_handler_get_status,
 	[CANARDS_MODULE_ID_SD_CARD] = sd_card_get_status,

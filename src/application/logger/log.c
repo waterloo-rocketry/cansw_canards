@@ -37,8 +37,6 @@ typedef struct {
  */
 typedef struct {
 	bool is_init;
-	uint32_t dropped_txt_msgs;
-	uint32_t dropped_data_msgs;
 	uint32_t trunc_msgs;
 	uint32_t full_buffer_moments;
 	uint32_t log_write_timeouts;
@@ -47,8 +45,12 @@ typedef struct {
 	uint32_t no_full_buf_moments;
 	uint32_t buffer_flush_fails;
 	uint32_t unsafe_buffer_flushes;
+	uint32_t null_param_count;
 	bool buffer_is_full; // flag for full buffer since last health check
 	bool timeout_occurred; // flag for timeout since last health check
+	bool os_error_occurred; // flag for queue send fail / unsafe buffer flush since last health check
+	bool invalid_param; // flag for NULL/bad-arg call since last health check
+	bool region_overflow; // flag for invalid msg region index since last health check
 } logger_health_t;
 
 static log_buffer_t log_text_buffers[NUM_TEXT_LOG_BUFFERS];
@@ -81,6 +83,8 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 	// Validate arguments
 	// Assumption: logger_health.is_init == true OR (during init) all buffer semaphores are valid
 	if ((NULL == buffer) || (msg_num >= DATA_MSGS_PER_BUFFER) || (NULL == data)) {
+		logger_health.null_param_count++;
+		logger_health.invalid_param = true;
 		return W_INVALID_PARAM;
 	}
 
@@ -130,6 +134,7 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 		if (xQueueSendToBack(full_buffers_queue, &buffer, 0) != pdPASS) {
 			// This should never be reached as the queue should have space for all buffers
 			logger_health.queue_send_fails++;
+			logger_health.os_error_occurred = true;
 			return W_FAILURE;
 		}
 	}
@@ -175,18 +180,25 @@ w_status_t log_init(void) {
 		return W_SUCCESS;
 	}
 
+	// Note: log_text() no-ops until logger_health.is_init is set at the end of this function, so
+	// these calls won't actually reach the log file on a real failure here. Kept for consistency
+	// with other modules' init-failure logging and in case that gating ever changes.
+
 	full_buffers_queue =
 		xQueueCreate(NUM_TEXT_LOG_BUFFERS + NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
 	if (NULL == full_buffers_queue) {
+		log_text(1, LOG_LVL_WARN, "logger", "Failed to create full buffers queue.");
 		return W_FAILURE;
 	}
 
 	log_text_write_mutex = xSemaphoreCreateMutex();
 	if (NULL == log_text_write_mutex) {
+		log_text(1, LOG_LVL_WARN, "logger", "Failed to create text write mutex.");
 		return W_FAILURE;
 	}
 	log_data_write_mutex = xSemaphoreCreateMutex();
 	if (NULL == log_data_write_mutex) {
+		log_text(1, LOG_LVL_WARN, "logger", "Failed to create data write mutex.");
 		return W_FAILURE;
 	}
 
@@ -196,10 +208,12 @@ w_status_t log_init(void) {
 		buffer->is_text = true;
 		buffer->next_msg_num_mutex = xSemaphoreCreateMutex();
 		if (NULL == buffer->next_msg_num_mutex) {
+			log_text(1, LOG_LVL_WARN, "logger", "Failed to create text buffer mutex.");
 			return W_FAILURE;
 		}
 		buffer->msgs_done_semaphore = xSemaphoreCreateCounting(TEXT_MSGS_PER_BUFFER, 0);
 		if (NULL == buffer->msgs_done_semaphore) {
+			log_text(1, LOG_LVL_WARN, "logger", "Failed to create text buffer semaphore.");
 			return W_FAILURE;
 		}
 		log_reset_buffer(buffer);
@@ -211,10 +225,12 @@ w_status_t log_init(void) {
 		buffer->is_text = false;
 		buffer->next_msg_num_mutex = xSemaphoreCreateMutex();
 		if (NULL == buffer->next_msg_num_mutex) {
+			log_text(1, LOG_LVL_WARN, "logger", "Failed to create data buffer mutex.");
 			return W_FAILURE;
 		}
 		buffer->msgs_done_semaphore = xSemaphoreCreateCounting(DATA_MSGS_PER_BUFFER, 0);
 		if (NULL == buffer->msgs_done_semaphore) {
+			log_text(1, LOG_LVL_WARN, "logger", "Failed to create data buffer semaphore.");
 			return W_FAILURE;
 		}
 		log_reset_buffer(buffer);
@@ -235,6 +251,7 @@ w_status_t log_init(void) {
 		run_count = 1;
 		status = sd_card_file_create(LOG_RUN_COUNT_FILENAME);
 		if (W_SUCCESS != status) {
+			log_text(1, LOG_LVL_WARN, "logger", "Failed to create run count file.");
 			return W_IO_ERROR;
 		}
 	}
@@ -255,6 +272,8 @@ w_status_t log_init(void) {
 
 	if (W_SUCCESS == status) {
 		logger_health.is_init = true;
+	} else {
+		log_text(1, LOG_LVL_WARN, "logger", "Failed to write run count or create log files.");
 	}
 	return status;
 }
@@ -269,7 +288,13 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	(void)timer_get_ms(&timestamp);
 
 	// Validate arguments
-	if ((!logger_health.is_init) || (NULL == source) || (NULL == format)) {
+	if (!logger_health.is_init) {
+		return W_FAILURE;
+	}
+
+	if ((NULL == source) || (NULL == format)) {
+		logger_health.null_param_count++;
+		logger_health.invalid_param = true;
 		return W_INVALID_PARAM;
 	}
 
@@ -277,7 +302,6 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	if (xSemaphoreTake(log_text_write_mutex, pdMS_TO_TICKS(timeout)) != pdPASS) {
 		logger_health.log_write_timeouts++;
 		logger_health.timeout_occurred = true;
-		logger_health.dropped_txt_msgs++;
 		return W_FAILURE;
 	}
 
@@ -287,7 +311,6 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	if (buffer->is_full) {
 		xSemaphoreGive(log_text_write_mutex);
 		logger_health.full_buffer_moments++;
-		logger_health.dropped_txt_msgs++;
 		logger_health.buffer_is_full = true;
 		return W_FAILURE;
 	}
@@ -307,7 +330,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 
 	if (msg_num >= TEXT_MSGS_PER_BUFFER) {
 		logger_health.invalid_region_moments++;
-		logger_health.dropped_txt_msgs++;
+		logger_health.region_overflow = true;
 		return W_FAILURE;
 	}
 
@@ -370,6 +393,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 		if (xQueueSendToBack(full_buffers_queue, &buffer, 0) != pdPASS) {
 			// This should never be reached as the queue should have space for all buffers
 			logger_health.queue_send_fails++;
+			logger_health.os_error_occurred = true;
 			return W_FAILURE;
 		}
 	}
@@ -384,8 +408,14 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
+	if (!logger_health.is_init) {
+		return W_FAILURE;
+	}
+
 	// Validate arguments
-	if ((!logger_health.is_init) || (NULL == data)) {
+	if (NULL == data) {
+		logger_health.null_param_count++;
+		logger_health.invalid_param = true;
 		return W_INVALID_PARAM;
 	}
 
@@ -393,7 +423,6 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	if (xSemaphoreTake(log_data_write_mutex, pdMS_TO_TICKS(timeout)) != pdPASS) {
 		logger_health.log_write_timeouts++;
 		logger_health.timeout_occurred = true;
-		logger_health.dropped_data_msgs++;
 		return W_FAILURE;
 	}
 
@@ -403,7 +432,6 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	if (buffer->is_full) {
 		xSemaphoreGive(log_data_write_mutex);
 		logger_health.full_buffer_moments++;
-		logger_health.dropped_data_msgs++;
 		logger_health.buffer_is_full = true;
 		return W_FAILURE;
 	}
@@ -426,7 +454,7 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	if (W_INVALID_PARAM == res) {
 		// msg_num was invalid (is_init, buffer, data must all have made sense at this point)
 		logger_health.invalid_region_moments++;
-		logger_health.dropped_data_msgs++;
+		logger_health.region_overflow = true;
 		return W_FAILURE;
 	}
 	return res;
@@ -451,6 +479,7 @@ void log_task(void *argument) {
 					msgs_done++;
 				} else {
 					logger_health.unsafe_buffer_flushes++;
+					logger_health.os_error_occurred = true;
 					break;
 				}
 			}
@@ -494,46 +523,54 @@ health_status_t logger_get_status(void) {
 	}
 
 	if (logger_health.buffer_is_full) {
+		logger_health.buffer_is_full = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= (1 << CANARDS_MODULE_E_OVERFLOW_OFFSET);
 	}
 
 	if (logger_health.timeout_occurred) {
+		logger_health.timeout_occurred = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= (1 << CANARDS_MODULE_E_TIMEOUT_OFFSET);
 	}
 
-	if ((logger_health.queue_send_fails > 0) || (logger_health.unsafe_buffer_flushes > 0)) {
+	if (logger_health.os_error_occurred) {
+		logger_health.os_error_occurred = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= (1 << CANARDS_MODULE_E_OS_OFFSET);
 	}
 
-	// reset error flags
-	logger_health.buffer_is_full = false;
-	logger_health.timeout_occurred = false;
+	if (logger_health.invalid_param) {
+		logger_health.invalid_param = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= (1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
+	}
+
+	if (logger_health.region_overflow) {
+		logger_health.region_overflow = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= (1 << CANARDS_MODULE_E_OUT_OF_BOUNDS_OFFSET);
+	}
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "logger",
-			 "init=%d, drop_txt=%d, drop_data=%d, trunc=%d, "
-			 "full_buff=%d, log_w_timeouts=%d",
+			 "init=%d, trunc=%d, full_buff=%d, log_w_timeouts=%d, invalid_region=%d",
 			 logger_health.is_init,
-			 logger_health.dropped_txt_msgs,
-			 logger_health.dropped_data_msgs,
 			 logger_health.trunc_msgs,
 			 logger_health.full_buffer_moments,
-			 logger_health.log_write_timeouts);
+			 logger_health.log_write_timeouts,
+			 logger_health.invalid_region_moments);
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "logger",
-			 "invalid_region=%d, queue_send_fails=%d, no_full_buf=%d, "
-			 "buffer_flush_fails=%d, unsafe_buffer_flush=%d",
-			 logger_health.invalid_region_moments,
+			 "q_fail=%d, no_buf=%d, flush_fail=%d, unsafe_fl=%d, nparam=%d",
 			 logger_health.queue_send_fails,
 			 logger_health.no_full_buf_moments,
 			 logger_health.buffer_flush_fails,
-			 logger_health.unsafe_buffer_flushes);
+			 logger_health.unsafe_buffer_flushes,
+			 logger_health.null_param_count);
 
 	return status;
 }

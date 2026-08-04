@@ -22,10 +22,13 @@ FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 FAKE_VOID_FUNC(build_analog_sensor_16bit_msg, can_msg_prio_t, uint16_t, can_analog_sensor_id_t,
 			   uint16_t, can_msg_t *);
+FAKE_VOID_FUNC(build_analog_sensor_32bit_msg, can_msg_prio_t, uint16_t, can_analog_sensor_id_t,
+			   uint32_t, can_msg_t *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, can_msg_t *);
-FAKE_VALUE_FUNC(w_status_t, telemetry_register, const telemetry_source_config_t *)
-FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_int, can_scaling_types_t, int64_t, void *)
-FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_float, can_scaling_types_t, float32_t, void *)
+FAKE_VALUE_FUNC(w_status_t, telemetry_register, const telemetry_source_config_t *);
+FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_int, can_scaling_types_t, int64_t, void *);
+FAKE_VALUE_FUNC(w_status_t, can_encode_scaled_float, can_scaling_types_t, float32_t, void *);
+    FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t*);
 }
 
 // There is a while loop in ak45_driver initialization which waits for messages to be received.il
@@ -348,8 +351,7 @@ TEST_F(AK45DriverTest, SendTelemetryFailsIfGetLatestFeedbackFails) {
 
 	// Ensure all telemetry fails.
 	EXPECT_EQ(ak45_test_angle_telemetry(), W_FAILURE);
-	EXPECT_EQ(ak45_test_temperature_telemetry(), W_FAILURE);
-	EXPECT_EQ(ak45_test_current_telemetry(), W_FAILURE);
+	EXPECT_EQ(ak45_test_temp_curr_telemetry(), W_FAILURE);
 	EXPECT_EQ(can_handler_transmit_fake.call_count, 0);
 }
 
@@ -364,8 +366,7 @@ TEST_F(AK45DriverTest, SendTelemetryFailsIfTimerFails) {
 
 	// Ensure all telemetry fails.
 	EXPECT_EQ(ak45_test_angle_telemetry(), W_FAILURE);
-	EXPECT_EQ(ak45_test_temperature_telemetry(), W_FAILURE);
-	EXPECT_EQ(ak45_test_current_telemetry(), W_FAILURE);
+	EXPECT_EQ(ak45_test_temp_curr_telemetry(), W_FAILURE);
 	EXPECT_EQ(can_handler_transmit_fake.call_count, 0);
 }
 
@@ -381,7 +382,6 @@ TEST_F(AK45DriverTest, SendTelemetryFailsIfCanHandlerTransmitFails) {
 
 	// Ensure can handler fails
 	EXPECT_EQ(ak45_test_angle_telemetry(), W_FAILURE);
-	EXPECT_EQ(ak45_test_temperature_telemetry(), W_FAILURE);
-	EXPECT_EQ(ak45_test_current_telemetry(), W_FAILURE);
+	EXPECT_EQ(ak45_test_temp_curr_telemetry(), W_FAILURE);
 	EXPECT_EQ(can_handler_transmit_fake.call_count, 3);
 }

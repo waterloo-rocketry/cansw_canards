@@ -20,6 +20,12 @@
 // IDEAL task period, for calculating CAN send rate limiter
 static const uint32_t ESTIMATOR_TASK_PERIOD_MS = 5;
 static const float64_t TENTH_MS_TO_SEC = 0.0001;
+static const uint32_t NAV_LOG_DATA_TIMEOUT = 0;
+
+static const uint8_t NUM_VEL_AXIS = 3;
+
+// maximum number of times that nav can fail to run before error is reported
+static const uint8_t MAXIMUM_NAV_NOT_RUN_COUNT = 3;
 
 // Rate limit CAN tx: only send data at 10Hz, every 100ms
 // TODO: if kept change to static const
@@ -29,7 +35,27 @@ static const float64_t TENTH_MS_TO_SEC = 0.0001;
 #define DATA_WAIT_MS 10
 
 // Error tracking
-static navigator_error_data_t estimator_error_stats = {0};
+
+/**
+ * @brief Structure to track navigator errors and status
+ */
+typedef struct {
+	bool is_init; /**< Initialization status flag */
+	uint32_t null_ctx_count;
+	uint32_t total_nav_not_run_count;
+	uint8_t nav_not_run_count;
+	uint32_t can_encode_fail_count;
+	uint32_t timestamp_fail_count;
+	uint32_t log_data_fail_count;
+	uint32_t can_telem_tx_fail_count;
+
+	bool can_telem_tx_fail;
+	bool queue_is_empty;
+	bool ctx_is_null;
+	bool nav_not_run;
+} navigator_error_data_t;
+
+static navigator_error_data_t navigator_error_stats = {0};
 
 // Latest nav state, stored unscaled as raw floats. Scaling + offset into the
 // CAN integer fields happens at telemetry-tx time (see nav_*_telemetry below)
@@ -44,82 +70,42 @@ typedef struct {
 
 static QueueHandle_t nav_value_queue; // mailbox queue to hold the latest nav values
 
-static w_status_t nav_orientation_altitude_varnorm_telemetry(void) {
+static w_status_t nav_can_telemetry(void) {
 	nav_value_handle_t nav_value_lastest_raw;
 
-	if (xQueuePeek(nav_value_queue, &nav_value_lastest_raw, 0) == pdTRUE) {
-		// scale quaternion x, y, z (orientation[1..3]) and offset into uint16
-		int16_t orientation_x;
-		int16_t orientation_y;
-		int16_t orientation_z;
+	w_status_t status = W_SUCCESS;
 
-		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
-												 nav_value_lastest_raw.orientation[1],
-												 &orientation_x)) {
-			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion x.");
-		}
+	if (xQueuePeek(nav_value_queue, &nav_value_lastest_raw, 0) != pdTRUE) {
+		navigator_error_stats.queue_is_empty = true;
+		return W_FAILURE;
+	}
 
-		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
-												 nav_value_lastest_raw.orientation[2],
-												 &orientation_y)) {
-			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion y.");
-		}
+	uint32_t timestamp = 0;
 
-		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
-												 nav_value_lastest_raw.orientation[3],
-												 &orientation_z)) {
-			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion z.");
-		}
+	if (timer_get_ms(&timestamp) != W_SUCCESS) {
+		navigator_error_stats.timestamp_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
+		return W_FAILURE;
+	}
 
-		// quaternion w is signed (offset into uint16); altitude and varnorm are unsigned
-		int16_t orientation_w;
-		uint16_t altitude;
-		uint16_t varnorm;
+	w_status_t nav_pt1_enc_status = W_SUCCESS;
 
-		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_ORIENTATION,
-												 nav_value_lastest_raw.orientation[0],
-												 &orientation_w)) {
-			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for orientaion w.");
-		}
+	// quaternion w is signed (offset into uint16); altitude and varnorm are unsigned
+	int16_t orientation_w = 0;
+	uint16_t altitude = 0;
+	uint16_t varnorm = 0;
 
-		if (W_SUCCESS != can_encode_scaled_float(
-							 SCALE_NAV_ALTITUDE, nav_value_lastest_raw.altitude, &altitude)) {
-			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for altitude.");
-		}
+	nav_pt1_enc_status |= can_encode_scaled_float(
+		SCALE_NAV_ORIENTATION, nav_value_lastest_raw.orientation[0], &orientation_w);
 
-		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_VARIANCE_NORM,
-												 nav_value_lastest_raw.variance_norm,
-												 &varnorm)) {
-			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for variance norm.");
-		}
+	nav_pt1_enc_status |=
+		can_encode_scaled_float(SCALE_NAV_ALTITUDE, nav_value_lastest_raw.altitude, &altitude);
 
-		uint32_t timestamp;
+	nav_pt1_enc_status |= can_encode_scaled_float(
+		SCALE_NAV_VARIANCE_NORM, nav_value_lastest_raw.variance_norm, &varnorm);
 
-		if (timer_get_ms(&timestamp) != W_SUCCESS) {
-			log_text(0, LOG_LVL_WARN, "navigator", "Failed to get timestamp for can msg tx");
-			return W_FAILURE;
-		}
-
-		w_status_t status = W_SUCCESS;
-
-		can_msg_t msg_qxyz;
-		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-										 (uint16_t)timestamp,
-										 DEM_3D_SENSOR_CANARD_NAV_ORI_QX_QY_QZ,
-										 (uint16_t)(orientation_x + TELEMETRY_INT16_OFFSET),
-										 (uint16_t)(orientation_y + TELEMETRY_INT16_OFFSET),
-										 (uint16_t)(orientation_z + TELEMETRY_INT16_OFFSET),
-										 &msg_qxyz);
-
-		if (can_handler_transmit(&msg_qxyz) != W_SUCCESS) {
-			log_text(0,
-					 LOG_LVL_WARN,
-					 "navigator",
-					 "Failed to transmit orientation x y z values through can.");
-			status = W_FAILURE;
-		}
-
-		can_msg_t msg_qw_alt_var;
+	if (W_SUCCESS == nav_pt1_enc_status) {
+		can_msg_t msg_qw_alt_var = {0};
 		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
 										 (uint16_t)timestamp,
 										 DEM_3D_SENSOR_CANARD_NAV_ORI_QW_ALT_VARNORM,
@@ -129,40 +115,51 @@ static w_status_t nav_orientation_altitude_varnorm_telemetry(void) {
 										 &msg_qw_alt_var);
 
 		if (can_handler_transmit(&msg_qw_alt_var) != W_SUCCESS) {
-			log_text(
-				0,
-				LOG_LVL_WARN,
-				"navigator",
-				"Failed to transmit orientation w, altitude, variance norm values through can.");
-			status = W_FAILURE;
+			navigator_error_stats.can_telem_tx_fail_count++;
+			navigator_error_stats.can_telem_tx_fail = true;
+			status |= W_FAILURE;
 		}
 
-		return status;
 	} else {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "navigator",
-				 "Failed to peek mailbox queue while sending current nav values through can.");
-
-		return W_FAILURE;
+		navigator_error_stats.can_encode_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
+		status = W_FAILURE;
 	}
 
-	return W_SUCCESS;
-}
+	// scale quaternion x, y, z (orientation[1..3]) and offset into uint16
+	int16_t orientation_x = 0;
+	int16_t orientation_y = 0;
+	int16_t orientation_z = 0;
 
-// Velocity and angular velocity are carried per-axis by the 2D 24bit messages
-// DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_{X,Y,Z}: each message packs that axis's
-// (velocity, angular_velocity) pair, both scaled as int24 (scale table entries
-// SCALE_NAV_VELOCITY / SCALE_NAV_ANGULAR_VELOCITY).
-static w_status_t nav_velocity_angular_velocity_telemetry(void) {
-	nav_value_handle_t nav_value_lastest_raw;
+	w_status_t nav_pt2_enc_status = W_SUCCESS;
 
-	if (xQueuePeek(nav_value_queue, &nav_value_lastest_raw, 0) != pdTRUE) {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "navigator",
-				 "Failed to peek mailbox queue while sending current nav values through can.");
-		return W_FAILURE;
+	nav_pt2_enc_status |= can_encode_scaled_float(
+		SCALE_NAV_ORIENTATION, nav_value_lastest_raw.orientation[1], &orientation_x);
+
+	nav_pt2_enc_status |= can_encode_scaled_float(
+		SCALE_NAV_ORIENTATION, nav_value_lastest_raw.orientation[2], &orientation_y);
+
+	nav_pt2_enc_status |= can_encode_scaled_float(
+		SCALE_NAV_ORIENTATION, nav_value_lastest_raw.orientation[3], &orientation_z);
+	if (W_SUCCESS == nav_pt2_enc_status) {
+		can_msg_t msg_qxyz = {0};
+		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
+										 (uint16_t)timestamp,
+										 DEM_3D_SENSOR_CANARD_NAV_ORI_QX_QY_QZ,
+										 (uint16_t)(orientation_x + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(orientation_y + TELEMETRY_INT16_OFFSET),
+										 (uint16_t)(orientation_z + TELEMETRY_INT16_OFFSET),
+										 &msg_qxyz);
+
+		if (can_handler_transmit(&msg_qxyz) != W_SUCCESS) {
+			navigator_error_stats.can_telem_tx_fail_count++;
+			navigator_error_stats.can_telem_tx_fail = true;
+			status |= W_FAILURE;
+		}
+	} else {
+		navigator_error_stats.can_encode_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
+		status = W_FAILURE;
 	}
 
 	const can_dem_2d_sensor_id_t axis_ids[3] = {
@@ -171,46 +168,86 @@ static w_status_t nav_velocity_angular_velocity_telemetry(void) {
 		DEM_2D_SENSOR_CANARD_NAV_VEL_ANGLE_VEL_Z,
 	};
 
-	uint32_t timestamp;
-	if (timer_get_ms(&timestamp) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "navigator", "Failed to get timestamp for can msg tx");
+	for (uint8_t axis = 0; axis < NUM_VEL_AXIS; axis++) {
+		w_status_t nav_vel_ang_vel_enc_status = W_SUCCESS;
+
+		int32_t velocity = 0;
+		nav_vel_ang_vel_enc_status |= can_encode_scaled_float(
+			SCALE_NAV_VELOCITY, (float32_t)nav_value_lastest_raw.velocity[axis], &velocity);
+
+		int32_t angular_velocity = 0;
+		nav_vel_ang_vel_enc_status |=
+			can_encode_scaled_float(SCALE_NAV_ANGULAR_VELOCITY,
+									(float32_t)nav_value_lastest_raw.angular_velocity[axis],
+									&angular_velocity);
+
+		if (W_SUCCESS == nav_vel_ang_vel_enc_status) {
+			can_msg_t msg = {0};
+			build_2d_analog_sensor_24bit_msg(PRIO_LOW,
+											 (uint16_t)timestamp,
+											 axis_ids[axis],
+											 (uint32_t)(velocity + TELEMETRY_INT24_OFFSET),
+											 (uint32_t)(angular_velocity + TELEMETRY_INT24_OFFSET),
+											 &msg);
+
+			if (can_handler_transmit(&msg) != W_SUCCESS) {
+				navigator_error_stats.can_telem_tx_fail_count++;
+				navigator_error_stats.can_telem_tx_fail = true;
+				status |= W_FAILURE;
+			}
+		} else {
+			navigator_error_stats.can_encode_fail_count++;
+			navigator_error_stats.can_telem_tx_fail = true;
+			status = W_FAILURE;
+		}
+	}
+
+	return status;
+}
+
+static w_status_t nav_sd_telemetry(void) {
+	nav_value_handle_t nav_value_lastest_raw;
+
+	w_status_t status = W_SUCCESS;
+
+	if (xQueuePeek(nav_value_queue, &nav_value_lastest_raw, 0) != pdTRUE) {
+		navigator_error_stats.queue_is_empty = true;
 		return W_FAILURE;
 	}
 
-	w_status_t status = W_SUCCESS;
-	for (int axis = 0; axis < 3; axis++) {
-		int32_t velocity = 0;
-		if (W_SUCCESS != can_encode_scaled_float(SCALE_NAV_VELOCITY,
-												 (float32_t)nav_value_lastest_raw.velocity[axis],
-												 &velocity)) {
-			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for velocity.");
-			status = W_FAILURE;
-		}
+	// set up the log data
+	log_data_container_t log_container = {0};
 
-		int32_t angular_velocity = 0;
-		if (W_SUCCESS !=
-			can_encode_scaled_float(SCALE_NAV_ANGULAR_VELOCITY,
-									(float32_t)nav_value_lastest_raw.angular_velocity[axis],
-									&angular_velocity)) {
-			log_text(0, LOG_LVL_WARN, "navigator", "Can encode failed for angular velocity.");
-			status = W_FAILURE;
-		}
+	// nav pt1
+	log_container.navigator_pt1.orient_w = (float32_t)nav_value_lastest_raw.orientation[0];
+	log_container.navigator_pt1.orient_x = (float32_t)nav_value_lastest_raw.orientation[1];
+	log_container.navigator_pt1.orient_y = (float32_t)nav_value_lastest_raw.orientation[2];
+	log_container.navigator_pt1.orient_z = (float32_t)nav_value_lastest_raw.orientation[3];
+	log_container.navigator_pt1.altitude = (float32_t)nav_value_lastest_raw.altitude;
+	log_container.navigator_pt1.variance_norm = (float32_t)nav_value_lastest_raw.variance_norm;
 
-		can_msg_t msg;
-		build_2d_analog_sensor_24bit_msg(PRIO_LOW,
-										 (uint16_t)timestamp,
-										 axis_ids[axis],
-										 (uint32_t)(velocity + TELEMETRY_INT24_OFFSET),
-										 (uint32_t)(angular_velocity + TELEMETRY_INT24_OFFSET),
-										 &msg);
+	if (log_data(NAV_LOG_DATA_TIMEOUT, LOG_TYPE_NAVIGATOR_PT1, &log_container) != W_SUCCESS) {
+		navigator_error_stats.log_data_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
+		status |= W_FAILURE;
+	}
 
-		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0,
-					 LOG_LVL_WARN,
-					 "navigator",
-					 "Failed to transmit velocity/angular velocity values through can.");
-			status = W_FAILURE;
-		}
+	// nav pt2
+	log_container.navigator_pt2.velocity.x = (float32_t)nav_value_lastest_raw.velocity[0];
+	log_container.navigator_pt2.velocity.y = (float32_t)nav_value_lastest_raw.velocity[1];
+	log_container.navigator_pt2.velocity.z = (float32_t)nav_value_lastest_raw.velocity[2];
+
+	log_container.navigator_pt2.angular_velocity.x =
+		(float32_t)nav_value_lastest_raw.angular_velocity[0];
+	log_container.navigator_pt2.angular_velocity.y =
+		(float32_t)nav_value_lastest_raw.angular_velocity[1];
+	log_container.navigator_pt2.angular_velocity.z =
+		(float32_t)nav_value_lastest_raw.angular_velocity[2];
+
+	if (log_data(NAV_LOG_DATA_TIMEOUT, LOG_TYPE_NAVIGATOR_PT2, &log_container) != W_SUCCESS) {
+		navigator_error_stats.log_data_fail_count++;
+		navigator_error_stats.can_telem_tx_fail = true;
+		status |= W_FAILURE;
 	}
 
 	return status;
@@ -220,46 +257,28 @@ static w_status_t nav_velocity_angular_velocity_telemetry(void) {
 
 w_status_t navigator_init(void) {
 	// Initialize error tracking
-	estimator_error_stats = (navigator_error_data_t){.is_init = true};
+	navigator_error_stats = (navigator_error_data_t){0};
 
 	// create mailbox queue for nav values
 	nav_value_queue = xQueueCreate(1, sizeof(nav_value_handle_t));
-	configASSERT(nav_value_queue != NULL);
+	if (NULL == nav_value_queue) {
+		log_text(0, LOG_LVL_FATAL, "navigator", "unable to allocate memory for queue.");
+		return W_FAILURE;
+	}
 
 	static const telemetry_source_config_t telemetry_sources[] = {
-		{"Navigator angular velocity and velocity",
-		 nav_velocity_angular_velocity_telemetry,
-		 STATE_PAD_FILTER,
-		 1000 / 10},
-		{"Navigator angular velocity and velocity",
-		 nav_velocity_angular_velocity_telemetry,
-		 STATE_PAD_NAV,
-		 1000 / 10},
-		{"Navigator angular velocity and velocity",
-		 nav_velocity_angular_velocity_telemetry,
-		 STATE_BOOST,
-		 1000 / 5},
-		{"Navigator angular velocity and velocity",
-		 nav_velocity_angular_velocity_telemetry,
-		 STATE_ACT_ALLOWED,
-		 1000 / 5},
 
-		{"Navigator orientation, altitude, and variance norm",
-		 nav_orientation_altitude_varnorm_telemetry,
-		 STATE_PAD_FILTER,
-		 1000 / 10},
-		{"Navigator orientation, altitude, and variance norm",
-		 nav_orientation_altitude_varnorm_telemetry,
-		 STATE_PAD_NAV,
-		 1000 / 10},
-		{"Navigator orientation, altitude, and variance norm",
-		 nav_orientation_altitude_varnorm_telemetry,
-		 STATE_BOOST,
-		 1000 / 10},
-		{"Navigator orientation, altitude, and variance norm",
-		 nav_orientation_altitude_varnorm_telemetry,
-		 STATE_ACT_ALLOWED,
-		 1000 / 10},
+		{"Nav CAN Telem", nav_can_telemetry, STATE_PAD_FILTER, 1000 / 10},
+		{"Nav CAN Telem", nav_can_telemetry, STATE_PAD_NAV, 1000 / 10},
+		{"Nav CAN Telem", nav_can_telemetry, STATE_BOOST, 1000 / 10},
+		{"Nav CAN Telem", nav_can_telemetry, STATE_ACT_ALLOWED, 1000 / 10},
+
+		{"Nav SD Telem", nav_sd_telemetry, STATE_PAD_FILTER, 1000 / 20},
+		{"Nav SD Telem", nav_sd_telemetry, STATE_PAD_NAV, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Nav SD Telem", nav_sd_telemetry, STATE_BOOST, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Nav SD Telem", nav_sd_telemetry, STATE_ACT_ALLOWED, 1000 / MAX_LOGGING_RATE_HZ},
+		{"Nav SD Telem", nav_sd_telemetry, STATE_RECOVERY, 1000 / 20},
+		{"Nav SD Telem", nav_sd_telemetry, STATE_SLEEPY, 1000 / 1},
 	};
 
 	static const size_t telemetry_source_count =
@@ -276,13 +295,16 @@ w_status_t navigator_init(void) {
 		return W_FAILURE;
 	}
 
+	navigator_error_stats.is_init = true;
+
 	return W_SUCCESS;
 }
 
 w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t timestamp_tenth_ms,
 						  navigator_ctx_t *p_ctx, navigator_output_t *p_output) {
 	if ((NULL == p_input) || (NULL == p_ctx) || (NULL == p_output)) {
-		log_text(0, LOG_LVL_WARN, "navigator", "Invalid context ptr.");
+		navigator_error_stats.null_ctx_count++;
+		navigator_error_stats.ctx_is_null = true;
 		return W_INVALID_PARAM;
 	}
 	// calculate remainder navigator data
@@ -293,7 +315,7 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 	// construct sensor inputs
 	gnc_navigator_sensor_input_t codegen_sensor_input = {0};
 
-	// status repersents if this sensor should be used in this cycle of nav
+	// status represents if this sensor should be used in this cycle of nav
 	// lsm6
 	memcpy(codegen_sensor_input.board_accel.meas,
 		   p_input->sensor_data->board_meas.board_imu.accel.array,
@@ -359,49 +381,16 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 							 p_output->roll_state,
 							 &(p_output->dynamic_pressure),
 							 &is_run);
-#ifdef HIL
-	log_data_container_t container = {0};
-	container.navigator_pt1.orient_w = p_ctx->gnc_navigator_ctx.x.q.w;
-	container.navigator_pt1.orient_x = p_ctx->gnc_navigator_ctx.x.q.x;
-	container.navigator_pt1.orient_y = p_ctx->gnc_navigator_ctx.x.q.y;
-	container.navigator_pt1.orient_z = p_ctx->gnc_navigator_ctx.x.q.z;
-	container.navigator_pt1.altitude = p_ctx->gnc_navigator_ctx.x.altitude;
-	container.navigator_pt1.variance_norm = p_output->cov_norm;
-
-	log_data(1, LOG_TYPE_NAVIGATOR_PT1, (log_data_container_t *)&container);
-
-	container.navigator_pt2.velocity.x = p_ctx->gnc_navigator_ctx.x.vel.x;
-	container.navigator_pt2.velocity.y = p_ctx->gnc_navigator_ctx.x.vel.y;
-	container.navigator_pt2.velocity.z = p_ctx->gnc_navigator_ctx.x.vel.z;
-	container.navigator_pt2.angular_velocity.x = p_ctx->gnc_navigator_ctx.x.ang_rate.x;
-	container.navigator_pt2.angular_velocity.y = p_ctx->gnc_navigator_ctx.x.ang_rate.y;
-	container.navigator_pt2.angular_velocity.z = p_ctx->gnc_navigator_ctx.x.ang_rate.z;
-
-	log_data(1, LOG_TYPE_NAVIGATOR_PT2, (log_data_container_t *)&container);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "bias",
-			 "board_baro bias %f, mti_baro %f",
-			 p_ctx->gnc_navigator_ctx.bias.board_baro,
-			 p_ctx->gnc_navigator_ctx.bias.mti_baro);
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "sensorfilter",
-			 "board_baro bias %f, mti_baro %f",
-			 p_ctx->gnc_navigator_ctx.sensor_filter.board_baro,
-			 p_ctx->gnc_navigator_ctx.sensor_filter.mti_baro);
-#endif
-
-#ifdef HIL
-	p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
-#else
 	if (is_run) { // if nav ran
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
-		log_text(0, LOG_LVL_WARN, "Navigator", "Nav failed to run");
+		navigator_error_stats.nav_not_run_count++;
+		navigator_error_stats.total_nav_not_run_count++;
+		if (navigator_error_stats.nav_not_run_count > MAXIMUM_NAV_NOT_RUN_COUNT) {
+			navigator_error_stats.nav_not_run = true;
+			navigator_error_stats.nav_not_run_count = 0;
+		}
 	}
-#endif
 
 	nav_value_handle_t nav_latest_values;
 
@@ -427,7 +416,8 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 
 w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_data) {
 	if ((NULL == p_ctx) || (NULL == p_sensor_data)) {
-		log_text(0, LOG_LVL_WARN, "navigator", "Invalid context ptr.");
+		navigator_error_stats.null_ctx_count++;
+		navigator_error_stats.ctx_is_null = true;
 		return W_INVALID_PARAM;
 	}
 
@@ -482,61 +472,58 @@ w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_
 	return W_SUCCESS;
 }
 
-// TODO: to be revived
-// w_status_t navigator_log_state_to_can(const x_state_t *current_state) {
-// 	can_msg_t msg;
-// 	uint32_t current_time_ms;
-// 	w_status_t status = W_SUCCESS;
-
-// 	if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
-// 		current_time_ms = 0; // Default to 0 if timer fails
-// 	}
-// 	uint16_t timestamp_16bit = (uint16_t)current_time_ms;
-
-// 	// TODO: Redo how messages are built and sent
-// 	// Iterate through all defined state IDs
-// 	for (can_state_est_id_t state_id = 0; state_id < STATE_ID_ENUM_MAX; ++state_id) {
-// 		// The x_state_t union maps directly to the enum order if accessed as an array
-// 		// Convert the doubles in x_state_t to floats for CAN message
-// 		float state_value = (float)current_state->array[state_id];
-
-// 		if (!build_state_est_data_msg(PRIO_LOW, timestamp_16bit, state_id, &state_value, &msg)) {
-// 			log_text(0, "Estimator", "Failed to build CAN message for state ID %d", state_id);
-// 			estimator_error_stats.can_log_fails++;
-// 			status = W_FAILURE; // Mark as failure but continue trying other states
-// 			continue;
-// 		}
-
-// 		if (W_SUCCESS != can_handler_transmit(&msg)) {
-// 			log_text(0, "Estimator", "Failed to transmit CAN message for state ID %d", state_id);
-// 			estimator_error_stats.can_log_fails++;
-// 			status = W_FAILURE; // Mark as failure but continue trying other states
-// 		}
-// 	}
-
-// 	return status;
-// }
-
 health_status_t navigator_get_status(void) {
-	// Log all error statistics
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "Navigator",
-			 "imu_timeouts=%lu, encoder_miss=%lu, controller_miss=%lu,",
-			 estimator_error_stats.imu_data_timeouts,
-			 estimator_error_stats.encoder_data_fails,
-			 estimator_error_stats.controller_data_fails);
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "Navigator",
-			 "pad_filter_fails=%lu, can_log_fails=%lu, invalid_phase=%lu",
-			 estimator_error_stats.pad_filter_fails,
-			 estimator_error_stats.can_log_fails,
-			 estimator_error_stats.invalid_phase_errors);
-
 	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
 							  .module_id = CANARDS_MODULE_ID_NAVIGATOR,
 							  .error_bitfield = 0};
+
+	if (navigator_error_stats.ctx_is_null) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		navigator_error_stats.ctx_is_null = false;
+	}
+
+	if (navigator_error_stats.can_telem_tx_fail) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
+		navigator_error_stats.can_telem_tx_fail = false;
+	}
+
+	if (navigator_error_stats.nav_not_run) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_LOOP_TIMING_OFFSET;
+		navigator_error_stats.nav_not_run = false;
+	}
+
+	if (navigator_error_stats.queue_is_empty) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
+		navigator_error_stats.queue_is_empty = false;
+	}
+
+	if (!navigator_error_stats.is_init) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+	}
+
+	// Log all error statistics
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "navigator",
+			 "init=%lu, null_ctx=%lu, nav_not_run=%lu, can_encode_fail=%lu",
+			 navigator_error_stats.is_init,
+			 navigator_error_stats.null_ctx_count,
+			 navigator_error_stats.total_nav_not_run_count,
+			 navigator_error_stats.can_encode_fail_count);
+
+	log_text(10,
+			 LOG_LVL_INFO,
+			 "navigator",
+			 "timestamp_fail=%lu, log_data_fail=%lu, can_telem_tx_fail=%lu",
+			 navigator_error_stats.timestamp_fail_count,
+			 navigator_error_stats.log_data_fail_count,
+			 navigator_error_stats.can_telem_tx_fail_count);
 
 	return status;
 }
