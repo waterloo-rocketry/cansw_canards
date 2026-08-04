@@ -33,10 +33,8 @@
 
 /* Number of text log buffers */
 #define NUM_TEXT_LOG_BUFFERS 2
-// #define NUM_TEXT_LOG_BUFFERS 2
 /* Number of data log buffers */
 #define NUM_DATA_LOG_BUFFERS 4
-// #define NUM_DATA_LOG_BUFFERS 11
 
 /**
  * Version number to identify post-flight how to parse data log messages.
@@ -45,7 +43,7 @@
  *
  * Deprecated values: none
  */
-#define LOG_DATA_FORMAT_VERSION 2
+#define LOG_DATA_FORMAT_VERSION 3
 
 /**
  * Magic number to encode into log_data_type_t values: "DL" encoded as a little-endian 16-bit int.
@@ -72,6 +70,7 @@ typedef enum {
 
 	LOG_TYPE_POLOLU_READING = M(0x07),
 	LOG_TYPE_POLOLU_RAW = M(0x08),
+    LOG_TYPE_MOVELLA_PT4 = M(0x0A),
 	*/
 
 	// Message type values in use
@@ -90,7 +89,6 @@ typedef enum {
 	LOG_TYPE_MOVELLA_PT1 = M(0x07),
 	LOG_TYPE_MOVELLA_PT2 = M(0x08),
 	LOG_TYPE_MOVELLA_PT3 = M(0x09),
-	LOG_TYPE_MOVELLA_PT4 = M(0x0A),
 
 	LOG_TYPE_AD_BREAKOUT = M(0x0B),
 

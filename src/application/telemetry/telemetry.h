@@ -14,7 +14,7 @@
 #define TELEMETRY_INT24_OFFSET 8388608
 #define TELEMETRY_INT32_OFFSET 2147483648
 
-#define MAX_LOGGING_RATE_HZ 50
+#define MAX_LOGGING_RATE_HZ 400
 
 // Pass in any fuction your module desire to log data (had to be NON-BLOCKING and returns a status
 // code)

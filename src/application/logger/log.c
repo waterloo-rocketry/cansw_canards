@@ -24,12 +24,12 @@ static char text_log_filename[8 + 1 + 3 + 1] = "XXXXXXXX.TXT";
 static char data_log_filename[8 + 1 + 3 + 1] = "XXXXXXXX.BIN";
 
 typedef struct {
-	bool is_text;
-	bool is_full;
+	char data[LOG_BUFFER_SIZE];
 	uint32_t next_msg_num;
 	SemaphoreHandle_t next_msg_num_mutex;
 	SemaphoreHandle_t msgs_done_semaphore;
-	char data[LOG_BUFFER_SIZE];
+	bool is_text;
+	bool is_full;
 } log_buffer_t;
 
 static log_buffer_t log_text_buffers[NUM_TEXT_LOG_BUFFERS];
@@ -409,20 +409,31 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	return res;
 }
 
+static sd_card_file_ctx_t text_file_ctx;
+static sd_card_file_ctx_t data_file_ctx;
+
 void log_task(void *argument) {
 	(void)argument;
 
 	log_buffer_t *buffer_to_print = NULL;
+
+	// Open persistent streaming files.
+	// Keep these open for the duration of logging to avoid FAT traversal overhead.
+	if ((sd_card_file_open(&text_file_ctx, text_log_filename) != W_SUCCESS) ||
+		(sd_card_file_open(&data_file_ctx, data_log_filename) != W_SUCCESS)) {
+		logger_health.crit_errs++;
+	}
+
 	for (;;) {
 		if (xQueueReceive(full_buffers_queue, &buffer_to_print, 5000) == pdPASS) {
-			// Retrieve number of completed log messages in the received buffer
+			// Retrieve number of completed log messages in the received buffer.
 			uint32_t msgs_done = 0;
 			uint32_t max_msgs = TEXT_MSGS_PER_BUFFER;
-			char *filename = text_log_filename;
+
 			if (!buffer_to_print->is_text) {
 				max_msgs = DATA_MSGS_PER_BUFFER;
-				filename = data_log_filename;
 			}
+
 			while (msgs_done < max_msgs) {
 				if (xSemaphoreTake(buffer_to_print->msgs_done_semaphore, 10) == pdPASS) {
 					msgs_done++;
@@ -432,27 +443,66 @@ void log_task(void *argument) {
 				}
 			}
 
-			// try several times to buffer to SD card
+			// Select correct persistent file.
+			sd_card_file_ctx_t *file_ctx = NULL;
+
+			if (buffer_to_print->is_text) {
+				file_ctx = &text_file_ctx;
+			} else {
+				file_ctx = &data_file_ctx;
+			}
+
+			// Try several times to write buffer to SD card.
 			uint32_t size = 0;
 			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
-				if (sd_card_file_write(
-						filename, buffer_to_print->data, LOG_BUFFER_SIZE, true, &size) ==
-					W_SUCCESS) {
-					break; // Successfully wrote the buffer
-				} else {
-					// TODO: log err
-					gpio_toggle(GPIO_PIN_RED_LED, 0);
+                uint32_t open_start_ms = 0;
+                timer_get_ms(&open_start_ms);
+
+				if (sd_card_file_write_open(file_ctx,
+											buffer_to_print->data,
+											LOG_BUFFER_SIZE,
+											&size) == W_SUCCESS) {
+                                            
+                    uint32_t open_end_ms = 0;
+                    timer_get_ms(&open_end_ms);
+					/*
+					 * Sync after every buffer for maximum data retention.
+					 * Consider reducing this to periodic syncs once reliability
+					 * is confirmed.
+					 */
+                    uint32_t sync_start_ms = 0;
+                    timer_get_ms(&sync_start_ms);
+					if (sd_card_file_sync(file_ctx) == W_SUCCESS) {
+                        uint32_t sync_end_ms = 0;
+                        timer_get_ms(&sync_end_ms);
+						log_text(10,
+								 LOG_LVL_INFO,
+								 "hi",
+								 "open_time=%d, sync_time=%d, try=%d",
+								 open_end_ms - open_start_ms,
+								 sync_end_ms - sync_start_ms,
+								 i + 1);
+						gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+						break;
+					} else {
+                        log_text(10,
+                                 LOG_LVL_WARN, "logger",
+                                 "sd_card_file_sync failed on try %d", i + 1);
+                    }
 				}
+
+				gpio_toggle(GPIO_PIN_RED_LED, 0);
+
 				if ((LOG_WRITE_TRY_COUNT - 1) == i) {
 					logger_health.buffer_flush_fails++;
-					break; // Failed to write after all attempts
+					break;
 				} else {
-					// wait some time before retrying, shld allow wear leveling to finish ideally..
-					vTaskDelay(pdMS_TO_TICKS(20));
+					// Allow SD card time to recover.
+					vTaskDelay(pdMS_TO_TICKS(2));
 				}
 			}
 
-			// Reinitialize buffer for reuse
+			// Reinitialize buffer for reuse.
 			log_reset_buffer(buffer_to_print);
 		} else {
 			logger_health.no_full_buf_moments++;
