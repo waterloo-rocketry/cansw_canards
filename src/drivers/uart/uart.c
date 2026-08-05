@@ -222,7 +222,10 @@ w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
 w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
 					 uint32_t timeout_ms) {
 	/* Validate all parameters before proceeding */
-	if ((channel >= UART_CHANNEL_COUNT) || (NULL == buffer) || (NULL == length)) {
+	if (channel >= UART_CHANNEL_COUNT) {
+		return W_INVALID_PARAM;
+	}
+	if ((NULL == buffer) || (NULL == length)) {
 		uart_health[channel].invalid_params++;
 		return W_INVALID_PARAM;
 	}
