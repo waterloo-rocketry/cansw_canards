@@ -107,7 +107,7 @@ w_status_t fsm_init() {
 	g_ctx.p_imu_context = &g_imu_context;
 
 	// initialize fsm state
-	g_ctx.curr_state = STATE_BOOST;
+	g_ctx.curr_state = STATE_IDLE;
 #ifndef HIL
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, &unblock_fsm_loop);
 
@@ -252,7 +252,6 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			}
 			break;
 
-		// TODO Implement
 		case STATE_SLEEPY:
 			break;
 

@@ -5,9 +5,10 @@
 #include <stdint.h>
 
 #include "application/health_checks/health_checks.h"
+#include "application/logger/log.h"
 
-#include "stm32h7xx_hal.h"
 #include "fatfs.h"
+#include "stm32h7xx_hal.h"
 
 #include "rocketlib/include/common.h"
 
@@ -104,13 +105,13 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *p_sd_handle);
  */
 health_status_t sd_card_get_status(void);
 
-
 /**
  * @brief SD card file context used for persistent streaming writes.
  *
  * A separate context should be created for each file that remains open.
  */
 typedef struct {
+	char filename[FILENAME_STRING_SIZE];
 	FIL file;
 	bool is_open;
 } sd_card_file_ctx_t;
@@ -129,7 +130,7 @@ typedef struct {
  *
  * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
  */
-w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx, const char *file_name);
+w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx);
 
 /**
  * @brief Write data to an opened SD card file.
@@ -144,9 +145,7 @@ w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx, const char *file_name);
  *
  * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
  */
-w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx,
-								   const char *buffer,
-								   uint32_t num_bytes,
+w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, uint32_t num_bytes,
 								   uint32_t *bytes_written);
 
 /**

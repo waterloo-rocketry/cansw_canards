@@ -36,6 +36,9 @@
 /* Number of data log buffers */
 #define NUM_DATA_LOG_BUFFERS 4
 
+/* Size of filename string */
+#define FILENAME_STRING_SIZE 8 + 1 + 3 + 1
+
 /**
  * Version number to identify post-flight how to parse data log messages.
  * Increment this value when making an incompatible change to log_data_type_t or log_data()'s
@@ -70,7 +73,7 @@ typedef enum {
 
 	LOG_TYPE_POLOLU_READING = M(0x07),
 	LOG_TYPE_POLOLU_RAW = M(0x08),
-    LOG_TYPE_MOVELLA_PT4 = M(0x0A),
+	LOG_TYPE_MOVELLA_PT4 = M(0x0A),
 	*/
 
 	// Message type values in use

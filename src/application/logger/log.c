@@ -15,13 +15,13 @@
 #include "third_party/printf/printf.h"
 
 // number of times to try writing a log message in case fails once
-#define LOG_WRITE_TRY_COUNT 2
+#define LOG_WRITE_TRY_COUNT 20
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
 
-static char text_log_filename[8 + 1 + 3 + 1] = "XXXXXXXX.TXT";
-static char data_log_filename[8 + 1 + 3 + 1] = "XXXXXXXX.BIN";
+static char text_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.TXT";
+static char data_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.BIN";
 
 typedef struct {
 	char data[LOG_BUFFER_SIZE];
@@ -419,8 +419,11 @@ void log_task(void *argument) {
 
 	// Open persistent streaming files.
 	// Keep these open for the duration of logging to avoid FAT traversal overhead.
-	if ((sd_card_file_open(&text_file_ctx, text_log_filename) != W_SUCCESS) ||
-		(sd_card_file_open(&data_file_ctx, data_log_filename) != W_SUCCESS)) {
+	// write the file names
+	memcpy(text_file_ctx.filename, text_log_filename, sizeof(text_file_ctx.filename));
+	memcpy(data_file_ctx.filename, data_log_filename, sizeof(data_file_ctx.filename));
+	if ((sd_card_file_open(&text_file_ctx) != W_SUCCESS) ||
+		(sd_card_file_open(&data_file_ctx) != W_SUCCESS)) {
 		logger_health.crit_errs++;
 	}
 
@@ -455,26 +458,23 @@ void log_task(void *argument) {
 			// Try several times to write buffer to SD card.
 			uint32_t size = 0;
 			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
-                uint32_t open_start_ms = 0;
-                timer_get_ms(&open_start_ms);
+				uint32_t open_start_ms = 0;
+				timer_get_ms(&open_start_ms);
 
-				if (sd_card_file_write_open(file_ctx,
-											buffer_to_print->data,
-											LOG_BUFFER_SIZE,
-											&size) == W_SUCCESS) {
-                                            
-                    uint32_t open_end_ms = 0;
-                    timer_get_ms(&open_end_ms);
+				if (sd_card_file_write_open(
+						file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE, &size) == W_SUCCESS) {
+					uint32_t open_end_ms = 0;
+					timer_get_ms(&open_end_ms);
 					/*
 					 * Sync after every buffer for maximum data retention.
 					 * Consider reducing this to periodic syncs once reliability
 					 * is confirmed.
 					 */
-                    uint32_t sync_start_ms = 0;
-                    timer_get_ms(&sync_start_ms);
+					uint32_t sync_start_ms = 0;
+					timer_get_ms(&sync_start_ms);
 					if (sd_card_file_sync(file_ctx) == W_SUCCESS) {
-                        uint32_t sync_end_ms = 0;
-                        timer_get_ms(&sync_end_ms);
+						uint32_t sync_end_ms = 0;
+						timer_get_ms(&sync_end_ms);
 						log_text(10,
 								 LOG_LVL_INFO,
 								 "hi",
@@ -485,10 +485,12 @@ void log_task(void *argument) {
 						gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 						break;
 					} else {
-                        log_text(10,
-                                 LOG_LVL_WARN, "logger",
-                                 "sd_card_file_sync failed on try %d", i + 1);
-                    }
+						log_text(10,
+								 LOG_LVL_WARN,
+								 "logger",
+								 "sd_card_file_sync failed on try %d",
+								 i + 1);
+					}
 				}
 
 				gpio_toggle(GPIO_PIN_RED_LED, 0);

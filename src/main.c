@@ -74,88 +74,6 @@ void MX_FREERTOS_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-#define TEST_BUF_SIZE (64 * 1024)
-
-static uint8_t test_buf[TEST_BUF_SIZE];
-FATFS test_fs_obj;
-
-void sd_write_test(void)
-{
-    FIL file;
-    UINT written;
-    HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET); // Turn on LED to indicate test is running
-    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET); // Turn on LED to indicate test is running
-    HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET); // Turn on LED to indicate test is running
-
-    if (f_mount(&test_fs_obj, "", 1) != FR_OK) {
-		  while (1) {
-            __NOP();
-        };
-	}
-
-    if (f_open(&file, "TEST.TXT", FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
-    {
-        while (1) {
-            __NOP();
-        };
-    }
-
-    uint32_t iter = 0;
-    uint32_t last_write_ms = 0;
-    uint32_t last_sync_ms = 0;
-
-    while (1)
-    {
-    HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin); // Turn on LED to indicate test is running
-
-        // Fill entire block with recognizable data
-        memset(test_buf, 'A', sizeof(test_buf));
-
-        // Write previous timing results into start of this block
-        snprintf((char *)test_buf,
-                 TEST_BUF_SIZE,
-                 "SD WRITE TEST\r\n"
-                 "ITERATION: %lu\r\n"
-                 "PREVIOUS_WRITE_MS: %lu\r\n"
-                 "PREVIOUS_SYNC_MS: %lu\r\n"
-                 "--------------------------------\r\n",
-                 iter,
-                 last_write_ms,
-                 last_sync_ms);
-
-        uint32_t start = HAL_GetTick();
-
-        FRESULT res = f_write(&file,
-                              test_buf,
-                              sizeof(test_buf),
-                              &written);
-
-        uint32_t after_write = HAL_GetTick();
-
-        if (res != FR_OK || written != sizeof(test_buf))
-        {
-            // Cannot use stdout; file will contain previous results
-            while (1);
-        }
-
-        res = f_sync(&file);
-
-        uint32_t after_sync = HAL_GetTick();
-
-        if (res != FR_OK)
-        {
-            while (1);
-        }
-
-        last_write_ms = after_write - start;
-        last_sync_ms = after_sync - after_write;
-
-        iter++;
-    }
-
-    f_close(&file);
-}
-
 /* USER CODE END 0 */
 
 /**
@@ -216,8 +134,6 @@ int main(void) {
 	MX_FATFS_Init();
 	MX_TIM5_Init();
 	/* USER CODE BEGIN 2 */
-
-    // sd_write_test();
 
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
 	// our actual code
