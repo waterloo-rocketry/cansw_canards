@@ -37,7 +37,7 @@
 #define NUM_DATA_LOG_BUFFERS 4
 
 /* Size of filename string */
-#define FILENAME_STRING_SIZE 8 + 1 + 3 + 1
+#define FILENAME_STRING_SIZE (8 + 1 + 3 + 1)
 
 /**
  * Version number to identify post-flight how to parse data log messages.

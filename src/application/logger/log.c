@@ -494,9 +494,11 @@ void log_task(void *argument) {
 					if (sd_card_file_sync(file_ctx) == W_SUCCESS) {
 						uint32_t sync_end_ms = 0;
 						timer_get_ms(&sync_end_ms);
+
+						// REMOVE BEFORE FLIGHT
 						log_text(10,
 								 LOG_LVL_INFO,
-								 "hi",
+								 "logger_write",
 								 "open_time=%d, sync_time=%d, try=%d",
 								 open_end_ms - open_start_ms,
 								 sync_end_ms - sync_start_ms,

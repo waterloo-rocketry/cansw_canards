@@ -125,8 +125,8 @@ typedef struct {
  *
  * This avoids repeated file open/close overhead during logging.
  *
- * @param[out] ctx File context to initialize.
- * @param[in] file_name Name/path of the file to open.
+ * @param[in/out] ctx File context to initialize.
+ * please define the file name
  *
  * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
  */
