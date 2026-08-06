@@ -103,8 +103,8 @@ TEST_F(TelemetryModuleTest, RegisterZeroPeriodIsInvalidParam) {
 
 TEST_F(TelemetryModuleTest, RegisterBeyondMaxSourcesFails) {
     ASSERT_EQ(telemetry_init(), W_SUCCESS);
-    // TELEMETRY_MAX_SOURCES is a private macro (100) in telemetry.c.
-    constexpr uint32_t kMaxSources = 100;
+    // TELEMETRY_MAX_SOURCES is a private macro (75) in telemetry.c.
+    constexpr uint32_t kMaxSources = 75;
     telemetry_source_config_t cfg = make_source(source_log_ok, STATE_ACT_ALLOWED, 100);
     for (uint32_t i = 0; i < kMaxSources; i++) {
         EXPECT_EQ(telemetry_register(&cfg), W_SUCCESS) << "at source " << i;
