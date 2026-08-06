@@ -254,7 +254,6 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			}
 			break;
 
-		// TODO Implement
 		case STATE_SLEEPY:
 			navigator_step(&navigator_input,
 						   timestamp_tenth_ms,
