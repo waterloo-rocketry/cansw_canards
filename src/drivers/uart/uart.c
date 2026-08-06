@@ -14,6 +14,8 @@
 /* Static buffer pool for all channels */
 static uint8_t s_buffer_pool[UART_CHANNEL_COUNT][UART_MAX_LEN * UART_NUM_RX_BUFFERS];
 
+static uint16_t MAX_UART_ATTEMPTS = 5;
+
 /**
  * @brief Internal handle structure for UART channel state
  */
@@ -47,6 +49,7 @@ typedef struct {
 	uint32_t init_callback_errors; /**< Callback registration errors */
 	uint32_t init_rx_errors; /**< Init receive errors */
 	uint32_t hw_errors; /**< Count of hardware errors */
+	uint32_t retry_attempts;
 	uint32_t messages_received; /**< Count of messages successfully received */
 	uint32_t messages_sent; /**< Count of messages successfully sent */
 	uint32_t restart_failed; /**< Count of times we failed to restart reception after error */
@@ -63,11 +66,16 @@ static uart_health_t uart_health[UART_CHANNEL_COUNT] = {0};
  * @return Status of the initialization
  */
 w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t timeout_ms) {
+	if (channel >= UART_CHANNEL_COUNT) {
+		return W_INVALID_PARAM;
+	}
+
 	if (uart_health[channel].initialized) {
 		uart_health[channel].reinit_attempts++;
 		return W_FAILURE;
 	}
-	if ((channel >= UART_CHANNEL_COUNT) || (NULL == huart)) {
+
+	if (NULL == huart) {
 		uart_health[channel].invalid_params++;
 		return W_INVALID_PARAM;
 	}
@@ -170,8 +178,11 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
 					  uint32_t timeout_ms) {
 	w_status_t status = W_SUCCESS;
-	if ((channel >= UART_CHANNEL_COUNT) || (NULL == s_uart_handles[channel].huart) ||
-		(buffer == NULL) || (length == 0)) {
+	if ((channel >= UART_CHANNEL_COUNT)) {
+		return W_INVALID_PARAM;
+	}
+
+	if ((NULL == s_uart_handles[channel].huart) || (buffer == NULL) || (length == 0)) {
 		uart_health[channel].invalid_params++;
 		return W_INVALID_PARAM; // Invalid parameter(s)
 	}
@@ -306,14 +317,19 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 		if (s_uart_handles[ch].huart == huart) {
 			uart_health[ch].hw_errors++;
 
-			// Reset current buffer and restart reception
-			uart_handle_t *handle = &s_uart_handles[ch];
-			uart_msg_t *curr_msg = &handle->rx_msgs[handle->curr_buffer_num];
-			curr_msg->len = 0;
-			curr_msg->busy = false;
-			// Attempt to restart reception
-			if (HAL_UARTEx_ReceiveToIdle_DMA(huart, curr_msg->data, UART_MAX_LEN) != HAL_OK) {
-				uart_health[ch].restart_failed++;
+			if (uart_health[ch].retry_attempts < MAX_UART_ATTEMPTS) {
+				uart_health[ch].retry_attempts++;
+
+				// Reset current buffer and restart reception
+				uart_handle_t *handle = &s_uart_handles[ch];
+				uart_msg_t *curr_msg = &handle->rx_msgs[handle->curr_buffer_num];
+				curr_msg->len = 0;
+				curr_msg->busy = false;
+				// Attempt to restart reception
+				if (HAL_UARTEx_ReceiveToIdle_DMA(huart, curr_msg->data, UART_MAX_LEN) != HAL_OK) {
+					uart_health[ch].restart_failed++;
+				}
+				uart_health[ch].retry_attempts = 0;
 			}
 			portYIELD_FROM_ISR(higher_priority_task_woken);
 			break;
@@ -347,7 +363,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
  * @return Status code indicating success or failure
  */
 health_status_t uart_get_status(void) {
-	health_status_t status = {.severity = HEALTH_OK, .module_id = MODULE_UART, .error_bitfield = 0};
+	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+							  .module_id = CANARDS_MODULE_ID_UART,
+							  .error_bitfield = 0};
 
 	// Iterate through all UART channels
 	for (uart_channel_t channel = 0; channel < UART_CHANNEL_COUNT; channel++) {
@@ -370,9 +388,9 @@ health_status_t uart_get_status(void) {
 		log_text(10,
 				 LOG_LVL_INFO,
 				 "uart",
-				 "%s init=%d reinit=%lu timeouts=%lu hw_err=%lu ovf=%lu",
+				 "%s %s reinit=%lu timeouts=%lu hw_err=%lu ovf=%lu",
 				 channel_name,
-				 stats->initialized,
+				 stats->initialized ? "INIT" : "NOT INIT",
 				 stats->reinit_attempts,
 				 stats->timeouts,
 				 stats->hw_errors,
@@ -391,7 +409,7 @@ health_status_t uart_get_status(void) {
 		log_text(10,
 				 LOG_LVL_INFO,
 				 "uart",
-				 "%s init_mtx=%lu init_q=%lu init_cb=%lu init_rx=%lu",
+				 "%s init err: mtx=%lu q=%lu cb=%lu rx=%lu",
 				 channel_name,
 				 stats->init_mutex_errors,
 				 stats->init_queue_errors,
@@ -399,13 +417,13 @@ health_status_t uart_get_status(void) {
 				 stats->init_rx_errors);
 
 		if (!stats->initialized) {
-			status.severity = HEALTH_ERROR;
-			status.error_bitfield |= (1 << ERR_NOT_INIT);
+			status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+			status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
 		}
 
 		if (stats->restart_failed > 0) {
-			status.severity = HEALTH_ERROR;
-			status.error_bitfield |= (1 << ERR_COMM_FAILURE);
+			status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+			status.error_bitfield |= ((1U) << CANARDS_MODULE_E_COMM_FAILURE_OFFSET);
 		}
 	}
 

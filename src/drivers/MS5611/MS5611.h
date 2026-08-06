@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
+
 #include "rocketlib/include/common.h"
 
 typedef struct {
@@ -28,5 +30,11 @@ w_status_t ms5611_get_raw_pressure(ms5611_raw_result_t *result, uint32_t *timest
  * the latest result for ms5611_get_raw_pressure.
  */
 void ms5611_task(void *argument);
+
+/**
+ * @brief Report MS5611 (barometer) health check status.
+ * @return The health status of the module.
+ */
+health_status_t ms5611_get_status(void);
 
 #endif // MS5611_H

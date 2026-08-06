@@ -1,24 +1,28 @@
-#include "health_checks.h"
+#include "application/health_checks/health_checks.h"
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/telemetry/telemetry.h"
 #include "can.h"
+#include "drivers/ad_breakout_board/ADXL380.h"
+#include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
+#include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 #include "fdcan.h"
-#include "message_types.h"
 #include "printf.h"
 #include "task.h"
 
@@ -40,22 +44,29 @@ typedef health_status_t (*get_module_status_t)(void);
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
 static uint32_t num_watchdog_tasks = 0;
 
-static const get_module_status_t module_get_status_fns[MODULE_COUNT] = {
-	[MODULE_I2C] = i2c_get_status,
-	[MODULE_ADC] = adc_get_status,
-	[MODULE_CAN_HANDLER] = can_handler_get_status,
-	[MODULE_NAVIGATOR] = navigator_get_status,
-	[MODULE_CONTROLLER] = controller_get_status,
-	[MODULE_SD_CARD] = sd_card_get_status,
-	[MODULE_TIMER] = timer_get_status,
-	[MODULE_GPIO] = gpio_get_status,
-	[MODULE_FLIGHT_PHASE] = flight_phase_get_status,
-	[MODULE_SENSOR_HANDLER] = sensor_handler_get_status,
-	[MODULE_UART] = uart_get_status,
-	[MODULE_LOGGER] = logger_get_status,
-	[MODULE_POWER_HANDLER] = power_handler_get_status,
-	[MODULE_LSM6DSV32X] = lsm6dsv32x_get_status,
-	[MODULE_TELEMETRY] = telemetry_get_status,
+static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MAX] = {
+	[CANARDS_MODULE_ID_ADC] = adc_get_status,
+	[CANARDS_MODULE_ID_ADXL380] = adxl380_get_status,
+	[CANARDS_MODULE_ID_ADXRS649] = adxrs649_get_status,
+	[CANARDS_MODULE_ID_AK45] = ak45_get_status,
+	[CANARDS_MODULE_ID_CAN_HANDLER] = can_handler_get_status,
+	[CANARDS_MODULE_ID_CONTROLLER] = controller_get_status,
+	[CANARDS_MODULE_ID_FLIGHT_PHASE] = flight_phase_get_status,
+	[CANARDS_MODULE_ID_FSM] = fsm_get_status,
+	[CANARDS_MODULE_ID_GPIO] = gpio_get_status,
+	[CANARDS_MODULE_ID_I2C] = i2c_get_status,
+	[CANARDS_MODULE_ID_IIS2MDC] = iis2mdc_get_status,
+	[CANARDS_MODULE_ID_LOGGER] = logger_get_status,
+	[CANARDS_MODULE_ID_LSM6DSV32X] = lsm6dsv32x_get_status,
+	[CANARDS_MODULE_ID_MOVELLA] = movella_get_status,
+	[CANARDS_MODULE_ID_MS5611] = ms5611_get_status,
+	[CANARDS_MODULE_ID_NAVIGATOR] = navigator_get_status,
+	[CANARDS_MODULE_ID_POWER_HANDLER] = power_handler_get_status,
+	[CANARDS_MODULE_ID_SD_CARD] = sd_card_get_status,
+	[CANARDS_MODULE_ID_SENSOR_HANDLER] = sensor_handler_get_status,
+	[CANARDS_MODULE_ID_TELEMETRY] = telemetry_get_status,
+	[CANARDS_MODULE_ID_TIMER] = timer_get_status,
+	[CANARDS_MODULE_ID_UART] = uart_get_status,
 };
 
 w_status_t health_check_init(void) {
@@ -170,13 +181,13 @@ uint32_t check_watchdog_tasks(void) {
 }
 
 /**
- * @brief Processes the status a module. If severity is not HEALTH_OK,l send CAN canards firmware
- * error msg. If severity is HEALTH_FATAL, call fatal error handler
+ * @brief Processes the status a module. If severity is not CANARDS_HEALTH_SEVERITY_HEALTH_OK,l send
+ * CAN canards firmware error msg. If severity is HEALTH_FATAL, call fatal error handler
  *
- * @return W_SUCCESS if severity is HEALTH_OK. W_FAILURE if not
+ * @return W_SUCCESS if severity is CANARDS_HEALTH_SEVERITY_HEALTH_OK. W_FAILURE if not
  */
 static w_status_t process_module_status(health_status_t status) {
-	if (status.severity != HEALTH_OK) {
+	if (status.severity != CANARDS_HEALTH_SEVERITY_HEALTH_OK) {
 		log_text(0,
 				 LOG_LVL_WARN,
 				 "health",
@@ -203,7 +214,7 @@ static w_status_t process_module_status(health_status_t status) {
 			log_text(0, LOG_LVL_WARN, "health", "CAN send failure for module status msg");
 		}
 
-		if (HEALTH_FATAL == status.severity) {
+		if (CANARDS_HEALTH_SEVERITY_HEALTH_FATAL == status.severity) {
 			char data[32];
 			// build error msg in the form "module id:error bitfield:severity"
 			snprintf_(data, sizeof(data), "%d:%lu", status.module_id, status.error_bitfield);
@@ -225,8 +236,16 @@ static uint32_t check_modules_status(void) {
 	uint32_t status_bitfield = 0;
 	w_status_t status = W_SUCCESS;
 
-	for (int i = 0; i < MODULE_COUNT; i++) {
-		status |= process_module_status(module_get_status_fns[i]());
+	for (int i = 0; i < CANARDS_MODULE_ID_ENUM_MAX; i++) {
+		if (NULL != module_get_status_fns[i]) {
+			status |= process_module_status(module_get_status_fns[i]());
+		} else {
+			log_text(1,
+					 LOG_LVL_WARN,
+					 "Health Checks",
+					 "Null element in module_get_status_fns array at index %d",
+					 i);
+		}
 	}
 
 	if (status != W_SUCCESS) {
@@ -292,6 +311,7 @@ w_status_t health_check_exec() {
 
 	status_bitfield |= check_watchdog_tasks();
 	status_bitfield |= check_modules_status();
+	status_bitfield |= power_handler_get_board_status();
 
 	// send status CAN msg
 	can_msg_t msg = {0};

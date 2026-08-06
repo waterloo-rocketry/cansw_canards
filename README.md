@@ -32,7 +32,7 @@ All firmware dev is done in VSCode using PlatformIO (previously using devcontain
 
 Steps to configure stuff in CubeMX and auto-generate code:
 
-- Open `cansw_canard_board.ioc` in CubeMX and configure things as needed
+- Open `cansw_canard_board_h733.ioc` and `cansw_canard_board_h723.ioc` in CubeMX and configure things as needed
 - Click `Generate Code` and wait for the pop-up that indicates it's done
 - Run the script `./scripts/cubemx_cleanup.sh` to make the auto-gen files conform to our project setup
 - Run clang-format (see section 2) to format the auto-gen code
@@ -53,6 +53,11 @@ Run tests:
 - Under `Configure`, select which build type you want
 - Hover over `Build`, click the build icon to build the configuration
     - The build preset should automatically be selected (eg, `Build Firmware (Debug) preset`)
+
+### 4. Build HIL
+- Switch to the HIL build environment: `Ctrl+Shift+P > PlatformIO: Pick Project Environment > env:hil`
+- Build and upload as usual. Now the board will be in HIL mode
+
 
 ## Unit Testing
 

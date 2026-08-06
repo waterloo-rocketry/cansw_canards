@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
 #include "rocketlib/include/common.h"
 
@@ -12,6 +13,20 @@ typedef struct {
 	uint16_t y;
 	uint16_t z;
 } adxl380_raw_accel_data_t;
+
+typedef struct {
+	bool comm_failure;
+	bool invalid_param;
+
+	uint32_t not_initialized_calls;
+	uint32_t get_raw_accel_fails;
+	uint32_t null_params;
+	uint32_t invalid_params;
+	uint32_t data_ready_check_fails;
+	uint32_t data_read_fails;
+	uint32_t read_fails;
+	uint32_t data_logging_fails;
+} adxl380_health_t;
 
 /**
  * @brief this is initializes the ADXL380
@@ -40,5 +55,11 @@ w_status_t adxl380_is_data_ready(bool *p_drdy);
  * @return the status of the function call
  */
 w_status_t adxl380_get_accel_data(vector3d_t *data, adxl380_raw_accel_data_t *p_raw_data);
+
+/**
+ * @brief gets the health status of the ADXL380 accelerometer and logs info
+ * @return the health status of the ADXL380
+ */
+health_status_t adxl380_get_status(void);
 
 #endif
