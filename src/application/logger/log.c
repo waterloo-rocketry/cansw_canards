@@ -49,6 +49,7 @@ typedef struct {
 	uint32_t buffer_flush_fails;
 	uint32_t unsafe_buffer_flushes;
 	uint32_t null_param_count;
+	uint32_t file_open_errs;
 	bool buffer_is_full; // flag for full buffer since last health check
 	bool timeout_occurred; // flag for timeout since last health check
 	bool os_error_occurred; // flag for queue send fail
@@ -188,9 +189,9 @@ w_status_t log_init(void) {
 	// these calls won't actually reach the log file on a real failure here. Kept for consistency
 	// with other modules' init-failure logging and in case that gating ever changes.
 
-	full_buffers_queue =
-		xQueueCreate(NUM_TEXT_LOG_BUFFERS + NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
-	if (NULL == full_buffers_queue) {
+	data_buffers_queue = xQueueCreate(NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
+	text_buffers_queue = xQueueCreate(NUM_TEXT_LOG_BUFFERS, sizeof(log_buffer_t *));
+	if ((NULL == data_buffers_queue) || (NULL == text_buffers_queue)) {
 		return W_FAILURE;
 	}
 
@@ -478,7 +479,7 @@ void log_task(void *argument) {
 	memcpy(data_file_ctx.filename, data_log_filename, sizeof(data_file_ctx.filename));
 	if ((sd_card_file_open(&text_file_ctx) != W_SUCCESS) ||
 		(sd_card_file_open(&data_file_ctx) != W_SUCCESS)) {
-		logger_health.crit_errs++;
+		logger_health.file_open_errs++;
 	}
 
 	uint32_t last_text_logging_time = 0;
