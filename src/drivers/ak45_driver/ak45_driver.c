@@ -44,7 +44,7 @@ static volatile bool received_can_msg = false;
 static const uint32_t AK45_UPDATE_PERIOD_MS = 5;
 
 const ak45_calibration_config_t ak45_calibration_config = {
-	.seek_target_deg = 50.0f,
+	.seek_target_deg = 70.0f,
 	.backoff_deg = 20.0f,
 	.settle_ms = 2000,
 
@@ -590,7 +590,7 @@ health_status_t ak45_get_status(void) {
 	}
 
 	if (!ak45_health.is_init) {
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 

@@ -289,3 +289,128 @@ health_status_t sd_card_get_status(void) {
 
 	return status;
 }
+
+static w_status_t sd_card_file_reopen(sd_card_file_ctx_t *ctx) {
+	if ((!sd_card_health.is_init) || (NULL == ctx) || (!ctx->is_open)) {
+		return W_INVALID_PARAM;
+	}
+
+	// restart the file regardless of situation
+
+	if (sd_card_file_close(ctx) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SD", "Fail to clase for reopen file");
+		return W_FAILURE;
+	}
+
+	if (sd_card_file_open(ctx) != W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "SD", "Fail to reopen file");
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}
+
+w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx) {
+	if ((!sd_card_health.is_init) || (NULL == ctx)) {
+		return W_INVALID_PARAM;
+	}
+
+	if (ctx->is_open) {
+		return W_FAILURE;
+	}
+
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+	FRESULT res = f_open(&ctx->file, ctx->filename, FA_WRITE | FA_OPEN_APPEND);
+
+	if (res != FR_OK) {
+		f_mount(NULL, "", 0); // unmount then remount
+		f_mount(&g_fs_obj, "", 1);
+		xSemaphoreGive(sd_mutex);
+		sd_card_health.err_count++;
+		return W_FAILURE;
+	}
+	xSemaphoreGive(sd_mutex);
+
+	ctx->is_open = true;
+
+	return W_SUCCESS;
+}
+
+w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, uint32_t num_bytes,
+								   uint32_t *bytes_written) {
+	if ((!sd_card_health.is_init) || (NULL == ctx) || (!ctx->is_open) || (NULL == buffer) ||
+		(NULL == bytes_written)) {
+		return W_INVALID_PARAM;
+	}
+
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+	FRESULT res = f_write(&ctx->file, buffer, num_bytes, (UINT *)bytes_written);
+
+	xSemaphoreGive(sd_mutex);
+
+	if ((res != FR_OK) || (*bytes_written != num_bytes)) {
+		log_text(0, LOG_LVL_WARN, "SD", "Write Fail %d", res);
+		sd_card_health.err_count++;
+
+		// try to reopen the file
+		sd_card_file_reopen(ctx);
+		return W_FAILURE;
+	}
+
+	sd_card_health.write_count++;
+	return W_SUCCESS;
+}
+
+w_status_t sd_card_file_sync(sd_card_file_ctx_t *ctx) {
+	if ((!sd_card_health.is_init) || (NULL == ctx) || (!ctx->is_open)) {
+		return W_INVALID_PARAM;
+	}
+
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+	FRESULT res = f_sync(&ctx->file);
+
+	xSemaphoreGive(sd_mutex);
+
+	if (res != FR_OK) {
+		log_text(0, LOG_LVL_WARN, "SD", "sync Fail %d", res);
+		sd_card_health.err_count++;
+
+		// try to reopen the file
+		sd_card_file_reopen(ctx);
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}
+
+w_status_t sd_card_file_close(sd_card_file_ctx_t *ctx) {
+	if ((!sd_card_health.is_init) || (NULL == ctx) || (!ctx->is_open)) {
+		return W_INVALID_PARAM;
+	}
+
+	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
+		return W_FAILURE;
+	}
+
+	FRESULT res = f_close(&ctx->file);
+
+	xSemaphoreGive(sd_mutex);
+
+	ctx->is_open = false;
+
+	if (res != FR_OK) {
+		sd_card_health.err_count++;
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
+}

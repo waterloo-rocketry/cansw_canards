@@ -11,6 +11,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
+#include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "drivers/timer/timer.h"
 #ifdef HIL
@@ -74,6 +75,7 @@ typedef struct {
 	uint32_t loop_timeouts;
 	uint32_t get_timer_failures;
 	uint32_t unknown_state_errors;
+	uint32_t power_handler_errors;
 
 	bool loop_timer_failed;
 	bool get_timer_failed;
@@ -252,8 +254,16 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			}
 			break;
 
-		// TODO Implement
 		case STATE_SLEEPY:
+			navigator_step(&navigator_input,
+						   timestamp_tenth_ms,
+						   p_ctx->p_navigator_context,
+						   &navigator_output);
+
+			// not command motor and turn off external 5v
+			if (power_handler_set_5V_external(false) != W_SUCCESS) {
+				fsm_health.power_handler_errors++;
+			}
 			break;
 
 		default:
@@ -374,11 +384,12 @@ health_status_t fsm_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "fsm",
-			 "init=%d, loop_timeouts=%d, get_timer_failures=%d, unknown_state_errors=%d",
+			 "init=%d, loop_timeout=%d, get_timer_errors=%d, unk_state_errors=%d, Ext_5V_error=%d",
 			 fsm_health.is_init,
 			 fsm_health.loop_timeouts,
 			 fsm_health.get_timer_failures,
-			 fsm_health.unknown_state_errors);
+			 fsm_health.unknown_state_errors,
+			 fsm_health.power_handler_errors);
 
 	return status;
 }
