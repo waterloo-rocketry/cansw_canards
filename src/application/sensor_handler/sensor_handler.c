@@ -63,13 +63,13 @@ static const matrix3d_t soft_iron_correction_matrix = {
 	.array = {{1.0, 0, 0}, {0, 1.0, 0}, {0, 0, 1.0}}};
 #endif
 
-#if defined(ADBREAKOUT_1) && defined(CANARDBOARD_1)
+#if defined(ADBREAKOUT_09590) && defined(CANARDBOARD_1)
 // canardboard 1 ad accel 1 null bias offsets
 static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.49;
 static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.43;
 static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.12;
 
-#elif defined(ADBREAKOUT_1) && defined(CANARDBOARD_2)
+#elif defined(ADBREAKOUT_09590) && defined(CANARDBOARD_2)
 // canardboard 2 ad accel 1 null bias offsets
 static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.61;
 static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.65;
