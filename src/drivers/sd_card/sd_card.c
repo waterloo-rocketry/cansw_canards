@@ -219,10 +219,10 @@ static w_status_t sd_card_file_reopen(sd_card_file_ctx_t *ctx) {
 		return W_INVALID_PARAM;
 	}
 
-	// check if need to restart the fuke
-	if (ctx->file.err == FR_OK) {
-		return W_SUCCESS
-	}
+	// // check if need to restart the fuke
+	// if (ctx->file.err == FR_OK) {
+	// 	return W_SUCCESS;
+	// }
 
 	if (sd_card_file_close(ctx) != W_SUCCESS) {
 		log_text(0, LOG_LVL_WARN, "SD", "Fail to clase for reopen file");
@@ -251,7 +251,6 @@ w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx) {
 	}
 
 	FRESULT res = f_open(&ctx->file, ctx->filename, FA_WRITE | FA_OPEN_APPEND);
-
 
 	if (res != FR_OK) {
 		f_mount(NULL, "", 0); // unmount then remount

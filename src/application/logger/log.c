@@ -15,7 +15,10 @@
 #include "third_party/printf/printf.h"
 
 // number of times to try writing a log message in case fails once
-#define LOG_WRITE_TRY_COUNT 20
+#define DATA_WRITE_TRY_COUNT 50
+#define TEXT_WRITE_TRY_COUNT 20
+
+static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
@@ -41,7 +44,8 @@ static SemaphoreHandle_t log_text_write_mutex = NULL;
 /* Mutex that protects access of current_data_buf_num */
 static SemaphoreHandle_t log_data_write_mutex = NULL;
 /* Queue of full log buffers sent to the task to be flushed */
-static QueueHandle_t full_buffers_queue = NULL;
+static QueueHandle_t data_buffers_queue = NULL;
+static QueueHandle_t text_buffers_queue = NULL;
 /* Count of data buffers initialized, for buffer header index value */
 static uint32_t total_data_log_buffers = 0;
 
@@ -108,7 +112,7 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 	xSemaphoreGive(buffer->msgs_done_semaphore);
 	// If last message in buffer, send buffer to queue
 	if (msg_num == DATA_MSGS_PER_BUFFER - 1) {
-		if (xQueueSendToBack(full_buffers_queue, &buffer, 0) != pdPASS) {
+		if (xQueueSendToBack(data_buffers_queue, &buffer, 0) != pdPASS) {
 			// This should never be reached as the queue should have space for all buffers
 			logger_health.crit_errs++;
 			return W_FAILURE;
@@ -156,9 +160,9 @@ w_status_t log_init(void) {
 		return W_SUCCESS;
 	}
 
-	full_buffers_queue =
-		xQueueCreate(NUM_TEXT_LOG_BUFFERS + NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
-	if (NULL == full_buffers_queue) {
+	data_buffers_queue = xQueueCreate(NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
+	text_buffers_queue = xQueueCreate(NUM_TEXT_LOG_BUFFERS, sizeof(log_buffer_t *));
+	if ((NULL == data_buffers_queue) || (NULL == text_buffers_queue)) {
 		return W_FAILURE;
 	}
 
@@ -346,7 +350,7 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	xSemaphoreGive(buffer->msgs_done_semaphore);
 	// If last message in buffer, send buffer to queue
 	if (msg_num == TEXT_MSGS_PER_BUFFER - 1) {
-		if (xQueueSendToBack(full_buffers_queue, &buffer, 0) != pdPASS) {
+		if (xQueueSendToBack(text_buffers_queue, &buffer, 0) != pdPASS) {
 			// This should never be reached as the queue should have space for all buffers
 			logger_health.crit_errs++;
 			return W_FAILURE;
@@ -427,16 +431,41 @@ void log_task(void *argument) {
 		logger_health.crit_errs++;
 	}
 
+	uint32_t last_text_logging_time = 0;
+	if (timer_get_ms(&last_text_logging_time) != W_SUCCESS) {
+		last_text_logging_time = UINT32_MAX;
+	}
+
+	uint32_t cur_timestamps = 0;
+
 	for (;;) {
-		if (xQueueReceive(full_buffers_queue, &buffer_to_print, 5000) == pdPASS) {
-			// Retrieve number of completed log messages in the received buffer.
-			uint32_t msgs_done = 0;
-			uint32_t max_msgs = TEXT_MSGS_PER_BUFFER;
+		// this is kept in case any other issues require this fix
+		// bool must_log_txt = (timer_get_ms(&cur_timestamps) == W_SUCCESS) &&
+		// ((last_text_logging_time + MAX_TXT_LOGGING_PERIOD_MS) < cur_timestamps);
 
-			if (!buffer_to_print->is_text) {
-				max_msgs = DATA_MSGS_PER_BUFFER;
+		bool must_log_txt = false;
+		bool have_msg = false;
+		uint32_t msgs_done = 0;
+		uint32_t max_msgs = DATA_MSGS_PER_BUFFER;
+		sd_card_file_ctx_t *file_ctx = &data_file_ctx;
+		uint32_t log_write_try_count = 0;
+		// check data
+		if ((xQueueReceive(data_buffers_queue, &buffer_to_print, 100) == pdPASS) &&
+			(!must_log_txt)) {
+			log_write_try_count = DATA_WRITE_TRY_COUNT;
+			have_msg = true;
+		} else if (xQueueReceive(text_buffers_queue, &buffer_to_print, 10) == pdPASS) {
+			log_write_try_count = TEXT_WRITE_TRY_COUNT;
+			max_msgs = TEXT_MSGS_PER_BUFFER;
+			file_ctx = &text_file_ctx;
+			have_msg = true;
+
+			if (timer_get_ms(&cur_timestamps) == W_SUCCESS) {
+				last_text_logging_time = cur_timestamps;
 			}
+		}
 
+		if (have_msg) {
 			while (msgs_done < max_msgs) {
 				if (xSemaphoreTake(buffer_to_print->msgs_done_semaphore, 10) == pdPASS) {
 					msgs_done++;
@@ -446,21 +475,11 @@ void log_task(void *argument) {
 				}
 			}
 
-			// Select correct persistent file.
-			sd_card_file_ctx_t *file_ctx = NULL;
-
-			if (buffer_to_print->is_text) {
-				file_ctx = &text_file_ctx;
-			} else {
-				file_ctx = &data_file_ctx;
-			}
-
-			// Try several times to write buffer to SD card.
+			// try several times to buffer to SD card
 			uint32_t size = 0;
-			for (uint32_t i = 0; i < LOG_WRITE_TRY_COUNT; i++) {
+			for (uint32_t i = 0; i < log_write_try_count; i++) {
 				uint32_t open_start_ms = 0;
 				timer_get_ms(&open_start_ms);
-
 				if (sd_card_file_write_open(
 						file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE, &size) == W_SUCCESS) {
 					uint32_t open_end_ms = 0;
@@ -495,16 +514,16 @@ void log_task(void *argument) {
 
 				gpio_toggle(GPIO_PIN_RED_LED, 0);
 
-				if ((LOG_WRITE_TRY_COUNT - 1) == i) {
+				if ((log_write_try_count - 1) == i) {
 					logger_health.buffer_flush_fails++;
-					break;
+					break; // Failed to write after all attempts
 				} else {
 					// Allow SD card time to recover.
 					vTaskDelay(pdMS_TO_TICKS(2));
 				}
 			}
 
-			// Reinitialize buffer for reuse.
+			// Reinitialize buffer for reuse
 			log_reset_buffer(buffer_to_print);
 		} else {
 			logger_health.no_full_buf_moments++;
