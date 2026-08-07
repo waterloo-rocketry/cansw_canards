@@ -484,9 +484,13 @@ void log_task(void *argument) {
 	// write the file names
 	memcpy(text_file_ctx.filename, text_log_filename, sizeof(text_file_ctx.filename));
 	memcpy(data_file_ctx.filename, data_log_filename, sizeof(data_file_ctx.filename));
-	if ((sd_card_file_open(&text_file_ctx) != W_SUCCESS) ||
-		(sd_card_file_open(&data_file_ctx) != W_SUCCESS)) {
-		logger_health.file_open_errs++;
+
+	// Open the files and record if either failed to open
+	const bool text_open_failed = sd_card_file_open(&text_file_ctx) != W_SUCCESS;
+	const bool data_open_failed = sd_card_file_open(&data_file_ctx) != W_SUCCESS;
+
+	if (text_open_failed || data_open_failed) {
+		logger_health.file_open_errs += (uint32_t)text_open_failed + (uint32_t)data_open_failed;
 		logger_health.fs_open_flush_failed = true;
 	}
 
