@@ -50,32 +50,24 @@ static const matrix3d_t g_board_mag_correction_matrix = {
 static const matrix3d_t g_ad_accel_correction_matrix = {
 	.array = {{0, 0, 1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 
-#ifdef CANARDBOARD_1
 // mag hard iron and soft iron calibration values
 static const vector3d_t hard_iron_bias = {.x = 0.17, .y = 0.27, .z = 0.07};
 static const matrix3d_t soft_iron_correction_matrix = {
-	.array = {{1.03, -0.02, -0.03}, {0.03, 1.02, 0.00}, {-0.02, 0.00, 0.95}}};
+	.array = {{1.00, 1.00, 1.00}, {1.00, 1.00, 1.00}, {1.00, 1.00, 1.00}}};
 
-#else
-// mag hard iron and soft iron calibration values
-static const vector3d_t hard_iron_bias = {.x = 0, .y = 0, .z = 0};
-static const matrix3d_t soft_iron_correction_matrix = {
-	.array = {{1.0, 0, 0}, {0, 1.0, 0}, {0, 0, 1.0}}};
-#endif
-
-#if defined(ADBREAKOUT_09590)
+#ifdef ADBREAKOUT_09590
 // TODO: Add actual calibration values for AD gyro
-static const float64_t AD_GYRO_GAIN = 1.0;
-static const float64_t AD_GYRO_OFFSET = 0.0;
+static const float64_t AD_GYRO_MV_OFFSET = 0.0;
+static const float64_t AD_GYRO_RAD_PER_MV = RAD_PER_DEG * 10.0;
 
 #elif defined(ADBREAKOUT_05127)
 
-static const float64_t AD_GYRO_GAIN = 1.0;
-static const float64_t AD_GYRO_OFFSET = 0.0;
+static const float64_t AD_GYRO_MV_OFFSET = 0.0;
+static const float64_t AD_GYRO_RAD_PER_MV = RAD_PER_DEG * 10.0;
 
 #else
-static const float64_t AD_GYRO_GAIN = 1.0;
-static const float64_t AD_GYRO_OFFSET = 0.0;
+static const float64_t AD_GYRO_MV_OFFSET = 0.0;
+static const float64_t AD_GYRO_RAD_PER_MV = RAD_PER_DEG * 10.0;
 #endif
 
 // set to true once calibrated, initialized to false to prevent use before calibration
@@ -719,11 +711,9 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 			(ctx->last_ad_gyro_timestamp_ms)) { // designed to make sure no overflow
 			ad_data->ad_gyro.is_new = true;
 
-			// convert gyro from dps to rad/sec
-			ad_data->ad_gyro.meas = (ad_data->ad_gyro.meas) * RAD_PER_DEG;
-
 			// Apply gyro calibration
-			ad_data->ad_gyro.meas = ((ad_data->ad_gyro.meas) * AD_GYRO_GAIN) + AD_GYRO_OFFSET;
+			ad_data->ad_gyro.meas =
+				((ad_data->ad_gyro.meas) + AD_GYRO_MV_OFFSET) * AD_GYRO_RAD_PER_MV;
 
 			sensor_handler_state.ad_gyro_stats.success_count++;
 
