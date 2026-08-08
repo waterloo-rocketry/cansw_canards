@@ -2,6 +2,7 @@
 #define LOG_H
 
 #include "rocketlib/include/common.h"
+#include <stdbool.h>
 #include <stdint.h>
 // Include headers for structs used in log_data_container_t
 #include "application/health_checks/health_checks.h"
@@ -107,6 +108,16 @@ typedef enum {
 	LOG_LVL_INFO, // Info (data from sensors, etc)
 	LOG_LVL_DEBUG // Only for debugging on the ground
 } log_level_t;
+
+/**
+ * Storage backend a data log message is written to. Passed to log_data() to select where the
+ * message ends up. Text logs are not selectable: they always go to the SD card.
+ */
+typedef enum {
+	LOG_TARGET_SD = 0, // SD card, via FatFs (drivers/sd_card)
+	LOG_TARGET_FLASH, // External NOR flash (not implemented yet)
+	LOG_TARGET_COUNT // Number of targets; not a valid target
+} log_target_t;
 
 // Packed vector3d_f32_t for logging only
 typedef union {
@@ -224,6 +235,8 @@ w_status_t log_init(void);
 /**
  * @brief Log a message in text form to the text log file.
  *
+ * @note Text logs always go to the SD card. Only log_data() can target the flash.
+ *
  * @param timeout Maximum amount of time to block waiting to log, in ms
  * @param source A string identifying the source of the log message
  * @param format The message to log, optionally specifying printf-like formatting for optional
@@ -237,12 +250,15 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 /**
  * @brief Log a message in binary form to the data log file.
  *
+ * @param target Storage backend to write this message to. LOG_TARGET_FLASH is not implemented
+ * yet, so buffers targeting it currently fail to flush.
  * @param timeout Maximum amount of time to block waiting to log, in ms
  * @param type The type of data log message to write
  * @param data Pointer to raw data to write via memcpy
  * @return Status indicating success or failure
  */
-w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_container_t *data);
+w_status_t log_data(log_target_t target, uint32_t timeout, log_data_type_t type,
+					const log_data_container_t *data);
 
 void log_task(void *argument);
 
