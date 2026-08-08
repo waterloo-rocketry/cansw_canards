@@ -104,52 +104,53 @@ static void system_init_task(void *arg) {
 		proc_handle_fatal_error("timerinit");
 	}
 
-	// INIT NON-CRITICAL MODULES; try to do logger first
-	w_status_t non_crit_status = sd_card_init();
+	w_status_t non_crit_status = W_SUCCESS;
+	w_status_t crit_status = W_SUCCESS;
+
+	// init logging and telem
+	non_crit_status |= sd_card_init();
 	non_crit_status |= log_init();
+	crit_status |= telemetry_init();
+
+	// motor init
+	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
+
+	// init hardware drivers
+	crit_status |= gpio_init();
+	non_crit_status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
+	non_crit_status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
+	non_crit_status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
+	non_crit_status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
+	non_crit_status |= uart_init(UART_MOVELLA, &huart3, 100);
+	non_crit_status |= adc_init(&hadc1, &hadc2, &hadc3);
+
+	// init application modules
+	crit_status |= navigator_init();
+	crit_status |= health_check_init();
+	non_crit_status |= movella_init();
+	crit_status |= flight_phase_init();
+	crit_status |= sensor_handler_init();
+	crit_status |= can_handler_init(&hfdcan3);
+	non_crit_status |= controller_init();
+	crit_status |= fsm_init();
+
+	// init non-critical sensors and power handler
+	non_crit_status |= lsm6dsv32x_init();
+	non_crit_status |= ms5611_init();
+	non_crit_status |= power_handler_init();
+	non_crit_status |= iis2mdc_init();
+	non_crit_status |= adxl380_init();
+	non_crit_status |= adxrs649_init();
+
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx (log)", non_crit_status);
 	}
 
-	if (telemetry_init() != W_SUCCESS) {
-		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (telem).");
-		proc_handle_fatal_error("sysinit");
-	}
-
-	if (ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS) != W_SUCCESS) {
-		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail (motor)", non_crit_status);
-	}
-
-	w_status_t status = W_SUCCESS;
-
-	// INIT REQUIRED MODULES
-	status |= gpio_init();
-	status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
-	status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
-	status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
-	status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
-	status |= uart_init(UART_MOVELLA, &huart3, 100);
-	status |= adc_init(&hadc1, &hadc2, &hadc3);
-	status |= navigator_init();
-	status |= health_check_init();
-	status |= movella_init();
-	status |= flight_phase_init();
-	status |= sensor_handler_init();
-	status |= can_handler_init(&hfdcan3);
-	status |= controller_init();
-	status |= fsm_init();
-	status |= lsm6dsv32x_init();
-	status |= ms5611_init();
-	status |= power_handler_init();
-	status |= iis2mdc_init();
-	status |= adxl380_init();
-	status |= adxrs649_init();
-
-	// cannot continue if any of the above fail
-	if (status != W_SUCCESS) {
+	// cannot continue if any of the critical inits fail
+	if (crit_status != W_SUCCESS) {
 		// Log critical initialization failure - specific modules should have logged details
-		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).", status);
+		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).", crit_status);
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}

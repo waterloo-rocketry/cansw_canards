@@ -156,7 +156,7 @@ static w_status_t ctrl_sd_telemetry(void) {
 w_status_t controller_init(void) {
 	ctrl_value_queue = xQueueCreate(1, sizeof(ctrl_value_handle_t));
 	if (NULL == ctrl_value_queue) {
-		log_text(0, LOG_LVL_FATAL, "controller", "unable to allocate memory for queue.");
+		log_text(0, LOG_LVL_WARN, "controller", "unable to allocate memory for queue.");
 		return W_FAILURE;
 	}
 
@@ -210,6 +210,9 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 		controller_error_stats.null_ctx_count++;
 		controller_error_stats.ctx_is_null = true;
 		return W_INVALID_PARAM;
+	}
+	if (!controller_error_stats.is_init) {
+		return W_FAILURE;
 	}
 
 	float64_t flight_time_sec = ((float64_t)((uint32_t)(timestamp_tenth_ms * TENTH_MS_TO_MS) -
@@ -290,7 +293,7 @@ health_status_t controller_get_status(void) {
 	}
 
 	if (controller_error_stats.is_init == false) {
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 

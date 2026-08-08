@@ -259,7 +259,7 @@ health_status_t power_handler_get_status(void) {
 
 	if (!power_handler_status.initialized) {
 		status.error_bitfield |= (1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET;
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 	}
 
 	status.error_bitfield = status.error_bitfield;
