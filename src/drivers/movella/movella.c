@@ -188,6 +188,13 @@ void movella_task(void *parameters) {
 	uint16_t rx_length;
 
 	while (1) {
+		// Must not do anything in the task if init failed.
+		// This allows non-critical init to fail and board to not kill itself
+		if (!s_movella.initialized) {
+			vTaskDelay(pdMS_TO_TICKS(10000));
+			continue;
+		}
+
 		w_status_t status =
 			uart_read(UART_MOVELLA, movella_rx_buffer, &rx_length, UART_RX_TIMEOUT_MS);
 

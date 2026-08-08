@@ -211,6 +211,9 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 		controller_error_stats.ctx_is_null = true;
 		return W_INVALID_PARAM;
 	}
+	if (!controller_error_stats.is_init) {
+		return W_FAILURE;
+	}
 
 	float64_t flight_time_sec = ((float64_t)((uint32_t)(timestamp_tenth_ms * TENTH_MS_TO_MS) -
 											 (p_input->launch_timestamp_ms))) *

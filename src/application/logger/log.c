@@ -439,6 +439,13 @@ void log_task(void *argument) {
 	uint32_t cur_timestamps = 0;
 
 	for (;;) {
+		// Must not do anything in the task if init failed.
+		// This allows non-critical init to fail and board to not kill itself
+		if (!logger_health.is_init) {
+			vTaskDelay(pdMS_TO_TICKS(10000));
+			continue;
+		}
+
 		// this is kept in case any other issues require this fix
 		// bool must_log_txt = (timer_get_ms(&cur_timestamps) == W_SUCCESS) &&
 		// ((last_text_logging_time + MAX_TXT_LOGGING_PERIOD_MS) < cur_timestamps);
