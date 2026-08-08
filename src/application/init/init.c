@@ -107,30 +107,34 @@ static void system_init_task(void *arg) {
 	w_status_t non_crit_status = W_SUCCESS;
 	w_status_t crit_status = W_SUCCESS;
 
-	// init non-critical logging first
+	// init logging and telem
 	non_crit_status |= sd_card_init();
 	non_crit_status |= log_init();
-
-	// init critical modules
 	crit_status |= telemetry_init();
-	crit_status |= gpio_init();
-	crit_status |= navigator_init();
-	crit_status |= health_check_init();
-	crit_status |= flight_phase_init();
-	crit_status |= sensor_handler_init();
-	crit_status |= can_handler_init(&hfdcan3);
-	crit_status |= fsm_init();
 
-	// init non-critical modules
+	// motor init
+	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
+
+	// init hardware drivers
+	crit_status |= gpio_init();
 	non_crit_status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
 	non_crit_status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
 	non_crit_status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
 	non_crit_status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
 	non_crit_status |= uart_init(UART_MOVELLA, &huart3, 100);
 	non_crit_status |= adc_init(&hadc1, &hadc2, &hadc3);
-	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
+
+	// init application modules
+	crit_status |= navigator_init();
+	crit_status |= health_check_init();
 	non_crit_status |= movella_init();
+	crit_status |= flight_phase_init();
+	crit_status |= sensor_handler_init();
+	crit_status |= can_handler_init(&hfdcan3);
 	non_crit_status |= controller_init();
+	crit_status |= fsm_init();
+
+	// init non-critical sensors and power handler
 	non_crit_status |= lsm6dsv32x_init();
 	non_crit_status |= ms5611_init();
 	non_crit_status |= power_handler_init();
