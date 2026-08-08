@@ -51,7 +51,8 @@ static const matrix3d_t g_ad_accel_correction_matrix = {
 	.array = {{0, 0, 1.0}, {0, -1.0, 0}, {1.0, 0, 0}}};
 
 // mag hard iron and soft iron calibration values
-static const vector3d_t hard_iron_bias = {.x = 0.17, .y = 0.27, .z = 0.07};
+static const vector3d_t hard_iron_bias_board = {.x = 0.0, .y = 0.0, .z = 0.0};
+static const vector3d_t hard_iron_bias_mti = {.x = 0.0, .y = 0.0, .z = 0.0};
 static const matrix3d_t soft_iron_correction_matrix = {
 	.array = {{1.00, 0.00, 0.00}, {0.00, 1.00, 0.00}, {0.00, 0.00, 1.00}}};
 
@@ -604,7 +605,7 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 				math_vector3d_rotate(&g_board_mag_correction_matrix, &(board_data->board_mag.meas));
 
 			board_data->board_mag.meas =
-				math_vector3d_subt(&(board_data->board_mag.meas), &hard_iron_bias);
+				math_vector3d_subt(&(board_data->board_mag.meas), &hard_iron_bias_board);
 			board_data->board_mag.meas =
 				math_vector3d_rotate(&soft_iron_correction_matrix, &(board_data->board_mag.meas));
 
@@ -790,6 +791,8 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
 			imu_data->mti_mag.meas =
 				math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.mag);
 
+			imu_data->mti_mag.meas =
+				math_vector3d_subt(&(imu_data->mti_mag.meas), &hard_iron_bias_board);
 			sensor_handler_state.mti_mag_stats.success_count++;
 
 		} else {
