@@ -39,17 +39,22 @@ typedef struct {
  * A collection of status variables describing the current health of the logger module.
  */
 typedef struct {
-	bool is_init;
-	uint32_t trunc_msgs;
-	uint32_t full_buffer_moments;
-	uint32_t log_write_timeouts;
-	uint32_t invalid_region_moments;
-	uint32_t queue_send_fails;
-	uint32_t no_full_buf_moments;
-	uint32_t buffer_flush_fails;
-	uint32_t unsafe_buffer_flushes;
-	uint32_t null_param_count;
-	uint32_t file_open_errs;
+	bool is_init; // log_init() fully succeeded; log_text()/log_data() no-op until set
+	uint32_t trunc_msgs; // message didn't fit its fixed-size region and was cut short
+	uint32_t
+		full_buffer_moments; // current buffer still full (log_task hasn't drained it); msg dropped
+	uint32_t log_write_timeouts; // couldn't take the buffer mutex within the caller's timeout
+	uint32_t invalid_region_moments; // msg_num >= msgs per buffer; slot-claiming bug, should never
+									 // happen
+	uint32_t queue_send_fails; // xQueueSendToBack() of a full buffer failed; queue is sized to
+							   // never fill
+	uint32_t
+		no_full_buf_moments; // log_task found no buffer to flush; normal while idle, not an error
+	uint32_t
+		buffer_flush_fails; // number of times a log buffer flush failed after retrying max times
+	uint32_t unsafe_buffer_flushes; // xSemaphoreTake failed when attempting to flush a log buffer
+	uint32_t null_param_count; // number of times a NULL parameter was passed
+	uint32_t file_open_errs; // sd_card_file_open() failed
 	bool buffer_is_full; // flag for full buffer since last health check
 	bool timeout_occurred; // flag for timeout since last health check
 	bool os_error_occurred; // flag for queue send fail
@@ -92,10 +97,15 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 										   const log_data_container_t *data) {
 	// Validate arguments
 	// Assumption: logger_health.is_init == true OR (during init) all buffer semaphores are valid
-	if ((NULL == buffer) || (msg_num >= DATA_MSGS_PER_BUFFER) || (NULL == data)) {
+	if ((NULL == buffer) || (NULL == data)) {
 		logger_health.null_param_count++;
 		logger_health.invalid_param = true;
 		return W_INVALID_PARAM;
+	}
+
+	if (msg_num >= DATA_MSGS_PER_BUFFER) {
+		logger_health.region_overflow = true;
+		return W_OVERFLOW;
 	}
 
 	// Get pointer to message region to write to
@@ -486,8 +496,8 @@ void log_task(void *argument) {
 	memcpy(data_file_ctx.filename, data_log_filename, sizeof(data_file_ctx.filename));
 
 	// Open the files and record if either failed to open
-	const bool text_open_failed = sd_card_file_open(&text_file_ctx) != W_SUCCESS;
-	const bool data_open_failed = sd_card_file_open(&data_file_ctx) != W_SUCCESS;
+	const bool text_open_failed = (sd_card_file_open(&text_file_ctx) != W_SUCCESS);
+	const bool data_open_failed = (sd_card_file_open(&data_file_ctx) != W_SUCCESS);
 
 	if (text_open_failed || data_open_failed) {
 		logger_health.file_open_errs += (uint32_t)text_open_failed + (uint32_t)data_open_failed;
