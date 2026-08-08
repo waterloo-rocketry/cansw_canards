@@ -566,6 +566,22 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 		if ((raw_data->raw_board_accel.timestamp_ms) > (ctx->last_board_imu_timestamp_ms)) {
 			board_data->board_imu.is_new = true;
 
+			// convert gyro from dps to rad/sec
+			board_data->board_imu.gyro.x = (board_data->board_imu.gyro.x) * RAD_PER_DEG;
+			board_data->board_imu.gyro.y = (board_data->board_imu.gyro.y) * RAD_PER_DEG;
+			board_data->board_imu.gyro.z = (board_data->board_imu.gyro.z) * RAD_PER_DEG;
+
+			// convert accel from g to m/s^2
+			board_data->board_imu.accel.x = (board_data->board_imu.accel.x) * M_S2_PER_G;
+			board_data->board_imu.accel.y = (board_data->board_imu.accel.y) * M_S2_PER_G;
+			board_data->board_imu.accel.z = (board_data->board_imu.accel.z) * M_S2_PER_G;
+
+			// Apply orientation correction
+			board_data->board_imu.accel = math_vector3d_rotate(&g_board_imu_correction_matrix,
+															   &(board_data->board_imu.accel));
+			board_data->board_imu.gyro =
+				math_vector3d_rotate(&g_board_imu_correction_matrix, &(board_data->board_imu.gyro));
+
 			sensor_handler_state.board_imu_stats.success_count++;
 		} else {
 			board_data->board_imu.is_new = false;
@@ -590,6 +606,16 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 		if (mag_timestamp_ms > (ctx->last_mag_timestamp_ms)) {
 			board_data->board_mag.is_new = true;
 
+			// mag data is already provided in Gauss
+
+			board_data->board_mag.meas =
+				math_vector3d_rotate(&g_board_mag_correction_matrix, &(board_data->board_mag.meas));
+
+			board_data->board_mag.meas =
+				math_vector3d_subt(&(board_data->board_mag.meas), &hard_iron_bias);
+			board_data->board_mag.meas =
+				math_vector3d_rotate(&soft_iron_correction_matrix, &(board_data->board_mag.meas));
+
 			sensor_handler_state.board_mag_stats.success_count++;
 		} else {
 			board_data->board_mag.is_new = false;
@@ -612,6 +638,9 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 		if (baro_timestamp_ms > (ctx->last_baro_timestamp_ms)) {
 			board_data->board_baro.is_new = true;
 
+			// convert baro from mbar to Pascals
+			board_data->board_baro.meas =
+				((float64_t)(raw_data->raw_board_baro.pressure_centimbar)) * PA_PER_CENTIMBAR;
 			sensor_handler_state.board_baro_stats.success_count++;
 		} else {
 			board_data->board_baro.is_new = false;
@@ -625,35 +654,6 @@ static w_status_t read_board_meas(sensor_handler_ctx_t *ctx, navigator_board_mea
 
 		sensor_handler_state.board_baro_stats.failure_count++;
 	}
-
-	// convert gyro from dps to rad/sec
-	board_data->board_imu.gyro.x = (board_data->board_imu.gyro.x) * RAD_PER_DEG;
-	board_data->board_imu.gyro.y = (board_data->board_imu.gyro.y) * RAD_PER_DEG;
-	board_data->board_imu.gyro.z = (board_data->board_imu.gyro.z) * RAD_PER_DEG;
-
-	// convert accel from g to m/s^2
-	board_data->board_imu.accel.x = (board_data->board_imu.accel.x) * M_S2_PER_G;
-	board_data->board_imu.accel.y = (board_data->board_imu.accel.y) * M_S2_PER_G;
-	board_data->board_imu.accel.z = (board_data->board_imu.accel.z) * M_S2_PER_G;
-
-	// mag data is already provided in Gauss
-
-	// convert baro from mbar to Pascals
-	board_data->board_baro.meas =
-		((float64_t)(raw_data->raw_board_baro.pressure_centimbar)) * PA_PER_CENTIMBAR;
-
-	// Apply orientation correction
-	board_data->board_imu.accel =
-		math_vector3d_rotate(&g_board_imu_correction_matrix, &(board_data->board_imu.accel));
-	board_data->board_imu.gyro =
-		math_vector3d_rotate(&g_board_imu_correction_matrix, &(board_data->board_imu.gyro));
-
-	board_data->board_mag.meas =
-		math_vector3d_rotate(&g_board_mag_correction_matrix, &(board_data->board_mag.meas));
-
-	board_data->board_mag.meas = math_vector3d_subt(&(board_data->board_mag.meas), &hard_iron_bias);
-	board_data->board_mag.meas =
-		math_vector3d_rotate(&soft_iron_correction_matrix, &(board_data->board_mag.meas));
 
 	// success is if at least one of the sensors updated
 	if ((!board_data->board_mag.is_new) && (!board_data->board_imu.is_new) &&
@@ -685,6 +685,15 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 		if ((accel_timestamp_ms) > (ctx->last_ad_accel_timestamp_ms)) {
 			ad_data->ad_accel.is_new = true;
 
+			// convert accel from g to m/s^2
+			ad_data->ad_accel.meas.x = (ad_data->ad_accel.meas.x) * M_S2_PER_G;
+			ad_data->ad_accel.meas.y = (ad_data->ad_accel.meas.y) * M_S2_PER_G;
+			ad_data->ad_accel.meas.z = (ad_data->ad_accel.meas.z) * M_S2_PER_G;
+
+			// Apply orientation correction
+			ad_data->ad_accel.meas =
+				math_vector3d_rotate(&g_ad_accel_correction_matrix, &(ad_data->ad_accel.meas));
+
 			sensor_handler_state.ad_accel_stats.success_count++;
 		} else {
 			ad_data->ad_accel.is_new = false;
@@ -709,6 +718,13 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 		if ((gyro_timestamp_ms) >
 			(ctx->last_ad_gyro_timestamp_ms)) { // designed to make sure no overflow
 			ad_data->ad_gyro.is_new = true;
+
+			// convert gyro from dps to rad/sec
+			ad_data->ad_gyro.meas = (ad_data->ad_gyro.meas) * RAD_PER_DEG;
+
+			// Apply gyro calibration
+			ad_data->ad_gyro.meas = ((ad_data->ad_gyro.meas) * AD_GYRO_GAIN) + AD_GYRO_OFFSET;
+
 			sensor_handler_state.ad_gyro_stats.success_count++;
 
 		} else {
@@ -722,21 +738,6 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 		ad_data->ad_gyro.is_new = false;
 		sensor_handler_state.ad_gyro_stats.failure_count++;
 	}
-
-	// convert gyro from dps to rad/sec
-	ad_data->ad_gyro.meas = (ad_data->ad_gyro.meas) * RAD_PER_DEG;
-
-	// Apply gyro calibration
-	ad_data->ad_gyro.meas = ((ad_data->ad_gyro.meas) * AD_GYRO_GAIN) + AD_GYRO_OFFSET;
-
-	// convert accel from g to m/s^2
-	ad_data->ad_accel.meas.x = (ad_data->ad_accel.meas.x) * M_S2_PER_G;
-	ad_data->ad_accel.meas.y = (ad_data->ad_accel.meas.y) * M_S2_PER_G;
-	ad_data->ad_accel.meas.z = (ad_data->ad_accel.meas.z) * M_S2_PER_G;
-
-	// Apply orientation correction
-	ad_data->ad_accel.meas =
-		math_vector3d_rotate(&g_ad_accel_correction_matrix, &(ad_data->ad_accel.meas));
 
 	// success is if at least one of the sensors updated
 	if ((!ad_data->ad_gyro.is_new) && (!ad_data->ad_accel.is_new)) {
@@ -767,15 +768,13 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
 		// Copy data from Movella
 		memcpy(quaternion_output, &movella_data.quaternion, sizeof(*quaternion_output));
 		// Apply orientation correction
-		imu_data->mti_accel.meas =
-			math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.acc);
-		imu_data->mti_gyro.meas = math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.gyr);
-		imu_data->mti_mag.meas = math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.mag);
 
 		imu_data->mti_baro.meas = movella_data.pres;
 
 		// check freshness
 		if ((movella_data.acc_timestamp_ms) > (ctx->last_mti_acc_timestamp_ms)) {
+			imu_data->mti_accel.meas =
+				math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.acc);
 			imu_data->mti_accel.is_new = true;
 			sensor_handler_state.mti_accel_stats.success_count++;
 
@@ -786,6 +785,9 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
 
 		if ((movella_data.gyr_timestamp_ms) > (ctx->last_mti_gyr_timestamp_ms)) {
 			imu_data->mti_gyro.is_new = true;
+			imu_data->mti_gyro.meas =
+				math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.gyr);
+
 			sensor_handler_state.mti_gyro_stats.success_count++;
 
 		} else {
@@ -795,6 +797,9 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
 
 		if ((movella_data.mag_timestamp_ms) > (ctx->last_mti_mag_timestamp_ms)) {
 			imu_data->mti_mag.is_new = true;
+			imu_data->mti_mag.meas =
+				math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.mag);
+
 			sensor_handler_state.mti_mag_stats.success_count++;
 
 		} else {
@@ -854,6 +859,7 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 			MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS) {
 			encoder_data->is_new = true;
 
+			encoder_data->meas = (motor_feedback.position_deg) * RAD_PER_DEG;
 			sensor_handler_state.motor_encoder_stats.success_count++;
 		} else {
 			encoder_data->is_new = false;
@@ -873,8 +879,6 @@ static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t
 		encoder_data->is_new = false;
 		sensor_handler_state.motor_encoder_stats.failure_count++;
 	}
-
-	encoder_data->meas = (motor_feedback.position_deg) * RAD_PER_DEG;
 
 	// success is if at least one of the sensors updated
 	if ((!encoder_data->is_new)) {
