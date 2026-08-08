@@ -290,7 +290,7 @@ health_status_t controller_get_status(void) {
 	}
 
 	if (controller_error_stats.is_init == false) {
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
