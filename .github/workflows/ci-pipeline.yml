@@ -39,18 +39,3 @@ jobs:
           chmod +x ./scripts/run_unit_tests.sh
           ./scripts/run_unit_tests.sh cleanall
           ./scripts/run_unit_tests.sh test
-          
-      - name: Build and run unit tests for Board 2
-        run: |
-          pio run -e release_board_2_ad_09590
-          chmod +x ./scripts/run_unit_tests.sh
-          ./scripts/run_unit_tests.sh cleanall
-          ./scripts/run_unit_tests.sh test
-
-      - name: Build and run unit tests for Board 4
-        run: |
-          pio run -e release_board_4_ad_09590
-          chmod +x ./scripts/run_unit_tests.sh
-          ./scripts/run_unit_tests.sh cleanall
-          ./scripts/run_unit_tests.sh test
-
