@@ -792,7 +792,7 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
 				math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.mag);
 
 			imu_data->mti_mag.meas =
-				math_vector3d_subt(&(imu_data->mti_mag.meas), &hard_iron_bias_board);
+				math_vector3d_subt(&(imu_data->mti_mag.meas), &hard_iron_bias_mti);
 			sensor_handler_state.mti_mag_stats.success_count++;
 
 		} else {
