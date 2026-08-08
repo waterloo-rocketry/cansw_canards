@@ -1,5 +1,9 @@
 /**
  * orientation correction from matlab commit e20e5d1
+ *
+ * NOTE: the AD breakout accelerometer and the board magnetometer are descoped -
+ * sensor_handler_get_fresh_meas() forces ad_accel.is_new / board_mag.is_new false
+ * regardless of what the drivers return, so those flags are always expected FALSE here.
  */
 
 #include "fff.h"
@@ -332,10 +336,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasAllSensorNew) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -390,10 +394,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadLSM6) {
 
 	// Verify new flags
 	EXPECT_FALSE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -447,10 +451,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewLSM6) {
 
 	// Verify new flags
 	EXPECT_FALSE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -505,10 +509,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetLSM6) {
 
 	// Verify new flags
 	EXPECT_FALSE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -565,7 +569,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadMag) {
 	EXPECT_FALSE(output.board_meas.board_mag.is_new);
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -622,7 +626,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMag) {
 	EXPECT_FALSE(output.board_meas.board_mag.is_new);
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -679,7 +683,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetMag) {
 	EXPECT_FALSE(output.board_meas.board_mag.is_new);
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -738,10 +742,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadMTI) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -801,10 +805,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewAccelMTI) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -864,10 +868,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewGyroMTI) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -927,10 +931,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaroMTI) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -990,10 +994,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMagMTI) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -1053,10 +1057,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewOtherMTI) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -1116,10 +1120,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasGetFailMTI) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -1173,7 +1177,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaro) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_FALSE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
@@ -1226,7 +1230,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailBaro) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_FALSE(output.board_meas.board_baro.is_new);
 
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
@@ -1279,7 +1283,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADAccel) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_FALSE(output.ad_meas.ad_accel.is_new);
@@ -1336,7 +1340,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADAccel) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
 	EXPECT_FALSE(output.ad_meas.ad_accel.is_new);
@@ -1393,10 +1397,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADGyro) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_FALSE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -1450,10 +1454,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADGyro) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_FALSE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
@@ -1508,10 +1512,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMotorEncoder) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_FALSE(output.motor_encoder_meas.is_new);
 
@@ -1566,10 +1570,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 
 	// Verify new flags
 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_FALSE(output.motor_encoder_meas.is_new);
 
@@ -1623,10 +1627,10 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 
 // 	// Verify new flags
 // 	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-// 	EXPECT_TRUE(output.board_meas.board_mag.is_new);
+// 	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 // 	EXPECT_TRUE(output.board_meas.board_baro.is_new);
 
-// 	EXPECT_TRUE(output.ad_meas.ad_accel.is_new);
+// 	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
 // 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 // 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
