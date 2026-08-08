@@ -76,7 +76,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 	if ((NULL == handle->transfer_complete) || (NULL == handle->write_mutex)) {
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
-		log_text(10, LOG_LVL_FATAL, "uart", "initmtxfail %d", channel);
+		log_text(10, LOG_LVL_WARN, "uart", "initmtxfail %d", channel);
 		return W_FAILURE;
 	}
 
@@ -92,7 +92,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 	if (NULL == handle->msg_queue) {
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
-		log_text(10, LOG_LVL_FATAL, "uart", "initqfail %d", channel);
+		log_text(10, LOG_LVL_WARN, "uart", "initqfail %d", channel);
 		return W_FAILURE;
 	}
 
@@ -103,7 +103,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		vQueueDelete(handle->msg_queue);
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
-		log_text(10, LOG_LVL_FATAL, "uart", "initcbfail %d", channel);
+		log_text(10, LOG_LVL_WARN, "uart", "initcbfail %d", channel);
 		return W_FAILURE;
 	}
 
@@ -113,7 +113,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		vQueueDelete(handle->msg_queue);
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
-		log_text(10, LOG_LVL_FATAL, "uart", "initfail %d", channel);
+		log_text(10, LOG_LVL_WARN, "uart", "initfail %d", channel);
 		return W_FAILURE;
 	}
 
@@ -124,7 +124,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		vQueueDelete(handle->msg_queue);
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
-		log_text(10, LOG_LVL_FATAL, "uart", "initisr %d", channel);
+		log_text(10, LOG_LVL_WARN, "uart", "initisr %d", channel);
 		return W_FAILURE;
 	}
 
@@ -133,7 +133,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		vQueueDelete(handle->msg_queue);
 		vSemaphoreDelete(handle->write_mutex);
 		vSemaphoreDelete(handle->transfer_complete);
-		log_text(10, LOG_LVL_FATAL, "uart", "initrx %d", channel);
+		log_text(10, LOG_LVL_WARN, "uart", "initrx %d", channel);
 		return W_IO_ERROR;
 	}
 

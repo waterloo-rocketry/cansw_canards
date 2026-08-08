@@ -156,7 +156,7 @@ static w_status_t ctrl_sd_telemetry(void) {
 w_status_t controller_init(void) {
 	ctrl_value_queue = xQueueCreate(1, sizeof(ctrl_value_handle_t));
 	if (NULL == ctrl_value_queue) {
-		log_text(0, LOG_LVL_FATAL, "controller", "unable to allocate memory for queue.");
+		log_text(0, LOG_LVL_WARN, "controller", "unable to allocate memory for queue.");
 		return W_FAILURE;
 	}
 
