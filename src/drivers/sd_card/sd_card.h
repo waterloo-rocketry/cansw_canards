@@ -13,17 +13,6 @@
 #include "rocketlib/include/common.h"
 
 /**
- * @brief SD card module health stats
- */
-typedef struct {
-	bool is_init;
-	uint32_t file_create_count;
-	uint32_t read_count;
-	uint32_t write_count;
-	uint32_t err_count;
-} sd_card_health_t;
-
-/**
  * @brief Initialize the SD card hardware and create the mutex for thread safety.
  * @pre Must be called after scheduler starts. The HAL sd init inside this uses hal_delay
  * in it, so it will hang forever if the timer interrupt is masked (freertos masks interrupts
