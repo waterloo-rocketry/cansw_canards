@@ -436,6 +436,14 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 	}
 
 	if (num_imu_detect_launch >= NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL) {
+		log_text(1,
+				 LOG_LVL_INFO,
+				 "FlightPhase",
+				 "Accel-based launch detected: %d IMUs, %d board, %d movella, %d ad",
+				 num_imu_detect_launch,
+				 p_ctx->num_consec_board,
+				 p_ctx->num_consec_movella,
+				 p_ctx->num_consec_ad);
 		p_ctx->num_consec_board = 0;
 		p_ctx->num_consec_movella = 0;
 		p_ctx->num_consec_ad = 0;
