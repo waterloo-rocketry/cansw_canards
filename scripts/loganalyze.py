@@ -68,6 +68,34 @@ MODULE_ERROR_CODE_NAMES = {
 }
 NOT_INIT_BIT = 16  # ERR_NOT_INIT (CANARDS_MODULE_E_NOT_INIT_OFFSET)
 
+# --- Flight phase state machine, mirrored from src/common/gnc/gnc_types.h
+# (fsm_state_t) and src/application/flight_phase/flight_phase.c ---
+FLIGHT_PHASE_SOURCE = "FlightPhase"
+FLIGHT_PHASE_NAMES = {
+    0: "STATE_IDLE",
+    1: "STATE_PAD_FILTER",
+    2: "STATE_PAD_NAV",
+    3: "STATE_BOOST",
+    4: "STATE_ACT_ALLOWED",
+    5: "STATE_RECOVERY",
+    6: "STATE_SLEEPY",
+    7: "STATE_ERROR",
+}
+# The nominal flight sequence the state diagram expects a real flight to pass
+# through. STATE_ERROR is a fault state, not part of that expected sequence.
+REQUIRED_FLIGHT_PHASES = {0, 1, 2, 3, 4, 5, 6}
+
+# flight_phase.c: timer-based transitions, measured from the timestamp of the
+# transition that lands in STATE_BOOST (i.e. launch).
+ACT_DELAY_MS = 7000
+RECOVERY_LOG_TIMEOUT_MS = 300000
+SLEEPY_LOG_TIMEOUT_MS = 1600000
+TIMED_TRANSITIONS = {
+    (3, 4): ("STATE_BOOST -> STATE_ACT_ALLOWED", ACT_DELAY_MS),
+    (4, 5): ("STATE_ACT_ALLOWED -> STATE_RECOVERY", RECOVERY_LOG_TIMEOUT_MS),
+    (5, 6): ("STATE_RECOVERY -> STATE_SLEEPY", SLEEPY_LOG_TIMEOUT_MS),
+}
+
 @dataclass
 class Section:
     """One report section: a title, body lines, failure reasons (fail the
@@ -303,7 +331,135 @@ def check_heartbeat(parsed):
         sec.lines.append("Gap within tolerance")
     return sec
 
-def analyze(txt_path):
+# ~13 driver/task modules each log their own periodic "name=value, ..."
+# counter dump (see e.g. src/drivers/ak45_driver/ak45_driver.c,
+# src/drivers/movella/movella.c, src/application/navigator/navigator.c), and
+# the same "name=value" text also shows up for things that aren't errors at
+# all: status/state fields (init=, curr_state=), transition tallies
+# (state_transitions=), calibration constants (ms5611's C1=..C6=), and usage
+# counts (sd_card's reads=/writes=, timer's successful=/total=). There's no
+# type info in the log text to tell these apart structurally, so a field is
+# only tracked here if its name itself suggests a failure/error condition.
+_COUNTER_KV_RE = re.compile(r"([A-Za-z_][\w ]*?)\s*=\s*(-?\d+)")
+_ERROR_NAME_KEYWORDS = (
+    "fail", "error", "err", "timeout", "drop", "invalid", "overflow",
+    "mismatch", "null", "reinit", "not_init", "stale", "wrong", "empty",
+    "insane", "unexpected", "dead", "crit", "fault", "corrupt", "trunc",
+    "memory",
+)
+
+def _looks_like_error_counter(name):
+    lname = name.lower()
+    return any(kw in lname for kw in _ERROR_NAME_KEYWORDS)
+
+def check_error_counters(parsed, show_all=False):
+    """List every module's 'name=value' counter field (whose name looks
+    error-related) with its final logged value, and whether it's increasing
+    periodically or rose once and went flat. By default only nonzero
+    counters are listed; show_all also lists ones that are 0.
+    """
+    sec = Section("ERROR COUNTERS")
+    counters = {}  # (source, name) -> [(timestamp, value), ...]
+
+    for ln in parsed:
+        if ln.timestamp < 0:
+            continue  # unparsed line (e.g. truncated) -- source/message aren't trustworthy
+        if _decode_module_status(ln.message):
+            continue  # health-check bitfield broadcast, not a driver counter
+        for name, value in _COUNTER_KV_RE.findall(ln.message):
+            name = name.strip()
+            if not _looks_like_error_counter(name):
+                continue
+            key = (ln.source, name)
+            counters.setdefault(key, []).append((ln.timestamp, int(value)))
+
+    if not counters:
+        sec.lines.append("no counter variables found")
+        return sec
+
+    nonzero_count = 0
+    rows = []
+    for (source, name), points in sorted(counters.items()):
+        points.sort(key=lambda p: p[0])
+        final_val = points[-1][1]
+        if final_val != 0:
+            nonzero_count += 1
+        elif not show_all:
+            continue
+        distinct_nonzero = {v for _, v in points if v != 0}
+        if final_val == 0:
+            status = "0"
+        elif len(distinct_nonzero) <= 1:
+            status = f"{final_val} (rose once, flat since)"
+        else:
+            status = f"{final_val} (increasing periodically)"
+        rows.append(f"    {source}.{name} = {status}")
+
+    sec.lines.append(f"{len(rows)} counter variable(s):")
+    if nonzero_count == 0 and not show_all:
+        sec.lines.append("    all counters are 0")
+    sec.lines.extend(rows)
+
+    return sec
+
+def check_flight_phase(parsed):
+    """Track FlightPhase 'State transition: X -> Y' lines against the
+    expected state diagram, and verify the three timer-based transitions
+    (BOOST->ACT_ALLOWED, ACT_ALLOWED->RECOVERY, RECOVERY->SLEEPY) don't fire
+    earlier than their minimum delay after launch.
+    """
+    sec = Section("FLIGHT PHASE")
+    transition_re = re.compile(r"State transition:\s*(\d+)\s*->\s*(\d+)")
+    transitions = []
+    for ln in parsed:
+        if ln.source != FLIGHT_PHASE_SOURCE:
+            continue
+        m = transition_re.search(ln.message)
+        if m:
+            transitions.append((ln.timestamp, int(m.group(1)), int(m.group(2))))
+
+    if not transitions:
+        sec.lines.append("no FlightPhase state transition lines found")
+        sec.failures.append("no flight-phase state transitions logged")
+        return sec
+
+    transitions.sort(key=lambda t: t[0])
+    sec.lines.append(f"{len(transitions)} state transition(s):")
+    visited = {0}  # STATE_IDLE is the FSM's starting state; never logged into
+    for ts, frm, to in transitions:
+        frm_name = FLIGHT_PHASE_NAMES.get(frm, f"state {frm}")
+        to_name = FLIGHT_PHASE_NAMES.get(to, f"state {to}")
+        sec.lines.append(f"    [{ts}] {frm_name} -> {to_name}")
+        visited.add(frm)
+        visited.add(to)
+
+    for phase in sorted(REQUIRED_FLIGHT_PHASES - visited):
+        sec.failures.append(
+            f"flight phase {FLIGHT_PHASE_NAMES[phase]} never appears in the log"
+        )
+
+    launch_ts = next((ts for ts, _, to in transitions if to == 3), None)
+    if launch_ts is None:
+        sec.lines.append("launch (transition into STATE_BOOST) not found; skipping timing checks")
+    else:
+        for ts, frm, to in transitions:
+            if (frm, to) not in TIMED_TRANSITIONS:
+                continue
+            label, min_delay_ms = TIMED_TRANSITIONS[(frm, to)]
+            elapsed = ts - launch_ts
+            if elapsed < min_delay_ms:
+                sec.failures.append(
+                    f"{label} fired {elapsed} ms after launch, "
+                    f"before the expected {min_delay_ms} ms minimum"
+                )
+            else:
+                sec.lines.append(
+                    f"    {label}: {elapsed} ms after launch (expected >= {min_delay_ms} ms) OK"
+                )
+
+    return sec
+
+def analyze(txt_path, show_all_counters=False):
     """Run all checks against a text log and return (sections, ok)."""
     with open(txt_path, "r", encoding="utf-8", errors="replace") as f:
         text = f.read()
@@ -326,12 +482,20 @@ def analyze(txt_path):
         check_txt(parsed),
         check_init_completion(parsed),
         check_heartbeat(parsed),
+        check_error_counters(parsed, show_all=show_all_counters),
+        check_flight_phase(parsed),
     ]
 
     ok = not any(sec.failures for sec in sections)
     return sections, ok
 
-DEFAULT_SHOWN_SECTIONS = {"FATAL ERRORS", "INIT COMPLETION", "HEARTBEAT"}
+DEFAULT_SHOWN_SECTIONS = {
+    "FATAL ERRORS",
+    "INIT COMPLETION",
+    "HEARTBEAT",
+    "ERROR COUNTERS",
+    "FLIGHT PHASE",
+}
 
 def format_report(sections, ok, include_warns=False, truncated_only=False):
     shown = set(DEFAULT_SHOWN_SECTIONS)
@@ -373,6 +537,11 @@ def parse_argv(argv):
         action="store_true",
         help="also show TRUNCATED log lines",
     )
+    p.add_argument(
+        "--include-zero-counters",
+        action="store_true",
+        help="also show ERROR COUNTERS entries that are 0",
+    )
     return p.parse_args(argv[1:])
 
 def main(argv=None):
@@ -382,7 +551,7 @@ def main(argv=None):
         print(f"error: no such file: {args.txt_file}", file=sys.stderr)
         return 2
 
-    sections, ok = analyze(args.txt_file)
+    sections, ok = analyze(args.txt_file, show_all_counters=args.include_zero_counters)
     print(
         format_report(
             sections,
