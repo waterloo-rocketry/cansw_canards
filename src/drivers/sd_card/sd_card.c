@@ -250,25 +250,25 @@ health_status_t sd_card_get_status(void) {
 
 	if (!sd_card_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	if (sd_card_health.file_error) {
 		sd_card_health.file_error = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_FILE_SYSTEM_OFFSET;
+		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_FILE_SYSTEM_OFFSET);
 	}
 
 	if (sd_card_health.invalid_param) {
 		sd_card_health.invalid_param = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 	}
 
 	if (sd_card_health.semaphore_take_fail) {
 		sd_card_health.semaphore_take_fail = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
+		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_OS_OFFSET);
 	}
 
 	// Log operation statistics
@@ -315,7 +315,7 @@ static w_status_t sd_card_file_reopen(sd_card_file_ctx_t *ctx) {
 
 	if (sd_card_file_close(ctx) != W_SUCCESS) {
 		sd_card_health.file_reopen_error++;
-		log_text(0, LOG_LVL_WARN, "SD", "Fail to clase for reopen file");
+		log_text(0, LOG_LVL_WARN, "SD", "Fail to close for reopen file");
 		return W_FAILURE;
 	}
 
