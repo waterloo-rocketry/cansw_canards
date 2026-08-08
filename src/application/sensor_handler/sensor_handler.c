@@ -1030,7 +1030,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	} else {
 		status = W_SUCCESS;
 	}
-	
+
 	// setting the descoped sensors to dead
 	imu_output->ad_meas.ad_accel.is_new = false;
 	imu_output->board_meas.board_mag.is_new = false;
