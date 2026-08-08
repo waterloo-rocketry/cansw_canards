@@ -373,6 +373,7 @@ w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, 
 
 	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
 		sd_card_health.file_write_error++;
+		sd_card_health.semaphore_take_fail = true;
 		return W_FAILURE;
 	}
 
@@ -403,6 +404,7 @@ w_status_t sd_card_file_sync(sd_card_file_ctx_t *ctx) {
 
 	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
 		sd_card_health.file_sync_error++;
+		sd_card_health.semaphore_take_fail = true;
 		return W_FAILURE;
 	}
 
@@ -432,6 +434,7 @@ w_status_t sd_card_file_close(sd_card_file_ctx_t *ctx) {
 
 	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
 		sd_card_health.file_close_error++;
+		sd_card_health.semaphore_take_fail = true;
 		return W_FAILURE;
 	}
 
