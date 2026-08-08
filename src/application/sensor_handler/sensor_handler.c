@@ -63,25 +63,19 @@ static const matrix3d_t soft_iron_correction_matrix = {
 	.array = {{1.0, 0, 0}, {0, 1.0, 0}, {0, 0, 1.0}}};
 #endif
 
-#if defined(ADBREAKOUT_09590) && defined(CANARDBOARD_1)
-// canardboard 1 ad accel 1 null bias offsets
-static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.49;
-static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.43;
-static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.12;
+#if defined(ADBREAKOUT_09590)
+// TODO: Add actual calibration values for AD gyro
+static const float64_t AD_GYRO_GAIN = 1.0;
+static const float64_t AD_GYRO_OFFSET = 0.0;
 
-#elif defined(ADBREAKOUT_09590) && defined(CANARDBOARD_2)
-// canardboard 2 ad accel 1 null bias offsets
-static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = -0.61;
-static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = -0.65;
-static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.15;
+#elif defined(ADBREAKOUT_05127)
+
+static const float64_t AD_GYRO_GAIN = 1.0;
+static const float64_t AD_GYRO_OFFSET = 0.0;
 
 #else
-// Default null bias offsets
-// TODO: Add more combinations
-static const float64_t AD_ACCEL_X_NULL_BIAS_OFFSET = 0.0;
-static const float64_t AD_ACCEL_Y_NULL_BIAS_OFFSET = 0.0;
-static const float64_t AD_ACCEL_Z_NULL_BIAS_OFFSET = 0.0;
-
+static const float64_t AD_GYRO_GAIN = 1.0;
+static const float64_t AD_GYRO_OFFSET = 0.0;
 #endif
 
 // set to true once calibrated, initialized to false to prevent use before calibration
@@ -732,6 +726,9 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 	// convert gyro from dps to rad/sec
 	ad_data->ad_gyro.meas = (ad_data->ad_gyro.meas) * RAD_PER_DEG;
 
+	// Apply gyro calibration
+	ad_data->ad_gyro.meas = ((ad_data->ad_gyro.meas) * AD_GYRO_GAIN) + AD_GYRO_OFFSET;
+
 	// convert accel from g to m/s^2
 	ad_data->ad_accel.meas.x = (ad_data->ad_accel.meas.x) * M_S2_PER_G;
 	ad_data->ad_accel.meas.y = (ad_data->ad_accel.meas.y) * M_S2_PER_G;
@@ -740,11 +737,6 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 	// Apply orientation correction
 	ad_data->ad_accel.meas =
 		math_vector3d_rotate(&g_ad_accel_correction_matrix, &(ad_data->ad_accel.meas));
-
-	// ad null bias offset
-	ad_data->ad_accel.meas.x -= AD_ACCEL_X_NULL_BIAS_OFFSET;
-	ad_data->ad_accel.meas.y -= AD_ACCEL_Y_NULL_BIAS_OFFSET;
-	ad_data->ad_accel.meas.z -= AD_ACCEL_Z_NULL_BIAS_OFFSET;
 
 	// success is if at least one of the sensors updated
 	if ((!ad_data->ad_gyro.is_new) && (!ad_data->ad_accel.is_new)) {
