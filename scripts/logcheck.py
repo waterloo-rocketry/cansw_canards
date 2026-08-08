@@ -88,9 +88,8 @@ EXPECTED_RATE_HZ = {
     # "test" and "header" are not sensor channels; no rate expectation.
 }
 
-# Tolerance for throttled tiers before flagging WARN/FAIL.
-RATE_WARN_FRACTION = 0.7  # below 90% of expected -> WARN
-RATE_FAIL_FRACTION = 0.4  # below 70% of expected -> FAIL
+# Tolerance for throttled tiers before flagging FAIL.
+RATE_FAIL_FRACTION = 0.9  # below 90% of expected -> FAIL
 
 # A rolling 1-second rate above this multiple of the expected/typical rate (or
 # expected+SPIKE_RATE_FLOOR_HZ, whichever is higher) is a timing spike: samples
@@ -367,13 +366,6 @@ def check_phase_rates(
                 findings.append(
                     Finding(
                         "FAIL",
-                        f"{type_name} in {phase_name}: {observed_hz:.1f} Hz observed, expected ~{expected} Hz.",
-                    )
-                )
-            elif observed_hz < expected * RATE_WARN_FRACTION:
-                findings.append(
-                    Finding(
-                        "WARN",
                         f"{type_name} in {phase_name}: {observed_hz:.1f} Hz observed, expected ~{expected} Hz.",
                     )
                 )
