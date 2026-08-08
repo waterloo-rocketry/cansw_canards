@@ -713,7 +713,7 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 
 			// Apply gyro calibration
 			ad_data->ad_gyro.meas =
-				((ad_data->ad_gyro.meas) + AD_GYRO_MV_OFFSET) * AD_GYRO_RAD_PER_MV;
+				((ad_data->ad_gyro.meas) - AD_GYRO_MV_OFFSET) * AD_GYRO_RAD_PER_MV;
 
 			sensor_handler_state.ad_gyro_stats.success_count++;
 
