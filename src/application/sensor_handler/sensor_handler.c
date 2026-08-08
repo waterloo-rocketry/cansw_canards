@@ -53,7 +53,7 @@ static const matrix3d_t g_ad_accel_correction_matrix = {
 // mag hard iron and soft iron calibration values
 static const vector3d_t hard_iron_bias = {.x = 0.17, .y = 0.27, .z = 0.07};
 static const matrix3d_t soft_iron_correction_matrix = {
-	.array = {{1.00, 1.00, 1.00}, {1.00, 1.00, 1.00}, {1.00, 1.00, 1.00}}};
+	.array = {{1.00, 0.00, 0.00}, {0.00, 1.00, 0.00}, {0.00, 0.00, 1.00}}};
 
 #ifdef ADBREAKOUT_09590
 // TODO: Add actual calibration values for AD gyro
