@@ -984,11 +984,11 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	}
 
 	// assume data are all dead until you read
-	imu_output->ad_meas.ad_accel.is_new = false;
+	imu_output->ad_meas.ad_accel.is_new = false; // descoped for comp
 	imu_output->ad_meas.ad_gyro.is_new = false;
 
 	imu_output->board_meas.board_baro.is_new = false;
-	imu_output->board_meas.board_mag.is_new = false;
+	imu_output->board_meas.board_mag.is_new = false; // descoped for comp
 	imu_output->board_meas.board_imu.is_new = false;
 	imu_output->motor_encoder_meas.is_new = false;
 
@@ -1030,6 +1030,10 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	} else {
 		status = W_SUCCESS;
 	}
+	
+	// setting the descoped sensors to dead
+	imu_output->ad_meas.ad_accel.is_new = false;
+	imu_output->board_meas.board_mag.is_new = false;
 
 	// Publish the latest telemetry snapshot to the mailbox for the telemetry task to broadcast.
 	sensor_can_telem_data_t telem = {
