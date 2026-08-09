@@ -549,7 +549,7 @@ health_status_t flight_phase_get_status(void) {
 			 LOG_LVL_INFO,
 			 "FlightPhase",
 			 "inv_evt=%" PRIu32 ", inv_act_data=%" PRIu32 ", trans=%" PRIu32
-			 "curr=%d, evt_send_err=%" PRIu32 ", rst=%" PRIu32,
+			 "evt_send_err=%" PRIu32 ", rst=%" PRIu32,
 			 flight_phase_status.invalid_event_count,
 			 flight_phase_status.invalid_actuator_data_count,
 			 flight_phase_status.state_transitions,

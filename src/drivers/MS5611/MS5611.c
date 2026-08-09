@@ -629,6 +629,7 @@ health_status_t ms5611_get_status(void) {
 			 ", stale_pres=%" PRIu32,
 			 ms5611_health.deinit_before_init,
 			 ms5611_health.read_before_init,
+			 ms5611_health.timer_read_fail,
 			 ms5611_health.null_param_count,
 			 ms5611_health.stale_pressure_read);
 
