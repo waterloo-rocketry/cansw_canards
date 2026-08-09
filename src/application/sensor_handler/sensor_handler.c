@@ -1035,6 +1035,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	// setting the descoped sensors to dead
 	imu_output->ad_meas.ad_accel.is_new = false;
 	imu_output->board_meas.board_mag.is_new = false;
+	imu_output->mti_meas.mti_mag.is_new = false;
 
 	// Publish the latest telemetry snapshot to the mailbox for the telemetry task to broadcast.
 	sensor_can_telem_data_t telem = {
