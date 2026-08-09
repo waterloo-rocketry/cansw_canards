@@ -251,7 +251,7 @@ w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 		return W_FAILURE;
 	}
 
-	*p_data = (data_mv - NULL_BIAS_mV) / MV_TO_DPS;
+	*p_data = data_mv;
 
 	return W_SUCCESS;
 }
