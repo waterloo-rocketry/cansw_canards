@@ -145,8 +145,15 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 	// set the inputs
 	navigator_input_t navigator_input = {.sensor_data = p_fsm_input->p_sensor_data,
 										 .fsm_state = p_ctx->curr_state};
-	controller_input_t controller_input = {.launch_timestamp_ms =
-											   p_ctx->p_flight_phase_context->launch_timestamp_ms};
+	controller_input_t controller_input = {0};
+
+	// shall pass "timestamp since launch" as a NEGATIVE float if launch hasnt been detected yet
+	if (p_ctx->p_flight_phase_context->launch_timestamp_ms == UINT32_MAX) {
+		controller_input.launch_timestamp_ms = -1000.0f;
+	} else {
+		controller_input.launch_timestamp_ms =
+			timestamp_tenth_ms - p_ctx->p_flight_phase_context->launch_timestamp_ms;
+	}
 
 	// initialize the outputs
 	navigator_output_t navigator_output = {0};
