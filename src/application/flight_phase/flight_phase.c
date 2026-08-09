@@ -17,7 +17,7 @@
 // See the flowchart in the design doc for more context on these
 
 static const float32_t ACCEL_THRESHOLD_LAUNCH_M_S2 =
-	20; // minimum acceleration in m/s^2 for a launch to be detected
+	30; // minimum acceleration in m/s^2 for a launch to be detected
 
 static const uint32_t ACT_DELAY_MS =
 	7000; // Q - the minimum time after launch before allowing canards to actuate
@@ -32,7 +32,7 @@ static const uint32_t SLEEPY_LOG_TIMEOUT_MS =
 	1600000; // K - the approximate time between launch and main at apogee launch to land time
 
 static const uint32_t NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL =
-	2; // minimum number of IMUs that must detect launch acceleration for launch event to be
+	1; // minimum number of IMUs that must detect launch acceleration for launch event to be
 	   // triggered
 static const uint32_t NUM_CONSEC_LAUNCH_DETECT_THRESHOLD =
 	5; // minimum number of consecutive detections required for an IMU to be considered as detecting
