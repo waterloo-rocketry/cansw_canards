@@ -58,17 +58,16 @@ static const matrix3d_t soft_iron_correction_matrix = {
 
 #ifdef ADBREAKOUT_09590
 // TODO: Add actual calibration values for AD gyro
-static const float64_t AD_GYRO_MV_OFFSET = 0.0;
-static const float64_t AD_GYRO_RAD_PER_MV = RAD_PER_DEG * 10.0;
+static const float64_t AD_GYRO_DPS_OFFSET = -68.67;
+static const float64_t AD_GYRO_DPS_GAIN = 12.476;
 
 #elif defined(ADBREAKOUT_05127)
-
-static const float64_t AD_GYRO_MV_OFFSET = 0.0;
-static const float64_t AD_GYRO_RAD_PER_MV = RAD_PER_DEG * 10.0;
+static const float64_t AD_GYRO_DPS_OFFSET = 33.873;
+static const float64_t AD_GYRO_DPS_GAIN = 12.584;
 
 #else
-static const float64_t AD_GYRO_MV_OFFSET = 0.0;
-static const float64_t AD_GYRO_RAD_PER_MV = RAD_PER_DEG * 10.0;
+static const float64_t AD_GYRO_DPS_OFFSET = 0.0;
+static const float64_t AD_GYRO_DPS_GAIN = 12.5;
 #endif
 
 // set to true once calibrated, initialized to false to prevent use before calibration
@@ -714,7 +713,9 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 
 			// Apply gyro calibration
 			ad_data->ad_gyro.meas =
-				((ad_data->ad_gyro.meas) - AD_GYRO_MV_OFFSET) * AD_GYRO_RAD_PER_MV;
+				((ad_data->ad_gyro.meas) * AD_GYRO_DPS_GAIN) + AD_GYRO_DPS_OFFSET;
+
+			ad_data->ad_gyro.meas = ad_data->ad_gyro.meas * RAD_PER_DEG;
 
 			sensor_handler_state.ad_gyro_stats.success_count++;
 
