@@ -197,8 +197,8 @@ w_status_t controller_init(void) {
 w_status_t controller_codegen_init(controller_ctx_t *p_ctx) {
 	// init to default values
 	p_ctx->gnc_controller_ctx.coeffs[0] = 2;
-	p_ctx->gnc_controller_ctx.P[0] = 1e-9;
-	p_ctx->gnc_controller_ctx.P[3] = 1e-5;
+	p_ctx->gnc_controller_ctx.P[0] = 1e-5;
+	p_ctx->gnc_controller_ctx.P[3] = 1e-9;
 
 	return W_SUCCESS;
 }
