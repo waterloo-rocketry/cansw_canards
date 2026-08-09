@@ -530,6 +530,13 @@ void ms5611_task(void *argument) {
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 
 	while (1) {
+		// Must not do anything in the task if init failed.
+		// This allows non-critical init to fail and board to not kill itself
+		if (!handle.initialized) {
+			vTaskDelay(pdMS_TO_TICKS(10000));
+			continue;
+		}
+
 		w_status_t status = ms5611_read_raw_pressure(&result, &timestamp_ms);
 
 		if (pdTRUE == xSemaphoreTake(s_data_mutex, pdMS_TO_TICKS(3))) {

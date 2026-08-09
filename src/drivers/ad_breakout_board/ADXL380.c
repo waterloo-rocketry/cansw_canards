@@ -45,7 +45,7 @@ w_status_t adxl380_init() {
 	g_adx380_handle.i2c_bus = I2C_BUS_2; // TODO: To be corrected
 
 	if (W_SUCCESS != adxl38x_init(&g_adx380_handle)) {
-		log_text(0, LOG_LVL_FATAL, "ADXL380", "NO-OS based driver failed to init.");
+		log_text(0, LOG_LVL_WARN, "ADXL380", "NO-OS based driver failed to init.");
 		return W_FAILURE;
 	}
 
@@ -54,7 +54,7 @@ w_status_t adxl380_init() {
 	// re-zero all register to make sure no old setting will be carried over and prepare for
 	// self-test
 	if (W_SUCCESS != adxl38x_soft_reset(&g_adx380_handle)) {
-		log_text(0, LOG_LVL_FATAL, "ADXL380", "Soft reset of registers failed.");
+		log_text(0, LOG_LVL_WARN, "ADXL380", "Soft reset of registers failed.");
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(ADXL_SOFT_RESET_DELAY));
@@ -68,22 +68,22 @@ w_status_t adxl380_init() {
 	if (W_SUCCESS !=
 		adxl38x_selftest(
 			&g_adx380_handle, ADXL38X_MODE_HP, &x_axis_status, &y_axis_status, &z_axis_status)) {
-		log_text(0, LOG_LVL_FATAL, "ADXL380", "Self-test unable to be completed.");
+		log_text(0, LOG_LVL_WARN, "ADXL380", "Self-test unable to be completed.");
 		return W_FAILURE;
 
 	} else {
 		if (!x_axis_status) {
-			log_text(0, LOG_LVL_FATAL, "ADXL380", "x-axis self-test failed.");
+			log_text(0, LOG_LVL_WARN, "ADXL380", "x-axis self-test failed.");
 			st_failed = true;
 		}
 
 		if (!y_axis_status) {
-			log_text(0, LOG_LVL_FATAL, "ADXL380", "y-axis self-test failed.");
+			log_text(0, LOG_LVL_WARN, "ADXL380", "y-axis self-test failed.");
 			st_failed = true;
 		}
 
 		if (!z_axis_status) {
-			log_text(0, LOG_LVL_FATAL, "ADXL380", "z-axis self-test failed.");
+			log_text(0, LOG_LVL_WARN, "ADXL380", "z-axis self-test failed.");
 			st_failed = true;
 		}
 	}
@@ -125,7 +125,7 @@ w_status_t adxl380_init() {
 		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, ADXL38X_CH_EN_XYZ));
 
 	if (W_SUCCESS != init_setting_status) {
-		log_text(0, LOG_LVL_FATAL, "ADXL380", "Failed to set up the correct initial register bit.");
+		log_text(0, LOG_LVL_WARN, "ADXL380", "Failed to set up the correct initial register bit.");
 
 	} else {
 		is_initialized = true;

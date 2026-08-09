@@ -131,7 +131,7 @@ w_status_t adxrs649_init() {
 	// reset both gpio pins to low to start
 
 	if (W_SUCCESS != ads1219_init(&g_ads_handle, I2C_BUS_2, ADS1219_ADDR)) {
-		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Unable to initialize the ADC.");
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Unable to initialize the ADC.");
 		return W_FAILURE;
 	}
 
@@ -144,13 +144,12 @@ w_status_t adxrs649_init() {
 		&g_ads_handle, ADS1219_VREF_EXTERNAL, V_EXTERNAL_REF_N_mV, V_EXTERNAL_REF_P_mV);
 
 	if (adc_setup_status != W_SUCCESS) {
-		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to write settings ADC for gyro.");
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed to write settings ADC for gyro.");
 		return W_FAILURE;
 	}
 
 	if (ads1219_start(&g_ads_handle) != W_SUCCESS) {
-		log_text(
-			0, LOG_LVL_FATAL, "ADXRS649", "Failed to start continuous conversion for the ADC.");
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed to start continuous conversion for the ADC.");
 		return W_FAILURE;
 	}
 
@@ -159,26 +158,25 @@ w_status_t adxrs649_init() {
 	// currect ads setting 00001111 -> 0x0F
 	// perform sanity check
 	if (ads1219_sanity_check(&g_ads_handle, ADS1219_CONFIG_SETTINGS) != W_SUCCESS) {
-		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed ADC sanity check.");
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed ADC sanity check.");
 		return W_FAILURE;
 	}
 
 	if (adxrs649_self_test() != W_SUCCESS) {
 		// Make sure ST pins are low
 		if (gpio_write(GPIO_PIN_ADXRS649_ST1, GPIO_LEVEL_LOW, 1) != W_SUCCESS) {
-			log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to set ST1 to LOW");
+			log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed to set ST1 to LOW");
 		}
 		if (gpio_write(GPIO_PIN_ADXRS649_ST2, GPIO_LEVEL_LOW, 1) != W_SUCCESS) {
-			log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed to set ST2 to LOW");
+			log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed to set ST2 to LOW");
 		}
 
-		log_text(0, LOG_LVL_FATAL, "ADXRS649", "Failed gyro self-test.");
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed gyro self-test.");
 		return W_FAILURE;
 	}
 
 	if (ads1219_start(&g_ads_handle) != W_SUCCESS) {
-		log_text(
-			0, LOG_LVL_FATAL, "ADXRS649", "Failed to start continuous conversion for the ADC.");
+		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed to start continuous conversion for the ADC.");
 		return W_FAILURE;
 	}
 
