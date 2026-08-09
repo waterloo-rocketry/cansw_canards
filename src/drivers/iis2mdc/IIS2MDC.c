@@ -567,31 +567,22 @@ health_status_t iis2mdc_get_status(void) {
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
-			 "state=%d, dma_busy=%d, cache_valid=%d",
+			 "state=%d, dma_busy=%d, cache_valid=%d"
+			 "dma_b4_switch=%" PRIu32 ", dma_r_fail=%" PRIu32,
 			 iis2mdc_state,
 			 iis2mdc_dma_busy,
-			 iis2mdc_cache.valid);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "dma_before_callback_switch=%" PRIu32 ", dma_read_fails=%" PRIu32,
+			 iis2mdc_cache.valid,
 			 iis2mdc_health.dma_before_callback_switch,
 			 iis2mdc_health.dma_read_fails);
 
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "iis2mdc",
-			 "dma_callback_error=%" PRIu32 ", i2c_handle_mismatch=%" PRIu32
-			 ", get_data_dma_busy=%" PRIu32,
+			 "dma_cb_err=%" PRIu32 " i2c_handle_err=%" PRIu32 " dma_busy=%" PRIu32
+			 "inv_cache=%" PRIu32 ", null_param=%" PRIu32,
 			 iis2mdc_health.dma_callback_error,
 			 iis2mdc_health.i2c_handle_mismatch,
-			 iis2mdc_health.get_data_dma_busy);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "get_data_invalid_cache=%" PRIu32 ", get_data_null_param=%" PRIu32,
+			 iis2mdc_health.get_data_dma_busy,
 			 iis2mdc_health.get_data_invalid_cache,
 			 iis2mdc_health.get_data_null_param);
 

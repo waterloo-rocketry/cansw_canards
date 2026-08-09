@@ -285,26 +285,21 @@ health_status_t adxrs649_get_status(void) {
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "ADXRS649",
-			 "init=%d, not_init_calls=%" PRIu32 ", millivolt_conversion_fails=%" PRIu32,
+			 "init=%d not_init=%" PRIu32 " mv_conv_fail=%" PRIu32 "r_fail=%" PRIu32
+			 " inv_param=%" PRIu32,
 			 is_initialized,
 			 adxrs649_health.not_initialized_calls,
-			 adxrs649_health.millivolt_conversion_fails);
+			 adxrs649_health.millivolt_conversion_fails,
+			 adxrs649_health.read_fails,
+			 adxrs649_health.invalid_params);
 
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "ADXRS649",
-			 "data_ready_check_fails=%" PRIu32 ", data_read_fails=%" PRIu32
-			 ", null_params=%" PRIu32,
+			 "drdy_check_fails=%" PRIu32 ", data_r_fails=%" PRIu32 ", null_params=%" PRIu32,
 			 adxrs649_health.data_ready_check_fails,
 			 adxrs649_health.data_read_fails,
 			 adxrs649_health.null_params);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "AD BREAKBOARD TASK",
-			 "gyro_read_fails=%" PRIu32 ", gyro_invalid_params=%" PRIu32,
-			 adxrs649_health.read_fails,
-			 adxrs649_health.invalid_params);
 
 	return status;
 }

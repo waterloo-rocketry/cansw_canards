@@ -597,8 +597,8 @@ health_status_t ak45_get_status(void) {
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
 			 "ak45",
-			 "is_init=%d, hard_stop_calibrated=%d, hard_stop_cal_failed=%d, rx_errors=%lu, "
-			 "tx_errors=%lu",
+			 "is_init=%d, hard_stop_calibd=%d, hardstop_cal_fail=%d, rx_err=%lu, "
+			 "tx_err=%lu",
 			 ak45_health.is_init,
 			 ak45_health.hard_stop_calibrated,
 			 ak45_health.hard_stop_cal_failed,
@@ -608,8 +608,8 @@ health_status_t ak45_get_status(void) {
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
 			 "ak45",
-			 "out_of_memory=%lu, not_initialized=%lu, feedback_queue_empty=%lu, "
-			 "reinit_attempts=%lu, invalid_args=%lu, timer_get_ms_fails=%lu",
+			 "OOM=%lu, not_init=%lu, fb_q_empty=%lu, "
+			 "reinit_tries=%lu, invalid_arg=%lu, get_ms_fails=%lu",
 			 ak45_health.out_of_memory,
 			 ak45_health.not_initialized,
 			 ak45_health.feedback_queue_empty,
@@ -620,8 +620,8 @@ health_status_t ak45_get_status(void) {
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
 			 "ak45",
-			 "init_timeout=%lu, init_notif_fails=%lu, init_start_fails=%lu, init_filter_fails=%lu, "
-			 "fdcan_stop_fails=%lu",
+			 "timeout=%lu notif_fail=%lu start_fail=%lu cfg_fail=%lu "
+			 "stop_fail=%lu",
 			 ak45_health.init_fdcan_timeout,
 			 ak45_health.init_fdcan_notification_fails,
 			 ak45_health.init_fdcan_start_fails,
@@ -631,8 +631,7 @@ health_status_t ak45_get_status(void) {
 	log_text(LOG_WAIT_MS,
 			 LOG_LVL_INFO,
 			 "ak45",
-			 "telemetry_scale_fails=%" PRIu32 ", telemetry_can_tx_fails=%" PRIu32
-			 ", sd_log_data_fails=%" PRIu32,
+			 "telem_scale_fail=%" PRIu32 " telem_can_tx_fail=%" PRIu32 ", log_data_fail=%" PRIu32,
 			 ak45_health.telemetry_scale_fails,
 			 ak45_health.telemetry_can_tx_fails,
 			 ak45_health.sd_log_data_fails);
