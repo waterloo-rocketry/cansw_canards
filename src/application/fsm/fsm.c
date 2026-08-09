@@ -384,7 +384,7 @@ health_status_t fsm_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "fsm",
-			 "init=%d, loop_timeout=%d, get_timer_errors=%d, unk_state_errors=%d, Ext_5V_error=%d",
+			 "init=%d, loop_timeout=%d, get_ms_err=%d, unk_state_err=%d, Ext_5V_err=%d",
 			 fsm_health.is_init,
 			 fsm_health.loop_timeouts,
 			 fsm_health.get_timer_failures,

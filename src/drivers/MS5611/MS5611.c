@@ -615,29 +615,20 @@ health_status_t ms5611_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "ms5611",
-			 "semaphore_fail_count=%" PRIu32 ", i2c_read_fail_count=%" PRIu32,
+			 "sem_fail=%" PRIu32 ", i2c_r_fail=%" PRIu32 "i2c_w_fail=%" PRIu32
+			 ", reinit_try=%" PRIu32,
 			 ms5611_health.semaphore_fail_count,
-			 ms5611_health.i2c_read_fail_count);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "ms5611",
-			 "i2c_write_fail_count=%" PRIu32 ", reinit_attempt=%" PRIu32,
+			 ms5611_health.i2c_read_fail_count,
 			 ms5611_health.i2c_write_fail_count,
 			 ms5611_health.reinit_attempt);
 
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "ms5611",
-			 "deinit_before_init=%" PRIu32 ", read_before_init=%" PRIu32,
+			 "deinit=%" PRIu32 ", r_b4_init=%" PRIu32 "getms_err=%" PRIu32 ", null=%" PRIu32
+			 ", stale_pres=%" PRIu32,
 			 ms5611_health.deinit_before_init,
-			 ms5611_health.read_before_init);
-
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "ms5611",
-			 "timer_read_fail=%" PRIu32 ", null_param_count=%" PRIu32
-			 ", stale_pressure_read=%" PRIu32,
+			 ms5611_health.read_before_init,
 			 ms5611_health.timer_read_fail,
 			 ms5611_health.null_param_count,
 			 ms5611_health.stale_pressure_read);
