@@ -151,8 +151,8 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 	if (p_ctx->p_flight_phase_context->launch_timestamp_ms == UINT32_MAX) {
 		controller_input.launch_timestamp_ms = 0;
 	} else {
-		controller_input.launch_timestamp_ms =
-			timestamp_tenth_ms - p_ctx->p_flight_phase_context->launch_timestamp_ms;
+		controller_input.launch_timestamp_ms = (timestamp_tenth_ms / MS_TO_TENTH_MS) -
+											   p_ctx->p_flight_phase_context->launch_timestamp_ms;
 	}
 
 	// initialize the outputs
