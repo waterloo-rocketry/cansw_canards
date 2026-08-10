@@ -145,8 +145,15 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 	// set the inputs
 	navigator_input_t navigator_input = {.sensor_data = p_fsm_input->p_sensor_data,
 										 .fsm_state = p_ctx->curr_state};
-	controller_input_t controller_input = {.launch_timestamp_ms =
-											   p_ctx->p_flight_phase_context->launch_timestamp_ms};
+	controller_input_t controller_input = {0};
+
+	// shall pass "timestamp since launch" as 0ms if launch hasnt been detected yet
+	if (p_ctx->p_flight_phase_context->launch_timestamp_ms == UINT32_MAX) {
+		controller_input.launch_timestamp_ms = 0;
+	} else {
+		controller_input.launch_timestamp_ms = (timestamp_tenth_ms / MS_TO_TENTH_MS) -
+											   p_ctx->p_flight_phase_context->launch_timestamp_ms;
+	}
 
 	// initialize the outputs
 	navigator_output_t navigator_output = {0};
@@ -392,4 +399,270 @@ health_status_t fsm_get_status(void) {
 			 fsm_health.power_handler_errors);
 
 	return status;
+}
+
+void log_gnc_internal_state() {
+	gnc_navigator_ctx_t *ctx = &g_ctx.p_navigator_context->gnc_navigator_ctx;
+	/* Bias */
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "Bgy %.3g %.3g %.3g Mgy %.3g %.3g %.3g",
+			 ctx->bias.board_gyro[0],
+			 ctx->bias.board_gyro[1],
+			 ctx->bias.board_gyro[2],
+			 ctx->bias.mti_gyro[0],
+			 ctx->bias.mti_gyro[1],
+			 ctx->bias.mti_gyro[2]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "Agy %.3g %.3g %.3g Bma %.3g %.3g %.3g",
+			 ctx->bias.ad_gyro[0],
+			 ctx->bias.ad_gyro[1],
+			 ctx->bias.ad_gyro[2],
+			 ctx->bias.board_mag_earth[0],
+			 ctx->bias.board_mag_earth[1],
+			 ctx->bias.board_mag_earth[2]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "Mma %.3g %.3g %.3g Bb %.3g Mb %.3g",
+			 ctx->bias.mti_mag_earth[0],
+			 ctx->bias.mti_mag_earth[1],
+			 ctx->bias.mti_mag_earth[2],
+			 ctx->bias.board_baro,
+			 ctx->bias.mti_baro);
+
+	/* Sensor filter */
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "Ba %.3g %.3g %.3g Bg %.3g %.3g %.3g",
+			 ctx->sensor_filter.board_accel[0],
+			 ctx->sensor_filter.board_accel[1],
+			 ctx->sensor_filter.board_accel[2],
+			 ctx->sensor_filter.board_gyro[0],
+			 ctx->sensor_filter.board_gyro[1],
+			 ctx->sensor_filter.board_gyro[2]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "Ma %.3g %.3g %.3g Mg %.3g %.3g %.3g",
+			 ctx->sensor_filter.mti_accel[0],
+			 ctx->sensor_filter.mti_accel[1],
+			 ctx->sensor_filter.mti_accel[2],
+			 ctx->sensor_filter.mti_gyro[0],
+			 ctx->sensor_filter.mti_gyro[1],
+			 ctx->sensor_filter.mti_gyro[2]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "Aa %.3g %.3g %.3g Ag %.3g %.3g %.3g",
+			 ctx->sensor_filter.ad_accel[0],
+			 ctx->sensor_filter.ad_accel[1],
+			 ctx->sensor_filter.ad_accel[2],
+			 ctx->sensor_filter.ad_gyro[0],
+			 ctx->sensor_filter.ad_gyro[1],
+			 ctx->sensor_filter.ad_gyro[2]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "Bb %.3g Bm %.3g %.3g %.3g Mb %.3g Mm %.3g %.3g %.3g",
+			 ctx->sensor_filter.board_baro,
+			 ctx->sensor_filter.board_mag[0],
+			 ctx->sensor_filter.board_mag[1],
+			 ctx->sensor_filter.board_mag[2],
+			 ctx->sensor_filter.mti_baro,
+			 ctx->sensor_filter.mti_mag[0],
+			 ctx->sensor_filter.mti_mag[1],
+			 ctx->sensor_filter.mti_mag[2]);
+
+	/* Covariance P */
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P0 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[0],
+			 ctx->P[1],
+			 ctx->P[2],
+			 ctx->P[3],
+			 ctx->P[4],
+			 ctx->P[5],
+			 ctx->P[6],
+			 ctx->P[7],
+			 ctx->P[8],
+			 ctx->P[9]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P10 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[10],
+			 ctx->P[11],
+			 ctx->P[12],
+			 ctx->P[13],
+			 ctx->P[14],
+			 ctx->P[15],
+			 ctx->P[16],
+			 ctx->P[17],
+			 ctx->P[18],
+			 ctx->P[19]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P20 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[20],
+			 ctx->P[21],
+			 ctx->P[22],
+			 ctx->P[23],
+			 ctx->P[24],
+			 ctx->P[25],
+			 ctx->P[26],
+			 ctx->P[27],
+			 ctx->P[28],
+			 ctx->P[29]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P30 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[30],
+			 ctx->P[31],
+			 ctx->P[32],
+			 ctx->P[33],
+			 ctx->P[34],
+			 ctx->P[35],
+			 ctx->P[36],
+			 ctx->P[37],
+			 ctx->P[38],
+			 ctx->P[39]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P40 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[40],
+			 ctx->P[41],
+			 ctx->P[42],
+			 ctx->P[43],
+			 ctx->P[44],
+			 ctx->P[45],
+			 ctx->P[46],
+			 ctx->P[47],
+			 ctx->P[48],
+			 ctx->P[49]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P50 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[50],
+			 ctx->P[51],
+			 ctx->P[52],
+			 ctx->P[53],
+			 ctx->P[54],
+			 ctx->P[55],
+			 ctx->P[56],
+			 ctx->P[57],
+			 ctx->P[58],
+			 ctx->P[59]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P60 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[60],
+			 ctx->P[61],
+			 ctx->P[62],
+			 ctx->P[63],
+			 ctx->P[64],
+			 ctx->P[65],
+			 ctx->P[66],
+			 ctx->P[67],
+			 ctx->P[68],
+			 ctx->P[69]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P70 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[70],
+			 ctx->P[71],
+			 ctx->P[72],
+			 ctx->P[73],
+			 ctx->P[74],
+			 ctx->P[75],
+			 ctx->P[76],
+			 ctx->P[77],
+			 ctx->P[78],
+			 ctx->P[79]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P80 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[80],
+			 ctx->P[81],
+			 ctx->P[82],
+			 ctx->P[83],
+			 ctx->P[84],
+			 ctx->P[85],
+			 ctx->P[86],
+			 ctx->P[87],
+			 ctx->P[88],
+			 ctx->P[89]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P90 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[90],
+			 ctx->P[91],
+			 ctx->P[92],
+			 ctx->P[93],
+			 ctx->P[94],
+			 ctx->P[95],
+			 ctx->P[96],
+			 ctx->P[97],
+			 ctx->P[98],
+			 ctx->P[99]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P100 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[100],
+			 ctx->P[101],
+			 ctx->P[102],
+			 ctx->P[103],
+			 ctx->P[104],
+			 ctx->P[105],
+			 ctx->P[106],
+			 ctx->P[107],
+			 ctx->P[108],
+			 ctx->P[109]);
+
+	log_text(1,
+			 LOG_LVL_WARN,
+			 "Nav",
+			 "P110 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g",
+			 ctx->P[110],
+			 ctx->P[111],
+			 ctx->P[112],
+			 ctx->P[113],
+			 ctx->P[114],
+			 ctx->P[115],
+			 ctx->P[116],
+			 ctx->P[117],
+			 ctx->P[118],
+			 ctx->P[119]);
+
+	log_text(1, LOG_LVL_WARN, "Nav", "P120 %.3g", ctx->P[120]);
 }

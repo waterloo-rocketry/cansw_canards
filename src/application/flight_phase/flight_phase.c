@@ -315,6 +315,7 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 	// Only count as a transition if the state actually changed
 	if (new_state != curr_state) {
+		log_gnc_internal_state();
 		log_text(
 			1, LOG_LVL_INFO, "FlightPhase", "State transition: %d -> %d", curr_state, new_state);
 		flight_phase_status.state_transitions++;
