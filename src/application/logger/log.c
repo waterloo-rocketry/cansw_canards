@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "FreeRTOS.h"
+#include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"
@@ -516,6 +517,12 @@ void log_task(void *argument) {
 		// This allows non-critical init to fail and board to not kill itself
 		if (!logger_health.is_init) {
 			vTaskDelay(pdMS_TO_TICKS(10000));
+			continue;
+		}
+
+		// requirement: stop logging during sleepy state to avoid filling sd card uselessly
+		if (fsm_get_state() == STATE_SLEEPY) {
+			vTaskDelay(pdMS_TO_TICKS(1000));
 			continue;
 		}
 

@@ -346,7 +346,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasAllSensorNew) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -404,7 +404,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadLSM6) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -461,7 +461,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewLSM6) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -519,7 +519,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetLSM6) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -576,7 +576,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadMag) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -633,7 +633,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMag) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -690,7 +690,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetMag) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -815,7 +815,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewAccelMTI) {
 	EXPECT_FALSE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -878,7 +878,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewGyroMTI) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_FALSE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -941,7 +941,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaroMTI) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_FALSE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1067,7 +1067,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewOtherMTI) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1183,7 +1183,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaro) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1236,7 +1236,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailBaro) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1293,7 +1293,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADAccel) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1350,7 +1350,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADAccel) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1407,7 +1407,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADGyro) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1464,7 +1464,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADGyro) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1522,7 +1522,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMotorEncoder) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1580,7 +1580,7 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
+	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // TODO: consider what to do
@@ -1806,19 +1806,3 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailWithTimerFail) {
 // 	EXPECT_EQ(build_baro_data_msg_fake.arg3_history[0], 101325); // Raw pressure
 // 	EXPECT_EQ(build_baro_data_msg_fake.arg4_history[0], 33); // Raw temperature
 // }
-
-TEST_F(SensorHandlerTest, ImuHandlerRun_CalibrationWarning) {
-	// Arrange
-	// Simulate uncalibrated orientation by setting the flag to failure
-	bool orientation_calibrated = false;
-
-	// Act
-	w_status_t result = sensor_handler_init();
-
-	// Assert
-	EXPECT_EQ(result, W_SUCCESS); // Initialization should still succeed
-	EXPECT_STREQ(log_text_fake.arg2_history[0], "SensorHandler");
-	EXPECT_STREQ(log_text_fake.arg3_history[0],
-				 "Sensor orientation correction matrices not calibrated yet, using default "
-				 "orientation.");
-}

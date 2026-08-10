@@ -24,7 +24,7 @@ FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *
 FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t *);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 FAKE_VALUE_FUNC(w_status_t, can_handler_act_cmd_register_callback, can_actuator_id_t, can_callback_t);
-
+FAKE_VOID_FUNC(log_gnc_internal_state);
 FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_t *);
 
 // w_status_t get_cmd_actuator_state(const can_msg_t *msg, can_actuator_state_t *cmd_actuator_state);

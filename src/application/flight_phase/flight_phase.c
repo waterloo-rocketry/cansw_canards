@@ -315,6 +315,7 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 
 	// Only count as a transition if the state actually changed
 	if (new_state != curr_state) {
+		log_gnc_internal_state();
 		log_text(
 			1, LOG_LVL_INFO, "FlightPhase", "State transition: %d -> %d", curr_state, new_state);
 		flight_phase_status.state_transitions++;
@@ -548,33 +549,23 @@ health_status_t flight_phase_get_status(void) {
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
-			 "invalid_event=%" PRIu32 ", invalid_act_data=%" PRIu32 ", state_transitions=%" PRIu32,
+			 "inv_evt=%" PRIu32 ", inv_act_data=%" PRIu32 ", trans=%" PRIu32 "evt_send_err=%" PRIu32
+			 ", rst=%" PRIu32,
 			 flight_phase_status.invalid_event_count,
 			 flight_phase_status.invalid_actuator_data_count,
-			 flight_phase_status.state_transitions);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "curr_state=%d, event_send_fail=%" PRIu32 ", reset=%" PRIu32,
-			 fsm_get_state(),
+			 flight_phase_status.state_transitions,
 			 flight_phase_status.event_send_fail_count,
 			 flight_phase_status.event_counts.reset);
 
 	log_text(1,
 			 LOG_LVL_INFO,
 			 "FlightPhase",
-			 "pad_filter=%" PRIu32 ", ignitor=%" PRIu32 ", inj_open=%" PRIu32
-			 ", launch_accel=%" PRIu32,
+			 "pad_filt=%" PRIu32 " ign=%" PRIu32 " inj=%" PRIu32 " accel=%" PRIu32
+			 "act_delay=%" PRIu32 " recvry=%" PRIu32 " slep=%" PRIu32,
 			 flight_phase_status.event_counts.pad_filter,
 			 flight_phase_status.event_counts.ignitor,
 			 flight_phase_status.event_counts.inj_open,
-			 flight_phase_status.event_counts.launch_accel);
-
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "act_delay_elapsed=%" PRIu32 ", recovery_rate=%" PRIu32 ", sleep_rate=%" PRIu32,
+			 flight_phase_status.event_counts.launch_accel,
 			 flight_phase_status.event_counts.act_delay_elapsed,
 			 flight_phase_status.event_counts.recovery_rate,
 			 flight_phase_status.event_counts.sleep_rate);

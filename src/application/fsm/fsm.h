@@ -48,4 +48,9 @@ health_status_t fsm_get_status(void);
  */
 void fsm_task(void *args);
 
+/**
+ * @brief use log_text() to log everything in gnc_navigator_ctx_t
+ */
+void log_gnc_internal_state();
+
 #endif
