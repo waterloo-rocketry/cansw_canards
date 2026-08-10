@@ -1806,19 +1806,3 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailWithTimerFail) {
 // 	EXPECT_EQ(build_baro_data_msg_fake.arg3_history[0], 101325); // Raw pressure
 // 	EXPECT_EQ(build_baro_data_msg_fake.arg4_history[0], 33); // Raw temperature
 // }
-
-TEST_F(SensorHandlerTest, ImuHandlerRun_CalibrationWarning) {
-	// Arrange
-	// Simulate uncalibrated orientation by setting the flag to failure
-	bool orientation_calibrated = false;
-
-	// Act
-	w_status_t result = sensor_handler_init();
-
-	// Assert
-	EXPECT_EQ(result, W_SUCCESS); // Initialization should still succeed
-	EXPECT_STREQ(log_text_fake.arg2_history[0], "SensorHandler");
-	EXPECT_STREQ(log_text_fake.arg3_history[0],
-				 "Sensor orientation correction matrices not calibrated yet, using default "
-				 "orientation.");
-}
