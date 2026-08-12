@@ -379,11 +379,7 @@ w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t
 	tx_packet.payload.altitude = p_x_state->altitude;
 
 	tx_packet.payload.cl = p_controller_ctx->coeffs[0];
-	// tx_packet.payload.cov_norm = p_nav_out->cov_norm;
-	// tx_packet.payload.where_it_is[0] = p_nav_out->roll_state[0];
-	// tx_packet.payload.where_it_is[1] = p_nav_out->roll_state[1];
-	// tx_packet.payload.where_it_isnt[0] = p_cntl_in->xR[0];
-	// tx_packet.payload.where_it_isnt[1] = p_cntl_in->xR[1];
+	tx_packet.payload.delta = p_cntl_out->ref_roll[0];
 
 	tx_packet.payload.footer[0] = HIL_FOOTER_CHAR;
 

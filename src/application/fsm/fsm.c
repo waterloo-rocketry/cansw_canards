@@ -145,15 +145,8 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 	// set the inputs
 	navigator_input_t navigator_input = {.sensor_data = p_fsm_input->p_sensor_data,
 										 .fsm_state = p_ctx->curr_state};
-	controller_input_t controller_input = {0};
-
-	// shall pass "timestamp since launch" as 0ms if launch hasnt been detected yet
-	if (p_ctx->p_flight_phase_context->launch_timestamp_ms == UINT32_MAX) {
-		controller_input.launch_timestamp_ms = 0;
-	} else {
-		controller_input.launch_timestamp_ms = (timestamp_tenth_ms / MS_TO_TENTH_MS) -
-											   p_ctx->p_flight_phase_context->launch_timestamp_ms;
-	}
+	controller_input_t controller_input = {.launch_timestamp_ms =
+											   p_ctx->p_flight_phase_context->launch_timestamp_ms};
 
 	// initialize the outputs
 	navigator_output_t navigator_output = {0};
@@ -283,7 +276,11 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 #ifdef HIL
 	/******************************** HIL START ********************************/
 	// send hil packet regardless of fsm state. In non-actuation states, we
-	// still want to send telem to simulink (canard cmd gets ignored)
+	// still want to send telem to simulink (zero canard cmd)
+	if (p_ctx->curr_state != STATE_ACT_ALLOWED && p_ctx->curr_state != STATE_RECOVERY) {
+		// set motor command to zero in non-actuation state
+		controller_output.canard_command_angle_rad = 0;
+	}
 	w_status_t send_rc = hil_send_simulink_cmd(&navigator_input,
 											   &navigator_output,
 											   &p_ctx->p_navigator_context->gnc_navigator_ctx.x,
