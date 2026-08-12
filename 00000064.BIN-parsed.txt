@@ -1,0 +1,5972 @@
+[17] header (type "HEAD") with
+    version: 3
+    index: 0
+[13400] board_imu (type 5) with
+    accel_x: 9.718178749084473
+    accel_y: 0.10532016307115555
+    accel_z: -0.07659648358821869
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.004886921960860491
+[13400] ad_breakout (type 11) with
+    accel_x: 9.694290161132812
+    accel_y: -0.26681530475616455
+    accel_z: 0.10986512899398804
+    gyro: -5.050205707550049
+[13400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[13400] board_mag_baro (type 6) with
+    mag_x: -0.6345000267028809
+    mag_y: 0.006000000052154064
+    mag_z: -0.4830000102519989
+    baro: 97016.0
+    temp: 0.0
+[13400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[13400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[14400] board_imu (type 5) with
+    accel_x: 9.689455032348633
+    accel_y: 0.08617103844881058
+    accel_z: -0.08617103844881058
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.004886921960860491
+[14400] ad_breakout (type 11) with
+    accel_x: 9.704752922058105
+    accel_y: -0.2772786617279053
+    accel_z: 0.12556014955043793
+    gyro: -5.166958808898926
+[14400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[14400] board_mag_baro (type 6) with
+    mag_x: -0.6315000057220459
+    mag_y: 0.0
+    mag_z: -0.4860000014305115
+    baro: 97022.0
+    temp: 0.0
+[14400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[14400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[15400] board_imu (type 5) with
+    accel_x: 9.708603858947754
+    accel_y: 0.11489471793174744
+    accel_z: -0.12446928024291992
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.0024434609804302454
+[15400] ad_breakout (type 11) with
+    accel_x: 9.600119590759277
+    accel_y: -0.21973025798797607
+    accel_z: 0.08370676636695862
+    gyro: -5.120512962341309
+[15400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[15400] board_mag_baro (type 6) with
+    mag_x: -0.6345000267028809
+    mag_y: 0.006000000052154064
+    mag_z: -0.48750001192092896
+    baro: 97020.0
+    temp: 0.0
+[15400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[15400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[16400] board_imu (type 5) with
+    accel_x: 9.718178749084473
+    accel_y: 0.04787280037999153
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.0
+[16400] ad_breakout (type 11) with
+    accel_x: 9.652436256408691
+    accel_y: -0.2458886206150055
+    accel_z: 0.09417010843753815
+    gyro: -4.593846321105957
+[16400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[16400] board_mag_baro (type 6) with
+    mag_x: -0.6359999775886536
+    mag_y: 0.0044999998062849045
+    mag_z: -0.484499990940094
+    baro: 97018.0
+    temp: 0.0
+[16400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[16400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[17400] board_imu (type 5) with
+    accel_x: 9.785200119018555
+    accel_y: 0.18191663920879364
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0
+    gyro_y: -0.012217304669320583
+    gyro_z: 0.009773843921720982
+[17400] ad_breakout (type 11) with
+    accel_x: 9.673362731933594
+    accel_y: -0.21973025798797607
+    accel_z: 0.06801174581050873
+    gyro: -5.326748371124268
+[17400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[17400] board_mag_baro (type 6) with
+    mag_x: 0.48750001192092896
+    mag_y: -0.010499999858438969
+    mag_z: -0.6315000057220459
+    baro: 97018.0
+    temp: 0.0
+[17400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[17400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[18400] board_imu (type 5) with
+    accel_x: 9.689455032348633
+    accel_y: 0.07659648358821869
+    accel_z: -0.09574560075998306
+    gyro_x: -0.004886921960860491
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[18400] ad_breakout (type 11) with
+    accel_x: 9.678594589233398
+    accel_y: -0.2563519775867462
+    accel_z: 0.12556014955043793
+    gyro: -5.089407444000244
+[18400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[18400] board_mag_baro (type 6) with
+    mag_x: 0.49050000309944153
+    mag_y: -0.0044999998062849045
+    mag_z: -0.6345000267028809
+    baro: 97020.0
+    temp: 0.0
+[18400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[18400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[19400] board_imu (type 5) with
+    accel_x: 9.699028968811035
+    accel_y: 0.07659648358821869
+    accel_z: -0.11489471793174744
+    gyro_x: -0.004886921960860491
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.0
+[19400] ad_breakout (type 11) with
+    accel_x: 9.657668113708496
+    accel_y: -0.2458886206150055
+    accel_z: 0.09940178692340851
+    gyro: -4.615151405334473
+[19400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[19400] board_mag_baro (type 6) with
+    mag_x: -0.6315000057220459
+    mag_y: 0.006000000052154064
+    mag_z: -0.492000013589859
+    baro: 97017.0
+    temp: 0.0
+[19400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[19400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[20400] board_imu (type 5) with
+    accel_x: 9.699028968811035
+    accel_y: 0.07659648358821869
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.004886921960860491
+[20400] ad_breakout (type 11) with
+    accel_x: 9.6995210647583
+    accel_y: -0.2720469832420349
+    accel_z: 0.09940178692340851
+    gyro: -5.0118560791015625
+[20400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[20400] board_mag_baro (type 6) with
+    mag_x: -0.6315000057220459
+    mag_y: 0.001500000013038516
+    mag_z: -0.48750001192092896
+    baro: 97021.0
+    temp: 0.0
+[20400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[20400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[21400] board_imu (type 5) with
+    accel_x: 9.718178749084473
+    accel_y: 0.08617103844881058
+    accel_z: -0.07659648358821869
+    gyro_x: -0.004886921960860491
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[21400] ad_breakout (type 11) with
+    accel_x: 9.704752922058105
+    accel_y: -0.2301936000585556
+    accel_z: 0.13602349162101746
+    gyro: -5.107303619384766
+[21400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[21400] board_mag_baro (type 6) with
+    mag_x: -0.6284999847412109
+    mag_y: 0.006000000052154064
+    mag_z: -0.47850000858306885
+    baro: 97012.0
+    temp: 0.0
+[21400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[21400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[22400] board_imu (type 5) with
+    accel_x: 9.699028968811035
+    accel_y: 0.11489471793174744
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0024434609804302454
+    gyro_z: -0.0024434609804302454
+[22400] ad_breakout (type 11) with
+    accel_x: 9.657668113708496
+    accel_y: -0.23542527854442596
+    accel_z: 0.13602349162101746
+    gyro: -5.655702114105225
+[22400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[22400] board_mag_baro (type 6) with
+    mag_x: -0.637499988079071
+    mag_y: 0.0
+    mag_z: -0.48750001192092896
+    baro: 97013.0
+    temp: 0.0
+[22400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[22400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[23400] board_imu (type 5) with
+    accel_x: 9.708603858947754
+    accel_y: 0.09574560075998306
+    accel_z: -0.07659648358821869
+    gyro_x: -0.004886921960860491
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[23400] ad_breakout (type 11) with
+    accel_x: 9.673362731933594
+    accel_y: -0.2458886206150055
+    accel_z: 0.1569501906633377
+    gyro: -5.32802677154541
+[23400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[23400] board_mag_baro (type 6) with
+    mag_x: -0.6345000267028809
+    mag_y: 0.003000000026077032
+    mag_z: -0.4830000102519989
+    baro: 97016.0
+    temp: 0.0
+[23400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[23400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[24400] board_imu (type 5) with
+    accel_x: 9.746902465820312
+    accel_y: 0.11489471793174744
+    accel_z: -0.08617103844881058
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: -0.0073303827084600925
+[24400] ad_breakout (type 11) with
+    accel_x: 9.736143112182617
+    accel_y: -0.21973025798797607
+    accel_z: 0.09417010843753815
+    gyro: -4.588733196258545
+[24400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[24400] board_mag_baro (type 6) with
+    mag_x: 0.4830000102519989
+    mag_y: -0.001500000013038516
+    mag_z: -0.6299999952316284
+    baro: 97016.0
+    temp: 0.0
+[24400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[24400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[25400] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 0.12446928024291992
+    accel_z: -0.05744735896587372
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[25400] ad_breakout (type 11) with
+    accel_x: 9.689058303833008
+    accel_y: -0.2144985944032669
+    accel_z: 0.1307918280363083
+    gyro: -5.509547710418701
+[25400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[25400] board_mag_baro (type 6) with
+    mag_x: -0.6284999847412109
+    mag_y: 0.003000000026077032
+    mag_z: -0.4830000102519989
+    baro: 97021.0
+    temp: 0.0
+[25400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[25400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[26400] board_imu (type 5) with
+    accel_x: 9.708603858947754
+    accel_y: 0.10532016307115555
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.004886921960860491
+[26400] ad_breakout (type 11) with
+    accel_x: 9.678594589233398
+    accel_y: -0.25112029910087585
+    accel_z: 0.06801174581050873
+    gyro: -5.351888656616211
+[26400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[26400] board_mag_baro (type 6) with
+    mag_x: -0.6330000162124634
+    mag_y: 0.006000000052154064
+    mag_z: -0.49050000309944153
+    baro: 97017.0
+    temp: 0.0
+[26400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[26400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[27400] board_imu (type 5) with
+    accel_x: 9.718178749084473
+    accel_y: 0.12446928024291992
+    accel_z: -0.07659648358821869
+    gyro_x: -0.004886921960860491
+    gyro_y: -0.01710422709584236
+    gyro_z: 0.03420845419168472
+[27400] ad_breakout (type 11) with
+    accel_x: 9.636741638183594
+    accel_y: -0.29297366738319397
+    accel_z: 0.14125517010688782
+    gyro: -4.021160125732422
+[27400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[27400] board_mag_baro (type 6) with
+    mag_x: -0.6345000267028809
+    mag_y: 0.0044999998062849045
+    mag_z: -0.48899999260902405
+    baro: 97021.0
+    temp: 0.0
+[27400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[27400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[28400] board_imu (type 5) with
+    accel_x: 9.708603858947754
+    accel_y: 0.07659648358821869
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.0024434609804302454
+[28400] ad_breakout (type 11) with
+    accel_x: 9.668131828308105
+    accel_y: -0.29297366738319397
+    accel_z: 0.12556014955043793
+    gyro: -4.58234167098999
+[28400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[28400] board_mag_baro (type 6) with
+    mag_x: -0.6330000162124634
+    mag_y: 0.001500000013038516
+    mag_z: -0.48899999260902405
+    baro: 97022.0
+    temp: 0.0
+[28400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[28400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[29400] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 0.0670219212770462
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0024434609804302454
+    gyro_z: -0.0024434609804302454
+[29400] ad_breakout (type 11) with
+    accel_x: 9.70998477935791
+    accel_y: -0.3348270654678345
+    accel_z: 0.10986512899398804
+    gyro: -5.432422637939453
+[29400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[29400] board_mag_baro (type 6) with
+    mag_x: -0.6315000057220459
+    mag_y: 0.007499999832361937
+    mag_z: -0.48899999260902405
+    baro: 97023.0
+    temp: 0.0
+[29400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[29400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[30400] board_imu (type 5) with
+    accel_x: 10.378823280334473
+    accel_y: 9.957542419433594
+    accel_z: 3.485139846801758
+    gyro_x: 17.038253784179688
+    gyro_y: -0.08796459436416626
+    gyro_z: 0.1270599663257599
+[30400] ad_breakout (type 11) with
+    accel_x: 8.166641235351562
+    accel_y: 6.665151119232178
+    accel_z: 0.8213726282119751
+    gyro: 130.8979949951172
+[30400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[30400] board_mag_baro (type 6) with
+    mag_x: 0.414000004529953
+    mag_y: 0.2535000145435333
+    mag_z: -0.43050000071525574
+    baro: 97021.0
+    temp: 0.0
+[30400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[30400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[31400] board_imu (type 5) with
+    accel_x: 9.574560165405273
+    accel_y: 7.9756083488464355
+    accel_z: 5.467073917388916
+    gyro_x: 17.099340438842773
+    gyro_y: -0.07819075137376785
+    gyro_z: 0.1368338167667389
+[31400] ad_breakout (type 11) with
+    accel_x: 12.362442970275879
+    accel_y: 16.134479522705078
+    accel_z: 1.8310855627059937
+    gyro: 131.33517456054688
+[31400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[31400] board_mag_baro (type 6) with
+    mag_x: -0.2460000067949295
+    mag_y: -0.02250000089406967
+    mag_z: -0.41850000619888306
+    baro: 97020.0
+    temp: 0.0
+[31400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[31400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[32400] board_imu (type 5) with
+    accel_x: 9.766051292419434
+    accel_y: 8.674551010131836
+    accel_z: 4.394722938537598
+    gyro_x: 17.17753028869629
+    gyro_y: -0.09285151958465576
+    gyro_z: 0.11972958594560623
+[32400] ad_breakout (type 11) with
+    accel_x: 15.710713386535645
+    accel_y: 17.186044692993164
+    accel_z: -2.1188275814056396
+    gyro: 131.8533172607422
+[32400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[32400] board_mag_baro (type 6) with
+    mag_x: -0.4724999964237213
+    mag_y: 0.1784999966621399
+    mag_z: -0.6119999885559082
+    baro: 97022.0
+    temp: 0.0
+[32400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[32400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[33400] board_imu (type 5) with
+    accel_x: 9.699028968811035
+    accel_y: 7.985183238983154
+    accel_z: 4.547915935516357
+    gyro_x: 17.074905395507812
+    gyro_y: -0.10262536257505417
+    gyro_z: 0.1319468915462494
+[33400] ad_breakout (type 11) with
+    accel_x: 7.235403537750244
+    accel_y: 5.221209526062012
+    accel_z: 3.8714380264282227
+    gyro: 130.7714385986328
+[33400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[33400] board_mag_baro (type 6) with
+    mag_x: -0.7095000147819519
+    mag_y: 0.007499999832361937
+    mag_z: -0.492000013589859
+    baro: 97023.0
+    temp: 0.0
+[33400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[33400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[34400] board_imu (type 5) with
+    accel_x: 9.909669876098633
+    accel_y: 10.436270713806152
+    accel_z: 4.298977375030518
+    gyro_x: 17.287487030029297
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.12461651116609573
+[34400] ad_breakout (type 11) with
+    accel_x: 8.428224563598633
+    accel_y: 13.59711742401123
+    accel_z: 4.075473308563232
+    gyro: 132.65098571777344
+[34400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[34400] board_mag_baro (type 6) with
+    mag_x: -0.3540000021457672
+    mag_y: -0.2475000023841858
+    mag_z: -0.40799999237060547
+    baro: 97018.0
+    temp: 0.0
+[34400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[34400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[35400] board_imu (type 5) with
+    accel_x: 10.302227020263672
+    accel_y: 6.8745341300964355
+    accel_z: 5.955376148223877
+    gyro_x: 16.81345558166504
+    gyro_y: -0.07330382615327835
+    gyro_z: 0.08552113175392151
+[35400] ad_breakout (type 11) with
+    accel_x: 6.733162879943848
+    accel_y: 4.964857578277588
+    accel_z: -2.1502175331115723
+    gyro: 129.1087646484375
+[35400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[35400] board_mag_baro (type 6) with
+    mag_x: 0.4860000014305115
+    mag_y: 0.007499999832361937
+    mag_z: -0.33000001311302185
+    baro: 97021.0
+    temp: 0.0
+[35400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[35400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[36400] board_imu (type 5) with
+    accel_x: 10.187332153320312
+    accel_y: 8.368165016174316
+    accel_z: 5.476648330688477
+    gyro_x: 17.223957061767578
+    gyro_y: -0.10751228034496307
+    gyro_z: 0.16859880089759827
+[36400] ad_breakout (type 11) with
+    accel_x: 1.77876877784729
+    accel_y: 8.323591232299805
+    accel_z: 8.637492179870605
+    gyro: 132.51846313476562
+[36400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[36400] board_mag_baro (type 6) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 97024.0
+    temp: 0.0
+[36400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[36400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[37400] board_imu (type 5) with
+    accel_x: 9.603283882141113
+    accel_y: 10.838401794433594
+    accel_z: 1.8670392036437988
+    gyro_x: 17.189746856689453
+    gyro_y: -0.04398229718208313
+    gyro_z: 0.19792033731937408
+[37400] ad_breakout (type 11) with
+    accel_x: 7.915521144866943
+    accel_y: 10.227920532226562
+    accel_z: -0.5545573234558105
+    gyro: 132.1294403076172
+[37400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[37400] board_mag_baro (type 6) with
+    mag_x: -0.5864999890327454
+    mag_y: -0.16500000655651093
+    mag_z: -0.4169999957084656
+    baro: 97024.0
+    temp: 0.0
+[37400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[37400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[38400] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 7.238367557525635
+    accel_z: 5.8979291915893555
+    gyro_x: 16.999156951904297
+    gyro_y: -0.09040805697441101
+    gyro_z: 0.17348572611808777
+[38400] ad_breakout (type 11) with
+    accel_x: 7.769034385681152
+    accel_y: 8.375907897949219
+    accel_z: 5.650206565856934
+    gyro: 130.60951232910156
+[38400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[38400] board_mag_baro (type 6) with
+    mag_x: -0.2535000145435333
+    mag_y: -0.15299999713897705
+    mag_z: -0.38100001215934753
+    baro: 97021.0
+    temp: 0.0
+[38400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[38400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[39400] board_imu (type 5) with
+    accel_x: 9.057534217834473
+    accel_y: 9.670305252075195
+    accel_z: 2.1255524158477783
+    gyro_x: 17.23373031616211
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.21013763546943665
+[39400] ad_breakout (type 11) with
+    accel_x: 6.544822692871094
+    accel_y: 4.075473308563232
+    accel_z: 1.6479769945144653
+    gyro: 133.13760375976562
+[39400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[39400] board_mag_baro (type 6) with
+    mag_x: -0.38999998569488525
+    mag_y: 0.11249999701976776
+    mag_z: -0.5789999961853027
+    baro: 97023.0
+    temp: 0.0
+[39400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[39400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[40400] board_imu (type 5) with
+    accel_x: 9.488389015197754
+    accel_y: 8.511783599853516
+    accel_z: 2.9585390090942383
+    gyro_x: 16.947845458984375
+    gyro_y: -0.06352998316287994
+    gyro_z: 0.12950342893600464
+[40400] ad_breakout (type 11) with
+    accel_x: 5.289221286773682
+    accel_y: 6.9895148277282715
+    accel_z: -5.043332576751709
+    gyro: 129.88641357421875
+[40400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[40400] board_mag_baro (type 6) with
+    mag_x: -0.6690000295639038
+    mag_y: 0.13500000536441803
+    mag_z: -0.5475000143051147
+    baro: 97024.0
+    temp: 0.0
+[40400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[40400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[41400] board_imu (type 5) with
+    accel_x: 9.880946159362793
+    accel_y: 6.539424419403076
+    accel_z: 5.869205474853516
+    gyro_x: 17.128662109375
+    gyro_y: -0.04886921867728233
+    gyro_z: 0.17104226350784302
+[41400] ad_breakout (type 11) with
+    accel_x: 12.828062057495117
+    accel_y: 9.045562744140625
+    accel_z: 2.3594844341278076
+    gyro: 131.23545837402344
+[41400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[41400] board_mag_baro (type 6) with
+    mag_x: 0.4410000145435333
+    mag_y: 0.23250000178813934
+    mag_z: -0.5130000114440918
+    baro: 97031.0
+    temp: 0.0
+[41400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[41400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[42400] board_imu (type 5) with
+    accel_x: 9.134130477905273
+    accel_y: 10.263928413391113
+    accel_z: 0.10532016307115555
+    gyro_x: 16.87209701538086
+    gyro_y: -0.04153883457183838
+    gyro_z: 0.11239920556545258
+[42400] ad_breakout (type 11) with
+    accel_x: 19.11130142211914
+    accel_y: 17.186044692993164
+    accel_z: -15.014901161193848
+    gyro: 130.2281494140625
+[42400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[42400] board_mag_baro (type 6) with
+    mag_x: -0.29100000858306885
+    mag_y: -0.0794999971985817
+    mag_z: -0.4169999957084656
+    baro: 97027.0
+    temp: 0.0
+[42400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[42400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[43400] board_imu (type 5) with
+    accel_x: 8.483059883117676
+    accel_y: 6.644744873046875
+    accel_z: 4.394722938537598
+    gyro_x: 17.21173858642578
+    gyro_y: -0.1319468915462494
+    gyro_z: 0.1612684279680252
+[43400] ad_breakout (type 11) with
+    accel_x: 8.742125511169434
+    accel_y: 12.017152786254883
+    accel_z: -2.369947910308838
+    gyro: 132.20144653320312
+[43400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[43400] board_mag_baro (type 6) with
+    mag_x: -0.42750000953674316
+    mag_y: 0.14249999821186066
+    mag_z: -0.5879999995231628
+    baro: 97033.0
+    temp: 0.0
+[43400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[43400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[44400] board_imu (type 5) with
+    accel_x: 9.660731315612793
+    accel_y: 10.551165580749512
+    accel_z: -0.10532016307115555
+    gyro_x: 16.901418685913086
+    gyro_y: -0.03420845419168472
+    gyro_z: 0.13927727937698364
+[44400] ad_breakout (type 11) with
+    accel_x: 13.000706672668457
+    accel_y: 13.241364479064941
+    accel_z: 14.10459041595459
+    gyro: 132.4673309326172
+[44400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[44400] board_mag_baro (type 6) with
+    mag_x: -0.640500009059906
+    mag_y: -0.0044999998062849045
+    mag_z: -0.46950000524520874
+    baro: 97024.0
+    temp: 0.0
+[44400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[44400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[45400] board_imu (type 5) with
+    accel_x: 9.469240188598633
+    accel_y: 7.563902378082275
+    accel_z: 5.524521350860596
+    gyro_x: 16.935626983642578
+    gyro_y: -0.04398229718208313
+    gyro_z: 0.17348572611808777
+[45400] ad_breakout (type 11) with
+    accel_x: 7.549304008483887
+    accel_y: 5.404317855834961
+    accel_z: 1.7316837310791016
+    gyro: 130.26138305664062
+[45400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[45400] board_mag_baro (type 6) with
+    mag_x: -0.35249999165534973
+    mag_y: -0.2084999978542328
+    mag_z: -0.3869999945163727
+    baro: 97030.0
+    temp: 0.0
+[45400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[45400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[46400] board_imu (type 5) with
+    accel_x: 10.292652130126953
+    accel_y: 9.632007598876953
+    accel_z: 3.9159951210021973
+    gyro_x: 17.346128463745117
+    gyro_y: -0.04642575979232788
+    gyro_z: 0.2272418737411499
+[46400] ad_breakout (type 11) with
+    accel_x: 9.689058303833008
+    accel_y: 5.796693325042725
+    accel_z: 2.354252815246582
+    gyro: 132.59474182128906
+[46400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[46400] board_mag_baro (type 6) with
+    mag_x: 0.4754999876022339
+    mag_y: 0.006000000052154064
+    mag_z: -0.29249998927116394
+    baro: 97030.0
+    temp: 0.0
+[46400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[46400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[47400] board_imu (type 5) with
+    accel_x: 9.478814125061035
+    accel_y: 8.454336166381836
+    accel_z: 3.8872714042663574
+    gyro_x: 17.030921936035156
+    gyro_y: -0.024434609338641167
+    gyro_z: 0.0806342139840126
+[47400] ad_breakout (type 11) with
+    accel_x: 11.106841087341309
+    accel_y: 10.87664794921875
+    accel_z: -5.163661003112793
+    gyro: 130.98704528808594
+[47400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[47400] board_mag_baro (type 6) with
+    mag_x: -0.5625
+    mag_y: 0.2070000022649765
+    mag_z: -0.5954999923706055
+    baro: 97028.0
+    temp: 0.0
+[47400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[47400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[48400] board_imu (type 5) with
+    accel_x: 9.794775009155273
+    accel_y: 8.023481369018555
+    accel_z: 5.237284183502197
+    gyro_x: 17.10422706604004
+    gyro_y: -0.07330382615327835
+    gyro_z: 0.08796459436416626
+[48400] ad_breakout (type 11) with
+    accel_x: 12.006689071655273
+    accel_y: 15.26078987121582
+    accel_z: -0.4342288374900818
+    gyro: 130.6776885986328
+[48400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[48400] board_mag_baro (type 6) with
+    mag_x: -0.6464999914169312
+    mag_y: -0.13349999487400055
+    mag_z: -0.4650000035762787
+    baro: 97028.0
+    temp: 0.0
+[48400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[48400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[49400] board_imu (type 5) with
+    accel_x: 10.043713569641113
+    accel_y: 10.733081817626953
+    accel_z: 1.3787366151809692
+    gyro_x: 17.11400032043457
+    gyro_y: 0.0757472887635231
+    gyro_z: 0.11728612333536148
+[49400] ad_breakout (type 11) with
+    accel_x: 9.589656829833984
+    accel_y: 14.779476165771484
+    accel_z: 1.4020882844924927
+    gyro: 132.30157470703125
+[49400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[49400] board_mag_baro (type 6) with
+    mag_x: -0.32249999046325684
+    mag_y: -0.20250000059604645
+    mag_z: -0.3779999911785126
+    baro: 97033.0
+    temp: 0.0
+[49400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[49400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[50400] board_imu (type 5) with
+    accel_x: 10.493718147277832
+    accel_y: 8.483059883117676
+    accel_z: 4.854301929473877
+    gyro_x: 17.08223533630371
+    gyro_y: 0.012217304669320583
+    gyro_z: 0.0659734457731247
+[50400] ad_breakout (type 11) with
+    accel_x: 12.514161109924316
+    accel_y: 11.394583702087402
+    accel_z: 1.4020882844924927
+    gyro: 131.46981811523438
+[50400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[50400] board_mag_baro (type 6) with
+    mag_x: -0.3179999887943268
+    mag_y: 0.06750000268220901
+    mag_z: -0.5205000042915344
+    baro: 97030.0
+    temp: 0.0
+[50400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[50400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[51400] board_imu (type 5) with
+    accel_x: 9.900094985961914
+    accel_y: 8.320292472839355
+    accel_z: 5.313880920410156
+    gyro_x: 17.153095245361328
+    gyro_y: -0.0757472887635231
+    gyro_z: 0.15393804013729095
+[51400] ad_breakout (type 11) with
+    accel_x: 6.44542121887207
+    accel_y: 6.073972225189209
+    accel_z: -1.9932674169540405
+    gyro: 131.7510528564453
+[51400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[51400] board_mag_baro (type 6) with
+    mag_x: -0.5684999823570251
+    mag_y: 0.1185000017285347
+    mag_z: -0.527999997138977
+    baro: 97035.0
+    temp: 0.0
+[51400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[51400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[52400] board_imu (type 5) with
+    accel_x: 10.187332153320312
+    accel_y: 10.034138679504395
+    accel_z: 2.5181093215942383
+    gyro_x: 16.867210388183594
+    gyro_y: -0.02687807008624077
+    gyro_z: 0.15393804013729095
+[52400] ad_breakout (type 11) with
+    accel_x: 17.77199363708496
+    accel_y: 19.053752899169922
+    accel_z: 2.914041757583618
+    gyro: 130.31507873535156
+[52400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[52400] board_mag_baro (type 6) with
+    mag_x: 0.4154999852180481
+    mag_y: 0.1589999943971634
+    mag_z: -0.5429999828338623
+    baro: 97029.0
+    temp: 0.0
+[52400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[52400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[53400] board_imu (type 5) with
+    accel_x: 8.846893310546875
+    accel_y: 7.5351786613464355
+    accel_z: 4.222381114959717
+    gyro_x: 17.099340438842773
+    gyro_y: -0.1368338167667389
+    gyro_z: 0.1563815027475357
+[53400] ad_breakout (type 11) with
+    accel_x: 6.408799171447754
+    accel_y: 2.715238332748413
+    accel_z: -0.5283989906311035
+    gyro: 131.85118103027344
+[53400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[53400] board_mag_baro (type 6) with
+    mag_x: -0.28349998593330383
+    mag_y: -0.10050000250339508
+    mag_z: -0.4169999957084656
+    baro: 97032.0
+    temp: 0.0
+[53400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[53400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[54400] board_imu (type 5) with
+    accel_x: 9.172428131103516
+    accel_y: 8.205397605895996
+    accel_z: 3.600034475326538
+    gyro_x: 17.197078704833984
+    gyro_y: -0.09040805697441101
+    gyro_z: 0.18814648687839508
+[54400] ad_breakout (type 11) with
+    accel_x: 7.795192718505859
+    accel_y: 4.065009593963623
+    accel_z: 5.430476665496826
+    gyro: 131.9832763671875
+[54400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[54400] board_mag_baro (type 6) with
+    mag_x: -0.4620000123977661
+    mag_y: 0.18150000274181366
+    mag_z: -0.5910000205039978
+    baro: 97044.0
+    temp: 0.0
+[54400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[54400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[55400] board_imu (type 5) with
+    accel_x: 9.459665298461914
+    accel_y: 7.851139068603516
+    accel_z: 4.567065238952637
+    gyro_x: 16.91119384765625
+    gyro_y: -0.0708603709936142
+    gyro_z: 0.11484266817569733
+[55400] ad_breakout (type 11) with
+    accel_x: 15.710713386535645
+    accel_y: 14.99920654296875
+    accel_z: 3.0448336601257324
+    gyro: 130.33126831054688
+[55400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[55400] board_mag_baro (type 6) with
+    mag_x: -0.6690000295639038
+    mag_y: 0.035999998450279236
+    mag_z: -0.5235000252723694
+    baro: 97040.0
+    temp: 0.0
+[55400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[55400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[56400] board_imu (type 5) with
+    accel_x: 9.316046714782715
+    accel_y: 8.856468200683594
+    accel_z: 4.097911834716797
+    gyro_x: 17.19219207763672
+    gyro_y: -0.0708603709936142
+    gyro_z: 0.11972958594560623
+[56400] ad_breakout (type 11) with
+    accel_x: 6.372177600860596
+    accel_y: 11.044061660766602
+    accel_z: -2.636763095855713
+    gyro: 132.83761596679688
+[56400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[56400] board_mag_baro (type 6) with
+    mag_x: -0.44850000739097595
+    mag_y: -0.25949999690055847
+    mag_z: -0.39899998903274536
+    baro: 97039.0
+    temp: 0.0
+[56400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[56400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[57400] board_imu (type 5) with
+    accel_x: 9.900094985961914
+    accel_y: 9.411792755126953
+    accel_z: 2.0681049823760986
+    gyro_x: 16.96006202697754
+    gyro_y: -0.07819075137376785
+    gyro_z: 0.10751228034496307
+[57400] ad_breakout (type 11) with
+    accel_x: 13.96856689453125
+    accel_y: 5.969338893890381
+    accel_z: -7.59115743637085
+    gyro: 131.37777709960938
+[57400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[57400] board_mag_baro (type 6) with
+    mag_x: 0.4154999852180481
+    mag_y: 0.0494999997317791
+    mag_z: -0.2370000034570694
+    baro: 97040.0
+    temp: 0.0
+[57400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[57400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[58400] board_imu (type 5) with
+    accel_x: 9.067108154296875
+    accel_y: 7.3915605545043945
+    accel_z: 4.911749362945557
+    gyro_x: 17.045583724975586
+    gyro_y: -0.02687807008624077
+    gyro_z: 0.18081611394882202
+[58400] ad_breakout (type 11) with
+    accel_x: 7.847509384155273
+    accel_y: 9.704752922058105
+    accel_z: 0.15171851217746735
+    gyro: 129.58558654785156
+[58400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[58400] board_mag_baro (type 6) with
+    mag_x: -0.4934999942779541
+    mag_y: 0.17100000381469727
+    mag_z: -0.5730000138282776
+    baro: 97040.0
+    temp: 0.0
+[58400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[58400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[59400] board_imu (type 5) with
+    accel_x: 9.976691246032715
+    accel_y: 6.663893699645996
+    accel_z: 4.988345623016357
+    gyro_x: -15.518420219421387
+    gyro_y: 0.08307766914367676
+    gyro_z: -0.24434609711170197
+[59400] ad_breakout (type 11) with
+    accel_x: 12.142712593078613
+    accel_y: 9.657668113708496
+    accel_z: 5.247367858886719
+    gyro: -128.38780212402344
+[59400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[59400] board_mag_baro (type 6) with
+    mag_x: -0.6884999871253967
+    mag_y: 0.012000000104308128
+    mag_z: -0.47850000858306885
+    baro: 97038.0
+    temp: 0.0
+[59400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[59400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[60400] board_imu (type 5) with
+    accel_x: 9.947967529296875
+    accel_y: 6.759639263153076
+    accel_z: 3.647907257080078
+    gyro_x: -14.941763877868652
+    gyro_y: 0.036651913076639175
+    gyro_z: -0.0806342139840126
+[60400] ad_breakout (type 11) with
+    accel_x: 8.517163276672363
+    accel_y: 7.198781967163086
+    accel_z: 2.4274961948394775
+    gyro: -123.92903137207031
+[60400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[60400] board_mag_baro (type 6) with
+    mag_x: -0.2460000067949295
+    mag_y: -0.08100000023841858
+    mag_z: -0.3944999873638153
+    baro: 97036.0
+    temp: 0.0
+[60400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[60400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[61400] board_imu (type 5) with
+    accel_x: 7.286240100860596
+    accel_y: 7.477731227874756
+    accel_z: -2.3649163246154785
+    gyro_x: -15.176336288452148
+    gyro_y: 0.01710422709584236
+    gyro_z: -0.12461651116609573
+[61400] ad_breakout (type 11) with
+    accel_x: 15.145692825317383
+    accel_y: 4.436458587646484
+    accel_z: -3.5366108417510986
+    gyro: -125.1574935913086
+[61400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[61400] board_mag_baro (type 6) with
+    mag_x: -0.6644999980926514
+    mag_y: 0.1469999998807907
+    mag_z: -0.5429999828338623
+    baro: 97039.0
+    temp: 0.0
+[61400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[61400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[62400] board_imu (type 5) with
+    accel_x: 10.043713569641113
+    accel_y: 6.137292861938477
+    accel_z: 7.171345233917236
+    gyro_x: -15.696793556213379
+    gyro_y: -0.10262536257505417
+    gyro_z: 0.024434609338641167
+[62400] ad_breakout (type 11) with
+    accel_x: 4.504470348358154
+    accel_y: 5.032869338989258
+    accel_z: 1.679366946220398
+    gyro: -129.9401092529297
+[62400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[62400] board_mag_baro (type 6) with
+    mag_x: 0.3540000021457672
+    mag_y: 0.21150000393390656
+    mag_z: -0.2955000102519989
+    baro: 97040.0
+    temp: 0.0
+[62400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[62400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[63400] board_imu (type 5) with
+    accel_x: 7.812840938568115
+    accel_y: 4.5000433921813965
+    accel_z: 1.8095918893814087
+    gyro_x: -14.956424713134766
+    gyro_y: 0.23457224667072296
+    gyro_z: -0.15882496535778046
+[63400] ad_breakout (type 11) with
+    accel_x: 7.973069667816162
+    accel_y: 11.4102783203125
+    accel_z: -7.502218723297119
+    gyro: -125.2947006225586
+[63400] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[63400] board_mag_baro (type 6) with
+    mag_x: 0.6014999747276306
+    mag_y: -0.1770000010728836
+    mag_z: -0.5460000038146973
+    baro: 97041.0
+    temp: 0.0
+[63400] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[63400] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[64401] board_imu (type 5) with
+    accel_x: 9.507537841796875
+    accel_y: 5.984099864959717
+    accel_z: 0.7372411489486694
+    gyro_x: -15.388916969299316
+    gyro_y: 0.04642575979232788
+    gyro_z: -0.012217304669320583
+[64401] ad_breakout (type 11) with
+    accel_x: 9.254829406738281
+    accel_y: 8.470078468322754
+    accel_z: 3.2070155143737793
+    gyro: -126.58451843261719
+[64401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[64401] board_mag_baro (type 6) with
+    mag_x: 0.3840000033378601
+    mag_y: 0.24150000512599945
+    mag_z: -0.43050000071525574
+    baro: 97042.0
+    temp: 0.0
+[64401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[64401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[65401] board_imu (type 5) with
+    accel_x: 9.880946159362793
+    accel_y: 5.198986053466797
+    accel_z: 4.816003799438477
+    gyro_x: -15.225205421447754
+    gyro_y: 0.0757472887635231
+    gyro_z: -0.17592918872833252
+[65401] ad_breakout (type 11) with
+    accel_x: 9.70998477935791
+    accel_y: 7.549304008483887
+    accel_z: -2.9192733764648438
+    gyro: -127.3242416381836
+[65401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[65401] board_mag_baro (type 6) with
+    mag_x: -0.41100001335144043
+    mag_y: 0.06449999660253525
+    mag_z: -0.5759999752044678
+    baro: 97045.0
+    temp: 0.0
+[65401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[65401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[66401] board_imu (type 5) with
+    accel_x: 9.335195541381836
+    accel_y: 5.112814903259277
+    accel_z: 4.959621906280518
+    gyro_x: -15.503759384155273
+    gyro_y: 0.04886921867728233
+    gyro_z: -0.20036379992961884
+[66401] ad_breakout (type 11) with
+    accel_x: 13.487252235412598
+    accel_y: 3.7563412189483643
+    accel_z: -3.0448336601257324
+    gyro: -128.154296875
+[66401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[66401] board_mag_baro (type 6) with
+    mag_x: -0.6000000238418579
+    mag_y: -0.11400000005960464
+    mag_z: -0.44699999690055847
+    baro: 97043.0
+    temp: 0.0
+[66401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[66401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[67401] board_imu (type 5) with
+    accel_x: 9.708603858947754
+    accel_y: 7.870288372039795
+    accel_z: 1.9915084838867188
+    gyro_x: -15.308282852172852
+    gyro_y: 0.0659734457731247
+    gyro_z: -0.0806342139840126
+[67401] ad_breakout (type 11) with
+    accel_x: 6.434957504272461
+    accel_y: 7.52314567565918
+    accel_z: 0.6539590954780579
+    gyro: -127.16402435302734
+[67401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[67401] board_mag_baro (type 6) with
+    mag_x: -0.296999990940094
+    mag_y: -0.050999999046325684
+    mag_z: -0.4860000014305115
+    baro: 97044.0
+    temp: 0.0
+[67401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[67401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[68401] board_imu (type 5) with
+    accel_x: 9.785200119018555
+    accel_y: 7.085174560546875
+    accel_z: 3.236201286315918
+    gyro_x: -15.14212703704834
+    gyro_y: 0.15393804013729095
+    gyro_z: -0.0757472887635231
+[68401] ad_breakout (type 11) with
+    accel_x: 4.2481184005737305
+    accel_y: 8.302664756774902
+    accel_z: 1.5014901161193848
+    gyro: -125.15451049804688
+[68401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[68401] board_mag_baro (type 6) with
+    mag_x: 0.5070000290870667
+    mag_y: -0.0494999997317791
+    mag_z: -0.6165000200271606
+    baro: 97046.0
+    temp: 0.0
+[68401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[68401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[69401] board_imu (type 5) with
+    accel_x: 8.645827293395996
+    accel_y: 7.583051681518555
+    accel_z: 1.1202235221862793
+    gyro_x: -15.596611022949219
+    gyro_y: -0.05619960278272629
+    gyro_z: -0.2590068578720093
+[69401] ad_breakout (type 11) with
+    accel_x: 9.704752922058105
+    accel_y: 11.77126407623291
+    accel_z: -6.529127597808838
+    gyro: -128.83990478515625
+[69401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[69401] board_mag_baro (type 6) with
+    mag_x: -0.27300000190734863
+    mag_y: -0.18150000274181366
+    mag_z: -0.39899998903274536
+    baro: 97049.0
+    temp: 0.0
+[69401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[69401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[70401] board_imu (type 5) with
+    accel_x: 11.642664909362793
+    accel_y: 9.641581535339355
+    accel_z: 4.5000433921813965
+    gyro_x: -15.37181282043457
+    gyro_y: 0.2174680233001709
+    gyro_z: -0.18814648687839508
+[70401] ad_breakout (type 11) with
+    accel_x: 16.81459617614746
+    accel_y: 7.999228000640869
+    accel_z: 24.238340377807617
+    gyro: -127.90076446533203
+[70401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[70401] board_mag_baro (type 6) with
+    mag_x: -0.5070000290870667
+    mag_y: 0.20999999344348907
+    mag_z: -0.5699999928474426
+    baro: 97047.0
+    temp: 0.0
+[70401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[70401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[71401] board_imu (type 5) with
+    accel_x: 7.8319902420043945
+    accel_y: 5.017069339752197
+    accel_z: -1.7808681726455688
+    gyro_x: -15.342491149902344
+    gyro_y: -0.051312681287527084
+    gyro_z: -0.039095375686883926
+[71401] ad_breakout (type 11) with
+    accel_x: 12.582173347473145
+    accel_y: 2.7518599033355713
+    accel_z: -7.261561870574951
+    gyro: -127.12013244628906
+[71401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[71401] board_mag_baro (type 6) with
+    mag_x: -0.3930000066757202
+    mag_y: -0.2370000034570694
+    mag_z: -0.4020000100135803
+    baro: 97047.0
+    temp: 0.0
+[71401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[71401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[72401] board_imu (type 5) with
+    accel_x: 8.827744483947754
+    accel_y: 5.112814903259277
+    accel_z: 2.039381265640259
+    gyro_x: -15.518420219421387
+    gyro_y: 0.019547687843441963
+    gyro_z: 0.051312681287527084
+[72401] ad_breakout (type 11) with
+    accel_x: 10.834794998168945
+    accel_y: 5.085186004638672
+    accel_z: -4.650957107543945
+    gyro: -128.14407348632812
+[72401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[72401] board_mag_baro (type 6) with
+    mag_x: -0.40049999952316284
+    mag_y: 0.18000000715255737
+    mag_z: -0.5774999856948853
+    baro: 97048.0
+    temp: 0.0
+[72401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[72401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[73401] board_imu (type 5) with
+    accel_x: 9.086256980895996
+    accel_y: 8.454336166381836
+    accel_z: 3.475565195083618
+    gyro_x: -15.542855262756348
+    gyro_y: 0.08796459436416626
+    gyro_z: -0.19303341209888458
+[73401] ad_breakout (type 11) with
+    accel_x: 18.36317253112793
+    accel_y: 15.213705062866211
+    accel_z: 11.017903327941895
+    gyro: -128.383544921875
+[73401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[73401] board_mag_baro (type 6) with
+    mag_x: 0.43799999356269836
+    mag_y: 0.18449999392032623
+    mag_z: -0.5774999856948853
+    baro: 97054.0
+    temp: 0.0
+[73401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[73401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[74401] board_imu (type 5) with
+    accel_x: 9.794775009155273
+    accel_y: 6.462828159332275
+    accel_z: 2.594705820083618
+    gyro_x: -15.022397994995117
+    gyro_y: 0.03176499158143997
+    gyro_z: -0.15393804013729095
+[74401] ad_breakout (type 11) with
+    accel_x: 5.409549713134766
+    accel_y: 9.056025505065918
+    accel_z: 1.6741353273391724
+    gyro: -124.8907470703125
+[74401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[74401] board_mag_baro (type 6) with
+    mag_x: -0.33000001311302185
+    mag_y: 0.04349999874830246
+    mag_z: -0.4754999876022339
+    baro: 97053.0
+    temp: 0.0
+[74401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[74401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[75401] board_imu (type 5) with
+    accel_x: 9.775626182556152
+    accel_y: 7.937310218811035
+    accel_z: 3.2266266345977783
+    gyro_x: -15.462221145629883
+    gyro_y: 0.019547687843441963
+    gyro_z: -0.03420845419168472
+[75401] ad_breakout (type 11) with
+    accel_x: 13.33553409576416
+    accel_y: 5.195051193237305
+    accel_z: -7.073221683502197
+    gyro: -128.03839111328125
+[75401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[75401] board_mag_baro (type 6) with
+    mag_x: -0.6915000081062317
+    mag_y: -0.001500000013038516
+    mag_z: -0.47099998593330383
+    baro: 97052.0
+    temp: 0.0
+[75401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[75401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[76401] board_imu (type 5) with
+    accel_x: 9.162854194641113
+    accel_y: 8.387314796447754
+    accel_z: -0.10532016307115555
+    gyro_x: -15.52086353302002
+    gyro_y: 0.0659734457731247
+    gyro_z: -0.10262536257505417
+[76401] ad_breakout (type 11) with
+    accel_x: 8.449151992797852
+    accel_y: 5.712986946105957
+    accel_z: -15.961833953857422
+    gyro: -128.02220153808594
+[76401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[76401] board_mag_baro (type 6) with
+    mag_x: -0.28949999809265137
+    mag_y: -0.08699999749660492
+    mag_z: -0.4050000011920929
+    baro: 97051.0
+    temp: 0.0
+[76401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[76401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[77401] board_imu (type 5) with
+    accel_x: 10.953296661376953
+    accel_y: 7.305389404296875
+    accel_z: 8.760722160339355
+    gyro_x: -15.523307800292969
+    gyro_y: 0.06108652427792549
+    gyro_z: -0.16371189057826996
+[77401] ad_breakout (type 11) with
+    accel_x: 18.520122528076172
+    accel_y: 6.026886940002441
+    accel_z: 1.8101588487625122
+    gyro: -128.93321228027344
+[77401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[77401] board_mag_baro (type 6) with
+    mag_x: -0.6330000162124634
+    mag_y: 0.10499999672174454
+    mag_z: -0.5385000109672546
+    baro: 97053.0
+    temp: 0.0
+[77401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[77401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[78401] board_imu (type 5) with
+    accel_x: 10.235204696655273
+    accel_y: 6.960705280303955
+    accel_z: 8.588379859924316
+    gyro_x: -15.05660629272461
+    gyro_y: 0.1319468915462494
+    gyro_z: -0.2125810980796814
+[78401] ad_breakout (type 11) with
+    accel_x: 9.124037742614746
+    accel_y: 15.616543769836426
+    accel_z: 10.709234237670898
+    gyro: -125.20606994628906
+[78401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[78401] board_mag_baro (type 6) with
+    mag_x: 0.3779999911785126
+    mag_y: 0.20100000500679016
+    mag_z: -0.3345000147819519
+    baro: 97052.0
+    temp: 0.0
+[78401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[78401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[79401] board_imu (type 5) with
+    accel_x: 7.027727127075195
+    accel_y: 2.1925742626190186
+    accel_z: 4.117060661315918
+    gyro_x: -14.768278121948242
+    gyro_y: 0.1368338167667389
+    gyro_z: -0.15882496535778046
+[79401] ad_breakout (type 11) with
+    accel_x: 5.25783109664917
+    accel_y: -0.973091185092926
+    accel_z: 1.4334783554077148
+    gyro: -122.26849365234375
+[79401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[79401] board_mag_baro (type 6) with
+    mag_x: -0.4544999897480011
+    mag_y: 0.12300000339746475
+    mag_z: -0.5985000133514404
+    baro: 97055.0
+    temp: 0.0
+[79401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[79401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[80401] board_imu (type 5) with
+    accel_x: 11.355427742004395
+    accel_y: 9.833072662353516
+    accel_z: 4.461744785308838
+    gyro_x: -15.669915199279785
+    gyro_y: 0.0659734457731247
+    gyro_z: -0.021991148591041565
+[80401] ad_breakout (type 11) with
+    accel_x: 9.08741569519043
+    accel_y: 5.728682041168213
+    accel_z: 7.130770206451416
+    gyro: -129.39596557617188
+[80401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[80401] board_mag_baro (type 6) with
+    mag_x: -0.48899999260902405
+    mag_y: -0.20999999344348907
+    mag_z: -0.4410000145435333
+    baro: 97055.0
+    temp: 0.0
+[80401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[80401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[81401] board_imu (type 5) with
+    accel_x: 10.340524673461914
+    accel_y: 6.491551876068115
+    accel_z: 5.371328353881836
+    gyro_x: -15.650367736816406
+    gyro_y: -0.004886921960860491
+    gyro_z: -0.24678955972194672
+[81401] ad_breakout (type 11) with
+    accel_x: 16.61056137084961
+    accel_y: 13.644203186035156
+    accel_z: -2.5373613834381104
+    gyro: -129.26898193359375
+[81401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[81401] board_mag_baro (type 6) with
+    mag_x: -0.35100001096725464
+    mag_y: 0.050999999046325684
+    mag_z: -0.5519999861717224
+    baro: 97049.0
+    temp: 0.0
+[81401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[81401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[82401] board_imu (type 5) with
+    accel_x: 10.014989852905273
+    accel_y: 6.242613315582275
+    accel_z: 3.7819511890411377
+    gyro_x: -14.716965675354004
+    gyro_y: 0.02687807008624077
+    gyro_z: -0.19303341209888458
+[82401] ad_breakout (type 11) with
+    accel_x: 6.230922222137451
+    accel_y: 3.2854905128479004
+    accel_z: -2.7100064754486084
+    gyro: -123.09386444091797
+[82401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[82401] board_mag_baro (type 6) with
+    mag_x: -0.6389999985694885
+    mag_y: -0.07800000160932541
+    mag_z: -0.4740000069141388
+    baro: 97058.0
+    temp: 0.0
+[82401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[82401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[83401] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: -0.1340438425540924
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0024434609804302454
+    gyro_z: 0.0
+[83401] ad_breakout (type 11) with
+    accel_x: 9.736143112182617
+    accel_y: -0.4342288374900818
+    accel_z: 0.08370676636695862
+    gyro: -5.012282371520996
+[83401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[83401] board_mag_baro (type 6) with
+    mag_x: 0.4544999897480011
+    mag_y: -0.027000000700354576
+    mag_z: -0.31200000643730164
+    baro: 97058.0
+    temp: 0.0
+[83401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[83401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[84401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: -0.10532016307115555
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[84401] ad_breakout (type 11) with
+    accel_x: 9.647204399108887
+    accel_y: -0.5231673121452332
+    accel_z: 0.1569501906633377
+    gyro: -4.693981170654297
+[84401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[84401] board_mag_baro (type 6) with
+    mag_x: -0.3089999854564667
+    mag_y: 0.025499999523162842
+    mag_z: -0.453000009059906
+    baro: 97056.0
+    temp: 0.0
+[84401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[84401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[85401] board_imu (type 5) with
+    accel_x: 9.718178749084473
+    accel_y: -0.1436184048652649
+    accel_z: -0.09574560075998306
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0024434609804302454
+    gyro_z: 0.0
+[85401] ad_breakout (type 11) with
+    accel_x: 9.678594589233398
+    accel_y: -0.4760822355747223
+    accel_z: 0.07847509533166885
+    gyro: -4.372271537780762
+[85401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[85401] board_mag_baro (type 6) with
+    mag_x: -0.3059999942779541
+    mag_y: 0.02250000089406967
+    mag_z: -0.44999998807907104
+    baro: 97062.0
+    temp: 0.0
+[85401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[85401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[86401] board_imu (type 5) with
+    accel_x: 9.708603858947754
+    accel_y: 8.349016189575195
+    accel_z: 4.050038814544678
+    gyro_x: 16.955175399780273
+    gyro_y: -0.09529497474431992
+    gyro_z: 0.10995574295520782
+[86401] ad_breakout (type 11) with
+    accel_x: 12.137480735778809
+    accel_y: 10.431955337524414
+    accel_z: -5.294453144073486
+    gyro: 130.68067932128906
+[86401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[86401] board_mag_baro (type 6) with
+    mag_x: -0.6660000085830688
+    mag_y: 0.03150000050663948
+    mag_z: -0.5220000147819519
+    baro: 97058.0
+    temp: 0.0
+[86401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[86401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[87401] board_imu (type 5) with
+    accel_x: 9.603283882141113
+    accel_y: 8.569231033325195
+    accel_z: 4.404297828674316
+    gyro_x: 17.17020034790039
+    gyro_y: -0.021991148591041565
+    gyro_z: 0.15882496535778046
+[87401] ad_breakout (type 11) with
+    accel_x: 12.62402629852295
+    accel_y: 9.851240158081055
+    accel_z: -1.0044811964035034
+    gyro: 131.6871337890625
+[87401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[87401] board_mag_baro (type 6) with
+    mag_x: -0.453000009059906
+    mag_y: -0.26249998807907104
+    mag_z: -0.4020000100135803
+    baro: 97056.0
+    temp: 0.0
+[87401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[87401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[88401] board_imu (type 5) with
+    accel_x: 10.005414962768555
+    accel_y: 10.656485557556152
+    accel_z: 0.6510700583457947
+    gyro_x: 17.11400032043457
+    gyro_y: -0.009773843921720982
+    gyro_z: 0.1514945775270462
+[88401] ad_breakout (type 11) with
+    accel_x: 6.947661399841309
+    accel_y: 10.970817565917969
+    accel_z: -0.24065695703029633
+    gyro: 132.91134643554688
+[88401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[88401] board_mag_baro (type 6) with
+    mag_x: 0.414000004529953
+    mag_y: 0.05849999934434891
+    mag_z: -0.23250000178813934
+    baro: 97053.0
+    temp: 0.0
+[88401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[88401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[89401] board_imu (type 5) with
+    accel_x: 9.095831871032715
+    accel_y: 7.123472690582275
+    accel_z: 4.806428909301758
+    gyro_x: 17.023591995239258
+    gyro_y: -0.09040805697441101
+    gyro_z: 0.17592918872833252
+[89401] ad_breakout (type 11) with
+    accel_x: 8.386371612548828
+    accel_y: 7.193550109863281
+    accel_z: -1.3497716188430786
+    gyro: 130.5332489013672
+[89401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[89401] board_mag_baro (type 6) with
+    mag_x: -0.47699999809265137
+    mag_y: 0.1589999943971634
+    mag_z: -0.5684999823570251
+    baro: 97062.0
+    temp: 0.0
+[89401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[89401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[90401] board_imu (type 5) with
+    accel_x: 9.354345321655273
+    accel_y: 7.171345233917236
+    accel_z: 6.577722549438477
+    gyro_x: 17.324138641357422
+    gyro_y: -0.04153883457183838
+    gyro_z: 0.17837265133857727
+[90401] ad_breakout (type 11) with
+    accel_x: 11.174853324890137
+    accel_y: 12.116554260253906
+    accel_z: 2.9349684715270996
+    gyro: 132.5248565673828
+[90401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[90401] board_mag_baro (type 6) with
+    mag_x: -0.6255000233650208
+    mag_y: -0.019500000402331352
+    mag_z: -0.445499986410141
+    baro: 97056.0
+    temp: 0.0
+[90401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[90401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[91401] board_imu (type 5) with
+    accel_x: 9.632007598876953
+    accel_y: 10.196906089782715
+    accel_z: 2.8819425106048584
+    gyro_x: 17.324138641357422
+    gyro_y: -0.09285151958465576
+    gyro_z: 0.08307766914367676
+[91401] ad_breakout (type 11) with
+    accel_x: 8.6322603225708
+    accel_y: 12.864683151245117
+    accel_z: 7.973069667816162
+    gyro: 132.8780975341797
+[91401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[91401] board_mag_baro (type 6) with
+    mag_x: -0.3240000009536743
+    mag_y: -0.22050000727176666
+    mag_z: -0.4020000100135803
+    baro: 97056.0
+    temp: 0.0
+[91401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[91401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[92401] board_imu (type 5) with
+    accel_x: 10.053288459777832
+    accel_y: 7.822415351867676
+    accel_z: 5.1606879234313965
+    gyro_x: 17.09689712524414
+    gyro_y: -0.0757472887635231
+    gyro_z: 0.0757472887635231
+[92401] ad_breakout (type 11) with
+    accel_x: 11.14869499206543
+    accel_y: 11.389351844787598
+    accel_z: 0.491777241230011
+    gyro: 130.85879516601562
+[92401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[92401] board_mag_baro (type 6) with
+    mag_x: 0.5099999904632568
+    mag_y: -0.04500000178813934
+    mag_z: -0.37049999833106995
+    baro: 97063.0
+    temp: 0.0
+[92401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[92401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[93401] board_imu (type 5) with
+    accel_x: 10.790529251098633
+    accel_y: 8.913915634155273
+    accel_z: 5.945801734924316
+    gyro_x: 17.21906852722168
+    gyro_y: -0.03420845419168472
+    gyro_z: 0.1466076523065567
+[93401] ad_breakout (type 11) with
+    accel_x: 8.637492179870605
+    accel_y: 9.249597549438477
+    accel_z: 4.556787014007568
+    gyro: 132.3893585205078
+[93401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[93401] board_mag_baro (type 6) with
+    mag_x: 0.5835000276565552
+    mag_y: -0.16500000655651093
+    mag_z: -0.5669999718666077
+    baro: 97059.0
+    temp: 0.0
+[93401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[93401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[94401] board_imu (type 5) with
+    accel_x: 9.746902465820312
+    accel_y: 9.670305252075195
+    accel_z: 2.700026035308838
+    gyro_x: 17.052913665771484
+    gyro_y: -0.05375614017248154
+    gyro_z: 0.1514945775270462
+[94401] ad_breakout (type 11) with
+    accel_x: 14.936426162719727
+    accel_y: 18.242843627929688
+    accel_z: -5.011942386627197
+    gyro: 131.31387329101562
+[94401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[94401] board_mag_baro (type 6) with
+    mag_x: -0.6225000023841858
+    mag_y: -0.17399999499320984
+    mag_z: -0.42899999022483826
+    baro: 97058.0
+    temp: 0.0
+[94401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[94401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[95401] board_imu (type 5) with
+    accel_x: 9.555411338806152
+    accel_y: 7.851139068603516
+    accel_z: 5.514946460723877
+    gyro_x: 17.101783752441406
+    gyro_y: -0.09529497474431992
+    gyro_z: 0.16615533828735352
+[95401] ad_breakout (type 11) with
+    accel_x: 11.153926849365234
+    accel_y: 9.887862205505371
+    accel_z: 2.2234609127044678
+    gyro: 131.5968017578125
+[95401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[95401] board_mag_baro (type 6) with
+    mag_x: -0.2475000023841858
+    mag_y: -0.17249999940395355
+    mag_z: -0.3659999966621399
+    baro: 97056.0
+    temp: 0.0
+[95401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[95401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[96401] board_imu (type 5) with
+    accel_x: 9.124555587768555
+    accel_y: 10.436270713806152
+    accel_z: 0.9861797094345093
+    gyro_x: 17.079792022705078
+    gyro_y: -0.08307766914367676
+    gyro_z: 0.22479841113090515
+[96401] ad_breakout (type 11) with
+    accel_x: 6.581444263458252
+    accel_y: 4.650957107543945
+    accel_z: 4.666652202606201
+    gyro: 132.44944763183594
+[96401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[96401] board_mag_baro (type 6) with
+    mag_x: -0.34049999713897705
+    mag_y: 0.09000000357627869
+    mag_z: -0.5565000176429749
+    baro: 97057.0
+    temp: 0.0
+[96401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[96401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[97401] board_imu (type 5) with
+    accel_x: 9.210726737976074
+    accel_y: 8.004332542419434
+    accel_z: 3.4659907817840576
+    gyro_x: 17.052913665771484
+    gyro_y: -0.0757472887635231
+    gyro_z: 0.11972958594560623
+[97401] ad_breakout (type 11) with
+    accel_x: 16.42222023010254
+    accel_y: 15.150924682617188
+    accel_z: -6.675614356994629
+    gyro: 131.5252227783203
+[97401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[97401] board_mag_baro (type 6) with
+    mag_x: 0.531000018119812
+    mag_y: -0.14399999380111694
+    mag_z: -0.6299999952316284
+    baro: 97060.0
+    temp: 0.0
+[97401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[97401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[98401] board_imu (type 5) with
+    accel_x: 9.344770431518555
+    accel_y: 7.8798627853393555
+    accel_z: 5.131964206695557
+    gyro_x: 17.08956527709961
+    gyro_y: -0.014660765416920185
+    gyro_z: 0.11484266817569733
+[98401] ad_breakout (type 11) with
+    accel_x: 9.019404411315918
+    accel_y: 10.19653034210205
+    accel_z: 0.973091185092926
+    gyro: 131.65135192871094
+[98401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[98401] board_mag_baro (type 6) with
+    mag_x: -0.4754999876022339
+    mag_y: -0.226500004529953
+    mag_z: -0.43950000405311584
+    baro: 97060.0
+    temp: 0.0
+[98401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[98401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[99401] board_imu (type 5) with
+    accel_x: 9.861796379089355
+    accel_y: 10.464994430541992
+    accel_z: 1.0532015562057495
+    gyro_x: 17.17753028869629
+    gyro_y: 0.036651913076639175
+    gyro_z: 0.19547687470912933
+[99401] ad_breakout (type 11) with
+    accel_x: 8.710735321044922
+    accel_y: 12.508930206298828
+    accel_z: 8.035849571228027
+    gyro: 131.85289001464844
+[99401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[99401] board_mag_baro (type 6) with
+    mag_x: -0.32249999046325684
+    mag_y: -0.0794999971985817
+    mag_z: -0.4350000023841858
+    baro: 97061.0
+    temp: 0.0
+[99401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[99401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[100401] board_imu (type 5) with
+    accel_x: 9.928818702697754
+    accel_y: 8.569231033325195
+    accel_z: 4.327701091766357
+    gyro_x: 17.030921936035156
+    gyro_y: -0.04642575979232788
+    gyro_z: 0.1319468915462494
+[100401] ad_breakout (type 11) with
+    accel_x: 6.126288890838623
+    accel_y: 8.05677604675293
+    accel_z: 3.3901240825653076
+    gyro: 130.44332885742188
+[100401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[100401] board_mag_baro (type 6) with
+    mag_x: -0.4560000002384186
+    mag_y: 0.1574999988079071
+    mag_z: -0.6029999852180481
+    baro: 97058.0
+    temp: 0.0
+[100401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[100401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[101401] board_imu (type 5) with
+    accel_x: 9.919243812561035
+    accel_y: 7.774542808532715
+    accel_z: 6.0415472984313965
+    gyro_x: 17.231287002563477
+    gyro_y: -0.05375614017248154
+    gyro_z: 0.1270599663257599
+[101401] ad_breakout (type 11) with
+    accel_x: 9.118805885314941
+    accel_y: 1.5276484489440918
+    accel_z: 4.096399784088135
+    gyro: 132.24960327148438
+[101401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[101401] board_mag_baro (type 6) with
+    mag_x: 0.49050000309944153
+    mag_y: 0.007499999832361937
+    mag_z: -0.6449999809265137
+    baro: 97057.0
+    temp: 0.0
+[101401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[101401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[102401] board_imu (type 5) with
+    accel_x: 9.995841026306152
+    accel_y: 8.684125900268555
+    accel_z: 3.4181180000305176
+    gyro_x: 17.20196533203125
+    gyro_y: 0.0
+    gyro_z: 0.17104226350784302
+[102401] ad_breakout (type 11) with
+    accel_x: 6.733162879943848
+    accel_y: 15.156156539916992
+    accel_z: -1.3026865720748901
+    gyro: 130.9755401611328
+[102401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[102401] board_mag_baro (type 6) with
+    mag_x: 0.37950000166893005
+    mag_y: 0.23999999463558197
+    mag_z: -0.3930000066757202
+    baro: 97058.0
+    temp: 0.0
+[102401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[102401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[103401] board_imu (type 5) with
+    accel_x: 9.354345321655273
+    accel_y: 8.004332542419434
+    accel_z: 5.323455333709717
+    gyro_x: 17.131105422973633
+    gyro_y: -0.10751228034496307
+    gyro_z: 0.11972958594560623
+[103401] ad_breakout (type 11) with
+    accel_x: 11.64570426940918
+    accel_y: 9.17635440826416
+    accel_z: 0.8422993421554565
+    gyro: 131.7041778564453
+[103401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[103401] board_mag_baro (type 6) with
+    mag_x: -0.24150000512599945
+    mag_y: -0.019500000402331352
+    mag_z: -0.4620000123977661
+    baro: 97060.0
+    temp: 0.0
+[103401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[103401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[104401] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 8.933064460754395
+    accel_z: 4.672385215759277
+    gyro_x: 17.16042709350586
+    gyro_y: -0.04886921867728233
+    gyro_z: 0.16615533828735352
+[104401] ad_breakout (type 11) with
+    accel_x: 9.192049026489258
+    accel_y: 6.220458984375
+    accel_z: 1.0881879329681396
+    gyro: 132.11708068847656
+[104401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[104401] board_mag_baro (type 6) with
+    mag_x: -0.5145000219345093
+    mag_y: 0.19349999725818634
+    mag_z: -0.5849999785423279
+    baro: 97061.0
+    temp: 0.0
+[104401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[104401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[105401] board_imu (type 5) with
+    accel_x: 10.120309829711914
+    accel_y: 11.049042701721191
+    accel_z: 1.704271674156189
+    gyro_x: 17.109113693237305
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.17104226350784302
+[105401] ad_breakout (type 11) with
+    accel_x: 12.21595573425293
+    accel_y: 10.672613143920898
+    accel_z: -2.1973025798797607
+    gyro: 132.01524353027344
+[105401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[105401] board_mag_baro (type 6) with
+    mag_x: -0.6570000052452087
+    mag_y: -0.027000000700354576
+    mag_z: -0.4724999964237213
+    baro: 97062.0
+    temp: 0.0
+[105401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[105401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[106401] board_imu (type 5) with
+    accel_x: 9.641581535339355
+    accel_y: 8.167099952697754
+    accel_z: 4.231955528259277
+    gyro_x: 17.013818740844727
+    gyro_y: -0.06841690838336945
+    gyro_z: 0.16615533828735352
+[106401] ad_breakout (type 11) with
+    accel_x: 10.949891090393066
+    accel_y: 8.14571475982666
+    accel_z: -1.6898303031921387
+    gyro: 131.18092346191406
+[106401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[106401] board_mag_baro (type 6) with
+    mag_x: 0.40950000286102295
+    mag_y: 0.2370000034570694
+    mag_z: -0.34950000047683716
+    baro: 97058.0
+    temp: 0.0
+[106401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[106401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[107401] board_imu (type 5) with
+    accel_x: 8.712849617004395
+    accel_y: 6.740490436553955
+    accel_z: 5.869205474853516
+    gyro_x: 17.255722045898438
+    gyro_y: -0.06108652427792549
+    gyro_z: 0.17837265133857727
+[107401] ad_breakout (type 11) with
+    accel_x: 7.45513391494751
+    accel_y: 5.917022228240967
+    accel_z: 2.59490966796875
+    gyro: 132.5862274169922
+[107401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[107401] board_mag_baro (type 6) with
+    mag_x: -0.36149999499320984
+    mag_y: 0.07649999856948853
+    mag_z: -0.515999972820282
+    baro: 97061.0
+    temp: 0.0
+[107401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[107401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[108401] board_imu (type 5) with
+    accel_x: 9.900094985961914
+    accel_y: -0.2010657638311386
+    accel_z: 1.2925655841827393
+    gyro_x: 3.215594530105591
+    gyro_y: 0.004886921960860491
+    gyro_z: 0.01710422709584236
+[108401] ad_breakout (type 11) with
+    accel_x: 9.746606826782227
+    accel_y: -0.09417010843753815
+    accel_z: 0.8527626991271973
+    gyro: 20.956308364868164
+[108401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[108401] board_mag_baro (type 6) with
+    mag_x: -0.43050000071525574
+    mag_y: -0.2639999985694885
+    mag_z: -0.414000004529953
+    baro: 97065.0
+    temp: 0.0
+[108401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[108401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[109401] board_imu (type 5) with
+    accel_x: 9.517112731933594
+    accel_y: 0.0
+    accel_z: -0.019149120897054672
+    gyro_x: -0.004886921960860491
+    gyro_y: -0.012217304669320583
+    gyro_z: 0.004886921960860491
+[109401] ad_breakout (type 11) with
+    accel_x: 9.626277923583984
+    accel_y: -0.3452904224395752
+    accel_z: 0.1307918280363083
+    gyro: -4.122573375701904
+[109401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[109401] board_mag_baro (type 6) with
+    mag_x: -0.47699999809265137
+    mag_y: -0.20250000059604645
+    mag_z: -0.43050000071525574
+    baro: 97066.0
+    temp: 0.0
+[109401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[109401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[110401] board_imu (type 5) with
+    accel_x: 9.746902465820312
+    accel_y: 0.0670219212770462
+    accel_z: 0.019149120897054672
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[110401] ad_breakout (type 11) with
+    accel_x: 9.72044849395752
+    accel_y: -0.29820534586906433
+    accel_z: 0.2301936000585556
+    gyro: -4.777924060821533
+[110401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[110401] board_mag_baro (type 6) with
+    mag_x: 0.42149999737739563
+    mag_y: 0.20250000059604645
+    mag_z: -0.4830000102519989
+    baro: 97063.0
+    temp: 0.0
+[110401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[110401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[111401] board_imu (type 5) with
+    accel_x: 9.756476402282715
+    accel_y: 0.0670219212770462
+    accel_z: 0.019149120897054672
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[111401] ad_breakout (type 11) with
+    accel_x: 9.70998477935791
+    accel_y: -0.2772786617279053
+    accel_z: 0.19880357384681702
+    gyro: -5.4469099044799805
+[111401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[111401] board_mag_baro (type 6) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 97072.0
+    temp: 0.0
+[111401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[111401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[112401] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 0.02872367948293686
+    accel_z: 0.02872367948293686
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0024434609804302454
+[112401] ad_breakout (type 11) with
+    accel_x: 9.725680351257324
+    accel_y: -0.3348270654678345
+    accel_z: 0.23542527854442596
+    gyro: -5.149914264678955
+[112401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[112401] board_mag_baro (type 6) with
+    mag_x: -0.4724999964237213
+    mag_y: -0.20399999618530273
+    mag_z: -0.42899999022483826
+    baro: 97069.0
+    temp: 0.0
+[112401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[112401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[113401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: 0.05744735896587372
+    accel_z: 0.038298241794109344
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.0024434609804302454
+[113401] ad_breakout (type 11) with
+    accel_x: 9.6628999710083
+    accel_y: -0.35575374960899353
+    accel_z: 0.2772786617279053
+    gyro: -4.659892559051514
+[113401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[113401] board_mag_baro (type 6) with
+    mag_x: -0.4754999876022339
+    mag_y: -0.1979999989271164
+    mag_z: -0.4244999885559082
+    baro: 97073.0
+    temp: 0.0
+[113401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[113401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[114401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: 0.04787280037999153
+    accel_z: 0.05744735896587372
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[114401] ad_breakout (type 11) with
+    accel_x: 9.715216636657715
+    accel_y: -0.287742018699646
+    accel_z: 0.23542527854442596
+    gyro: -4.965836524963379
+[114401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[114401] board_mag_baro (type 6) with
+    mag_x: -0.47999998927116394
+    mag_y: -0.19949999451637268
+    mag_z: -0.42899999022483826
+    baro: 97069.0
+    temp: 0.0
+[114401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[114401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[115401] board_imu (type 5) with
+    accel_x: 9.746902465820312
+    accel_y: 0.05744735896587372
+    accel_z: 0.02872367948293686
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[115401] ad_breakout (type 11) with
+    accel_x: 9.72044849395752
+    accel_y: -0.23542527854442596
+    accel_z: 0.20403523743152618
+    gyro: -5.486964225769043
+[115401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[115401] board_mag_baro (type 6) with
+    mag_x: 0.4230000078678131
+    mag_y: 0.20399999618530273
+    mag_z: -0.4740000069141388
+    baro: 97070.0
+    temp: 0.0
+[115401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[115401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[116401] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 0.04787280037999153
+    accel_z: 0.038298241794109344
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0024434609804302454
+[116401] ad_breakout (type 11) with
+    accel_x: 9.631509780883789
+    accel_y: -0.35052207112312317
+    accel_z: 0.25112029910087585
+    gyro: -4.987142086029053
+[116401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[116401] board_mag_baro (type 6) with
+    mag_x: -0.47850000858306885
+    mag_y: -0.20399999618530273
+    mag_z: -0.4259999990463257
+    baro: 97076.0
+    temp: 0.0
+[116401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[116401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[117401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: 0.0670219212770462
+    accel_z: 0.038298241794109344
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[117401] ad_breakout (type 11) with
+    accel_x: 9.673362731933594
+    accel_y: -0.2720469832420349
+    accel_z: 0.2615836560726166
+    gyro: -5.5530104637146
+[117401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[117401] board_mag_baro (type 6) with
+    mag_x: -0.4830000102519989
+    mag_y: -0.19949999451637268
+    mag_z: -0.4334999918937683
+    baro: 97073.0
+    temp: 0.0
+[117401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[117401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[118401] board_imu (type 5) with
+    accel_x: 9.746902465820312
+    accel_y: 0.0670219212770462
+    accel_z: 0.02872367948293686
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[118401] ad_breakout (type 11) with
+    accel_x: 9.70998477935791
+    accel_y: -0.28251034021377563
+    accel_z: 0.25112029910087585
+    gyro: -5.111138820648193
+[118401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[118401] board_mag_baro (type 6) with
+    mag_x: -0.4814999997615814
+    mag_y: -0.20550000667572021
+    mag_z: -0.4244999885559082
+    baro: 97073.0
+    temp: 0.0
+[118401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[118401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[119401] board_imu (type 5) with
+    accel_x: 9.746902465820312
+    accel_y: 0.08617103844881058
+    accel_z: 0.0670219212770462
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.0024434609804302454
+[119401] ad_breakout (type 11) with
+    accel_x: 9.678594589233398
+    accel_y: -0.22496193647384644
+    accel_z: 0.3139003813266754
+    gyro: -5.301608085632324
+[119401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[119401] board_mag_baro (type 6) with
+    mag_x: -0.4754999876022339
+    mag_y: -0.19949999451637268
+    mag_z: -0.43050000071525574
+    baro: 97076.0
+    temp: 0.0
+[119401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[119401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[120401] board_imu (type 5) with
+    accel_x: 9.718178749084473
+    accel_y: 0.04787280037999153
+    accel_z: 0.04787280037999153
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[120401] ad_breakout (type 11) with
+    accel_x: 9.652436256408691
+    accel_y: -0.3348270654678345
+    accel_z: 0.2563519775867462
+    gyro: -4.762157917022705
+[120401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[120401] board_mag_baro (type 6) with
+    mag_x: 0.42899999022483826
+    mag_y: 0.20250000059604645
+    mag_z: -0.46950000524520874
+    baro: 97077.0
+    temp: 0.0
+[120401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[120401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[121401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: 0.05744735896587372
+    accel_z: 0.04787280037999153
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[121401] ad_breakout (type 11) with
+    accel_x: 9.647204399108887
+    accel_y: -0.3295953869819641
+    accel_z: 0.2772786617279053
+    gyro: -4.656909942626953
+[121401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[121401] board_mag_baro (type 6) with
+    mag_x: -0.47850000858306885
+    mag_y: -0.19949999451637268
+    mag_z: -0.43650001287460327
+    baro: 97077.0
+    temp: 0.0
+[121401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[121401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[122401] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 0.04787280037999153
+    accel_z: 0.02872367948293686
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0024434609804302454
+[122401] ad_breakout (type 11) with
+    accel_x: 9.652436256408691
+    accel_y: -0.30866870284080505
+    accel_z: 0.28251034021377563
+    gyro: -4.41062068939209
+[122401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[122401] board_mag_baro (type 6) with
+    mag_x: -0.47999998927116394
+    mag_y: -0.19200000166893005
+    mag_z: -0.4244999885559082
+    baro: 97071.0
+    temp: 0.0
+[122401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[122401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[123401] board_imu (type 5) with
+    accel_x: 9.718178749084473
+    accel_y: 0.04787280037999153
+    accel_z: 0.019149120897054672
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.0
+[123401] ad_breakout (type 11) with
+    accel_x: 9.678594589233398
+    accel_y: -0.3191320598125458
+    accel_z: 0.2301936000585556
+    gyro: -5.303738594055176
+[123401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[123401] board_mag_baro (type 6) with
+    mag_x: -0.4724999964237213
+    mag_y: -0.1979999989271164
+    mag_z: -0.4259999990463257
+    baro: 97073.0
+    temp: 0.0
+[123401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[123401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[124401] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 0.04787280037999153
+    accel_z: 0.02872367948293686
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0024434609804302454
+    gyro_z: 0.0
+[124401] ad_breakout (type 11) with
+    accel_x: 9.647204399108887
+    accel_y: -0.287742018699646
+    accel_z: 0.2720469832420349
+    gyro: -4.867832183837891
+[124401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[124401] board_mag_baro (type 6) with
+    mag_x: 0.4259999990463257
+    mag_y: 0.20250000059604645
+    mag_z: -0.4724999964237213
+    baro: 97079.0
+    temp: 0.0
+[124401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[124401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[125401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: 0.04787280037999153
+    accel_z: 0.038298241794109344
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[125401] ad_breakout (type 11) with
+    accel_x: 9.647204399108887
+    accel_y: -0.3295953869819641
+    accel_z: 0.2563519775867462
+    gyro: -5.05617094039917
+[125401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[125401] board_mag_baro (type 6) with
+    mag_x: -0.47850000858306885
+    mag_y: -0.1965000033378601
+    mag_z: -0.4320000112056732
+    baro: 97083.0
+    temp: 0.0
+[125401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[125401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[126401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: 0.05744735896587372
+    accel_z: 0.02872367948293686
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[126401] ad_breakout (type 11) with
+    accel_x: 9.647204399108887
+    accel_y: -0.30866870284080505
+    accel_z: 0.2563519775867462
+    gyro: -4.055248737335205
+[126401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[126401] board_mag_baro (type 6) with
+    mag_x: -0.47699999809265137
+    mag_y: -0.2070000022649765
+    mag_z: -0.42149999737739563
+    baro: 97079.0
+    temp: 0.0
+[126401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[126401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[127401] board_imu (type 5) with
+    accel_x: 9.746902465820312
+    accel_y: 0.02872367948293686
+    accel_z: 0.038298241794109344
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[127401] ad_breakout (type 11) with
+    accel_x: 9.694290161132812
+    accel_y: -0.35052207112312317
+    accel_z: 0.2301936000585556
+    gyro: -5.538096904754639
+[127401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[127401] board_mag_baro (type 6) with
+    mag_x: -0.47999998927116394
+    mag_y: -0.1979999989271164
+    mag_z: -0.4244999885559082
+    baro: 97073.0
+    temp: 0.0
+[127401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[127401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[128401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: 0.038298241794109344
+    accel_z: 0.019149120897054672
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0024434609804302454
+[128401] ad_breakout (type 11) with
+    accel_x: 9.6628999710083
+    accel_y: -0.3295953869819641
+    accel_z: 0.2458886206150055
+    gyro: -4.839709281921387
+[128401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[128401] board_mag_baro (type 6) with
+    mag_x: -0.47850000858306885
+    mag_y: -0.1965000033378601
+    mag_z: -0.43050000071525574
+    baro: 97076.0
+    temp: 0.0
+[128401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[128401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[129401] board_imu (type 5) with
+    accel_x: 9.756476402282715
+    accel_y: 0.04787280037999153
+    accel_z: 0.0670219212770462
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.0024434609804302454
+[129401] ad_breakout (type 11) with
+    accel_x: 9.6995210647583
+    accel_y: -0.3348270654678345
+    accel_z: 0.2458886206150055
+    gyro: -5.2504754066467285
+[129401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[129401] board_mag_baro (type 6) with
+    mag_x: 0.42750000953674316
+    mag_y: 0.20100000500679016
+    mag_z: -0.46799999475479126
+    baro: 97078.0
+    temp: 0.0
+[129401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[129401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[130401] board_imu (type 5) with
+    accel_x: 9.756476402282715
+    accel_y: 0.04787280037999153
+    accel_z: 0.02872367948293686
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0024434609804302454
+[130401] ad_breakout (type 11) with
+    accel_x: 9.689058303833008
+    accel_y: -0.3191320598125458
+    accel_z: 0.20403523743152618
+    gyro: -5.6978864669799805
+[130401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[130401] board_mag_baro (type 6) with
+    mag_x: -0.4830000102519989
+    mag_y: -0.20250000059604645
+    mag_z: -0.43050000071525574
+    baro: 97077.0
+    temp: 0.0
+[130401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[130401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[131401] board_imu (type 5) with
+    accel_x: 9.718178749084473
+    accel_y: 0.0670219212770462
+    accel_z: 0.07659648358821869
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[131401] ad_breakout (type 11) with
+    accel_x: 9.6995210647583
+    accel_y: -0.28251034021377563
+    accel_z: 0.2458886206150055
+    gyro: -3.8724491596221924
+[131401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[131401] board_mag_baro (type 6) with
+    mag_x: -0.47699999809265137
+    mag_y: -0.20550000667572021
+    mag_z: -0.43050000071525574
+    baro: 97077.0
+    temp: 0.0
+[131401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[131401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[132401] board_imu (type 5) with
+    accel_x: 9.756476402282715
+    accel_y: 0.09574560075998306
+    accel_z: 0.038298241794109344
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0024434609804302454
+    gyro_z: 0.0
+[132401] ad_breakout (type 11) with
+    accel_x: 9.678594589233398
+    accel_y: -0.29297366738319397
+    accel_z: 0.24065695703029633
+    gyro: -4.212481498718262
+[132401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[132401] board_mag_baro (type 6) with
+    mag_x: -0.4724999964237213
+    mag_y: -0.20250000059604645
+    mag_z: -0.4244999885559082
+    baro: 97080.0
+    temp: 0.0
+[132401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[132401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[133401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: 0.05744735896587372
+    accel_z: 0.05744735896587372
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.0
+[133401] ad_breakout (type 11) with
+    accel_x: 9.647204399108887
+    accel_y: -0.30866870284080505
+    accel_z: 0.28251034021377563
+    gyro: -4.502233505249023
+[133401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[133401] board_mag_baro (type 6) with
+    mag_x: 0.42750000953674316
+    mag_y: 0.19499999284744263
+    mag_z: -0.4754999876022339
+    baro: 97081.0
+    temp: 0.0
+[133401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[133401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[134401] board_imu (type 5) with
+    accel_x: 9.708603858947754
+    accel_y: 0.019149120897054672
+    accel_z: 0.04787280037999153
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.0024434609804302454
+    gyro_z: 0.0
+[134401] ad_breakout (type 11) with
+    accel_x: 9.730911254882812
+    accel_y: -0.23542527854442596
+    accel_z: 0.28251034021377563
+    gyro: -4.357783794403076
+[134401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[134401] board_mag_baro (type 6) with
+    mag_x: -0.4740000069141388
+    mag_y: -0.1965000033378601
+    mag_z: -0.4334999918937683
+    baro: 97076.0
+    temp: 0.0
+[134401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[134401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[135401] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 0.038298241794109344
+    accel_z: 0.02872367948293686
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0024434609804302454
+[135401] ad_breakout (type 11) with
+    accel_x: 9.57396125793457
+    accel_y: -0.3348270654678345
+    accel_z: 0.2563519775867462
+    gyro: -5.512956619262695
+[135401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[135401] board_mag_baro (type 6) with
+    mag_x: -0.47099998593330383
+    mag_y: -0.19949999451637268
+    mag_z: -0.43050000071525574
+    baro: 97080.0
+    temp: 0.0
+[135401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[135401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[136401] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 0.05744735896587372
+    accel_z: 0.02872367948293686
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: -0.0024434609804302454
+[136401] ad_breakout (type 11) with
+    accel_x: 9.636741638183594
+    accel_y: -0.3452904224395752
+    accel_z: 0.2615836560726166
+    gyro: -4.705912113189697
+[136401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[136401] board_mag_baro (type 6) with
+    mag_x: -0.4740000069141388
+    mag_y: -0.19949999451637268
+    mag_z: -0.4230000078678131
+    baro: 97081.0
+    temp: 0.0
+[136401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[136401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[137401] board_imu (type 5) with
+    accel_x: 9.737327575683594
+    accel_y: 0.04787280037999153
+    accel_z: 0.04787280037999153
+    gyro_x: -0.0024434609804302454
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.0
+[137401] ad_breakout (type 11) with
+    accel_x: 9.673362731933594
+    accel_y: -0.32436370849609375
+    accel_z: 0.287742018699646
+    gyro: -5.318226337432861
+[137401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[137401] board_mag_baro (type 6) with
+    mag_x: 0.43050000071525574
+    mag_y: 0.20100000500679016
+    mag_z: -0.47850000858306885
+    baro: 97086.0
+    temp: 0.0
+[137401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[137401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[138401] board_imu (type 5) with
+    accel_x: 9.632007598876953
+    accel_y: 7.678797245025635
+    accel_z: 5.122389793395996
+    gyro_x: 17.099340438842773
+    gyro_y: -0.05619960278272629
+    gyro_z: 0.08796459436416626
+[138401] ad_breakout (type 11) with
+    accel_x: 6.691309452056885
+    accel_y: 5.906558513641357
+    accel_z: 0.2772786617279053
+    gyro: 131.8243408203125
+[138401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[138401] board_mag_baro (type 6) with
+    mag_x: -0.6029999852180481
+    mag_y: -0.1784999966621399
+    mag_z: -0.42899999022483826
+    baro: 97084.0
+    temp: 0.0
+[138401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[138401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[139401] board_imu (type 5) with
+    accel_x: 10.589463233947754
+    accel_y: 7.9564595222473145
+    accel_z: 6.989428997039795
+    gyro_x: 17.270381927490234
+    gyro_y: -0.019547687843441963
+    gyro_z: 0.13439035415649414
+[139401] ad_breakout (type 11) with
+    accel_x: 12.80190372467041
+    accel_y: 12.58740520477295
+    accel_z: -1.1614314317703247
+    gyro: 131.80857849121094
+[139401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[139401] board_mag_baro (type 6) with
+    mag_x: -0.23849999904632568
+    mag_y: -0.16949999332427979
+    mag_z: -0.38100001215934753
+    baro: 97085.0
+    temp: 0.0
+[139401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[139401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[140401] board_imu (type 5) with
+    accel_x: 9.957542419433594
+    accel_y: 9.804349899291992
+    accel_z: 2.8532187938690186
+    gyro_x: 16.906307220458984
+    gyro_y: -0.051312681287527084
+    gyro_z: 0.1612684279680252
+[140401] ad_breakout (type 11) with
+    accel_x: 6.581444263458252
+    accel_y: 4.201033115386963
+    accel_z: 1.2660648822784424
+    gyro: 130.92994689941406
+[140401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[140401] board_mag_baro (type 6) with
+    mag_x: -0.3675000071525574
+    mag_y: 0.09749999642372131
+    mag_z: -0.5580000281333923
+    baro: 97080.0
+    temp: 0.0
+[140401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[140401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[141401] board_imu (type 5) with
+    accel_x: 9.584134101867676
+    accel_y: 8.368165016174316
+    accel_z: 4.567065238952637
+    gyro_x: 17.101783752441406
+    gyro_y: -0.12217304855585098
+    gyro_z: 0.11239920556545258
+[141401] ad_breakout (type 11) with
+    accel_x: 6.670382976531982
+    accel_y: 5.4514031410217285
+    accel_z: -2.9506635665893555
+    gyro: 131.9317169189453
+[141401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[141401] board_mag_baro (type 6) with
+    mag_x: 0.5235000252723694
+    mag_y: -0.14249999821186066
+    mag_z: -0.6269999742507935
+    baro: 97087.0
+    temp: 0.0
+[141401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[141401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[142401] board_imu (type 5) with
+    accel_x: 9.555411338806152
+    accel_y: 8.224547386169434
+    accel_z: 5.007494926452637
+    gyro_x: 17.216625213623047
+    gyro_y: -0.08307766914367676
+    gyro_z: 0.11972958594560623
+[142401] ad_breakout (type 11) with
+    accel_x: 6.2413859367370605
+    accel_y: 5.739145278930664
+    accel_z: 4.6614203453063965
+    gyro: 132.830810546875
+[142401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[142401] board_mag_baro (type 6) with
+    mag_x: 0.43950000405311584
+    mag_y: 0.2084999978542328
+    mag_z: -0.4950000047683716
+    baro: 97080.0
+    temp: 0.0
+[142401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[142401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[143401] board_imu (type 5) with
+    accel_x: 9.497963905334473
+    accel_y: 9.775626182556152
+    accel_z: 0.8904340863227844
+    gyro_x: 16.857437133789062
+    gyro_y: -0.05375614017248154
+    gyro_z: 0.1368338167667389
+[143401] ad_breakout (type 11) with
+    accel_x: 3.1494669914245605
+    accel_y: 8.443920135498047
+    accel_z: -15.475288391113281
+    gyro: 129.4590301513672
+[143401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[143401] board_mag_baro (type 6) with
+    mag_x: -0.3089999854564667
+    mag_y: -0.04650000110268593
+    mag_z: -0.4424999952316284
+    baro: 97079.0
+    temp: 0.0
+[143401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[143401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[144401] board_imu (type 5) with
+    accel_x: 9.708603858947754
+    accel_y: 8.396888732910156
+    accel_z: 4.950047492980957
+    gyro_x: 17.118886947631836
+    gyro_y: -0.019547687843441963
+    gyro_z: 0.13927727937698364
+[144401] ad_breakout (type 11) with
+    accel_x: 11.384119987487793
+    accel_y: 14.585904121398926
+    accel_z: 1.0672612190246582
+    gyro: 131.42465209960938
+[144401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[144401] board_mag_baro (type 6) with
+    mag_x: -0.4620000123977661
+    mag_y: 0.15600000321865082
+    mag_z: -0.609000027179718
+    baro: 97081.0
+    temp: 0.0
+[144401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[144401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[145401] board_imu (type 5) with
+    accel_x: 9.603283882141113
+    accel_y: 7.784117221832275
+    accel_z: 5.945801734924316
+    gyro_x: 17.2752685546875
+    gyro_y: -0.024434609338641167
+    gyro_z: 0.12217304855585098
+[145401] ad_breakout (type 11) with
+    accel_x: 13.513411521911621
+    accel_y: 17.5574951171875
+    accel_z: 3.3535022735595703
+    gyro: 132.68849182128906
+[145401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[145401] board_mag_baro (type 6) with
+    mag_x: -0.6614999771118164
+    mag_y: -0.012000000104308128
+    mag_z: -0.4860000014305115
+    baro: 97077.0
+    temp: 0.0
+[145401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[145401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[146401] board_imu (type 5) with
+    accel_x: 9.430941581726074
+    accel_y: 8.990511894226074
+    accel_z: 2.2883198261260986
+    gyro_x: 16.828115463256836
+    gyro_y: -0.07819075137376785
+    gyro_z: 0.16615533828735352
+[146401] ad_breakout (type 11) with
+    accel_x: 11.394583702087402
+    accel_y: 11.22716999053955
+    accel_z: 4.718968868255615
+    gyro: 130.42628479003906
+[146401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[146401] board_mag_baro (type 6) with
+    mag_x: 0.375
+    mag_y: 0.23399999737739563
+    mag_z: -0.3765000104904175
+    baro: 97075.0
+    temp: 0.0
+[146401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[146401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[147401] board_imu (type 5) with
+    accel_x: 10.014989852905273
+    accel_y: 7.161770820617676
+    accel_z: 5.333029747009277
+    gyro_x: 17.231287002563477
+    gyro_y: -0.05864306166768074
+    gyro_z: 0.11728612333536148
+[147401] ad_breakout (type 11) with
+    accel_x: 5.990265369415283
+    accel_y: 5.106112957000732
+    accel_z: 1.7159887552261353
+    gyro: 132.33609008789062
+[147401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[147401] board_mag_baro (type 6) with
+    mag_x: -0.2639999985694885
+    mag_y: -0.014999999664723873
+    mag_z: -0.47099998593330383
+    baro: 97074.0
+    temp: 0.0
+[147401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[147401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[148401] board_imu (type 5) with
+    accel_x: 9.833072662353516
+    accel_y: 8.454336166381836
+    accel_z: 4.796854496002197
+    gyro_x: 17.197078704833984
+    gyro_y: 0.01710422709584236
+    gyro_z: 0.06841690838336945
+[148401] ad_breakout (type 11) with
+    accel_x: 9.945409774780273
+    accel_y: 14.408026695251465
+    accel_z: 0.4603872001171112
+    gyro: 132.33226013183594
+[148401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[148401] board_mag_baro (type 6) with
+    mag_x: -0.5325000286102295
+    mag_y: 0.2070000022649765
+    mag_z: -0.5789999961853027
+    baro: 97081.0
+    temp: 0.0
+[148401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[148401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[149401] board_imu (type 5) with
+    accel_x: 9.727752685546875
+    accel_y: 8.866042137145996
+    accel_z: 4.557490348815918
+    gyro_x: 16.884315490722656
+    gyro_y: -0.06352998316287994
+    gyro_z: 0.11239920556545258
+[149401] ad_breakout (type 11) with
+    accel_x: 17.871395111083984
+    accel_y: 15.339264869689941
+    accel_z: -14.073200225830078
+    gyro: 129.9302978515625
+[149401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[149401] board_mag_baro (type 6) with
+    mag_x: -0.6420000195503235
+    mag_y: -0.05249999836087227
+    mag_z: -0.46950000524520874
+    baro: 97078.0
+    temp: 0.0
+[149401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[149401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[150401] board_imu (type 5) with
+    accel_x: 10.101161003112793
+    accel_y: 8.080928802490234
+    accel_z: 5.505372047424316
+    gyro_x: 17.11400032043457
+    gyro_y: -0.10018189996480942
+    gyro_z: 0.17348572611808777
+[150401] ad_breakout (type 11) with
+    accel_x: 10.719697952270508
+    accel_y: 11.389351844787598
+    accel_z: 3.0971503257751465
+    gyro: 130.67257690429688
+[150401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[150401] board_mag_baro (type 6) with
+    mag_x: 0.4065000116825104
+    mag_y: 0.23100000619888306
+    mag_z: -0.3555000126361847
+    baro: 97087.0
+    temp: 0.0
+[150401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[150401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[151401] board_imu (type 5) with
+    accel_x: 9.679880142211914
+    accel_y: 8.147950172424316
+    accel_z: 4.806428909301758
+    gyro_x: 17.29970359802246
+    gyro_y: -0.01710422709584236
+    gyro_z: 0.19792033731937408
+[151401] ad_breakout (type 11) with
+    accel_x: 10.761550903320312
+    accel_y: 10.960354804992676
+    accel_z: -0.16741353273391724
+    gyro: 133.4473876953125
+[151401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[151401] board_mag_baro (type 6) with
+    mag_x: 0.4950000047683716
+    mag_y: -0.050999999046325684
+    mag_z: -0.3555000126361847
+    baro: 97083.0
+    temp: 0.0
+[151401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[151401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[152401] board_imu (type 5) with
+    accel_x: 8.770297050476074
+    accel_y: 8.377739906311035
+    accel_z: 0.9383068680763245
+    gyro_x: 16.935626983642578
+    gyro_y: -0.09285151958465576
+    gyro_z: 0.1563815027475357
+[152401] ad_breakout (type 11) with
+    accel_x: 12.545551300048828
+    accel_y: 6.811637878417969
+    accel_z: 3.290722131729126
+    gyro: 131.29214477539062
+[152401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[152401] board_mag_baro (type 6) with
+    mag_x: -0.5805000066757202
+    mag_y: 0.10649999976158142
+    mag_z: -0.5550000071525574
+    baro: 97080.0
+    temp: 0.0
+[152401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[152401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[153401] board_imu (type 5) with
+    accel_x: 9.823498725891113
+    accel_y: 7.966033935546875
+    accel_z: 4.854301929473877
+    gyro_x: 17.12133026123047
+    gyro_y: -0.05375614017248154
+    gyro_z: 0.0659734457731247
+[153401] ad_breakout (type 11) with
+    accel_x: 11.766032218933105
+    accel_y: 13.686056137084961
+    accel_z: -0.41330215334892273
+    gyro: 131.5345916748047
+[153401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[153401] board_mag_baro (type 6) with
+    mag_x: -0.5550000071525574
+    mag_y: -0.17249999940395355
+    mag_z: -0.4124999940395355
+    baro: 97079.0
+    temp: 0.0
+[153401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[153401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[154401] board_imu (type 5) with
+    accel_x: 10.005414962768555
+    accel_y: 10.484143257141113
+    accel_z: 4.327701091766357
+    gyro_x: 17.324138641357422
+    gyro_y: 0.0
+    gyro_z: 0.10262536257505417
+[154401] ad_breakout (type 11) with
+    accel_x: 8.64272403717041
+    accel_y: 14.334783554077148
+    accel_z: 7.198781967163086
+    gyro: 132.9799346923828
+[154401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[154401] board_mag_baro (type 6) with
+    mag_x: -0.23100000619888306
+    mag_y: -0.14249999821186066
+    mag_z: -0.3765000104904175
+    baro: 97083.0
+    temp: 0.0
+[154401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[154401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[155401] board_imu (type 5) with
+    accel_x: 10.177757263183594
+    accel_y: 8.387314796447754
+    accel_z: 4.480894088745117
+    gyro_x: 16.913637161254883
+    gyro_y: -0.039095375686883926
+    gyro_z: 0.14905111491680145
+[155401] ad_breakout (type 11) with
+    accel_x: 13.701751708984375
+    accel_y: 14.800402641296387
+    accel_z: 1.7107570171356201
+    gyro: 129.5745086669922
+[155401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[155401] board_mag_baro (type 6) with
+    mag_x: 0.5759999752044678
+    mag_y: -0.11550000309944153
+    mag_z: -0.3944999873638153
+    baro: 97085.0
+    temp: 0.0
+[155401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[155401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[156401] board_imu (type 5) with
+    accel_x: 10.101161003112793
+    accel_y: 7.812840938568115
+    accel_z: 5.610692024230957
+    gyro_x: 17.172643661499023
+    gyro_y: -0.14416418969631195
+    gyro_z: 0.13927727937698364
+[156401] ad_breakout (type 11) with
+    accel_x: 12.03284740447998
+    accel_y: 10.327322006225586
+    accel_z: 1.1195780038833618
+    gyro: 132.33055114746094
+[156401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[156401] board_mag_baro (type 6) with
+    mag_x: -0.6570000052452087
+    mag_y: 0.11249999701976776
+    mag_z: -0.5370000004768372
+    baro: 97089.0
+    temp: 0.0
+[156401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[156401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[157401] board_imu (type 5) with
+    accel_x: 9.909669876098633
+    accel_y: 7.640499114990234
+    accel_z: 5.371328353881836
+    gyro_x: 17.24350357055664
+    gyro_y: -0.03420845419168472
+    gyro_z: 0.14416418969631195
+[157401] ad_breakout (type 11) with
+    accel_x: 11.89682388305664
+    accel_y: 9.689058303833008
+    accel_z: 0.7899826169013977
+    gyro: 133.06985473632812
+[157401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[157401] board_mag_baro (type 6) with
+    mag_x: -0.48750001192092896
+    mag_y: -0.2535000145435333
+    mag_z: -0.43950000405311584
+    baro: 97080.0
+    temp: 0.0
+[157401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[157401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[158401] board_imu (type 5) with
+    accel_x: 10.359673500061035
+    accel_y: 8.387314796447754
+    accel_z: 4.231955528259277
+    gyro_x: 16.828115463256836
+    gyro_y: -0.04886921867728233
+    gyro_z: 0.10751228034496307
+[158401] ad_breakout (type 11) with
+    accel_x: 10.227920532226562
+    accel_y: 7.648705959320068
+    accel_z: 2.1240592002868652
+    gyro: 129.43133544921875
+[158401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[158401] board_mag_baro (type 6) with
+    mag_x: -0.2955000102519989
+    mag_y: -0.09149999916553497
+    mag_z: -0.41850000619888306
+    baro: 97085.0
+    temp: 0.0
+[158401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[158401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[159401] board_imu (type 5) with
+    accel_x: 9.153279304504395
+    accel_y: 7.468156814575195
+    accel_z: 4.758556365966797
+    gyro_x: 17.24350357055664
+    gyro_y: -0.08552113175392151
+    gyro_z: 0.1612684279680252
+[159401] ad_breakout (type 11) with
+    accel_x: 9.364694595336914
+    accel_y: 8.59040641784668
+    accel_z: -2.0560474395751953
+    gyro: 133.105224609375
+[159401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[159401] board_mag_baro (type 6) with
+    mag_x: 0.5789999961853027
+    mag_y: -0.14550000429153442
+    mag_z: -0.41999998688697815
+    baro: 97077.0
+    temp: 0.0
+[159401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[159401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[160401] board_imu (type 5) with
+    accel_x: 9.325621604919434
+    accel_y: 9.813923835754395
+    accel_z: 2.6042802333831787
+    gyro_x: 17.140878677368164
+    gyro_y: -0.012217304669320583
+    gyro_z: 0.19058994948863983
+[160401] ad_breakout (type 11) with
+    accel_x: 6.178605556488037
+    accel_y: 12.064237594604492
+    accel_z: -3.850511312484741
+    gyro: 133.3566131591797
+[160401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[160401] board_mag_baro (type 6) with
+    mag_x: -0.6434999704360962
+    mag_y: -0.013500000350177288
+    mag_z: -0.4620000123977661
+    baro: 97088.0
+    temp: 0.0
+[160401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[160401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[161401] board_imu (type 5) with
+    accel_x: 9.632007598876953
+    accel_y: 7.9756083488464355
+    accel_z: 4.433021068572998
+    gyro_x: 16.891645431518555
+    gyro_y: -0.051312681287527084
+    gyro_z: 0.15882496535778046
+[161401] ad_breakout (type 11) with
+    accel_x: 10.363944053649902
+    accel_y: 5.388623237609863
+    accel_z: -1.1718946695327759
+    gyro: 130.57884216308594
+[161401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[161401] board_mag_baro (type 6) with
+    mag_x: -0.32850000262260437
+    mag_y: -0.2175000011920929
+    mag_z: -0.38100001215934753
+    baro: 97082.0
+    temp: 0.0
+[161401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[161401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[162401] board_imu (type 5) with
+    accel_x: 8.684125900268555
+    accel_y: 8.205397605895996
+    accel_z: 5.285157203674316
+    gyro_x: 17.319252014160156
+    gyro_y: -0.0806342139840126
+    gyro_z: 0.11728612333536148
+[162401] ad_breakout (type 11) with
+    accel_x: 13.393082618713379
+    accel_y: 8.114324569702148
+    accel_z: 1.940950632095337
+    gyro: 132.917724609375
+[162401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[162401] board_mag_baro (type 6) with
+    mag_x: -0.296999990940094
+    mag_y: 0.006000000052154064
+    mag_z: -0.4860000014305115
+    baro: 97085.0
+    temp: 0.0
+[162401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[162401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[163401] board_imu (type 5) with
+    accel_x: 9.746902465820312
+    accel_y: 10.014989852905273
+    accel_z: 0.9383068680763245
+    gyro_x: 17.172643661499023
+    gyro_y: 0.039095375686883926
+    gyro_z: 0.12461651116609573
+[163401] ad_breakout (type 11) with
+    accel_x: 4.603872299194336
+    accel_y: 12.52985668182373
+    accel_z: -4.84976053237915
+    gyro: 132.83592224121094
+[163401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[163401] board_mag_baro (type 6) with
+    mag_x: 0.6000000238418579
+    mag_y: -0.19499999284744263
+    mag_z: -0.5640000104904175
+    baro: 97085.0
+    temp: 0.0
+[163401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[163401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[164401] board_imu (type 5) with
+    accel_x: 9.718178749084473
+    accel_y: 8.435187339782715
+    accel_z: 4.806428909301758
+    gyro_x: 16.947845458984375
+    gyro_y: -0.07330382615327835
+    gyro_z: 0.0806342139840126
+[164401] ad_breakout (type 11) with
+    accel_x: 7.962605953216553
+    accel_y: 5.5717315673828125
+    accel_z: 1.3340766429901123
+    gyro: 130.87327575683594
+[164401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[164401] board_mag_baro (type 6) with
+    mag_x: 0.46799999475479126
+    mag_y: 0.0689999982714653
+    mag_z: -0.6434999704360962
+    baro: 97086.0
+    temp: 0.0
+[164401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[164401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[165401] board_imu (type 5) with
+    accel_x: 9.593708992004395
+    accel_y: 7.6596479415893555
+    accel_z: 5.074516773223877
+    gyro_x: 17.128662109375
+    gyro_y: -0.09040805697441101
+    gyro_z: 0.18814648687839508
+[165401] ad_breakout (type 11) with
+    accel_x: 5.775766849517822
+    accel_y: 3.531379222869873
+    accel_z: 6.230922222137451
+    gyro: 131.93214416503906
+[165401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[165401] board_mag_baro (type 6) with
+    mag_x: -0.33149999380111694
+    mag_y: -0.21449999511241913
+    mag_z: -0.3840000033378601
+    baro: 97083.0
+    temp: 0.0
+[165401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[165401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[166401] board_imu (type 5) with
+    accel_x: 10.225629806518555
+    accel_y: 9.785200119018555
+    accel_z: 2.6808767318725586
+    gyro_x: 17.05780029296875
+    gyro_y: -0.004886921960860491
+    gyro_z: 0.15882496535778046
+[166401] ad_breakout (type 11) with
+    accel_x: 13.173352241516113
+    accel_y: 12.127017974853516
+    accel_z: 12.990243911743164
+    gyro: 132.86148071289062
+[166401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[166401] board_mag_baro (type 6) with
+    mag_x: -0.3165000081062317
+    mag_y: 0.05999999865889549
+    mag_z: -0.4934999942779541
+    baro: 97084.0
+    temp: 0.0
+[166401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[166401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[167401] board_imu (type 5) with
+    accel_x: 9.497963905334473
+    accel_y: 7.381985664367676
+    accel_z: 4.576639652252197
+    gyro_x: 16.99427032470703
+    gyro_y: -0.11972958594560623
+    gyro_z: 0.1466076523065567
+[167401] ad_breakout (type 11) with
+    accel_x: 11.049293518066406
+    accel_y: 9.275755882263184
+    accel_z: -2.0769741535186768
+    gyro: 130.51577758789062
+[167401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[167401] board_mag_baro (type 6) with
+    mag_x: -0.5444999933242798
+    mag_y: 0.1289999932050705
+    mag_z: -0.5504999756813049
+    baro: 97081.0
+    temp: 0.0
+[167401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[167401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[168401] board_imu (type 5) with
+    accel_x: 9.402217864990234
+    accel_y: 7.257516384124756
+    accel_z: 5.237284183502197
+    gyro_x: 17.197078704833984
+    gyro_y: -0.06352998316287994
+    gyro_z: 0.11972958594560623
+[168401] ad_breakout (type 11) with
+    accel_x: 9.103111267089844
+    accel_y: 8.15617847442627
+    accel_z: -1.4753317832946777
+    gyro: 133.081787109375
+[168401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[168401] board_mag_baro (type 6) with
+    mag_x: 0.42899999022483826
+    mag_y: 0.1379999965429306
+    mag_z: -0.5910000205039978
+    baro: 97084.0
+    temp: 0.0
+[168401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[168401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[169401] board_imu (type 5) with
+    accel_x: 9.287322998046875
+    accel_y: 8.875617027282715
+    accel_z: 3.360670566558838
+    gyro_x: 17.270381927490234
+    gyro_y: 0.04398229718208313
+    gyro_z: 0.16859880089759827
+[169401] ad_breakout (type 11) with
+    accel_x: 8.40729808807373
+    accel_y: 11.295181274414062
+    accel_z: 9.124037742614746
+    gyro: 133.1056365966797
+[169401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[169401] board_mag_baro (type 6) with
+    mag_x: -0.265500009059906
+    mag_y: -0.12600000202655792
+    mag_z: -0.41999998688697815
+    baro: 97083.0
+    temp: 0.0
+[169401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[169401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[170401] board_imu (type 5) with
+    accel_x: 9.699028968811035
+    accel_y: 7.640499114990234
+    accel_z: 4.816003799438477
+    gyro_x: 17.01626205444336
+    gyro_y: -0.014660765416920185
+    gyro_z: 0.10751228034496307
+[170401] ad_breakout (type 11) with
+    accel_x: 10.180835723876953
+    accel_y: 6.675614356994629
+    accel_z: 1.1928213834762573
+    gyro: 130.60057067871094
+[170401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[170401] board_mag_baro (type 6) with
+    mag_x: -0.4634999930858612
+    mag_y: 0.13950000703334808
+    mag_z: -0.5954999923706055
+    baro: 97085.0
+    temp: 0.0
+[170401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[170401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[171401] board_imu (type 5) with
+    accel_x: 9.555411338806152
+    accel_y: 8.578805923461914
+    accel_z: 6.510700702667236
+    gyro_x: 17.231287002563477
+    gyro_y: -0.08307766914367676
+    gyro_z: 0.10018189996480942
+[171401] ad_breakout (type 11) with
+    accel_x: 10.264542579650879
+    accel_y: 5.681596755981445
+    accel_z: -2.1240592002868652
+    gyro: 132.1980438232422
+[171401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[171401] board_mag_baro (type 6) with
+    mag_x: -0.6524999737739563
+    mag_y: 0.08699999749660492
+    mag_z: -0.5205000042915344
+    baro: 97080.0
+    temp: 0.0
+[171401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[171401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[172401] board_imu (type 5) with
+    accel_x: 10.168182373046875
+    accel_y: 9.612857818603516
+    accel_z: 3.523437976837158
+    gyro_x: 17.062686920166016
+    gyro_y: -0.036651913076639175
+    gyro_z: 0.11484266817569733
+[172401] ad_breakout (type 11) with
+    accel_x: 13.157657623291016
+    accel_y: 14.120285034179688
+    accel_z: -6.97905158996582
+    gyro: 131.26443481445312
+[172401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[172401] board_mag_baro (type 6) with
+    mag_x: 0.4124999940395355
+    mag_y: 0.27000001072883606
+    mag_z: -0.4560000002384186
+    baro: 97082.0
+    temp: 0.0
+[172401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[172401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[173401] board_imu (type 5) with
+    accel_x: 10.263928413391113
+    accel_y: 7.247941970825195
+    accel_z: 5.7734599113464355
+    gyro_x: 17.030921936035156
+    gyro_y: -0.11239920556545258
+    gyro_z: 0.11728612333536148
+[173401] ad_breakout (type 11) with
+    accel_x: 7.596388816833496
+    accel_y: 8.082934379577637
+    accel_z: 0.5388622879981995
+    gyro: 130.72116088867188
+[173401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[173401] board_mag_baro (type 6) with
+    mag_x: -0.23849999904632568
+    mag_y: -0.05550000071525574
+    mag_z: -0.4034999907016754
+    baro: 97083.0
+    temp: 0.0
+[173401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[173401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[174401] board_imu (type 5) with
+    accel_x: 9.660731315612793
+    accel_y: 8.645827293395996
+    accel_z: 5.1606879234313965
+    gyro_x: 17.360790252685547
+    gyro_y: -0.03420845419168472
+    gyro_z: 0.15882496535778046
+[174401] ad_breakout (type 11) with
+    accel_x: 11.561997413635254
+    accel_y: 16.37513542175293
+    accel_z: -1.2137480974197388
+    gyro: 134.36563110351562
+[174401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[174401] board_mag_baro (type 6) with
+    mag_x: -0.42750000953674316
+    mag_y: 0.1589999943971634
+    mag_z: -0.5924999713897705
+    baro: 97082.0
+    temp: 0.0
+[174401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[174401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[175401] board_imu (type 5) with
+    accel_x: 9.756476402282715
+    accel_y: 10.158608436584473
+    accel_z: 1.7329953908920288
+    gyro_x: 17.07246208190918
+    gyro_y: -0.03176499158143997
+    gyro_z: 0.14416418969631195
+[175401] ad_breakout (type 11) with
+    accel_x: 6.717467784881592
+    accel_y: 0.34005874395370483
+    accel_z: 1.872938871383667
+    gyro: 132.13795471191406
+[175401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[175401] board_mag_baro (type 6) with
+    mag_x: -0.6735000014305115
+    mag_y: 0.024000000208616257
+    mag_z: -0.4830000102519989
+    baro: 97088.0
+    temp: 0.0
+[175401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[175401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[176401] board_imu (type 5) with
+    accel_x: 8.770297050476074
+    accel_y: 7.420283794403076
+    accel_z: 4.978771209716797
+    gyro_x: 17.077348709106445
+    gyro_y: -0.04153883457183838
+    gyro_z: 0.17592918872833252
+[176401] ad_breakout (type 11) with
+    accel_x: 9.333304405212402
+    accel_y: 8.595638275146484
+    accel_z: -1.5799652338027954
+    gyro: 131.10081481933594
+[176401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[176401] board_mag_baro (type 6) with
+    mag_x: 0.41100001335144043
+    mag_y: 0.2084999978542328
+    mag_z: -0.3855000138282776
+    baro: 97081.0
+    temp: 0.0
+[176401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[176401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[177401] board_imu (type 5) with
+    accel_x: 9.009660720825195
+    accel_y: 8.866042137145996
+    accel_z: 4.461744785308838
+    gyro_x: 17.245946884155273
+    gyro_y: -0.06841690838336945
+    gyro_z: 0.15393804013729095
+[177401] ad_breakout (type 11) with
+    accel_x: 8.935697555541992
+    accel_y: 15.726408958435059
+    accel_z: 3.290722131729126
+    gyro: 133.43417358398438
+[177401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[177401] board_mag_baro (type 6) with
+    mag_x: -0.3555000126361847
+    mag_y: 0.024000000208616257
+    mag_z: -0.5009999871253967
+    baro: 97083.0
+    temp: 0.0
+[177401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[177401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[178401] board_imu (type 5) with
+    accel_x: 9.440516471862793
+    accel_y: 8.463911056518555
+    accel_z: 2.9298152923583984
+    gyro_x: 16.930740356445312
+    gyro_y: -0.02932153083384037
+    gyro_z: 0.11972958594560623
+[178401] ad_breakout (type 11) with
+    accel_x: 8.783978462219238
+    accel_y: 10.217456817626953
+    accel_z: -9.62104606628418
+    gyro: 129.2792205810547
+[178401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[178401] board_mag_baro (type 6) with
+    mag_x: -0.5580000281333923
+    mag_y: 0.17550000548362732
+    mag_z: -0.5805000066757202
+    baro: 97084.0
+    temp: 0.0
+[178401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[178401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[179401] board_imu (type 5) with
+    accel_x: 9.191577911376953
+    accel_y: 7.592626094818115
+    accel_z: 4.480894088745117
+    gyro_x: 17.074905395507812
+    gyro_y: -0.09285151958465576
+    gyro_z: 0.11728612333536148
+[179401] ad_breakout (type 11) with
+    accel_x: 11.321340560913086
+    accel_y: 13.016402244567871
+    accel_z: 0.47085055708885193
+    gyro: 131.66497802734375
+[179401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[179401] board_mag_baro (type 6) with
+    mag_x: -0.6060000061988831
+    mag_y: -0.13349999487400055
+    mag_z: -0.44850000739097595
+    baro: 97084.0
+    temp: 0.0
+[179401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[179401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[180401] board_imu (type 5) with
+    accel_x: 9.622432708740234
+    accel_y: 8.406463623046875
+    accel_z: 6.453253269195557
+    gyro_x: 17.2825984954834
+    gyro_y: -0.0073303827084600925
+    gyro_z: 0.11484266817569733
+[180401] ad_breakout (type 11) with
+    accel_x: 13.895322799682617
+    accel_y: 19.828041076660156
+    accel_z: 2.4118010997772217
+    gyro: 133.38516235351562
+[180401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[180401] board_mag_baro (type 6) with
+    mag_x: 0.3720000088214874
+    mag_y: 0.21299999952316284
+    mag_z: -0.2849999964237213
+    baro: 97088.0
+    temp: 0.0
+[180401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[180401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[181401] board_imu (type 5) with
+    accel_x: 9.545836448669434
+    accel_y: 8.406463623046875
+    accel_z: 4.413872241973877
+    gyro_x: 16.972280502319336
+    gyro_y: -0.04886921867728233
+    gyro_z: 0.1514945775270462
+[181401] ad_breakout (type 11) with
+    accel_x: 13.058255195617676
+    accel_y: 12.93792724609375
+    accel_z: 0.3609854280948639
+    gyro: 130.4122314453125
+[181401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[181401] board_mag_baro (type 6) with
+    mag_x: -0.3149999976158142
+    mag_y: 0.09749999642372131
+    mag_z: -0.5370000004768372
+    baro: 97085.0
+    temp: 0.0
+[181401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[181401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[182401] board_imu (type 5) with
+    accel_x: 9.411792755126953
+    accel_y: 7.477731227874756
+    accel_z: 4.892600059509277
+    gyro_x: 17.106670379638672
+    gyro_y: -0.1319468915462494
+    gyro_z: 0.1612684279680252
+[182401] ad_breakout (type 11) with
+    accel_x: 7.894594192504883
+    accel_y: 7.6591691970825195
+    accel_z: -1.5799652338027954
+    gyro: 132.01992797851562
+[182401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
+[182401] board_mag_baro (type 6) with
+    mag_x: -0.6225000023841858
+    mag_y: 0.14550000429153442
+    mag_z: -0.5534999966621399
+    baro: 97088.0
+    temp: 0.0
+[182401] movella_pt2 (type 8) with
+    mag_x: 0.0
+    mag_y: 0.0
+    mag_z: 0.0
+    baro: 0.0
+[182401] movella_pt3 (type 9) with
+    q_w: 0.0
+    q_x: 0.0
+    q_y: 0.0
+    q_z: 0.0
+[183401] board_imu (type 5) with
+    accel_x: 9.746902465820312
+    accel_y: 9.622432708740234
+    accel_z: 3.1787538528442383
+    gyro_x: 17.23373031616211
+    gyro_y: -0.05864306166768074
+    gyro_z: 0.2174680233001709
+[183401] ad_breakout (type 11) with
+    accel_x: 12.252577781677246
+    accel_y: 12.04331111907959
+    accel_z: -1.679366946220398
+    gyro: 131.79110717773438
+[183401] movella_pt1 (type 7) with
+    accel_x: 0.0
+    accel_y: 0.0
+    accel_z: 0.0
+    gyro_x: 0.0
+    gyro_y: 0.0
+    gyro_z: 0.0
