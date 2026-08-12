@@ -276,7 +276,11 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 #ifdef HIL
 	/******************************** HIL START ********************************/
 	// send hil packet regardless of fsm state. In non-actuation states, we
-	// still want to send telem to simulink (canard cmd gets ignored)
+	// still want to send telem to simulink (zero canard cmd)
+    if (p_ctx->curr_state != STATE_ACT_ALLOWED && p_ctx->curr_state != STATE_RECOVERY) {
+        // set motor command to zero in non-actuation state
+        controller_output.canard_command_angle_rad = 0;
+    }
 	w_status_t send_rc = hil_send_simulink_cmd(&navigator_input,
 											   &navigator_output,
 											   &p_ctx->p_navigator_context->gnc_navigator_ctx.x,
