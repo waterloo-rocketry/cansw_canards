@@ -4,10 +4,11 @@
 #include <stdint.h>
 
 #include "GNC_codegen_types.h"
-#include "common/gnc/gnc_types.h"
 #include "rocketlib/include/common.h"
 
 #ifdef HIL
+
+#include "common/gnc/gnc_types.h"
 
 extern volatile uint32_t hil_timestamp_tenth_ms; // HIL timestamp in 0.1 ms units
 

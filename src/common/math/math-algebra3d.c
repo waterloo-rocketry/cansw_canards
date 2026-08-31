@@ -6,6 +6,7 @@
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
 #include <math.h>
+#include <stdint.h>
 
 // vector * scalar // vector scaling
 vector3d_t math_vector3d_scale(double scalar, const vector3d_t *vector) {

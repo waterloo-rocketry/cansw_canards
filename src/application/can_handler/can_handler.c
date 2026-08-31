@@ -5,17 +5,17 @@
 #include <string.h>
 
 #include "FreeRTOS.h"
-#include "fdcan.h"
 #include "queue.h"
+#include "task.h"
+
 #include "stm32h7xx_hal.h"
 #include "third_party/canlib/canlib.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/can_handler/can_telemetry_scaling.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
-#include "common/math/math.h"
 #include "drivers/gpio/gpio.h"
-#include "drivers/timer/timer.h"
 
 #define UINT24_MAX (1U << 24) - 1U // maximum value for a 24-bit unsigned integer
 #define INT24_MIN -(1 << 23) // minimum value for a 24-bit signed integer

@@ -6,11 +6,13 @@
 
 #include "third_party/xsens-mti/src/xsens_mti.h"
 
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#include <stdint.h>
 
 #define UART_TX_TIMEOUT_MS 100
 // should be every 5 ms but allow some leeway before erroring

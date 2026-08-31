@@ -1,16 +1,18 @@
-#include "FreeRTOS.h"
-#include "queue.h"
-#include "task.h"
-#include "timers.h"
+#include <stdint.h>
 
+#include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/power_handler/power_handler.h"
 #include "canlib/message_types.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
+#include "queue.h"
 #include "rocketlib/include/common.h"
+#include "task.h"
+#include "timers.h"
 
 /**
  * States of the power handler.
@@ -124,7 +126,7 @@ static power_input_source_t get_active_input(void) {
  * charge voltage, and 5V rail current. Called by power_handler_get_status.
  * @return W_SUCCESS if all messages transmitted, W_FAILURE otherwise.
  */
-static w_status_t transmit_curr_volt_status_can_msg() {
+static w_status_t transmit_curr_volt_status_can_msg(void) {
 	float adc_value = 0;
 	can_msg_t msg = {0};
 

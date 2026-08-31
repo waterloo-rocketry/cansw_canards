@@ -16,10 +16,10 @@ Based on above repository
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/ad_breakout_board/ADS1219_reg.h"
 #include "drivers/i2c/i2c.h"
+#include "rocketlib/include/common.h"
 
 static const uint8_t INIT_DELAY_MS = 10;
 

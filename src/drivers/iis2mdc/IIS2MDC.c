@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
@@ -7,7 +8,9 @@
 #include "main.h" // for INT_MAG_Pin
 #include "task.h"
 
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "common/math/math.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"

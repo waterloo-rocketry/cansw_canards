@@ -2,11 +2,12 @@
 #include "task.h"
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "drivers/MS5611/MS5611.h"
-#include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/timer/timer.h"
 
@@ -449,10 +450,6 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		   ((((int64_t)handle.prom_coef[MS5611_COEFF_TCS]) * dt) >> 8);
 
 	/* Second-order cold compensation */
-	T2 = 0;
-	off2 = 0;
-	sens2 = 0;
-
 	if (temp < SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) {
 		T2 = ((int64_t)dt * dt) >> 31;
 		off2 = (5 * ((int64_t)(temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) *

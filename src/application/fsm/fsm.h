@@ -1,6 +1,7 @@
 #ifndef FSM_H
 #define FSM_H
 
+#include "GNC_codegen_types.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/health_checks/health_checks.h"
@@ -25,13 +26,13 @@ typedef struct {
 /**
  * @brief init fsm
  */
-w_status_t fsm_init();
+w_status_t fsm_init(void);
 
 /**
  * @brief get current fsm state
  * @return the current fsm state
  */
-fsm_state_t fsm_get_state();
+fsm_state_t fsm_get_state(void);
 
 /**
  * @brief Report FSM module health status
@@ -51,6 +52,6 @@ void fsm_task(void *args);
 /**
  * @brief use log_text() to log everything in gnc_navigator_ctx_t
  */
-void log_gnc_internal_state();
+void log_gnc_internal_state(void);
 
 #endif

@@ -1,7 +1,6 @@
 #ifndef CONTROLLER_H_
 #define CONTROLLER_H_
 
-#include "FreeRTOS.h"
 #include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>

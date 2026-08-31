@@ -5,8 +5,10 @@
 
 #include "drivers/uart/uart.h"
 #include "FreeRTOS.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "queue.h"
+#include "rocketlib/include/common.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
 #include <stdint.h>
@@ -333,7 +335,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 health_status_t uart_get_status(void) {
 	// Iterate through all UART channels
 	for (uart_channel_t channel = 0; channel < UART_CHANNEL_COUNT; channel++) {
-		const char *channel_name = "";
+		const char *channel_name;
 		switch (channel) {
 			case UART_MOVELLA:
 				channel_name = "MOVELLA";

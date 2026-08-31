@@ -1,3 +1,6 @@
+#include <stdint.h>
+#include <string.h>
+
 #include "FreeRTOS.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"
@@ -13,6 +16,7 @@
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
+#include "common/gnc/gnc_types.h"
 #include "drivers/timer/timer.h"
 #ifdef HIL
 #include "application/hil/hil.h"
@@ -64,7 +68,7 @@ static void unblock_fsm_loop(TIM_HandleTypeDef *htim) {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-void unblock_fsm_hil() {
+void unblock_fsm_hil(void) {
 	unblock_fsm_loop(&htim5);
 }
 
@@ -84,7 +88,7 @@ typedef struct {
 
 static fsm_health_t fsm_health = {0};
 
-w_status_t fsm_init() {
+w_status_t fsm_init(void) {
 	// init estimator context
 	// initialize ctx timestamp to current time
 	uint32_t init_time_tenth_ms = 0;
@@ -132,7 +136,7 @@ w_status_t fsm_init() {
 	return W_SUCCESS;
 }
 
-fsm_state_t fsm_get_state() {
+fsm_state_t fsm_get_state(void) {
 	return g_ctx.curr_state;
 }
 
@@ -398,7 +402,7 @@ health_status_t fsm_get_status(void) {
 	return status;
 }
 
-void log_gnc_internal_state() {
+void log_gnc_internal_state(void) {
 	gnc_navigator_ctx_t *ctx = &g_ctx.p_navigator_context->gnc_navigator_ctx;
 	/* Bias */
 	log_text(1,

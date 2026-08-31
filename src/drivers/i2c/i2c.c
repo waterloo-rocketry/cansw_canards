@@ -5,11 +5,11 @@
 
 #include "i2c.h"
 #include "FreeRTOS.h"
-#include "application/can_handler/can_handler.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
-#include "message_types.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
+#include <stdint.h>
 /** @brief Default timeout for I2C operations in milliseconds */
 #define I2C_DEFAULT_TIMEOUT_MS 50
 
@@ -403,7 +403,7 @@ health_status_t i2c_get_status(void) {
 
 	// Log per-bus status
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {
-		const char *bus_name = "unknown";
+		const char *bus_name;
 		switch (i) {
 			case I2C_BUS_1:
 				bus_name = "I2C1 (ST IMU)";

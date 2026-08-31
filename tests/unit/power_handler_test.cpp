@@ -15,6 +15,7 @@ extern "C" {
     #include "drivers/timer/timer.h"
     #include "message_types.h"
     #include "rocketlib/include/common.h"
+    #include "application/can_handler/can_handler.h"
 
     // gpio fakes
     FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t);

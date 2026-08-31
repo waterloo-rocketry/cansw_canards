@@ -1,10 +1,13 @@
-#include "telemetry.h"
+#include <stdint.h>
+
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "common/gnc/gnc_types.h"
 #include "drivers/timer/timer.h"
 #include "task.h"
+#include "telemetry.h"
 
 #define TELEMETRY_MAX_SOURCES 75 // TODO: find out real value for this
 #define TELEMETRY_TASK_PERIOD_MS 1 // 1000hz

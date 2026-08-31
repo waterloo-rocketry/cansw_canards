@@ -1,6 +1,7 @@
 #include "application/hil/hil.h"
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
@@ -10,6 +11,7 @@
 
 #include "application/flight_phase/flight_phase.h"
 #include "application/logger/log.h"
+#include "common/gnc/gnc_types.h"
 #include "common/math/math.h"
 
 extern void unblock_fsm_hil();

@@ -5,9 +5,7 @@
 #include <stdint.h>
 // Include headers for structs used in log_data_container_t
 #include "application/health_checks/health_checks.h"
-#include "application/sensor_handler/sensor_handler.h"
-#include "common/gnc/gnc_types.h"
-#include "drivers/altimu-10/altimu-10.h"
+#include "common/math/math.h"
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32768
@@ -213,7 +211,7 @@ typedef union __attribute__((packed)) {
 
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
-			  "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
+			  "log_data_container_t must fit within MAX_DATA_MSG_LENGTH")
 
 /**
  * @brief Create log buffers and mutexes necessary for logger operation.

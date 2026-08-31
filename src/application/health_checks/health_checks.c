@@ -1,6 +1,10 @@
 #include "application/health_checks/health_checks.h"
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
+
+#include <stdint.h>
+#include <string.h>
+
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
@@ -10,14 +14,15 @@
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/telemetry/telemetry.h"
 #include "can.h"
+#include "drivers/MS5611/MS5611.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
-#include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
+#include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
@@ -290,7 +295,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 
 		// scream a few times then attempt to reset.
 		// delay for ~1sec without using systick-based delays (no hal_delay)
-		volatile int dummy;
+		volatile int dummy = 0;
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 50000000; j++) {
 				dummy++;
@@ -306,7 +311,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 
 // --- End Fatal Error Handler ---
 
-w_status_t health_check_exec() {
+w_status_t health_check_exec(void) {
 	uint32_t status_bitfield = 0;
 
 	status_bitfield |= check_watchdog_tasks();
