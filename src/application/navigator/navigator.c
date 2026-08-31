@@ -1,8 +1,9 @@
 #include "FreeRTOS.h"
-#include "math.h"
 #include "queue.h"
-#include "semphr.h"
-#include "task.h"
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 #include "canlib.h"
 

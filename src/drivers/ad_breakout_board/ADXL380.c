@@ -4,11 +4,12 @@
 #include <stdint.h>
 
 #include "FreeRTOS.h"
-#include "task.h"
 
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
+#include "drivers/ad_breakout_board/ADXL380_regmap.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"

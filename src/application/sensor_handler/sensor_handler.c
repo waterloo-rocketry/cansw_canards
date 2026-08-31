@@ -6,6 +6,9 @@
 #include "queue.h"
 
 #include "application/can_handler/can_handler.h"
+#include "application/can_handler/can_telemetry_scaling.h"
+#include "application/health_checks/health_checks.h"
+#include "common/gnc/gnc_types.h"
 #include "application/logger/log.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/telemetry/telemetry.h"

@@ -13,7 +13,6 @@ Acknowledgement: https://github.com/binomaiheu/ADS1219
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "common/math/math.h"
 #include "drivers/i2c/i2c.h"
 #include "rocketlib/include/common.h"
 

@@ -1,13 +1,18 @@
 #include <inttypes.h>
+#include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
-#include "fdcan.h"
 #include "queue.h"
+#include "stm32h7xx_hal.h"
 
 #include "application/can_handler/can_handler.h"
+#include "application/can_handler/can_telemetry_scaling.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/telemetry/telemetry.h"
+#include "common/gnc/gnc_types.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/timer/timer.h"
 

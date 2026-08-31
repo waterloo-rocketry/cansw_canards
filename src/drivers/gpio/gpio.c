@@ -8,8 +8,10 @@
 #include "stm32h7xx_hal.h"
 
 #include "FreeRTOS.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "semphr.h"
+#include <stdint.h>
 
 #include "drivers/gpio/gpio.h"
 #include "drivers/iis2mdc/IIS2MDC.h"

@@ -5,8 +5,10 @@
  */
 
 #include "drivers/timer/timer.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "stm32h7xx_hal.h"
+#include <stdint.h>
 #ifdef HIL
 #include "application/hil/hil.h"
 

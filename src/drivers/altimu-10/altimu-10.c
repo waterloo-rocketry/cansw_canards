@@ -1,12 +1,14 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "application/logger/log.h"
+#include "common/math/math.h"
 #include "drivers/altimu-10/LIS3MDL_regmap.h"
 #include "drivers/altimu-10/LPS_regmap.h"
 #include "drivers/altimu-10/LSM6DSO_regmap.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include <limits.h>
-#include <stdio.h>
+#include <math.h>
+#include <stdint.h>
 
 // AltIMU device addresses and configuration
 #define LSM6DSO_ADDR 0x6B // addr sel pin HIGH IMU

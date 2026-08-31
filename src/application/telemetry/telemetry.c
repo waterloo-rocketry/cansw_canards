@@ -1,8 +1,11 @@
+#include <stdint.h>
+
 #include "telemetry.h"
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "common/gnc/gnc_types.h"
 #include "drivers/timer/timer.h"
 #include "task.h"
 

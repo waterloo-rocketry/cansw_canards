@@ -1,11 +1,14 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "common/gnc/gnc_types.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
@@ -13,6 +16,7 @@
 #include "queue.h"
 #include "rocketlib/include/common.h"
 #include "semphr.h"
+#include "task.h"
 #include "third_party/printf/printf.h"
 
 // number of times to try writing a log message in case fails once

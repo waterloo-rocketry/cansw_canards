@@ -1,4 +1,6 @@
 // Add these includes for hardware handles
+#include <stdint.h>
+
 #include "FreeRTOS.h"
 #include "adc.h" // For hadc1
 #include "fdcan.h" // For hfdcan1 and hfdcan3
@@ -25,7 +27,6 @@
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/adc/adc.h"
 #include "drivers/ak45_driver/ak45_driver.h"
-#include "drivers/altimu-10/altimu-10.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"

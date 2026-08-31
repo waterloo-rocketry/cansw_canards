@@ -43,10 +43,11 @@
 #include <stdlib.h>
 
 #include "FreeRTOS.h"
-#include "task.h"
 
-#include "common/math/math.h"
+#include "application/health_checks/health_checks.h"
+#include "drivers/ad_breakout_board/ADXL380_regmap.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
+#include "drivers/i2c/i2c.h"
 
 #define ADXL38X_MAX_XFER_LEN 64
 #define ADXL38X_NEG_ACC_MSK 0xFFFF0000

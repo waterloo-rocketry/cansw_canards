@@ -1,11 +1,12 @@
 #include "FreeRTOS.h"
 #include "i2c.h"
-#include "main.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
 #include "drivers/i2c/i2c.h"

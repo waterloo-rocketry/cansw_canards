@@ -4,10 +4,9 @@
 #include <stdint.h>
 
 #include "FreeRTOS.h"
-#include "task.h"
 
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
-#include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/ad_breakout_board/ADS1219_reg.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"

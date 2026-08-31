@@ -5,6 +5,7 @@
 
 #include "drivers/uart/uart.h"
 #include "FreeRTOS.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "queue.h"
 #include "rocketlib/include/common.h"

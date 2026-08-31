@@ -2,11 +2,12 @@
 #include "task.h"
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "drivers/MS5611/MS5611.h"
-#include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/timer/timer.h"
 

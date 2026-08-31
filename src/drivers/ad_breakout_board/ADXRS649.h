@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #include "application/health_checks/health_checks.h"
-#include "common/math/math.h"
 #include "rocketlib/include/common.h"
 
 typedef struct {

@@ -1,3 +1,6 @@
+#include <stdint.h>
+#include <string.h>
+
 #include "FreeRTOS.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"
