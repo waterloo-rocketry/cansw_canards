@@ -75,7 +75,7 @@ w_status_t altimu_check_sanity(void) {
  * @note Must be called after scheduler start
  * @return Status of the operation
  */
-w_status_t altimu_init() {
+w_status_t altimu_init(void) {
 	w_status_t status = W_SUCCESS;
 
 	// Drive addr sel pin HIGH to use each device's "default" i2c addr

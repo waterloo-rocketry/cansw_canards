@@ -27,7 +27,7 @@ static bool g_timer_initialized = false;
  * @details Use TIM CHANNEL 2. Without initialization any timer call will be invalid
  * @return the status of the initialization
  */
-w_status_t timer_init() {
+w_status_t timer_init(void) {
 	// can only init once
 	if (g_timer_initialized) {
 		return W_SUCCESS;

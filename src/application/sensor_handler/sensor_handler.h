@@ -6,6 +6,8 @@
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 
+#include <stdint.h>
+
 #include "application/health_checks/health_checks.h"
 #include "rocketlib/include/common.h"
 

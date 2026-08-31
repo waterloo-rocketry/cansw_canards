@@ -94,6 +94,7 @@ static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
 }
 
 static void system_init_task(void *arg) {
+	(void)arg;
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready

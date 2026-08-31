@@ -100,7 +100,7 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
 	}
 
 	// Reinit the CAN module if a bus off state was detected
-	FDCAN_ProtocolStatusTypeDef protocolStatus = {};
+	FDCAN_ProtocolStatusTypeDef protocolStatus = {0};
 	HAL_FDCAN_GetProtocolStatus(g_ak45_hfdcan, &protocolStatus);
 	if (protocolStatus.BusOff) {
 		CLEAR_BIT(g_ak45_hfdcan->Instance->CCCR, FDCAN_CCCR_INIT);
@@ -160,7 +160,7 @@ static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) 
 }
 
 /* used to stop the general can bus*/
-static void ak45_stop_can() {
+static void ak45_stop_can(void) {
 	// turn off fdcan so can restart
 	if (HAL_FDCAN_Stop(g_ak45_hfdcan) != HAL_OK) {
 		ak45_health.fdcan_stop_fails++;
@@ -172,7 +172,7 @@ static void ak45_stop_can() {
  * @brief Send temperature and current telemetry through CAN from the AK45 motor
  * @return W_SUCCESS on success, W_FAILURE on error
  */
-static w_status_t ak45_driver_temp_curr_telemetry() {
+static w_status_t ak45_driver_temp_curr_telemetry(void) {
 	ak45_feedback_t fb = {0};
 	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {
 		return W_FAILURE;
@@ -234,7 +234,7 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
  * @brief Send temperature angle through CAN from the AK45 motor
  * @return W_SUCCESS on success, W_FAILURE on error
  */
-static w_status_t ak45_driver_angle_telemetry() {
+static w_status_t ak45_driver_angle_telemetry(void) {
 	ak45_feedback_t fb = {0};
 	w_status_t status = W_SUCCESS;
 	if (W_SUCCESS != ak45_get_latest_feedback(&fb)) {

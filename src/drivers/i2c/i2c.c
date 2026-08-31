@@ -403,7 +403,7 @@ health_status_t i2c_get_status(void) {
 
 	// Log per-bus status
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {
-		const char *bus_name = "unknown";
+		const char *bus_name;
 		switch (i) {
 			case I2C_BUS_1:
 				bus_name = "I2C1 (ST IMU)";

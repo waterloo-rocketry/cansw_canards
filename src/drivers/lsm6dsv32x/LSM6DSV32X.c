@@ -88,7 +88,7 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
  * @note just checks the who am i bit
  * @return Status of the operation
  */
-static w_status_t lsm6dsv32x_check_sanity() {
+static w_status_t lsm6dsv32x_check_sanity(void) {
 	if (lsm6dsv32x_ctx.switched_callback) {
 		log_text(
 			1, LOG_LVL_WARN, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
@@ -150,7 +150,7 @@ static void lsm6dsv32x_dma_error_handle(I2C_HandleTypeDef *hi2c) {
  * @note Must be called after bit registers are configured, called before flight!!!
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_init() {
+w_status_t lsm6dsv32x_init(void) {
 	if (lsm6dsv32x_ctx.switched_callback) {
 		log_text(
 			1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
@@ -240,7 +240,7 @@ w_status_t lsm6dsv32x_init() {
  * @brief ISR for the interrupt pin that begins DMA data transfer
  * @return Status of the operation
  */
-w_status_t lsm6dsv32x_int1_isr_handler() {
+w_status_t lsm6dsv32x_int1_isr_handler(void) {
 	if (!lsm6dsv32x_health.is_init) {
 		return W_SUCCESS;
 	}

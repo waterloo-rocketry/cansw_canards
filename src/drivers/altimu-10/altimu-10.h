@@ -35,7 +35,7 @@ typedef struct __attribute__((packed)) {
  * @note Must be called after scheduler start
  * @return Status of the operation
  */
-w_status_t altimu_init();
+w_status_t altimu_init(void);
 
 /**
  * @brief Retrieves both gyroscope and accelerometer data in one I2C transaction.

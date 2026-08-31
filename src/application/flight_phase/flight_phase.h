@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-#include "FreeRTOS.h"
 #include "queue.h"
 
 #include "application/health_checks/health_checks.h"

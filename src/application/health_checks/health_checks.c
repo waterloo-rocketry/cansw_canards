@@ -290,7 +290,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 
 		// scream a few times then attempt to reset.
 		// delay for ~1sec without using systick-based delays (no hal_delay)
-		volatile int dummy;
+		volatile int dummy = 0;
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < 50000000; j++) {
 				dummy++;
@@ -306,7 +306,7 @@ void proc_handle_fatal_error(const char *errorMsg) {
 
 // --- End Fatal Error Handler ---
 
-w_status_t health_check_exec() {
+w_status_t health_check_exec(void) {
 	uint32_t status_bitfield = 0;
 
 	status_bitfield |= check_watchdog_tasks();

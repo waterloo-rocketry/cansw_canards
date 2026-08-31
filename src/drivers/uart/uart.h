@@ -7,7 +7,6 @@
 #ifndef UART_H
 #define UART_H
 
-#include "FreeRTOS.h"
 #include "application/health_checks/health_checks.h"
 #include "queue.h"
 #include "rocketlib/include/common.h"

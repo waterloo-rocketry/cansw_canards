@@ -213,7 +213,7 @@ typedef union __attribute__((packed)) {
 
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
-			  "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
+			  "log_data_container_t must fit within MAX_DATA_MSG_LENGTH")
 
 /**
  * @brief Create log buffers and mutexes necessary for logger operation.
