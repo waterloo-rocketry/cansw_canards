@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
+#include "common/gnc/gnc_types.h"
 #include "rocketlib/include/common.h"
 
 // Offsets to map a signed scaled value into the unsigned CAN field:

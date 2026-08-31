@@ -835,6 +835,7 @@ static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas
  */
 static w_status_t read_motor_meas(sensor_handler_ctx_t *ctx, navigator_1d_meas_t *encoder_data,
 								  const uint32_t curr_timestamp_ms) {
+	(void)curr_timestamp_ms;
 	ak45_feedback_t motor_feedback = {0};
 	w_status_t status = ak45_get_latest_feedback(&motor_feedback);
 

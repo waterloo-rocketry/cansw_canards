@@ -124,7 +124,7 @@ static power_input_source_t get_active_input(void) {
  * charge voltage, and 5V rail current. Called by power_handler_get_status.
  * @return W_SUCCESS if all messages transmitted, W_FAILURE otherwise.
  */
-static w_status_t transmit_curr_volt_status_can_msg() {
+static w_status_t transmit_curr_volt_status_can_msg(void) {
 	float adc_value = 0;
 	can_msg_t msg = {0};
 

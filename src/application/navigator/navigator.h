@@ -22,7 +22,7 @@ typedef struct {
 /**
  * @brief initialize navigator module
  */
-w_status_t navigator_init();
+w_status_t navigator_init(void);
 
 // TODO: to be REVIVED
 // /**

@@ -33,7 +33,7 @@ adxl380_health_t adxl380_health = {0};
  * @note Must be called after scheduler start
  * @return the status of the function call
  */
-w_status_t adxl380_init() {
+w_status_t adxl380_init(void) {
 	// so that we don't reinitialize
 	if (is_initialized) {
 		log_text(0, LOG_LVL_WARN, "ADXL380", "Reinitialization is not allowed.");

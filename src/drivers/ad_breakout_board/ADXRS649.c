@@ -40,7 +40,7 @@ static float64_t V_EXTERNAL_REF_P_mV = 2048.0;
 static float64_t V_EXTERNAL_REF_N_mV = 0.0;
 
 // global adc handle
-static ads1219_handle_t g_ads_handle = {};
+static ads1219_handle_t g_ads_handle = {0};
 static bool is_initialized = false;
 
 adxrs649_health_t adxrs649_health = {0};
@@ -49,7 +49,7 @@ adxrs649_health_t adxrs649_health = {0};
  * @brief perform the self-test on the ADXRS649
  * @return the status of the self-test
  */
-static w_status_t adxrs649_self_test() {
+static w_status_t adxrs649_self_test(void) {
 	w_status_t status = W_SUCCESS;
 	float64_t adc_voltage; // will be mV
 	uint32_t test_num = 0;
@@ -121,7 +121,7 @@ static w_status_t adxrs649_self_test() {
  * @brief initialize and start up the ADXRS649 AD Gyro and ADS1219
  * @return the status at which the ADXRS649 initalization goes
  */
-w_status_t adxrs649_init() {
+w_status_t adxrs649_init(void) {
 	// don't reinit
 	if (is_initialized) {
 		log_text(0, LOG_LVL_WARN, "ADXRS649", "Reinitialization is not allowed.");

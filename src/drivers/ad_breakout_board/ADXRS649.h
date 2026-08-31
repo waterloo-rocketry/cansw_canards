@@ -25,7 +25,7 @@ typedef struct {
  * @brief initialize and start up the ADXRS649 AD Gyro and ADS1219
  * @return the status at which the ADXRS649 initalization goes
  */
-w_status_t adxrs649_init();
+w_status_t adxrs649_init(void);
 
 /**
  * @brief gets the state of new data for the gyro
