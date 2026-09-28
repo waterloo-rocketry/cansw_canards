@@ -20,6 +20,7 @@
 #define TEXT_WRITE_TRY_COUNT 20
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
+static const uint32_t MIN_FLUSH_INTERVAL_MS = 1000;
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
@@ -512,6 +513,8 @@ void log_task(void *argument) {
 
 	uint32_t cur_timestamps = 0;
 
+	uint32_t last_flush_timestamp_ms = 0;
+
 	for (;;) {
 		// Must not do anything in the task if init failed.
 		// This allows non-critical init to fail and board to not kill itself
@@ -579,19 +582,29 @@ void log_task(void *argument) {
 					 */
 					uint32_t sync_start_ms = 0;
 					timer_get_ms(&sync_start_ms);
-					if (sd_card_file_sync(file_ctx) == W_SUCCESS) {
-						uint32_t sync_end_ms = 0;
-						timer_get_ms(&sync_end_ms);
+					if ((sync_start_ms - last_flush_timestamp_ms) < MIN_FLUSH_INTERVAL_MS) {
+						// REMOVE BEFORE FLIGHT
+						log_text(10,
+								 LOG_LVL_INFO,
+								 "logger_write",
+								 "write_time=%d, try=%d",
+								 open_end_ms - open_start_ms,
+								 i + 1);
+						break;
+
+					} else if ((sd_card_file_sync(file_ctx) == W_SUCCESS)) {
+						timer_get_ms(&last_flush_timestamp_ms);
 
 						// REMOVE BEFORE FLIGHT
 						log_text(10,
 								 LOG_LVL_INFO,
 								 "logger_write",
-								 "open_time=%d, sync_time=%d, try=%d",
+								 "write_time=%d, sync_time=%d, try=%d",
 								 open_end_ms - open_start_ms,
-								 sync_end_ms - sync_start_ms,
+								 last_flush_timestamp_ms - sync_start_ms,
 								 i + 1);
 						gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+
 						break;
 					} else {
 						log_text(10,
