@@ -20,19 +20,16 @@
  */
 w_status_t raw_logger_SD_init(void);
 
+//also hal data type? - from shiming
 /**
  * @brief Get SD card specs, values should get cached during init
  *
  * @param[out] block_count - Number of 512-byte blocks. Block_count * 512 bytes = Total Byte Capacity
- * @param[out] spec_version - Spec Version, SDSC / SDHC / SDXC
- * @param[out] manufacturer_id - CID MID
- * @param[out] serial_num - CID PSN
- * @param[out] erase_size_blocks - The SD cards preferred erase size.
+ * @param[out] erase_size_blocks - The SD cards preferred erase size. ALSO NOT SURE IF WE NEED THIS I FEEL LIKE WE
+ * 																		COULD JUST DEFINE THIS
  * @return w_status_t - W_SUCCESS on success, W_FAILURE if file DNE or other fails.
  */
-w_status_t get_SD_specs(uint32_t *block_count, uint8_t *spec_version, 
-						uint8_t *manufacturer_id, uint32_t *serial_num, 
-						uint32_t *erase_size_blocks)
+w_status_t get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks)
 
 /**
  * @brief Read from the beginning of a block.
