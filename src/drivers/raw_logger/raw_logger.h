@@ -26,7 +26,8 @@ w_status_t raw_logger_SD_init(void);
  *
  * @param[out] block_count - Number of 512-byte blocks. Block_count * 512 bytes = Total Byte Capacity
  * @param[out] erase_size_blocks - The SD cards preferred erase size. ALSO NOT SURE IF WE NEED THIS I FEEL LIKE WE
- * 																		COULD JUST DEFINE THIS
+ * 																		COULD JUST DEFINE THIS IN WHEREVER THIS IS
+ * 																		BEING CALLED
  * @return w_status_t - W_SUCCESS on success, W_FAILURE if file DNE or other fails.
  */
 w_status_t get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks)
