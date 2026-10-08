@@ -21,7 +21,7 @@
  */
 w_status_t raw_logger_SD_init(void);
 
-// wait for Shiming further info on what he wants for spec tracking for this func
+// waiting for Shiming on what he wants specs to return
 /**
  * @brief Get SD card specs, values should get cached during init
  *
@@ -35,6 +35,8 @@ w_status_t get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks)
 
 /**
  * @brief Read from the beginning of a block.
+ * 
+ * Use a binary semaphore, signalling for processes to sleep and wake up.
  *
  * @param[in] address - The address of the block to read.
  * @param[in] buffer - The buffer to read the block into.
@@ -46,7 +48,7 @@ w_status_t raw_logger_SD_read(const char *address, char *buffer, uint32_t num_bl
 /**
  * @brief Write data to a file on the SD card.
  *
- * Use semaphore, signalling for processes to sleep and wake up.
+ * Use a binary semaphore, signalling for processes to sleep and wake up.
  * Need a function var to include data tracking to see how much storage is left.
  *
  * @param[in]  address    The address of the block to write to.
