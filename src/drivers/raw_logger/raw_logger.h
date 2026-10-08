@@ -16,11 +16,12 @@
  * @pre Must be called after scheduler starts. The HAL sd init inside this uses hal_delay
  * in it, so it will hang forever if the timer interrupt is masked (freertos masks interrupts
  * before scheduler starts).
+ * Will reset SD to zeros and storage tracking. 
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
 w_status_t raw_logger_SD_init(void);
 
-//also hal data type? - from shiming
+// wait for Shiming further info on what he wants for spec tracking for this func
 /**
  * @brief Get SD card specs, values should get cached during init
  *
@@ -45,7 +46,8 @@ w_status_t raw_logger_SD_read(const char *address, char *buffer, uint32_t num_bl
 /**
  * @brief Write data to a file on the SD card.
  *
- * Acquires the SD card mutex, writes data from buffer, then releases the mutex.
+ * Use semaphore, signalling for processes to sleep and wake up.
+ * Need a function var to include data tracking to see how much storage is left.
  *
  * @param[in]  address    The address of the block to write to.
  * @param[in]  buffer       Pointer to the data that is to be written.
@@ -56,7 +58,7 @@ w_status_t raw_logger_SD_write(const char *address, const char *buffer, uint32_t
 
 /**
  * @brief Check if the SD card is writable.
- *
+ * 
  * This function verifies that the SD card is in the READY state using HAL_SD_GetCardState.
  * Also checks that the module is initialized (mutex created, etc)
  * @pre MUST be called only after scheduler starts.
