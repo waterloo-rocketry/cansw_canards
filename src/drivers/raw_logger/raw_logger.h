@@ -16,10 +16,17 @@
  * @pre Must be called after scheduler starts. The HAL sd init inside this uses hal_delay
  * in it, so it will hang forever if the timer interrupt is masked (freertos masks interrupts
  * before scheduler starts).
- * Will reset SD to zeros and storage tracking. 
+ * Will reset storage tracking and SD bits to zeros.
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
 w_status_t raw_logger_SD_init(void);
+
+/**
+ * @brief Recover the SDMMC in case of errors via resetting.
+ * Upon recovery, must flag the faulty block and handle block skipping if necessary.
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
+ */
+w_status_t raw_logger_SD_recover(void);
 
 // waiting for Shiming on what he wants specs to return
 /**
@@ -29,34 +36,37 @@ w_status_t raw_logger_SD_init(void);
  * @param[out] erase_size_blocks - The SD cards preferred erase size. ALSO NOT SURE IF WE NEED THIS I FEEL LIKE WE
  * 																		COULD JUST DEFINE THIS IN WHEREVER THIS IS
  * 																		BEING CALLED
- * @return w_status_t - W_SUCCESS on success, W_FAILURE if file DNE or other fails.
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks)
+w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks);
 
 /**
  * @brief Read from the beginning of a block.
+ * @pre Buffer should be 32 byte aligned
  * 
  * Use a binary semaphore, signalling for processes to sleep and wake up.
+ * (Architecture allows for future asynchronous implementation)
  *
- * @param[in] address - The address of the block to read.
+ * @param[in] block_address - The address of the block to read.
  * @param[in] buffer - The buffer to read the block into.
  * @param[in] num_blocks - Number of blocks (512*n bytes) to read from the start of the block.
- * @return w_status_t - W_SUCCESS on success. W_FAILURE if file DNE or other fails.
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_read(const char *address, char *buffer, uint32_t num_blocks);
+w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t num_blocks);
 
 /**
- * @brief Write data to a file on the SD card.
+ * @brief Write data to a block on the SD card.
+ * @pre Buffer should be 32 byte aligned
  *
  * Use a binary semaphore, signalling for processes to sleep and wake up.
  * Need a function var to include data tracking to see how much storage is left.
  *
- * @param[in]  address    The address of the block to write to.
+ * @param[in]  block_address    The address of the block to write to.
  * @param[in]  buffer       Pointer to the data that is to be written.
  * @param[in]  num_blocks    Number of blocks (512*n bytes) from buffer to write.
- * @return w_status_t - W_SUCCESS on success, W_FAILURE if file DNE or other fails.
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_write(const char *address, const char *buffer, uint32_t num_blocks);
+w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, uint32_t num_blocks);
 
 /**
  * @brief Check if the SD card is writable.
