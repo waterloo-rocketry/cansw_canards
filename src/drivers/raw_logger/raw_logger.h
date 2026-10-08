@@ -33,9 +33,7 @@ w_status_t raw_logger_SD_recover(void);
  * @brief Get SD card specs, values should get cached during init
  *
  * @param[out] block_count - Number of 512-byte blocks. Block_count * 512 bytes = Total Byte Capacity
- * @param[out] erase_size_blocks - The SD cards preferred erase size. ALSO NOT SURE IF WE NEED THIS I FEEL LIKE WE
- * 																		COULD JUST DEFINE THIS IN WHEREVER THIS IS
- * 																		BEING CALLED
+ * @param[out] erase_size_blocks - The SD cards preferred erase size.
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
 w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks);
