@@ -7,7 +7,7 @@ In 2024-25, this project was firmware for Processor Board in the first canards s
 
 - `src/drivers/`: custom peripheral driver modules
 - `src/application/`: high-level application logic modules
-- `src/third_party/`: third-party libraries, including CubeMX auto-gen files
+- `src/third_party/`: third-party libraries, including CubeMX auto-gen files, `closedrocket` source files, and MATLAB codegen 
 - `src/common/`: shared resources specific to this project
 - `tests/`: everything for [testing](#Unit-Testing)
 
@@ -15,7 +15,7 @@ In 2024-25, this project was firmware for Processor Board in the first canards s
 
 ### 1. Clone repo
 
-- Clone repo and initialize submodules: ` git clone --recurse-submodules https://github.com/waterloo-rocketry/cansw_processor_canards`
+- Clone repo and initialize submodules: ` git clone --recurse-submodules https://github.com/waterloo-rocketry/cansw_canards`
 
 ### 2. Firmware dev in PlatformIO: edit, build, flash, debug
 
@@ -28,7 +28,7 @@ All firmware dev is done in VSCode using PlatformIO (previously using devcontain
 - If needed, switch between debug/release environments: `Ctrl+Shift+P > PlatformIO: Pick Project Environment`
 - Auto-format the project code: `Project Tasks > Custom > Format`
 
-### 2.5 STM32CubeMX
+### 2.1 STM32CubeMX
 
 Steps to configure stuff in CubeMX and auto-generate code:
 
@@ -61,7 +61,7 @@ Run tests:
 
 ## Unit Testing
 
-We use GoogleTest and Fake Function Framework (fff) for unit testing. All testing-related files are in `tests/`.
+We use GoogleTest and [Fake Function Framework (fff)](https://android.googlesource.com/platform/external/fff/+/cacd5f5459dba658e0c88ceff32282a0e9fab0a5/README.md) for unit testing. All testing-related files are in `tests/`.
 
 - Tests are built from `tests/CMakeLists.txt` which is separate from the project's main build config. Building and running tests is done via cmake.
 - Test source code should be written in `tests/unit/`.
