@@ -1,6 +1,6 @@
 # Canard Board Firmware
 
-Firmware for 2025-26 Canard Board, performing state estimation and control for the 2nd iteration of the canards system. Project documentation can be found in the team Google Drive.
+Firmware for 2025-27 Canard Board, performing state estimation and control for the 2nd & 3rd iteration of the canards system. Project documentation can be found in the team Google Drive.
 In 2024-25, this project was firmware for Processor Board in the first canards system
 
 ## Project Structure
