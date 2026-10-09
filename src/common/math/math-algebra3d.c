@@ -99,13 +99,13 @@ void math_init_matrix_identity(arm_matrix_instance_f64 *I, uint16_t size) {
 }
 
 void math_init_matrix_diag(arm_matrix_instance_f64 *matrix, const uint16_t size,
-						   const double *vector) {
+                           const double *vector) {
 	matrix->numCols = size;
 	matrix->numRows = size;
 
 	for (uint16_t i = 0; i < size; i++) {
 		for (uint16_t j = 0; j < size; j++) {
-			matrix->pData[i * size + j] = (i == j) ? vector[i] : 0.0f;
+			matrix->pData[i * size + j] = (i == j) ? vector[i] : 0.0F;
 		}
 	}
 }

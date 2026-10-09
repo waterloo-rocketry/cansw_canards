@@ -2,7 +2,7 @@
 #define CONTROLLER_H_
 
 #include "FreeRTOS.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -38,7 +38,7 @@ w_status_t controller_codegen_init(controller_ctx_t *p_ctx);
  * @param p_output pointer to the output struct to update with new command
  */
 w_status_t controller_step(const controller_input_t *p_input, const uint32_t timestamp_tenth_ms,
-						   controller_ctx_t *p_ctx, controller_output_t *p_output);
+                           controller_ctx_t *p_ctx, controller_output_t *p_output);
 
 /**
  * Controller task function for RTOS

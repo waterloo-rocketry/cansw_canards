@@ -9,10 +9,8 @@ extern "C" {
 // add includes like freertos, hal, proc headers, etc
 #include "FreeRTOS.h"
 #include "application/health_checks/health_checks.h"
-#include "canlib.h"
+#include "rocketlib.h"
 #include "drivers/adc/adc.h"
-#include "message_types.h"
-#include "rocketlib/include/common.h"
 
 // all the functions that are being tested
 extern w_status_t health_check_exec();

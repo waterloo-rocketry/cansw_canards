@@ -9,9 +9,8 @@
 #include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
-#include "message_types.h"
 #include "queue.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 #include "semphr.h"
 #include "third_party/printf/printf.h"
 
@@ -46,9 +45,9 @@ typedef struct {
 		full_buffer_moments; // current buffer still full (log_task hasn't drained it); msg dropped
 	uint32_t log_write_timeouts; // couldn't take the buffer mutex within the caller's timeout
 	uint32_t invalid_region_moments; // msg_num >= msgs per buffer; slot-claiming bug, should never
-									 // happen
+	                                 // happen
 	uint32_t queue_send_fails; // xQueueSendToBack() of a full buffer failed; queue is sized to
-							   // never fill
+	                           // never fill
 	uint32_t
 		no_full_buf_moments; // log_task found no buffer to flush; normal while idle, not an error
 	uint32_t
@@ -94,8 +93,8 @@ static logger_health_t logger_health = {0};
  * @param data Pointer to raw payload data of data log message
  */
 static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uint32_t msg_num,
-										   log_data_type_t type, uint32_t timestamp,
-										   const log_data_container_t *data) {
+                                           log_data_type_t type, uint32_t timestamp,
+                                           const log_data_container_t *data) {
 	// Validate arguments
 	// Assumption: logger_health.is_init == true OR (during init) all buffer semaphores are valid
 	if ((NULL == buffer) || (NULL == data)) {
@@ -281,8 +280,8 @@ w_status_t log_init(void) {
 	// Write new run count to file
 	memcpy(run_count_buf, &run_count, sizeof(run_count));
 	// use append=true to overwrite the existing count
-	status |= sd_card_file_write(
-		LOG_RUN_COUNT_FILENAME, run_count_buf, sizeof(run_count_buf), false, &size);
+	status |= sd_card_file_write(LOG_RUN_COUNT_FILENAME, run_count_buf, sizeof(run_count_buf),
+	                             false, &size);
 
 	// Form log filenames using the run count
 	snprintf_(text_log_filename, sizeof(text_log_filename), "%08" PRIx32 ".TXT", run_count);
@@ -301,7 +300,7 @@ w_status_t log_init(void) {
 }
 
 w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
-					...) {
+                    ...) {
 	// Get timestamp as close to time of call as possible
 	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log
 	// message anyway. We're trying to log as much as possible and a missing timestamp does not
@@ -381,12 +380,8 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 
 	uint32_t chars_written = 0;
 	// Write log message header to region
-	chars_written += snprintf_(msg_dest + chars_written,
-							   MAX_TEXT_MSG_LENGTH - chars_written,
-							   "[%" PRIu32 "] %s; %s; ",
-							   timestamp,
-							   level_string,
-							   source);
+	chars_written += snprintf_(msg_dest + chars_written, MAX_TEXT_MSG_LENGTH - chars_written,
+	                           "[%" PRIu32 "] %s; %s; ", timestamp, level_string, source);
 	// If truncated, set first char to '!'
 	if (chars_written >= MAX_TEXT_MSG_LENGTH) {
 		msg_dest[0] = '!';
@@ -395,8 +390,8 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 		// Write log message contents to region
 		va_list format_args;
 		va_start(format_args, format);
-		chars_written += vsnprintf_(
-			msg_dest + chars_written, MAX_TEXT_MSG_LENGTH - chars_written, format, format_args);
+		chars_written += vsnprintf_(msg_dest + chars_written, MAX_TEXT_MSG_LENGTH - chars_written,
+		                            format, format_args);
 		va_end(format_args);
 		// If truncated, set first char to '!'
 		if (chars_written >= MAX_TEXT_MSG_LENGTH) {
@@ -538,7 +533,7 @@ void log_task(void *argument) {
 		uint32_t log_write_try_count = 0;
 		// check data
 		if ((xQueueReceive(data_buffers_queue, &buffer_to_print, 100) == pdPASS) &&
-			(!must_log_txt)) {
+		    (!must_log_txt)) {
 			log_write_try_count = DATA_WRITE_TRY_COUNT;
 			have_msg = true;
 		} else if (xQueueReceive(text_buffers_queue, &buffer_to_print, 10) == pdPASS) {
@@ -568,8 +563,8 @@ void log_task(void *argument) {
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
 				uint32_t open_start_ms = 0;
 				timer_get_ms(&open_start_ms);
-				if (sd_card_file_write_open(
-						file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE, &size) == W_SUCCESS) {
+				if (sd_card_file_write_open(file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
+				                            &size) == W_SUCCESS) {
 					uint32_t open_end_ms = 0;
 					timer_get_ms(&open_end_ms);
 					/*
@@ -584,21 +579,14 @@ void log_task(void *argument) {
 						timer_get_ms(&sync_end_ms);
 
 						// REMOVE BEFORE FLIGHT
-						log_text(10,
-								 LOG_LVL_INFO,
-								 "logger_write",
-								 "open_time=%d, sync_time=%d, try=%d",
-								 open_end_ms - open_start_ms,
-								 sync_end_ms - sync_start_ms,
-								 i + 1);
+						log_text(10, LOG_LVL_INFO, "logger_write",
+						         "open_time=%d, sync_time=%d, try=%d", open_end_ms - open_start_ms,
+						         sync_end_ms - sync_start_ms, i + 1);
 						gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 						break;
 					} else {
-						log_text(10,
-								 LOG_LVL_WARN,
-								 "logger",
-								 "sd_card_file_sync failed on try %d",
-								 i + 1);
+						log_text(10, LOG_LVL_WARN, "logger", "sd_card_file_sync failed on try %d",
+						         i + 1);
 					}
 				}
 
@@ -623,9 +611,11 @@ void log_task(void *argument) {
 }
 
 health_status_t logger_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_LOGGER,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_LOGGER,
+		.error_bitfield = 0
+	};
 
 	if (!logger_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
@@ -680,26 +670,16 @@ health_status_t logger_get_status(void) {
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_FILE_SYSTEM_OFFSET);
 	}
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "logger",
-			 "init=%lu, trunc=%lu, full_buff=%lu, log_w_timeouts=%lu, invalid_region=%lu",
-			 logger_health.is_init,
-			 logger_health.trunc_msgs,
-			 logger_health.full_buffer_moments,
-			 logger_health.log_write_timeouts,
-			 logger_health.invalid_region_moments);
+	log_text(10, LOG_LVL_INFO, "logger",
+	         "init=%lu, trunc=%lu, full_buff=%lu, log_w_timeouts=%lu, invalid_region=%lu",
+	         logger_health.is_init, logger_health.trunc_msgs, logger_health.full_buffer_moments,
+	         logger_health.log_write_timeouts, logger_health.invalid_region_moments);
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "logger",
-			 "q_fail=%lu, no_buf=%lu, flush_fail=%lu, f_open_err=%lu, unsafe_fl=%lu, nparam=%lu",
-			 logger_health.queue_send_fails,
-			 logger_health.no_full_buf_moments,
-			 logger_health.buffer_flush_fails,
-			 logger_health.file_open_errs,
-			 logger_health.unsafe_buffer_flushes,
-			 logger_health.null_param_count);
+	log_text(10, LOG_LVL_INFO, "logger",
+	         "q_fail=%lu, no_buf=%lu, flush_fail=%lu, f_open_err=%lu, unsafe_fl=%lu, nparam=%lu",
+	         logger_health.queue_send_fails, logger_health.no_full_buf_moments,
+	         logger_health.buffer_flush_fails, logger_health.file_open_errs,
+	         logger_health.unsafe_buffer_flushes, logger_health.null_param_count);
 
 	return status;
 }

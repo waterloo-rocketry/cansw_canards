@@ -13,7 +13,7 @@
 
 #include "FreeRTOS.h"
 #include "application/health_checks/health_checks.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
 #include <stdbool.h>
@@ -65,7 +65,7 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
  * @retval W_IO_ERROR Bus error occurred (NACK, bus error, etc)
  */
 w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data,
-						uint8_t len);
+                        uint8_t len);
 
 /**
  * @brief Write to device registers
@@ -82,7 +82,7 @@ w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t
  * @retval W_IO_ERROR Bus error occurred (NACK, bus error, etc)
  */
 w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const uint8_t *data,
-						 uint8_t len);
+                         uint8_t len);
 
 /**
  * @brief send arbitrary data through I2C

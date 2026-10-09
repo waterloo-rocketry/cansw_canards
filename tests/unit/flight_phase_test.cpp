@@ -9,9 +9,8 @@ extern "C" {
 #include "application/flight_phase/flight_phase.h"
 #include "common/gnc/gnc_types.h"
 #include "application/logger/log.h"
-#include "canlib.h"
+#include "rocketlib.h"
 #include "queue.h"
-#include "rocketlib/include/common.h"
 #include "timers.h"
 #include <stdint.h>
 

@@ -34,14 +34,14 @@ typedef enum {
 	FIFO_CTRL1 = 0x07,
 	FIFO_CTRL2 = 0x08,
 	FIFO_CTRL3 = 0x09,
-	FIFO_CTRL4 = 0x0A,
+	FIFO_CTRL4 = 0x0a,
 
-	COUNTER_BDR_REG1 = 0x0B,
-	COUNTER_BDR_REG2 = 0x0C,
+	COUNTER_BDR_REG1 = 0x0b,
+	COUNTER_BDR_REG2 = 0x0c,
 
-	INT1_CTRL = 0x0D,
-	INT2_CTRL = 0x0E,
-	WHO_AM_I_REG = 0x0F,
+	INT1_CTRL = 0x0d,
+	INT2_CTRL = 0x0e,
+	WHO_AM_I_REG = 0x0f,
 	CTRL1_XL = 0x10,
 	CTRL2_G = 0x11,
 	CTRL3_C = 0x12,
@@ -52,11 +52,11 @@ typedef enum {
 	CTRL8_XL = 0x17,
 	CTRL9_XL = 0x18,
 	CTRL10_C = 0x19,
-	ALL_INT_SRC = 0x1A,
-	WAKE_UP_SRC = 0x1B,
-	TAP_SRC = 0x1C,
-	D6D_SRC = 0x1D,
-	STATUS_REG = 0x1E,
+	ALL_INT_SRC = 0x1a,
+	WAKE_UP_SRC = 0x1b,
+	TAP_SRC = 0x1c,
+	D6D_SRC = 0x1d,
+	STATUS_REG = 0x1e,
 	OUT_TEMP_L = 0x20,
 	OUT_TEMP_H = 0x21,
 	OUTX_L_G = 0x22,
@@ -68,18 +68,18 @@ typedef enum {
 
 	OUTX_L_A = 0x28,
 	OUTX_H_A = 0x29,
-	OUTY_L_A = 0x2A,
-	OUTY_H_A = 0x2B,
-	OUTZ_L_A = 0x2C,
-	OUTZ_H_A = 0x2D,
+	OUTY_L_A = 0x2a,
+	OUTY_H_A = 0x2b,
+	OUTZ_L_A = 0x2c,
+	OUTZ_H_A = 0x2d,
 
 	EMB_FUNC_STATUS_MP = 0x35,
 	FSM_FUNC_STATUS_A_MP = 0x36,
 	FSM_FUNC_STATUS_B_MP = 0x37,
 	STATUS_MASTER_MAINPAGE = 0x39,
 
-	FIFO_STATUS1 = 0x3A,
-	FIFO_STATUS2 = 0x3B,
+	FIFO_STATUS1 = 0x3a,
+	FIFO_STATUS2 = 0x3b,
 
 	TIMESTAMP0_REG = 0x40,
 	TIMESTAMP1_REG = 0x41,
@@ -90,17 +90,17 @@ typedef enum {
 	TAP_CFG1 = 0x57,
 	TAP_CFG2 = 0x58,
 	TAP_THS_6D = 0x59,
-	INT_DUR2 = 0x5A,
-	WAKE_UP_THS = 0x5B,
-	WAKE_UP_DUR = 0x5C,
-	FREE_FALL = 0x5D,
-	MD1_CFG = 0x5E,
-	MD2_CFG = 0x5F,
+	INT_DUR2 = 0x5a,
+	WAKE_UP_THS = 0x5b,
+	WAKE_UP_DUR = 0x5c,
+	FREE_FALL = 0x5d,
+	MD1_CFG = 0x5e,
+	MD2_CFG = 0x5f,
 
 	I3C_BUS_AVB = 0x62,
 	INTERNAL_FREQ_FINE = 0x63,
 
-	INT_OIS = 0x6F,
+	INT_OIS = 0x6f,
 	CTRL1_OIS = 0x70,
 	CTRL2_OIS = 0x71,
 	CTRL3_OIS = 0x72,
@@ -110,11 +110,11 @@ typedef enum {
 
 	FIFO_DATA_OUT_TAG = 0x78,
 	FIFO_DATA_OUT_X_L = 0x79,
-	FIFO_DATA_OUT_X_H = 0x7A,
-	FIFO_DATA_OUT_Y_L = 0x7B,
-	FIFO_DATA_OUT_Y_H = 0x7C,
-	FIFO_DATA_OUT_Z_L = 0x7D,
-	FIFO_DATA_OUT_Z_H = 0x7E
+	FIFO_DATA_OUT_X_H = 0x7a,
+	FIFO_DATA_OUT_Y_L = 0x7b,
+	FIFO_DATA_OUT_Y_H = 0x7c,
+	FIFO_DATA_OUT_Z_L = 0x7d,
+	FIFO_DATA_OUT_Z_H = 0x7e
 } LSM6DSO_reg;
 
 #define GYRO_RAM_SIZE 4096
@@ -125,11 +125,11 @@ typedef enum {
 	EMB_FUNC_EN_B = 0x05,
 	PAGE_ADDRESS = 0x08,
 	PAGE_VALUE = 0x09,
-	EMB_FUNC_INT1 = 0x0A,
-	FSM_INT1_A = 0x0B,
-	FSM_INT1_B = 0x0C,
-	EMB_FUNC_INT2 = 0x0E,
-	FSM_INT2_A = 0x0F,
+	EMB_FUNC_INT1 = 0x0a,
+	FSM_INT1_A = 0x0b,
+	FSM_INT1_B = 0x0c,
+	EMB_FUNC_INT2 = 0x0e,
+	FSM_INT2_A = 0x0f,
 	FSM_INT2_B = 0x10,
 	EMB_FUNC_STATUS = 0x12,
 	FSM_STATUS_A = 0x13,
@@ -141,11 +141,11 @@ typedef enum {
 	FSM_ENABLE_B = 0x47,
 	FSM_LONG_COUNTER_L = 0x48,
 	FSM_LONG_COUNTER_H = 0x49,
-	FSM_LONG_COUNTER_CLEAR = 0x4A,
-	FSM_OUTS1 = 0x4C,
-	FSM_OUTS2 = 0x4D,
-	FSM_OUTS3 = 0x4E,
-	FSM_OUTS4 = 0x4F,
+	FSM_LONG_COUNTER_CLEAR = 0x4a,
+	FSM_OUTS1 = 0x4c,
+	FSM_OUTS2 = 0x4d,
+	FSM_OUTS3 = 0x4e,
+	FSM_OUTS4 = 0x4f,
 	FSM_OUTS5 = 0x50,
 	FSM_OUTS6 = 0x51,
 	FSM_OUTS7 = 0x52,
@@ -156,10 +156,10 @@ typedef enum {
 	FSM_OUTS12 = 0x57,
 	FSM_OUTS13 = 0x58,
 	FSM_OUTS14 = 0x59,
-	FSM_OUTS15 = 0x5A,
-	FSM_OUTS16 = 0x5B,
+	FSM_OUTS15 = 0x5a,
+	FSM_OUTS16 = 0x5b,
 	// RESERVED             = 0x5E
-	EMB_FUNC_ODR_CFG_B = 0x5F,
+	EMB_FUNC_ODR_CFG_B = 0x5f,
 	STEP_COUNTER_L = 0x62,
 	STEP_COUNTER_H = 0x63,
 	EMB_FUNC_SRC = 0x64,
@@ -194,7 +194,7 @@ typedef enum {
 typedef enum {
 	FIFO_STOP_ON_WTM_DISABLED = 0x00,
 	FIFO_STOP_ON_WTM_ENABLED = 0x01,
-	FIFO_STOP_ON_WTM_MASK = 0x7F
+	FIFO_STOP_ON_WTM_MASK = 0x7f
 } LSM6DSO_STOP_ON_WTM_t;
 
 /*******************************************************************************
@@ -206,7 +206,7 @@ typedef enum {
 typedef enum {
 	FIFO_COMPR_RT_DISABLED = 0x00,
 	FIFO_COMPR_RT_ENABLE = 0x01,
-	FIFO_COMPR_RT_MASK = 0xBF
+	FIFO_COMPR_RT_MASK = 0xbf
 } LSM6DSO_FIFO_COMPR_RT_t;
 
 /*******************************************************************************
@@ -218,7 +218,7 @@ typedef enum {
 typedef enum {
 	FIFO_ODRCHG_DISABLED = 0x00,
 	FIFO_ODRCHG_ENABLE = 0x01,
-	FIFO_ODRCHG_MASK = 0xEF
+	FIFO_ODRCHG_MASK = 0xef
 } LSM6DSO_FIFO_ODRCHG_t;
 
 /*******************************************************************************
@@ -232,7 +232,7 @@ typedef enum {
 	FIFO_UNCOPTR_RATE_8 = 0x02,
 	FIFO_UNCOPTR_RATE_16 = 0x04,
 	FIFO_UNCOPTR_RATE_32 = 0x06,
-	FIFO_UNCOPTR_RATE_MASK = 0xF9
+	FIFO_UNCOPTR_RATE_MASK = 0xf9
 } LSM6DSO_FIFO_UNCOPTR_RATE_t;
 
 /*******************************************************************************
@@ -252,9 +252,9 @@ typedef enum {
 	FIFO_BDR_GYRO_833Hz = 0x70,
 	FIFO_BDR_GYRO_1667Hz = 0x80,
 	FIFO_BDR_GYRO_3333Hz = 0x90,
-	FIFO_BDR_GYRO_6667Hz = 0xA0,
-	FIFO_BDR_GYRO_6_5Hz = 0xB0,
-	FIFO_BDR_GYRO_MASK = 0x0F
+	FIFO_BDR_GYRO_6667Hz = 0xa0,
+	FIFO_BDR_GYRO_6_5Hz = 0xb0,
+	FIFO_BDR_GYRO_MASK = 0x0f
 } LSM6DSO_BDR_GY_FIFO_t;
 
 /*******************************************************************************
@@ -274,9 +274,9 @@ typedef enum {
 	FIFO_BDR_ACC_833Hz = 0x07,
 	FIFO_BDR_ACC_1667Hz = 0x08,
 	FIFO_BDR_ACC_3333Hz = 0x09,
-	FIFO_BDR_ACC_6667Hz = 0x0A,
-	FIFO_BDR_ACC_1_6Hz = 0x0B,
-	FIFO_BDR_ACC_MASK = 0xF0
+	FIFO_BDR_ACC_6667Hz = 0x0a,
+	FIFO_BDR_ACC_1_6Hz = 0x0b,
+	FIFO_BDR_ACC_MASK = 0xf0
 } LSM6DSO_BDR_XL_FIFO_t;
 
 /*******************************************************************************
@@ -289,7 +289,7 @@ typedef enum {
 	FIFO_TS_DEC_DISABLED = 0x00,
 	FIFO_TS_DEC_BY_1 = 0x04,
 	FIFO_TS_DEC_BY_8 = 0x08,
-	FIFO_TS_DEC_BY_32 = 0x0C
+	FIFO_TS_DEC_BY_32 = 0x0c
 } LSM6DSO_FIFO_TS_DEC_t;
 
 /*******************************************************************************
@@ -318,7 +318,7 @@ typedef enum {
 	FIFO_MODE_BYPASS_TO_CONT = 0x04,
 	FIFO_MODE_CONTINUOUS = 0x06,
 	FIFO_MODE_BYPASS_TO_FIFO = 0x07,
-	FIFO_MODE_MASK = 0xF0
+	FIFO_MODE_MASK = 0xf0
 } LSM6DSO_FIFO_MODE_t;
 
 /*******************************************************************************
@@ -375,7 +375,7 @@ typedef enum {
  * Bit Group Name: REF_G
  * Permission    : RW
  *******************************************************************************/
-#define REF_G_MASK 0xFF
+#define REF_G_MASK 0xff
 #define REF_G_POSITION 0
 
 /*******************************************************************************
@@ -538,7 +538,7 @@ typedef enum {
  * Bit Group Name: WHO_AM_I_BIT
  * Permission    : RO
  *******************************************************************************/
-#define WHO_AM_I_BIT_MASK 0xFF
+#define WHO_AM_I_BIT_MASK 0xff
 #define WHO_AM_I_BIT_POSITION 0
 
 /*******************************************************************************
@@ -564,8 +564,8 @@ typedef enum {
 	FS_XL_2g = 0x00,
 	FS_XL_16g = 0x04,
 	FS_XL_4g = 0x08,
-	FS_XL_8g = 0x0C,
-	FS_XL_MASK = 0xF3
+	FS_XL_8g = 0x0c,
+	FS_XL_MASK = 0xf3
 } LSM6DSO_FS_XL_t;
 
 /*******************************************************************************
@@ -577,7 +577,7 @@ typedef enum {
  *******************************************************************************/
 typedef enum {
 	ODR_XL_DISABLE = 0x00,
-	ODR_XL_1_6Hz = 0xB0, // Low Power only
+	ODR_XL_1_6Hz = 0xb0, // Low Power only
 	ODR_XL_12_5Hz = 0x10, // Low Power only
 	ODR_XL_26Hz = 0x20, // Low Power only
 	ODR_XL_52Hz = 0x30, // Low Power only
@@ -587,8 +587,8 @@ typedef enum {
 	ODR_XL_833Hz = 0x70, // High Performance
 	ODR_XL_1660Hz = 0x80, // High Performance
 	ODR_XL_3330Hz = 0x90, // High Performance
-	ODR_XL_6660Hz = 0xA0, // High Performance
-	ODR_XL_MASK = 0x0F
+	ODR_XL_6660Hz = 0xa0, // High Performance
+	ODR_XL_MASK = 0x0f
 } LSM6DSO_ODR_XL_t;
 
 /*******************************************************************************
@@ -603,8 +603,8 @@ typedef enum {
 	FS_G_250dps = 0x00,
 	FS_G_500dps = 0x04,
 	FS_G_1000dps = 0x08,
-	FS_G_2000dps = 0x0C,
-	FS_G_MASK = 0xF0
+	FS_G_2000dps = 0x0c,
+	FS_G_MASK = 0xf0
 } LSM6DSO_FS_G_t;
 
 /*******************************************************************************
@@ -625,8 +625,8 @@ typedef enum {
 	ODR_GYRO_833Hz = 0x70, // High Performance
 	ODR_GYRO_1660Hz = 0x80, // High Performance
 	ODR_GYRO_3330Hz = 0x90, // High Performance
-	ODR_GYRO_6660Hz = 0xA0, // High Performance
-	ODR_GYRO_MASK = 0x0F
+	ODR_GYRO_6660Hz = 0xa0, // High Performance
+	ODR_GYRO_MASK = 0x0f
 } LSM6DSO_ODR_GYRO_G_t;
 
 /*******************************************************************************
@@ -693,7 +693,7 @@ typedef enum {
 typedef enum {
 	BDU_CONTINUOS = 0x00,
 	BDU_BLOCK_UPDATE = 0x40,
-	BDU_MASK = 0xBF
+	BDU_MASK = 0xbf
 } LSM6DSO_BDU_t;
 
 /*******************************************************************************
@@ -818,7 +818,7 @@ typedef enum {
 	ST_G_NORMAL_MODE = 0x00,
 	ST_G_POS_SIGN_TEST = 0x04,
 	ST_G_NA = 0x08,
-	ST_G_NEG_SIGN_TEST = 0x0C
+	ST_G_NEG_SIGN_TEST = 0x0c
 } LSM6DSO_ST_G_t;
 
 /*******************************************************************************
@@ -1351,9 +1351,9 @@ typedef enum {
  * Bit Group Name: DIFF_FIFO
  * Permission    : RO
  *******************************************************************************/
-#define DIFF_FIFO_STATUS1_MASK 0xFF
+#define DIFF_FIFO_STATUS1_MASK 0xff
 #define DIFF_FIFO_STATUS1_POSITION 0
-#define DIFF_FIFO_STATUS2_MASK 0xF
+#define DIFF_FIFO_STATUS2_MASK 0xf
 #define DIFF_FIFO_STATUS2_POSITION 0
 
 /*******************************************************************************
@@ -1416,12 +1416,12 @@ typedef enum {
 	TAG_ACCEL_NC_T_1 = 0x07,
 	TAG_ACCEL_2xC = 0x08,
 	TAG_ACCEL_3xC = 0x09,
-	TAG_GYRO_NC_T_2 = 0x0A,
-	TAG_GYRO_NC_T_1 = 0x0B,
-	TAG_GYRO_2xC = 0x0C,
-	TAG_GYRO_3xC = 0x0D,
-	TAG_SENSOR_HUB_0 = 0x0E,
-	TAG_SENSOR_HUB_1 = 0x0F,
+	TAG_GYRO_NC_T_2 = 0x0a,
+	TAG_GYRO_NC_T_1 = 0x0b,
+	TAG_GYRO_2xC = 0x0c,
+	TAG_GYRO_3xC = 0x0d,
+	TAG_SENSOR_HUB_0 = 0x0e,
+	TAG_SENSOR_HUB_1 = 0x0f,
 	TAG_SENSOR_HUB_2 = 0x10,
 	TAG_SENSOR_HUB_3 = 0x11,
 	STEP_COUNTER = 0x12,
@@ -1492,10 +1492,10 @@ typedef enum {
 typedef enum {
 	LIR_DISABLED = 0x00,
 	LIR_ENABLED = 0x01,
-	LIR_MASK = 0xFE
+	LIR_MASK = 0xfe
 } LSM6DSO_LIR_t;
 
-#define TAP_INTERRUPT_MASK 0xF1
+#define TAP_INTERRUPT_MASK 0xf1
 
 /*******************************************************************************
  * Register      : TAP_CFG0
@@ -1556,7 +1556,7 @@ typedef enum {
 	TAP_PRIORITY_YZX = 0x05,
 	TAP_PRIORITY_ZXY = 0x06,
 	// TAP_PRIORITY_ZYX   = 0x07, repeated
-	TAP_PRIORITY_MASK = 0x1F
+	TAP_PRIORITY_MASK = 0x1f
 } LSM6DSO_TAP_PRIORITY_t;
 
 /*******************************************************************************
@@ -1568,7 +1568,7 @@ typedef enum {
 typedef enum {
 	INTERRUPTS_DISABLED = 0x00,
 	INTERRUPTS_ENABLED = 0x80,
-	INTERRUPTS_MASK = 0x7F
+	INTERRUPTS_MASK = 0x7f
 } LSM6DSO_INTERRUPTS_t;
 
 /*******************************************************************************
@@ -1591,7 +1591,7 @@ typedef enum {
 typedef enum {
 	PEDO_DISABLED = 0x00,
 	PEDO_ENABLED = 0x08,
-	PEDO_MASK = 0xF7
+	PEDO_MASK = 0xf7
 } LSM6DSO_PEDO_EN_t;
 
 /*******************************************************************************
@@ -1614,7 +1614,7 @@ typedef enum {
 typedef enum {
 	PEDO_RST_STEP_ENABLED = 0x80,
 	PEDO_RST_STEP_DISABLED = 0x00,
-	PEDO_RST_STEP_MASK = 0x7F
+	PEDO_RST_STEP_MASK = 0x7f
 } PEDO_RST_STEP_t;
 
 /*******************************************************************************
@@ -1626,7 +1626,7 @@ typedef enum {
 typedef enum {
 	STEP_NOT_DETECED = 0x00,
 	STEP_DETECED = 0x40,
-	STEP_DETECED_MASK = 0xBF
+	STEP_DETECED_MASK = 0xbf
 } PEDO_STEP_DETECT_t;
 
 /*******************************************************************************
@@ -1635,7 +1635,7 @@ typedef enum {
  * Bit Group Name: TAP_THS
  * Permission    : RW
  *******************************************************************************/
-#define TAP_THS_MASK 0x1F
+#define TAP_THS_MASK 0x1f
 #define TAP_THS_POSITION 0
 
 /*******************************************************************************
@@ -1666,7 +1666,7 @@ typedef enum {
  * Bit Group Name: QUIET
  * Permission    : RW
  *******************************************************************************/
-#define QUIET_MASK 0x0C
+#define QUIET_MASK 0x0c
 #define QUIET_POSITION 2
 
 /*******************************************************************************
@@ -1675,7 +1675,7 @@ typedef enum {
  * Bit Group Name: DUR
  * Permission    : RW
  *******************************************************************************/
-#define DUR_MASK 0xF0
+#define DUR_MASK 0xf0
 #define DUR_POSITION 4
 
 /*******************************************************************************
@@ -1684,7 +1684,7 @@ typedef enum {
  * Bit Group Name: WK_THS
  * Permission    : RW
  *******************************************************************************/
-#define WK_THS_MASK 0x3F
+#define WK_THS_MASK 0x3f
 #define WK_THS_POSITION 0
 
 /*******************************************************************************
@@ -1715,7 +1715,7 @@ typedef enum {
  * Bit Group Name: SLEEP_DUR
  * Permission    : RW
  *******************************************************************************/
-#define SLEEP_DUR_MASK 0x0F
+#define SLEEP_DUR_MASK 0x0f
 #define SLEEP_DUR_POSITION 0
 
 /*******************************************************************************
@@ -1744,7 +1744,7 @@ typedef enum {
  * Bit Group Name: FF_DUR
  * Permission    : RW
  *******************************************************************************/
-#define FF_FREE_FALL_DUR_MASK 0xF8
+#define FF_FREE_FALL_DUR_MASK 0xf8
 #define FF_FREE_FALL_DUR_POSITION 3
 #define FF_WAKE_UP_DUR_MASK 0x80
 #define FF_WAKE_UP_DUR_POSITION 7
@@ -1841,7 +1841,7 @@ typedef enum {
 typedef enum {
 	INT1_SINGLE_TAP_DISABLED = 0x00,
 	INT1_SINGLE_TAP_ENABLED = 0x40,
-	INT1_SINGLE_TAP_MASK = 0xBF
+	INT1_SINGLE_TAP_MASK = 0xbf
 } LSM6DSO_INT1_SINGLE_TAP_t;
 
 /*******************************************************************************

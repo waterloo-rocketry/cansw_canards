@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib.h"
 
 #include "GNC_codegen_types.h"
 #include "common/gnc/gnc_types.h"
@@ -55,7 +55,7 @@ health_status_t navigator_get_status(void);
  * update with new actuation info
  */
 w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t timestamp_tenth_ms,
-						  navigator_ctx_t *p_ctx, navigator_output_t *p_output);
+                          navigator_ctx_t *p_ctx, navigator_output_t *p_output);
 
 /**
  * @brief init pad filter with alive sensors. Must call before pad filter starts. Can call this

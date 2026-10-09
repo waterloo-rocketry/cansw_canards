@@ -1,15 +1,21 @@
-#include "application/health_checks/health_checks.h"
 #include "FreeRTOS.h"
+#include "fdcan.h"
+#include "printf.h"
+#include "task.h"
+
+#include "rocketlib.h"
+#include "rocketlib/stm32h7/stm32h7_can.h"
+
 #include "application/can_handler/can_handler.h"
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/telemetry/telemetry.h"
-#include "can.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/adc/adc.h"
@@ -22,9 +28,6 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
-#include "fdcan.h"
-#include "printf.h"
-#include "task.h"
 
 #define TASK_DELAY_MS 1000
 #define MAX_WATCHDOG_TASKS 10
@@ -110,11 +113,8 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
 	// Check if the task is already registered
 	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
 		if (watchdog_tasks[i].task_handle == task_handle) {
-			log_text(0,
-					 LOG_LVL_WARN,
-					 "health_checks",
-					 "duplicate task registration:%p",
-					 (void *)task_handle);
+			log_text(0, LOG_LVL_WARN, "health_checks", "duplicate task registration:%p",
+			         (void *)task_handle);
 			return W_FAILURE;
 		}
 	}
@@ -188,13 +188,8 @@ uint32_t check_watchdog_tasks(void) {
  */
 static w_status_t process_module_status(health_status_t status) {
 	if (status.severity != CANARDS_HEALTH_SEVERITY_HEALTH_OK) {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "health",
-				 "module=%d: sev=%d, err=%d",
-				 status.module_id,
-				 status.severity,
-				 status.error_bitfield);
+		log_text(0, LOG_LVL_WARN, "health", "module=%d: sev=%d, err=%d", status.module_id,
+		         status.severity, status.error_bitfield);
 
 		can_msg_t msg = {0};
 		uint32_t current_time_ms;
@@ -204,12 +199,8 @@ static w_status_t process_module_status(health_status_t status) {
 			return W_FAILURE; // unable to send CAN msg without timestamp
 		}
 
-		build_canard_firmware_error_msg(PRIO_MEDIUM,
-										(uint16_t)current_time_ms,
-										status.module_id,
-										status.error_bitfield,
-										status.severity,
-										&msg);
+		build_canard_firmware_error_msg(PRIO_MEDIUM, (uint16_t)current_time_ms, status.module_id,
+		                                status.error_bitfield, status.severity, &msg);
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			log_text(0, LOG_LVL_WARN, "health", "CAN send failure for module status msg");
 		}
@@ -240,11 +231,8 @@ static uint32_t check_modules_status(void) {
 		if (NULL != module_get_status_fns[i]) {
 			status |= process_module_status(module_get_status_fns[i]());
 		} else {
-			log_text(1,
-					 LOG_LVL_WARN,
-					 "Health Checks",
-					 "Null element in module_get_status_fns array at index %d",
-					 i);
+			log_text(1, LOG_LVL_WARN, "Health Checks",
+			         "Null element in module_get_status_fns array at index %d", i);
 		}
 	}
 

@@ -28,14 +28,14 @@ typedef enum {
 
 // Feedback message mode ID
 static const uint16_t CAN_REAL_TIME_FEEDBACK = 0x29;
-static const uint16_t CAN_START_FRAME = 0x2C;
+static const uint16_t CAN_START_FRAME = 0x2c;
 
 // Scaling factors
-static const float32_t AK45_POS_CMD_DEG_TO_POS = 10000.0f; // Position: degrees * 10000
-static const float32_t AK45_POS_FB_TO_DEG = 0.1f; // Feedback position: raw * 0.1 = degrees
+static const float32_t AK45_POS_CMD_DEG_TO_POS = 10000.0F; // Position: degrees * 10000
+static const float32_t AK45_POS_FB_TO_DEG = 0.1F; // Feedback position: raw * 0.1 = degrees
 // eRPM is electrically counted RPM
-static const float32_t AK45_SPEED_FB_TO_ERPM = 10.0f; // speed feedback: raw * 10.0 = ERPM
-static const float32_t AK45_CURRENT_FB_TO_A = 0.01f; // current feedback: raw * 0.01 = Amps
+static const float32_t AK45_SPEED_FB_TO_ERPM = 10.0F; // speed feedback: raw * 10.0 = ERPM
+static const float32_t AK45_CURRENT_FB_TO_A = 0.01F; // current feedback: raw * 0.01 = Amps
 
 static FDCAN_HandleTypeDef *g_ak45_hfdcan = NULL;
 static QueueHandle_t g_feedback_queue = NULL;
@@ -44,13 +44,13 @@ static volatile bool received_can_msg = false;
 static const uint32_t AK45_UPDATE_PERIOD_MS = 5;
 
 const ak45_calibration_config_t ak45_calibration_config = {
-	.seek_target_deg = 70.0f,
-	.backoff_deg = 20.0f,
+	.seek_target_deg = 70.0F,
+	.backoff_deg = 20.0F,
 	.settle_ms = 2000,
 
-	.stall_current_a_min = 2.0f,
+	.stall_current_a_min = 2.0F,
 
-	.max_tap_delta_deg = 1.0f,
+	.max_tap_delta_deg = 1.0F,
 	.seek_timeout_ms = 40000,
 };
 
@@ -74,7 +74,7 @@ typedef struct {
 	uint32_t fdcan_stop_fails; // count of failures to stop FDCAN bus
 	uint32_t init_fdcan_timeout; // count of timeouts to receive response from the motor during init
 	uint32_t init_fdcan_notification_fails; // Count of failures to activate FDCAN notification
-											// during init
+	                                        // during init
 	uint32_t init_fdcan_start_fails; // count of failures to start FDCAN bus
 	uint32_t init_fdcan_filter_cfg_fails; // count of failures to configure FDCAN filter during init
 	uint32_t timer_get_ms_fails; // count of failures to get ms timestamp during feedback parsing
@@ -188,17 +188,15 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 	int16_t temperature_scaled_int16 = 0;
 
 	if (can_encode_scaled_int(SCALE_SERVO_TEMP, fb.temperature_c, &temperature_scaled_int16) !=
-		W_SUCCESS) {
+	    W_SUCCESS) {
 		ak45_health.telemetry_scale_fails++;
 		status |= W_FAILURE;
 
 	} else {
 		can_msg_t msg = {0};
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  (uint16_t)timestamp_ms,
-									  SENSOR_CANARD_SERVO_TEMP,
-									  (uint16_t)(temperature_scaled_int16 + TELEMETRY_INT16_OFFSET),
-									  &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_TEMP,
+		                              (uint16_t)(temperature_scaled_int16 + TELEMETRY_INT16_OFFSET),
+		                              &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			ak45_health.telemetry_can_tx_fails++;
@@ -209,17 +207,15 @@ static w_status_t ak45_driver_temp_curr_telemetry() {
 	// TODO: change to use automatic telem scaling once merged
 	int16_t current_scaled_int16 = 0;
 	if (can_encode_scaled_float(SCALE_SERVO_CURRENT, fb.current_a, &current_scaled_int16) !=
-		W_SUCCESS) {
+	    W_SUCCESS) {
 		ak45_health.telemetry_scale_fails++;
 		status |= W_FAILURE;
 
 	} else {
 		can_msg_t msg = {0};
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  (uint16_t)timestamp_ms,
-									  SENSOR_CANARD_SERVO_CURR,
-									  (uint16_t)(current_scaled_int16 + TELEMETRY_INT16_OFFSET),
-									  &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_CURR,
+		                              (uint16_t)(current_scaled_int16 + TELEMETRY_INT16_OFFSET),
+		                              &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			ak45_health.telemetry_can_tx_fails++;
@@ -248,17 +244,14 @@ static w_status_t ak45_driver_angle_telemetry() {
 
 	int32_t scaled_angle_int32 = 0;
 	if (can_encode_scaled_float(SCALE_SERVO_ANGLE, fb.position_deg, &scaled_angle_int32) !=
-		W_SUCCESS) {
+	    W_SUCCESS) {
 		ak45_health.telemetry_scale_fails++;
 		return W_FAILURE;
 	}
 
 	can_msg_t msg = {0};
-	build_analog_sensor_32bit_msg(PRIO_LOW,
-								  (uint16_t)timestamp_ms,
-								  SENSOR_CANARD_SERVO_ANGLE,
-								  (uint32_t)(scaled_angle_int32 + TELEMETRY_INT32_OFFSET),
-								  &msg);
+	build_analog_sensor_32bit_msg(PRIO_LOW, (uint16_t)timestamp_ms, SENSOR_CANARD_SERVO_ANGLE,
+	                              (uint32_t)(scaled_angle_int32 + TELEMETRY_INT32_OFFSET), &msg);
 
 	if (can_handler_transmit(&msg) != W_SUCCESS) {
 		ak45_health.telemetry_can_tx_fails++;
@@ -297,10 +290,10 @@ w_status_t ak45_send_position_cmd(float32_t angle_deg) {
 
 	int32_t pos_raw = (int32_t)(angle_deg * AK45_POS_CMD_DEG_TO_POS);
 	uint8_t data[4];
-	data[0] = (uint8_t)(((uint32_t)pos_raw >> 24) & 0xFF);
-	data[1] = (uint8_t)(((uint32_t)pos_raw >> 16) & 0xFF);
-	data[2] = (uint8_t)(((uint32_t)pos_raw >> 8) & 0xFF);
-	data[3] = (uint8_t)((uint32_t)pos_raw & 0xFF);
+	data[0] = (uint8_t)(((uint32_t)pos_raw >> 24) & 0xff);
+	data[1] = (uint8_t)(((uint32_t)pos_raw >> 16) & 0xff);
+	data[2] = (uint8_t)(((uint32_t)pos_raw >> 8) & 0xff);
+	data[3] = (uint8_t)((uint32_t)pos_raw & 0xff);
 
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
 }
@@ -309,30 +302,30 @@ w_status_t ak45_send_current_cmd(int32_t current_mA) {
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT << 8) | AK45_DRIVER_ID;
 
 	uint8_t data[4];
-	data[0] = (uint8_t)(((uint32_t)current_mA >> 24) & 0xFF);
-	data[1] = (uint8_t)(((uint32_t)current_mA >> 16) & 0xFF);
-	data[2] = (uint8_t)(((uint32_t)current_mA >> 8) & 0xFF);
-	data[3] = (uint8_t)((uint32_t)current_mA & 0xFF);
+	data[0] = (uint8_t)(((uint32_t)current_mA >> 24) & 0xff);
+	data[1] = (uint8_t)(((uint32_t)current_mA >> 16) & 0xff);
+	data[2] = (uint8_t)(((uint32_t)current_mA >> 8) & 0xff);
+	data[3] = (uint8_t)((uint32_t)current_mA & 0xff);
 
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
 }
 
 w_status_t ak45_send_pos_velo_cmd(float32_t angle_deg, uint16_t mag_speed_rpm,
-								  int16_t accel_rpm_s2) {
+                                  int16_t accel_rpm_s2) {
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS_SPD << 8) | AK45_DRIVER_ID;
 
 	uint32_t pos_raw = ((int32_t)(angle_deg * AK45_POS_CMD_DEG_TO_POS));
 	uint8_t data[8];
-	data[0] = (uint8_t)((pos_raw >> 24) & 0xFF);
-	data[1] = (uint8_t)((pos_raw >> 16) & 0xFF);
-	data[2] = (uint8_t)((pos_raw >> 8) & 0xFF);
-	data[3] = (uint8_t)(pos_raw & 0xFF);
+	data[0] = (uint8_t)((pos_raw >> 24) & 0xff);
+	data[1] = (uint8_t)((pos_raw >> 16) & 0xff);
+	data[2] = (uint8_t)((pos_raw >> 8) & 0xff);
+	data[3] = (uint8_t)(pos_raw & 0xff);
 
-	data[4] = (uint8_t)(((uint16_t)mag_speed_rpm >> 8) & 0xFF);
-	data[5] = (uint8_t)((uint16_t)mag_speed_rpm & 0xFF);
+	data[4] = (uint8_t)(((uint16_t)mag_speed_rpm >> 8) & 0xff);
+	data[5] = (uint8_t)((uint16_t)mag_speed_rpm & 0xff);
 
-	data[6] = (uint8_t)((accel_rpm_s2 >> 8) & 0xFF);
-	data[7] = (uint8_t)(accel_rpm_s2 & 0xFF);
+	data[6] = (uint8_t)((accel_rpm_s2 >> 8) & 0xff);
+	data[7] = (uint8_t)(accel_rpm_s2 & 0xff);
 
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_8);
 }
@@ -404,7 +397,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	// This will terminate either after recieving a CAN msg from the motor or worse case after the
 	// described timeout
 	while ((!received_can_msg) &&
-		   ((curr_time_ms - start_can_init_time_ms) <= can_init_timeout_ms)) {
+	       ((curr_time_ms - start_can_init_time_ms) <= can_init_timeout_ms)) {
 		vTaskDelay(pdMS_TO_TICKS(500));
 
 		if (timer_get_ms(&curr_time_ms) != W_SUCCESS) {
@@ -564,9 +557,11 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 }
 
 health_status_t ak45_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_AK45,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_AK45,
+		.error_bitfield = 0
+	};
 
 	if (!ak45_health.hard_stop_calibrated) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
@@ -594,47 +589,30 @@ health_status_t ak45_get_status(void) {
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
-	log_text(LOG_WAIT_MS,
-			 LOG_LVL_INFO,
-			 "ak45",
-			 "is_init=%d, hard_stop_calibd=%d, hardstop_cal_fail=%d, rx_err=%lu, "
-			 "tx_err=%lu",
-			 ak45_health.is_init,
-			 ak45_health.hard_stop_calibrated,
-			 ak45_health.hard_stop_cal_failed,
-			 ak45_health.rx_errors,
-			 ak45_health.tx_errors);
+	log_text(LOG_WAIT_MS, LOG_LVL_INFO, "ak45",
+	         "is_init=%d, hard_stop_calibd=%d, hardstop_cal_fail=%d, rx_err=%lu, "
+	         "tx_err=%lu",
+	         ak45_health.is_init, ak45_health.hard_stop_calibrated,
+	         ak45_health.hard_stop_cal_failed, ak45_health.rx_errors, ak45_health.tx_errors);
 
-	log_text(LOG_WAIT_MS,
-			 LOG_LVL_INFO,
-			 "ak45",
-			 "OOM=%lu, not_init=%lu, fb_q_empty=%lu, "
-			 "reinit_tries=%lu, invalid_arg=%lu, get_ms_fails=%lu",
-			 ak45_health.out_of_memory,
-			 ak45_health.not_initialized,
-			 ak45_health.feedback_queue_empty,
-			 ak45_health.reinit_attempts,
-			 ak45_health.invalid_args,
-			 ak45_health.timer_get_ms_fails);
+	log_text(LOG_WAIT_MS, LOG_LVL_INFO, "ak45",
+	         "OOM=%lu, not_init=%lu, fb_q_empty=%lu, "
+	         "reinit_tries=%lu, invalid_arg=%lu, get_ms_fails=%lu",
+	         ak45_health.out_of_memory, ak45_health.not_initialized,
+	         ak45_health.feedback_queue_empty, ak45_health.reinit_attempts,
+	         ak45_health.invalid_args, ak45_health.timer_get_ms_fails);
 
-	log_text(LOG_WAIT_MS,
-			 LOG_LVL_INFO,
-			 "ak45",
-			 "timeout=%lu notif_fail=%lu start_fail=%lu cfg_fail=%lu "
-			 "stop_fail=%lu",
-			 ak45_health.init_fdcan_timeout,
-			 ak45_health.init_fdcan_notification_fails,
-			 ak45_health.init_fdcan_start_fails,
-			 ak45_health.init_fdcan_filter_cfg_fails,
-			 ak45_health.fdcan_stop_fails);
+	log_text(LOG_WAIT_MS, LOG_LVL_INFO, "ak45",
+	         "timeout=%lu notif_fail=%lu start_fail=%lu cfg_fail=%lu "
+	         "stop_fail=%lu",
+	         ak45_health.init_fdcan_timeout, ak45_health.init_fdcan_notification_fails,
+	         ak45_health.init_fdcan_start_fails, ak45_health.init_fdcan_filter_cfg_fails,
+	         ak45_health.fdcan_stop_fails);
 
-	log_text(LOG_WAIT_MS,
-			 LOG_LVL_INFO,
-			 "ak45",
-			 "telem_scale_fail=%" PRIu32 " telem_can_tx_fail=%" PRIu32 ", log_data_fail=%" PRIu32,
-			 ak45_health.telemetry_scale_fails,
-			 ak45_health.telemetry_can_tx_fails,
-			 ak45_health.sd_log_data_fails);
+	log_text(LOG_WAIT_MS, LOG_LVL_INFO, "ak45",
+	         "telem_scale_fail=%" PRIu32 " telem_can_tx_fail=%" PRIu32 ", log_data_fail=%" PRIu32,
+	         ak45_health.telemetry_scale_fails, ak45_health.telemetry_can_tx_fails,
+	         ak45_health.sd_log_data_fails);
 
 	ak45_health.cmd_tx_failed = false;
 	ak45_health.feedback_rx_failed = false;
@@ -643,7 +621,7 @@ health_status_t ak45_get_status(void) {
 }
 
 static w_status_t ak45_detect_hard_stop(const ak45_calibration_config_t *config,
-										bool check_pos_side, float32_t *hard_stop_angle_deg) {
+                                        bool check_pos_side, float32_t *hard_stop_angle_deg) {
 	if ((NULL == config) || (NULL == hard_stop_angle_deg)) {
 		ak45_health.invalid_args++;
 		return W_FAILURE;
@@ -695,7 +673,7 @@ static w_status_t ak45_detect_hard_stop(const ak45_calibration_config_t *config,
 
 	// check if timed out
 	if (((start_time_ms + config->seek_timeout_ms) < curr_time_ms) ||
-		(fabsf(cur_angle_deg) > config->seek_target_deg)) {
+	    (fabsf(cur_angle_deg) > config->seek_target_deg)) {
 		ak45_send_position_cmd(0); // no success checks since this is an emergency cmd
 		return W_FAILURE;
 	}

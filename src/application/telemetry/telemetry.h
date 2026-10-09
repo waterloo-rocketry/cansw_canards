@@ -6,7 +6,7 @@
 
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 // Offsets to map a signed scaled value into the unsigned CAN field:
 // int16: [-2^15, 2^15) -> [0, 2^16); int24: [-2^23, 2^23) -> [0, 2^24)

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 #include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
@@ -40,8 +40,8 @@ w_status_t lsm6dsv32x_int1_isr_handler();
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
-										lsm6dsv32x_raw_imu_data_t *raw_acc,
-										lsm6dsv32x_raw_imu_data_t *raw_gyro);
+                                        lsm6dsv32x_raw_imu_data_t *raw_acc,
+                                        lsm6dsv32x_raw_imu_data_t *raw_gyro);
 
 /**
  * @brief Get and report the lsm6dsv32x status for the health check system

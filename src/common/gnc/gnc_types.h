@@ -9,7 +9,7 @@
 
 #include "GNC_codegen_types.h"
 #include "common/math/math.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib.h"
 
 // ---------- FSM STATE ----------
 
