@@ -37,7 +37,12 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "GNC_codegen.h"
+#include "navigation_testcases.h"
 #include "application/init/init.h"
+#include "common/benchmark/benchmark.h"
+#include "drivers/timer/timer.h"
+#include "common/gnc/gnc_types.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,14 +71,12 @@ void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
 void MX_FREERTOS_Init(void);
-
 /* USER CODE BEGIN PFP */
-
+BENCHMARK_FILE_INIT(1);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -87,6 +90,11 @@ int main(void) {
 
 	/* MPU Configuration--------------------------------------------------------*/
 	MPU_Config();
+
+	/* Enable the CPU Cache */
+
+	/* Enable I-Cache---------------------------------------------------------*/
+	SCB_EnableICache();
 
 	/* MCU Configuration--------------------------------------------------------*/
 
@@ -135,6 +143,34 @@ int main(void) {
 	MX_TIM5_Init();
 	/* USER CODE BEGIN 2 */
 
+	timer_init();
+
+	// the benchmarking section:
+	float64_t x[11] = {0};
+	float64_t  P[121] = {0};
+    gnc_navigator_bias_t bias = {0};
+    gnc_navigator_sensor_filter_t sens_filt = {0};
+    float64_t cov_norm = {0};
+	float64_t roll_state[2] = {0}; 
+	float64_t pdyn = 0;
+    bool w_status_nav = false;
+
+	GNC_codegenPersistentData gnc_code_persistent = {0};
+	GNC_codegenStackData gnc_codegen_data = {.pd = &gnc_code_persistent};
+	GNC_codegen_initialize(&gnc_codegen_data);
+    
+	for (uint16_t i = 0; i < 1000; i++) {
+		uint16_t testcase_index = i % NAV_TESTCASES_COUNT;
+		memcpy(x, nav_testcases_x[testcase_index], sizeof(x));
+		memcpy(P, nav_testcases_P[testcase_index], sizeof(P));
+		memcpy(&bias, &(nav_testcases_bias[testcase_index]), sizeof(bias));
+		memcpy(&sens_filt, &(nav_testcases_sens_filt[testcase_index]), sizeof(sens_filt));
+
+		SINGLE_BENCHMARK_START(0);
+		navigation_codegen_entry(&gnc_codegen_data, nav_testcases_dt[testcase_index], nav_testcases_flight_phase[testcase_index], x, P, &bias, &sens_filt, &nav_testcases_sens_in[testcase_index], &cov_norm, roll_state, &pdyn, &w_status_nav);
+		SINGLE_BENCHMARK_END(0);
+	}
+
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
 	// our actual code
 	init_tasks();
@@ -158,6 +194,10 @@ int main(void) {
 		/* USER CODE BEGIN 3 */
 	}
 	/* USER CODE END 3 */
+}
+
+void get_main_benchmark_data(benchmark_data_t *p_data) {
+	GET_BENCHMARK_STAT(0, p_data);
 }
 
 /**
