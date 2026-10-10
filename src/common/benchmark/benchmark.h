@@ -5,6 +5,8 @@
 #define BENCHMARK_H
 
 #include <stdint.h>
+#include "stm32h7xx_hal.h"
+#include "rocketlib.h"
 
 // struct benchmark data
 typedef struct {
