@@ -160,7 +160,7 @@ int main(void) {
 	GNC_codegen_initialize(&gnc_codegen_data);
     
 	for (uint16_t i = 0; i < 1000; i++) {
-		uint16_t testcase_index = i % NAV_TESTCASES_COUNT;
+		uint16_t testcase_index = i % (NAV_TESTCASES_COUNT - 5) + 5;
 		memcpy(x, nav_testcases_x[testcase_index], sizeof(x));
 		memcpy(P, nav_testcases_P[testcase_index], sizeof(P));
 		memcpy(&bias, &(nav_testcases_bias[testcase_index]), sizeof(bias));
