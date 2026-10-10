@@ -15,7 +15,7 @@ Acknowledgement: https://github.com/binomaiheu/ADS1219
 
 #include "common/math/math.h"
 #include "drivers/i2c/i2c.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 /**
  * @brief Run-time handle for one ADS1219 device.
@@ -96,7 +96,7 @@ w_status_t ads1219_get_vref(ads1219_handle_t *p_handle, uint8_t *vref);
  * @return status of function
  */
 w_status_t ads1219_set_vref(ads1219_handle_t *p_handle, uint8_t vref, float64_t aref_n,
-							float64_t aref_p);
+                            float64_t aref_p);
 
 /**
  * @brief Read the current data-rate setting.

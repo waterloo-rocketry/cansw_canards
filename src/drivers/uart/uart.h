@@ -10,14 +10,14 @@
 #include "FreeRTOS.h"
 #include "application/health_checks/health_checks.h"
 #include "queue.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
 #include <stdbool.h>
 #include <stdint.h>
 
 /** @brief Maximum message length for UART reception in bytes */
-#define UART_MAX_LEN 256u
+#define UART_MAX_LEN 256U
 
 /** @brief Number of buffers in circular buffer arrangement */
 #define UART_NUM_RX_BUFFERS 2 /* Theoretically expandable to N buffers */
@@ -67,7 +67,7 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
  * @note Message length will be truncated to UART_MAX_LEN if overflow occurs
  */
 w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
-					 uint32_t timeout_ms);
+                     uint32_t timeout_ms);
 
 /**
  * @brief Write message to UART with timeout
@@ -84,7 +84,7 @@ w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
  * @note Message length will be truncated to UART_MAX_LEN if overflow occurs
  */
 w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
-					  uint32_t timeout_ms);
+                      uint32_t timeout_ms);
 
 /**
  * @brief Gets the current status of all UART channels

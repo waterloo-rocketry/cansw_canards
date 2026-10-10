@@ -132,33 +132,28 @@ health_status_t timer_get_status(void) {
 
 	// Calculate total calls
 	uint32_t total_calls = timer_health.valid_calls + timer_health.invalid_param +
-						   timer_health.timer_stopped + timer_health.timer_invalid;
+	                       timer_health.timer_stopped + timer_health.timer_invalid;
 
 	// Log call statistics
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "timer",
-			 "Call statistics: total=%lu, successful=%lu",
-			 total_calls,
-			 timer_health.valid_calls);
+	log_text(0, LOG_LVL_INFO, "timer", "Call statistics: total=%lu, successful=%lu", total_calls,
+	         timer_health.valid_calls);
 
 	// Log error statistics if any errors occurred
 	uint32_t total_errors =
 		timer_health.invalid_param + timer_health.timer_stopped + timer_health.timer_invalid;
 
 	if (total_errors > 0) {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "timer",
-				 "Error statistics: invalid_param=%lu, timer_stopped=%lu, timer_invalid=%lu",
-				 timer_health.invalid_param,
-				 timer_health.timer_stopped,
-				 timer_health.timer_invalid);
+		log_text(0, LOG_LVL_WARN, "timer",
+		         "Error statistics: invalid_param=%lu, timer_stopped=%lu, timer_invalid=%lu",
+		         timer_health.invalid_param, timer_health.timer_stopped,
+		         timer_health.timer_invalid);
 	}
 
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_TIMER,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_TIMER,
+		.error_bitfield = 0
+	};
 
 	return status;
 }

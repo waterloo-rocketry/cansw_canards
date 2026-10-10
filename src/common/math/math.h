@@ -7,7 +7,7 @@
 #include "arm_math.h"
 #include <math.h>
 
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 #include <stdbool.h>
 
@@ -118,14 +118,14 @@ static inline float64_t cot(float64_t x) {
  * @return     execution status
  */
 static inline void arm_mat_add_f64(const arm_matrix_instance_f64 *pSrcA,
-								   const arm_matrix_instance_f64 *pSrcB,
-								   arm_matrix_instance_f64 *pDst) {
+                                   const arm_matrix_instance_f64 *pSrcB,
+                                   arm_matrix_instance_f64 *pDst) {
 	uint32_t numSamples;
 	float64_t *pInA, *pInB, *pOut;
 
 	// Check for matrix size mismatch
 	if ((pSrcA->numRows != pSrcB->numRows) || (pSrcA->numCols != pSrcB->numCols) ||
-		(pSrcA->numRows != pDst->numRows) || (pSrcA->numCols != pDst->numCols)) {
+	    (pSrcA->numRows != pDst->numRows) || (pSrcA->numCols != pDst->numCols)) {
 		return;
 	}
 
@@ -148,7 +148,7 @@ static inline void arm_mat_add_f64(const arm_matrix_instance_f64 *pSrcA,
  * @param[out] pDst    points to output vector
  */
 static inline void arm_mat_vec_mult_f64(const arm_matrix_instance_f64 *pSrcMat,
-										const float64_t *pVec, float64_t *pDst) {
+                                        const float64_t *pVec, float64_t *pDst) {
 	uint16_t row, col;
 	const float64_t *pMat = pSrcMat->pData;
 	float64_t sum;
@@ -172,7 +172,7 @@ static inline void arm_mat_vec_mult_f64(const arm_matrix_instance_f64 *pSrcMat,
  * @return     execution status
  */
 static inline void arm_mat_scale_f64(const arm_matrix_instance_f64 *pSrc, float64_t scale,
-									 arm_matrix_instance_f64 *pDst) {
+                                     arm_matrix_instance_f64 *pDst) {
 	uint32_t numSamples;
 	float64_t *pIn = pSrc->pData;
 	float64_t *pOut = pDst->pData;

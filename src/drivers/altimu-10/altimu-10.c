@@ -9,9 +9,9 @@
 #include <stdio.h>
 
 // AltIMU device addresses and configuration
-#define LSM6DSO_ADDR 0x6B // addr sel pin HIGH IMU
-#define LIS3MDL_ADDR 0x1E // addr sel pin HIGH Mag
-#define LPS22DF_ADDR 0x5D // addr sel pin HIGH Baro
+#define LSM6DSO_ADDR 0x6b // addr sel pin HIGH IMU
+#define LIS3MDL_ADDR 0x1e // addr sel pin HIGH Mag
+#define LPS22DF_ADDR 0x5d // addr sel pin HIGH Baro
 
 // sensor ranges. these must be selected using the i2c init regs. Use #define to allow use in the
 // consts below
@@ -44,9 +44,9 @@ w_status_t altimu_check_sanity(void) {
 	w_status_t i2c_status = W_SUCCESS;
 	w_status_t device_status = W_SUCCESS;
 
-	const uint8_t expected_lis3mdl = 0x3D;
-	const uint8_t expected_lps22df = 0xB4;
-	const uint8_t expected_lsm6dso = 0x6C;
+	const uint8_t expected_lis3mdl = 0x3d;
+	const uint8_t expected_lps22df = 0xb4;
+	const uint8_t expected_lsm6dso = 0x6c;
 
 	uint8_t who_am_i;
 	i2c_status |= i2c_read_reg(I2C_BUS_4, LIS3MDL_ADDR, LIS3_WHO_AM_I, &who_am_i, 1);
@@ -91,7 +91,7 @@ w_status_t altimu_init() {
 
 	// Gyro ODR: 208 Hz
 	// Gyro Fs: max (+-2000 dps)
-	status |= write_1_byte(LSM6DSO_ADDR, CTRL2_G, 0x5C);
+	status |= write_1_byte(LSM6DSO_ADDR, CTRL2_G, 0x5c);
 
 	// BDU Enable
 	status |= write_1_byte(LSM6DSO_ADDR, CTRL3_C, 0x44);
@@ -184,8 +184,8 @@ w_status_t altimu_get_gyro_data(vector3d_t *data, altimu_raw_imu_data_t *raw_dat
  * @return Status of I2C read
  */
 w_status_t altimu_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
-									altimu_raw_imu_data_t *raw_acc,
-									altimu_raw_imu_data_t *raw_gyro) {
+                                    altimu_raw_imu_data_t *raw_acc,
+                                    altimu_raw_imu_data_t *raw_gyro) {
 	// Drive addr sel pin HIGH to use each device's "default" i2c addr
 	w_status_t status = gpio_write(GPIO_PIN_ALTIMU_SA0, GPIO_LEVEL_HIGH, 10);
 
@@ -282,9 +282,9 @@ w_status_t altimu_get_baro_data(altimu_barometer_data_t *data, altimu_raw_baro_d
 	status |= i2c_read_reg(I2C_BUS_4, LPS22DF_ADDR, LPS_PRESS_OUT_XL, raw_bytes, 5);
 	if (W_SUCCESS == status) {
 		raw_data->pressure = (int32_t)((((uint32_t)raw_bytes[2] << 16) |
-										((uint32_t)raw_bytes[1] << 8) | (uint32_t)raw_bytes[0])
-									   << 8) >>
-							 8;
+		                                ((uint32_t)raw_bytes[1] << 8) | (uint32_t)raw_bytes[0])
+		                               << 8) >>
+		                     8;
 
 		raw_data->temperature = (int16_t)((raw_bytes[4] << 8) | raw_bytes[3]);
 		data->pressure = raw_data->pressure * BARO_FS;

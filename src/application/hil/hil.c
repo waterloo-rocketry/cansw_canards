@@ -245,7 +245,7 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	uint32_t timeout_ms = 0; // 30 second timeout
 	uint32_t start_time = xTaskGetTickCount();
 	while (!hil_ctx.is_reading_avail &&
-		   (xTaskGetTickCount() - start_time) < pdMS_TO_TICKS(timeout_ms)) {
+	       (xTaskGetTickCount() - start_time) < pdMS_TO_TICKS(timeout_ms)) {
 		vTaskDelay(pdMS_TO_TICKS(1)); // wait 1 ms before checking again
 	}
 	// critical section
@@ -298,42 +298,20 @@ w_status_t hil_wait_for_simulink_data(all_sensors_data_t *out) {
 	out->motor_encoder_meas.meas = ready_packet->motor_encoder;
 	out->motor_encoder_meas.is_new = true;
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "hil rx imu",
-			 "acc %f, %f, %f gyro %f, %f, %f mag %f, %f, %f baro %f",
-			 out->board_meas.board_imu.accel.x,
-			 out->board_meas.board_imu.accel.y,
-			 out->board_meas.board_imu.accel.z,
-			 out->board_meas.board_imu.gyro.x,
-			 out->board_meas.board_imu.gyro.y,
-			 out->board_meas.board_imu.gyro.z,
-			 out->board_meas.board_mag.meas.x,
-			 out->board_meas.board_mag.meas.y,
-			 out->board_meas.board_mag.meas.z,
-			 out->board_meas.board_baro.meas);
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "hil rx mti",
-			 "acc %f, %f, %f gyro %f, %f, %f mag %f, %f, %f baro %f",
-			 out->mti_meas.mti_accel.meas.x,
-			 out->mti_meas.mti_accel.meas.y,
-			 out->mti_meas.mti_accel.meas.z,
-			 out->mti_meas.mti_gyro.meas.x,
-			 out->mti_meas.mti_gyro.meas.y,
-			 out->mti_meas.mti_gyro.meas.z,
-			 out->mti_meas.mti_mag.meas.x,
-			 out->mti_meas.mti_mag.meas.y,
-			 out->mti_meas.mti_mag.meas.z,
-			 out->mti_meas.mti_baro.meas);
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "hil rx ad",
-			 "acc %f, %f, %f gyro %f",
-			 out->ad_meas.ad_accel.meas.x,
-			 out->ad_meas.ad_accel.meas.y,
-			 out->ad_meas.ad_accel.meas.z,
-			 out->ad_meas.ad_gyro.meas);
+	log_text(1, LOG_LVL_INFO, "hil rx imu", "acc %f, %f, %f gyro %f, %f, %f mag %f, %f, %f baro %f",
+	         out->board_meas.board_imu.accel.x, out->board_meas.board_imu.accel.y,
+	         out->board_meas.board_imu.accel.z, out->board_meas.board_imu.gyro.x,
+	         out->board_meas.board_imu.gyro.y, out->board_meas.board_imu.gyro.z,
+	         out->board_meas.board_mag.meas.x, out->board_meas.board_mag.meas.y,
+	         out->board_meas.board_mag.meas.z, out->board_meas.board_baro.meas);
+	log_text(1, LOG_LVL_INFO, "hil rx mti", "acc %f, %f, %f gyro %f, %f, %f mag %f, %f, %f baro %f",
+	         out->mti_meas.mti_accel.meas.x, out->mti_meas.mti_accel.meas.y,
+	         out->mti_meas.mti_accel.meas.z, out->mti_meas.mti_gyro.meas.x,
+	         out->mti_meas.mti_gyro.meas.y, out->mti_meas.mti_gyro.meas.z,
+	         out->mti_meas.mti_mag.meas.x, out->mti_meas.mti_mag.meas.y,
+	         out->mti_meas.mti_mag.meas.z, out->mti_meas.mti_baro.meas);
+	log_text(1, LOG_LVL_INFO, "hil rx ad", "acc %f, %f, %f gyro %f", out->ad_meas.ad_accel.meas.x,
+	         out->ad_meas.ad_accel.meas.y, out->ad_meas.ad_accel.meas.z, out->ad_meas.ad_gyro.meas);
 	log_text(1, LOG_LVL_INFO, "hil rx encoder", "meas %f", out->motor_encoder_meas.meas);
 
 	log_text(1, LOG_LVL_INFO, "hil", "rx footer: %c", ready_packet->footer);
@@ -350,15 +328,15 @@ static hil_tx_packet_t tx_packet = {0};
 static controller_output_t newest_cntl_out = {0};
 
 w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t *p_nav_out,
-								 gnc_x_state_t *p_x_state, gnc_controller_ctx_t *p_controller_ctx,
-								 controller_input_t *p_cntl_in, controller_output_t *p_cntl_out,
-								 bool ran_ctrl) {
+                                 gnc_x_state_t *p_x_state, gnc_controller_ctx_t *p_controller_ctx,
+                                 controller_input_t *p_cntl_in, controller_output_t *p_cntl_out,
+                                 bool ran_ctrl) {
 	if (ran_ctrl) {
 		memcpy(&newest_cntl_out, p_cntl_out, sizeof(newest_cntl_out));
 	}
 
-	log_text(
-		1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf", newest_cntl_out.canard_command_angle_rad);
+	log_text(1, LOG_LVL_DEBUG, "HIL", "start send tx usb %lf",
+	         newest_cntl_out.canard_command_angle_rad);
 	tx_packet.header[0] = HIL_HEADER_CHAR_0;
 	tx_packet.header[1] = HIL_HEADER_CHAR_1;
 	tx_packet.header[2] = HIL_HEADER_CHAR_2;
@@ -392,21 +370,11 @@ w_status_t hil_send_simulink_cmd(navigator_input_t *p_nav_in, navigator_output_t
 		log_text(1, LOG_LVL_INFO, "hil", "sent tx usb %lf", tx_packet.payload.canard_cmd);
 	}
 
-	log_text(1,
-			 LOG_LVL_DEBUG,
-			 "HIL",
-			 "att %f, %f, %f, %f rates %f, %f, %f vel %f, %f, %f alt %f",
-			 tx_packet.payload.att_w,
-			 tx_packet.payload.att_x,
-			 tx_packet.payload.att_y,
-			 tx_packet.payload.att_z,
-			 tx_packet.payload.rates_x,
-			 tx_packet.payload.rates_y,
-			 tx_packet.payload.rates_z,
-			 tx_packet.payload.vel_x,
-			 tx_packet.payload.vel_y,
-			 tx_packet.payload.vel_z,
-			 tx_packet.payload.altitude);
+	log_text(1, LOG_LVL_DEBUG, "HIL", "att %f, %f, %f, %f rates %f, %f, %f vel %f, %f, %f alt %f",
+	         tx_packet.payload.att_w, tx_packet.payload.att_x, tx_packet.payload.att_y,
+	         tx_packet.payload.att_z, tx_packet.payload.rates_x, tx_packet.payload.rates_y,
+	         tx_packet.payload.rates_z, tx_packet.payload.vel_x, tx_packet.payload.vel_y,
+	         tx_packet.payload.vel_z, tx_packet.payload.altitude);
 
 	// vTaskDelay(10);
 	// log_text(1, LOG_LVL_DEBUG, "HIL", "cov_norm %f where_it_is %f, %f where_it_isnt %f, %f",

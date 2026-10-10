@@ -13,7 +13,7 @@ flags = env.ParseFlags()  # {'CCFLAGS': [...], 'LINKFLAGS': [...]}
 print(flags)
 
 # set configuration
-CLANG_FORMAT_VERSION = "21"
+CLANG_FORMAT_VERSION = "23"
 DOWNLOAD_DIR = Dir('#/scripts').abspath
 SOURCE_DIR  = Dir('#').abspath
 

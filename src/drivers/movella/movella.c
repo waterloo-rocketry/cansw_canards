@@ -213,34 +213,26 @@ void movella_task(void *parameters) {
 }
 
 health_status_t movella_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_MOVELLA,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_MOVELLA,
+		.error_bitfield = 0
+	};
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "movella",
-			 "init=%d, configured=%d, dead_data=%d, recent_dead_data_count=%d",
-			 s_movella.initialized,
-			 s_movella.configured,
-			 s_movella.latest_data.is_dead,
-			 movella_health.recent_dead_data_count);
+	log_text(10, LOG_LVL_INFO, "movella",
+	         "init=%d, configured=%d, dead_data=%d, recent_dead_data_count=%d",
+	         s_movella.initialized, s_movella.configured, s_movella.latest_data.is_dead,
+	         movella_health.recent_dead_data_count);
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "movella",
-			 "init_double_init=%d, init_null_mutex=%d, get_data_not_init=%d",
-			 movella_health.init_double_init,
-			 movella_health.init_null_mutex,
-			 movella_health.get_data_not_init);
+	log_text(10, LOG_LVL_INFO, "movella",
+	         "init_double_init=%d, init_null_mutex=%d, get_data_not_init=%d",
+	         movella_health.init_double_init, movella_health.init_null_mutex,
+	         movella_health.get_data_not_init);
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "movella",
-			 "get_data_null_out=%d, get_data_failed_take_mutex=%d, cb_timer_fail=%d",
-			 movella_health.get_data_null_out_param,
-			 movella_health.get_data_failed_take_mutex,
-			 movella_health.event_callback_timer_fail);
+	log_text(10, LOG_LVL_INFO, "movella",
+	         "get_data_null_out=%d, get_data_failed_take_mutex=%d, cb_timer_fail=%d",
+	         movella_health.get_data_null_out_param, movella_health.get_data_failed_take_mutex,
+	         movella_health.event_callback_timer_fail);
 
 	if (movella_health.recent_dead_data_count) {
 		movella_health.recent_dead_data_count = 0;

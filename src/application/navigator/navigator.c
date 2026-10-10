@@ -4,7 +4,7 @@
 #include "semphr.h"
 #include "task.h"
 
-#include "canlib.h"
+#include "rocketlib.h"
 
 #include "GNC_codegen.h"
 #include "application/can_handler/can_handler.h"
@@ -101,18 +101,14 @@ static w_status_t nav_can_telemetry(void) {
 	nav_pt1_enc_status |=
 		can_encode_scaled_float(SCALE_NAV_ALTITUDE, nav_value_lastest_raw.altitude, &altitude);
 
-	nav_pt1_enc_status |= can_encode_scaled_float(
-		SCALE_NAV_VARIANCE_NORM, nav_value_lastest_raw.variance_norm, &varnorm);
+	nav_pt1_enc_status |= can_encode_scaled_float(SCALE_NAV_VARIANCE_NORM,
+	                                              nav_value_lastest_raw.variance_norm, &varnorm);
 
 	if (W_SUCCESS == nav_pt1_enc_status) {
 		can_msg_t msg_qw_alt_var = {0};
-		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-										 (uint16_t)timestamp,
-										 DEM_3D_SENSOR_CANARD_NAV_ORI_QW_ALT_VARNORM,
-										 (uint16_t)(orientation_w + TELEMETRY_INT16_OFFSET),
-										 altitude,
-										 varnorm,
-										 &msg_qw_alt_var);
+		build_3d_analog_sensor_16bit_msg(
+			PRIO_LOW, (uint16_t)timestamp, DEM_3D_SENSOR_CANARD_NAV_ORI_QW_ALT_VARNORM,
+			(uint16_t)(orientation_w + TELEMETRY_INT16_OFFSET), altitude, varnorm, &msg_qw_alt_var);
 
 		if (can_handler_transmit(&msg_qw_alt_var) != W_SUCCESS) {
 			navigator_error_stats.can_telem_tx_fail_count++;
@@ -143,13 +139,11 @@ static w_status_t nav_can_telemetry(void) {
 		SCALE_NAV_ORIENTATION, nav_value_lastest_raw.orientation[3], &orientation_z);
 	if (W_SUCCESS == nav_pt2_enc_status) {
 		can_msg_t msg_qxyz = {0};
-		build_3d_analog_sensor_16bit_msg(PRIO_LOW,
-										 (uint16_t)timestamp,
-										 DEM_3D_SENSOR_CANARD_NAV_ORI_QX_QY_QZ,
-										 (uint16_t)(orientation_x + TELEMETRY_INT16_OFFSET),
-										 (uint16_t)(orientation_y + TELEMETRY_INT16_OFFSET),
-										 (uint16_t)(orientation_z + TELEMETRY_INT16_OFFSET),
-										 &msg_qxyz);
+		build_3d_analog_sensor_16bit_msg(
+			PRIO_LOW, (uint16_t)timestamp, DEM_3D_SENSOR_CANARD_NAV_ORI_QX_QY_QZ,
+			(uint16_t)(orientation_x + TELEMETRY_INT16_OFFSET),
+			(uint16_t)(orientation_y + TELEMETRY_INT16_OFFSET),
+			(uint16_t)(orientation_z + TELEMETRY_INT16_OFFSET), &msg_qxyz);
 
 		if (can_handler_transmit(&msg_qxyz) != W_SUCCESS) {
 			navigator_error_stats.can_telem_tx_fail_count++;
@@ -176,19 +170,16 @@ static w_status_t nav_can_telemetry(void) {
 			SCALE_NAV_VELOCITY, (float32_t)nav_value_lastest_raw.velocity[axis], &velocity);
 
 		int32_t angular_velocity = 0;
-		nav_vel_ang_vel_enc_status |=
-			can_encode_scaled_float(SCALE_NAV_ANGULAR_VELOCITY,
-									(float32_t)nav_value_lastest_raw.angular_velocity[axis],
-									&angular_velocity);
+		nav_vel_ang_vel_enc_status |= can_encode_scaled_float(
+			SCALE_NAV_ANGULAR_VELOCITY, (float32_t)nav_value_lastest_raw.angular_velocity[axis],
+			&angular_velocity);
 
 		if (W_SUCCESS == nav_vel_ang_vel_enc_status) {
 			can_msg_t msg = {0};
-			build_2d_analog_sensor_24bit_msg(PRIO_LOW,
-											 (uint16_t)timestamp,
-											 axis_ids[axis],
-											 (uint32_t)(velocity + TELEMETRY_INT24_OFFSET),
-											 (uint32_t)(angular_velocity + TELEMETRY_INT24_OFFSET),
-											 &msg);
+			build_2d_analog_sensor_24bit_msg(PRIO_LOW, (uint16_t)timestamp, axis_ids[axis],
+			                                 (uint32_t)(velocity + TELEMETRY_INT24_OFFSET),
+			                                 (uint32_t)(angular_velocity + TELEMETRY_INT24_OFFSET),
+			                                 &msg);
 
 			if (can_handler_transmit(&msg) != W_SUCCESS) {
 				navigator_error_stats.can_telem_tx_fail_count++;
@@ -301,7 +292,7 @@ w_status_t navigator_init(void) {
 }
 
 w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t timestamp_tenth_ms,
-						  navigator_ctx_t *p_ctx, navigator_output_t *p_output) {
+                          navigator_ctx_t *p_ctx, navigator_output_t *p_output) {
 	if ((NULL == p_input) || (NULL == p_ctx) || (NULL == p_output)) {
 		navigator_error_stats.null_ctx_count++;
 		navigator_error_stats.ctx_is_null = true;
@@ -318,13 +309,13 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 	// status represents if this sensor should be used in this cycle of nav
 	// lsm6
 	memcpy(codegen_sensor_input.board_accel.meas,
-		   p_input->sensor_data->board_meas.board_imu.accel.array,
-		   sizeof(codegen_sensor_input.board_accel.meas));
+	       p_input->sensor_data->board_meas.board_imu.accel.array,
+	       sizeof(codegen_sensor_input.board_accel.meas));
 	codegen_sensor_input.board_accel.status = p_input->sensor_data->board_meas.board_imu.is_new;
 
 	memcpy(codegen_sensor_input.board_gyro.meas,
-		   p_input->sensor_data->board_meas.board_imu.gyro.array,
-		   sizeof(codegen_sensor_input.board_gyro.meas));
+	       p_input->sensor_data->board_meas.board_imu.gyro.array,
+	       sizeof(codegen_sensor_input.board_gyro.meas));
 	codegen_sensor_input.board_gyro.status = p_input->sensor_data->board_meas.board_imu.is_new;
 
 	// Baro
@@ -333,33 +324,29 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 
 	// Mag
 	memcpy(codegen_sensor_input.board_mag.meas,
-		   p_input->sensor_data->board_meas.board_mag.meas.array,
-		   sizeof(codegen_sensor_input.board_mag.meas));
+	       p_input->sensor_data->board_meas.board_mag.meas.array,
+	       sizeof(codegen_sensor_input.board_mag.meas));
 	codegen_sensor_input.board_mag.status = p_input->sensor_data->board_meas.board_mag.is_new;
 
 	// MTI
-	memcpy(codegen_sensor_input.mti_accel.meas,
-		   p_input->sensor_data->mti_meas.mti_accel.meas.array,
-		   sizeof(codegen_sensor_input.mti_accel.meas));
+	memcpy(codegen_sensor_input.mti_accel.meas, p_input->sensor_data->mti_meas.mti_accel.meas.array,
+	       sizeof(codegen_sensor_input.mti_accel.meas));
 	codegen_sensor_input.mti_accel.status = p_input->sensor_data->mti_meas.mti_accel.is_new;
 
-	memcpy(codegen_sensor_input.mti_gyro.meas,
-		   p_input->sensor_data->mti_meas.mti_gyro.meas.array,
-		   sizeof(codegen_sensor_input.mti_gyro.meas));
+	memcpy(codegen_sensor_input.mti_gyro.meas, p_input->sensor_data->mti_meas.mti_gyro.meas.array,
+	       sizeof(codegen_sensor_input.mti_gyro.meas));
 	codegen_sensor_input.mti_gyro.status = p_input->sensor_data->mti_meas.mti_gyro.is_new;
 
-	memcpy(codegen_sensor_input.mti_mag.meas,
-		   p_input->sensor_data->mti_meas.mti_mag.meas.array,
-		   sizeof(codegen_sensor_input.mti_mag.meas));
+	memcpy(codegen_sensor_input.mti_mag.meas, p_input->sensor_data->mti_meas.mti_mag.meas.array,
+	       sizeof(codegen_sensor_input.mti_mag.meas));
 	codegen_sensor_input.mti_mag.status = p_input->sensor_data->mti_meas.mti_mag.is_new;
 
 	codegen_sensor_input.mti_baro.meas = p_input->sensor_data->mti_meas.mti_baro.meas;
 	codegen_sensor_input.mti_baro.status = p_input->sensor_data->mti_meas.mti_baro.is_new;
 
 	// AD Accel
-	memcpy(codegen_sensor_input.ad_accel.meas,
-		   p_input->sensor_data->ad_meas.ad_accel.meas.array,
-		   sizeof(codegen_sensor_input.ad_accel.meas));
+	memcpy(codegen_sensor_input.ad_accel.meas, p_input->sensor_data->ad_meas.ad_accel.meas.array,
+	       sizeof(codegen_sensor_input.ad_accel.meas));
 	codegen_sensor_input.ad_accel.status = p_input->sensor_data->ad_meas.ad_accel.is_new;
 
 	codegen_sensor_input.ad_gyro.meas[0] = p_input->sensor_data->ad_meas.ad_gyro.meas; // x axis
@@ -369,18 +356,11 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 
 	bool is_run = false;
 
-	navigation_codegen_entry(p_ctx->p_gnc_stack_data,
-							 dt_sec,
-							 in_flight_phase,
-							 p_ctx->gnc_navigator_ctx.x.arr,
-							 p_ctx->gnc_navigator_ctx.P,
-							 &(p_ctx->gnc_navigator_ctx.bias),
-							 &(p_ctx->gnc_navigator_ctx.sensor_filter),
-							 &codegen_sensor_input,
-							 &(p_output->cov_norm),
-							 p_output->roll_state,
-							 &(p_output->dynamic_pressure),
-							 &is_run);
+	navigation_codegen_entry(
+		p_ctx->p_gnc_stack_data, dt_sec, in_flight_phase, p_ctx->gnc_navigator_ctx.x.arr,
+		p_ctx->gnc_navigator_ctx.P, &(p_ctx->gnc_navigator_ctx.bias),
+		&(p_ctx->gnc_navigator_ctx.sensor_filter), &codegen_sensor_input, &(p_output->cov_norm),
+		p_output->roll_state, &(p_output->dynamic_pressure), &is_run);
 	if (is_run) { // if nav ran
 		p_ctx->last_run_tenth_ms = timestamp_tenth_ms;
 	} else {
@@ -395,15 +375,12 @@ w_status_t navigator_step(const navigator_input_t *p_input, const uint32_t times
 	nav_value_handle_t nav_latest_values;
 
 	// Copied unscaled; scaling happens at tx.
-	memcpy(nav_latest_values.orientation,
-		   p_ctx->gnc_navigator_ctx.x.q.array,
-		   sizeof(nav_latest_values.orientation));
-	memcpy(nav_latest_values.angular_velocity,
-		   p_ctx->gnc_navigator_ctx.x.ang_rate.array,
-		   sizeof(nav_latest_values.angular_velocity));
-	memcpy(nav_latest_values.velocity,
-		   p_ctx->gnc_navigator_ctx.x.vel.array,
-		   sizeof(nav_latest_values.velocity));
+	memcpy(nav_latest_values.orientation, p_ctx->gnc_navigator_ctx.x.q.array,
+	       sizeof(nav_latest_values.orientation));
+	memcpy(nav_latest_values.angular_velocity, p_ctx->gnc_navigator_ctx.x.ang_rate.array,
+	       sizeof(nav_latest_values.angular_velocity));
+	memcpy(nav_latest_values.velocity, p_ctx->gnc_navigator_ctx.x.vel.array,
+	       sizeof(nav_latest_values.velocity));
 	nav_latest_values.altitude = p_ctx->gnc_navigator_ctx.x.altitude;
 
 	// variance_norm is not part of the x-state; it comes from the nav output
@@ -424,16 +401,16 @@ w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_
 	// check if sensor is alive
 	if (p_sensor_data->board_meas.board_imu.is_new) {
 		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.board_accel,
-			   p_sensor_data->board_meas.board_imu.accel.array,
-			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.board_accel));
+		       p_sensor_data->board_meas.board_imu.accel.array,
+		       sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.board_accel));
 		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.board_gyro,
-			   p_sensor_data->board_meas.board_imu.gyro.array,
-			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.board_gyro));
+		       p_sensor_data->board_meas.board_imu.gyro.array,
+		       sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.board_gyro));
 	}
 	if (p_sensor_data->board_meas.board_mag.is_new) {
 		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.board_mag,
-			   p_sensor_data->board_meas.board_mag.meas.array,
-			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.board_mag));
+		       p_sensor_data->board_meas.board_mag.meas.array,
+		       sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.board_mag));
 	}
 	if (p_sensor_data->board_meas.board_baro.is_new) {
 		p_ctx->gnc_navigator_ctx.sensor_filter.board_baro =
@@ -442,8 +419,8 @@ w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_
 
 	if (p_sensor_data->ad_meas.ad_accel.is_new) {
 		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.ad_accel,
-			   p_sensor_data->ad_meas.ad_accel.meas.array,
-			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.ad_accel));
+		       p_sensor_data->ad_meas.ad_accel.meas.array,
+		       sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.ad_accel));
 	}
 	if (p_sensor_data->ad_meas.ad_gyro.is_new) {
 		p_ctx->gnc_navigator_ctx.sensor_filter.ad_gyro[0] = p_sensor_data->ad_meas.ad_gyro.meas;
@@ -453,18 +430,18 @@ w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_
 
 	if (p_sensor_data->mti_meas.mti_accel.is_new) {
 		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.mti_accel,
-			   p_sensor_data->mti_meas.mti_accel.meas.array,
-			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.mti_accel));
+		       p_sensor_data->mti_meas.mti_accel.meas.array,
+		       sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.mti_accel));
 	}
 	if (p_sensor_data->mti_meas.mti_gyro.is_new) {
 		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.mti_gyro,
-			   p_sensor_data->mti_meas.mti_gyro.meas.array,
-			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.mti_gyro));
+		       p_sensor_data->mti_meas.mti_gyro.meas.array,
+		       sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.mti_gyro));
 	}
 	if (p_sensor_data->mti_meas.mti_mag.is_new) {
 		memcpy(p_ctx->gnc_navigator_ctx.sensor_filter.mti_mag,
-			   p_sensor_data->mti_meas.mti_mag.meas.array,
-			   sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.mti_mag));
+		       p_sensor_data->mti_meas.mti_mag.meas.array,
+		       sizeof(p_ctx->gnc_navigator_ctx.sensor_filter.mti_mag));
 	}
 	if (p_sensor_data->mti_meas.mti_baro.is_new) {
 		p_ctx->gnc_navigator_ctx.sensor_filter.mti_baro = p_sensor_data->mti_meas.mti_baro.meas;
@@ -473,9 +450,11 @@ w_status_t pad_filter_init(navigator_ctx_t *p_ctx, all_sensors_data_t *p_sensor_
 }
 
 health_status_t navigator_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_NAVIGATOR,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_NAVIGATOR,
+		.error_bitfield = 0
+	};
 
 	if (navigator_error_stats.ctx_is_null) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
@@ -508,22 +487,16 @@ health_status_t navigator_get_status(void) {
 
 	// Log all error statistics
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "navigator",
-			 "init=%lu, null_ctx=%lu, nav_not_run=%lu, can_encode_fail=%lu",
-			 navigator_error_stats.is_init,
-			 navigator_error_stats.null_ctx_count,
-			 navigator_error_stats.total_nav_not_run_count,
-			 navigator_error_stats.can_encode_fail_count);
+	log_text(10, LOG_LVL_INFO, "navigator",
+	         "init=%lu, null_ctx=%lu, nav_not_run=%lu, can_encode_fail=%lu",
+	         navigator_error_stats.is_init, navigator_error_stats.null_ctx_count,
+	         navigator_error_stats.total_nav_not_run_count,
+	         navigator_error_stats.can_encode_fail_count);
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "navigator",
-			 "timestamp_fail=%lu, log_data_fail=%lu, can_telem_tx_fail=%lu",
-			 navigator_error_stats.timestamp_fail_count,
-			 navigator_error_stats.log_data_fail_count,
-			 navigator_error_stats.can_telem_tx_fail_count);
+	log_text(10, LOG_LVL_INFO, "navigator",
+	         "timestamp_fail=%lu, log_data_fail=%lu, can_telem_tx_fail=%lu",
+	         navigator_error_stats.timestamp_fail_count, navigator_error_stats.log_data_fail_count,
+	         navigator_error_stats.can_telem_tx_fail_count);
 
 	return status;
 }

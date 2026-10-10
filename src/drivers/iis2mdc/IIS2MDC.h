@@ -5,7 +5,7 @@
 
 #include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 /**
  * @brief Raw magnetometer register data for each axis

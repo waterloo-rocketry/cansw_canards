@@ -6,7 +6,7 @@
 
 #include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 typedef struct {
 	bool comm_failure;

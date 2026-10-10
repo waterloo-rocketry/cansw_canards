@@ -6,11 +6,10 @@
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
 #include "application/power_handler/power_handler.h"
-#include "canlib/message_types.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 /**
  * States of the power handler.
@@ -73,42 +72,30 @@ static power_input_source_t get_active_input(void) {
 
 	status = adc_get_converted_val(VSENS_CHG, &vsens_chg);
 	if (W_SUCCESS != status) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "adc communication failed while getting charge voltage. Status: %d",
-				 status);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "adc communication failed while getting charge voltage. Status: %d", status);
 	}
 
 	status = adc_get_converted_val(VSENS_RKT, &vsens_rkt);
 	if (W_SUCCESS != status) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "adc communication failed while getting rocket voltage.Status: %d",
-				 status);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "adc communication failed while getting rocket voltage.Status: %d", status);
 	}
 
 	status = adc_get_converted_val(VSENS_BAT1, &vsens_bat1);
 	if (W_SUCCESS != status) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "adc communication failed while getting battery 1 voltage.Status: %d",
-				 status);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "adc communication failed while getting battery 1 voltage.Status: %d", status);
 	}
 
 	status = adc_get_converted_val(VSENS_BAT2, &vsens_bat2);
 	if (W_SUCCESS != status) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "adc communication failed while getting battery 2 voltage.Status: %d",
-				 status);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "adc communication failed while getting battery 2 voltage.Status: %d", status);
 	}
 
 	if (((int)vsens_chg == 0) && ((int)vsens_rkt == 0) && ((int)vsens_bat1 == 0) &&
-		((int)vsens_bat2 == 0)) {
+	    ((int)vsens_bat2 == 0)) {
 		return POWER_INPUT_NONE; // charged by usb, but we don't really care about usb during flight
 	} else if ((vsens_chg >= vsens_rkt) && (vsens_chg >= vsens_bat1) && (vsens_chg >= vsens_bat2)) {
 		return POWER_INPUT_CHG;
@@ -132,58 +119,49 @@ static w_status_t transmit_curr_volt_status_can_msg() {
 	w_status_t can_tx_status = W_SUCCESS;
 
 	if (W_SUCCESS != timer_get_ms(&timestamp)) {
-		log_text(
-			1, LOG_LVL_WARN, "power_handler", "Failed to get timestamp for power status can msg.");
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "Failed to get timestamp for power status can msg.");
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(VSENS_BAT1, &adc_value)) {
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  (uint16_t)timestamp,
-									  SENSOR_RA_BATT_VOLT_1,
-									  (uint16_t)(adc_value * mV_per_V),
-									  &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_VOLT_1,
+		                              (uint16_t)(adc_value * mV_per_V), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(VSENS_BAT2, &adc_value)) {
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  (uint16_t)timestamp,
-									  SENSOR_RA_BATT_VOLT_2,
-									  (uint16_t)(adc_value * mV_per_V),
-									  &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_VOLT_2,
+		                              (uint16_t)(adc_value * mV_per_V), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_BAT1, &adc_value)) {
-		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_CURR_1, (uint16_t)(adc_value), &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_CURR_1,
+		                              (uint16_t)(adc_value), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_BAT2, &adc_value)) {
-		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_CURR_2, (uint16_t)(adc_value), &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_RA_BATT_CURR_2,
+		                              (uint16_t)(adc_value), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_5V, &adc_value)) {
-		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_5V_CURR, (uint16_t)(adc_value), &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_5V_CURR,
+		                              (uint16_t)(adc_value), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(VSENS_RKT, &adc_value)) {
-		build_analog_sensor_16bit_msg(
-			PRIO_LOW, (uint16_t)timestamp, SENSOR_12V_VOLT, (uint16_t)(adc_value * mV_per_V), &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_12V_VOLT,
+		                              (uint16_t)(adc_value * mV_per_V), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(VSENS_CHG, &adc_value)) {
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  (uint16_t)timestamp,
-									  SENSOR_CHARGE_VOLT,
-									  (uint16_t)(adc_value * mV_per_V),
-									  &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_CHARGE_VOLT,
+		                              (uint16_t)(adc_value * mV_per_V), &msg);
 		can_tx_status |= can_handler_transmit(&msg);
 	}
 
@@ -197,9 +175,11 @@ static w_status_t transmit_curr_volt_status_can_msg() {
 health_status_t power_handler_get_status(void) {
 	w_status_t gpio_read_status = W_SUCCESS;
 	float adc_value = 0;
-	health_status_t status = {.error_bitfield = 0,
-							  .module_id = CANARDS_MODULE_ID_POWER_HANDLER,
-							  .severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK};
+	health_status_t status = {
+		.error_bitfield = 0,
+		.module_id = CANARDS_MODULE_ID_POWER_HANDLER,
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK
+	};
 
 	// Check battery fault pins and external 5V power good
 	gpio_level_t flt1 = GPIO_LEVEL_HIGH;
@@ -212,31 +192,22 @@ health_status_t power_handler_get_status(void) {
 
 	if (W_SUCCESS != gpio_read_status) {
 		status.error_bitfield |= (1U) << CANARDS_MODULE_E_HARDWARE_FAIL_OFFSET;
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "ERROR: gpio read failed during get status. Code:%lx",
-				 gpio_read_status);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "ERROR: gpio read failed during get status. Code:%lx", gpio_read_status);
 	}
 
 	if (GPIO_LEVEL_LOW == flt1) {
 		status.error_bitfield |= (1U) << CANARDS_MODULE_E_BAT1_FAULT_OFFSET;
 		power_handler_status.lipo_1_fault_count++;
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "bat 1 power fault. Fault count: %d",
-				 power_handler_status.lipo_1_fault_count);
+		log_text(1, LOG_LVL_WARN, "power_handler", "bat 1 power fault. Fault count: %d",
+		         power_handler_status.lipo_1_fault_count);
 	}
 
 	if (GPIO_LEVEL_LOW == flt2) {
 		status.error_bitfield |= (1U) << CANARDS_MODULE_E_BAT2_FAULT_OFFSET;
 		power_handler_status.lipo_2_fault_count++;
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "bat 2 power fault. Fault count: %d",
-				 power_handler_status.lipo_2_fault_count);
+		log_text(1, LOG_LVL_WARN, "power_handler", "bat 2 power fault. Fault count: %d",
+		         power_handler_status.lipo_2_fault_count);
 	}
 
 	// External 5V output device fault
@@ -275,22 +246,17 @@ uint32_t power_handler_get_board_status(void) {
 	if (gpio_read(GPIO_PIN_PG_EXT_5V, &pg_ext_5v, 5) != W_SUCCESS) {
 		board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 		power_handler_status.io_error_count++;
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "gpio read failed for ext 5v power good. IO error count: %d",
-				 power_handler_status.io_error_count);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "gpio read failed for ext 5v power good. IO error count: %d",
+		         power_handler_status.io_error_count);
 	}
 
 	// External 5V output efuse fault
 	if (GPIO_LEVEL_LOW == pg_ext_5v) {
 		board_bitfield |= (1U) << E_5V_EFUSE_FAULT_OFFSET;
 		power_handler_status.external_5v_fault_count++;
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "ext 5v output fault. Fault count: %d",
-				 power_handler_status.external_5v_fault_count);
+		log_text(1, LOG_LVL_WARN, "power_handler", "ext 5v output fault. Fault count: %d",
+		         power_handler_status.external_5v_fault_count);
 	}
 
 	// external and internal 5V share the same current sense, so if either is overcurrent it will
@@ -299,40 +265,32 @@ uint32_t power_handler_get_board_status(void) {
 		if (adc_value > I5V_MAX) {
 			board_bitfield |= (1U) << E_5V_OVER_CURR_OFFSET;
 			power_handler_status.overcurrent_count++;
-			log_text(1,
-					 LOG_LVL_WARN,
-					 "power_handler",
-					 "5v power rail current fault. Fault count: %d",
-					 power_handler_status.overcurrent_count);
+			log_text(1, LOG_LVL_WARN, "power_handler",
+			         "5v power rail current fault. Fault count: %d",
+			         power_handler_status.overcurrent_count);
 		}
 	} else {
 		board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 		power_handler_status.io_error_count++;
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "adc read failed for 5v rail current. IO error count: %d",
-				 power_handler_status.io_error_count);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "adc read failed for 5v rail current. IO error count: %d",
+		         power_handler_status.io_error_count);
 	}
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_3V3, &adc_value)) {
 		if (adc_value > I3V3_MAX) {
 			board_bitfield |= (1U) << E_LOCAL_RAIL_OVER_CURR_OFFSET;
 			power_handler_status.overcurrent_count++;
-			log_text(1,
-					 LOG_LVL_WARN,
-					 "power_handler",
-					 "3v3 power rail current fault. Fault count: %d",
-					 power_handler_status.overcurrent_count);
+			log_text(1, LOG_LVL_WARN, "power_handler",
+			         "3v3 power rail current fault. Fault count: %d",
+			         power_handler_status.overcurrent_count);
 		}
 	} else {
 		board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 		power_handler_status.io_error_count++;
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "adc read failed for 3v3 rail current. IO error count: %d",
-				 power_handler_status.io_error_count);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "adc read failed for 3v3 rail current. IO error count: %d",
+		         power_handler_status.io_error_count);
 	}
 
 	power_input_source_t active_input = get_active_input();
@@ -345,20 +303,16 @@ uint32_t power_handler_get_board_status(void) {
 				if (adc_value > VCHG_MAX) {
 					board_bitfield |= (1U) << E_CHARGE_RAIL_OVER_VOLT_OFFSET;
 					power_handler_status.charge_rail_over_volt_count++;
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "power_handler",
-							 "charge rail over voltage. Fault count: %d",
-							 power_handler_status.charge_rail_over_volt_count);
+					log_text(1, LOG_LVL_WARN, "power_handler",
+					         "charge rail over voltage. Fault count: %d",
+					         power_handler_status.charge_rail_over_volt_count);
 				}
 			} else {
 				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 				power_handler_status.io_error_count++;
-				log_text(1,
-						 LOG_LVL_WARN,
-						 "power_handler",
-						 "adc read failed for charge voltage. IO error count: %d",
-						 power_handler_status.io_error_count);
+				log_text(1, LOG_LVL_WARN, "power_handler",
+				         "adc read failed for charge voltage. IO error count: %d",
+				         power_handler_status.io_error_count);
 			}
 
 			log_text(1, LOG_LVL_INFO, "power_handler", "Active power source: CHG");
@@ -369,28 +323,22 @@ uint32_t power_handler_get_board_status(void) {
 				if (adc_value < VRKT_MIN) {
 					board_bitfield |= (1U) << E_12V_UNDER_VOLT_OFFSET;
 					power_handler_status.rkt_12v_under_volt_count++;
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "power_handler",
-							 "12v rocket rail under voltage. Fault count: %d",
-							 power_handler_status.rkt_12v_under_volt_count);
+					log_text(1, LOG_LVL_WARN, "power_handler",
+					         "12v rocket rail under voltage. Fault count: %d",
+					         power_handler_status.rkt_12v_under_volt_count);
 				} else if (adc_value > VRKT_MAX) {
 					board_bitfield |= (1U) << E_12V_OVER_VOLT_OFFSET;
 					power_handler_status.rkt_12v_over_volt_count++;
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "power_handler",
-							 "12v rocket rail over voltage. Fault count: %d",
-							 power_handler_status.rkt_12v_over_volt_count);
+					log_text(1, LOG_LVL_WARN, "power_handler",
+					         "12v rocket rail over voltage. Fault count: %d",
+					         power_handler_status.rkt_12v_over_volt_count);
 				}
 			} else {
 				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 				power_handler_status.io_error_count++;
-				log_text(1,
-						 LOG_LVL_WARN,
-						 "power_handler",
-						 "adc read failed for rocket voltage. IO error count: %d",
-						 power_handler_status.io_error_count);
+				log_text(1, LOG_LVL_WARN, "power_handler",
+				         "adc read failed for rocket voltage. IO error count: %d",
+				         power_handler_status.io_error_count);
 			}
 
 			log_text(1, LOG_LVL_INFO, "power_handler", "Active power source: RKT");
@@ -401,96 +349,76 @@ uint32_t power_handler_get_board_status(void) {
 				if (adc_value < VBAT_MIN) {
 					board_bitfield |= (1U) << E_BATT_UNDER_VOLT_OFFSET;
 					power_handler_status.batt_under_volt_count++;
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "power_handler",
-							 "batt 1 under voltage. Fault count: %d",
-							 power_handler_status.batt_under_volt_count);
+					log_text(1, LOG_LVL_WARN, "power_handler",
+					         "batt 1 under voltage. Fault count: %d",
+					         power_handler_status.batt_under_volt_count);
 				} else if (adc_value > VBAT_MAX) {
 					board_bitfield |= (1U) << E_BATT_OVER_VOLT_OFFSET;
 					power_handler_status.batt_over_volt_count++;
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "power_handler",
-							 "batt 1 over voltage. Fault count: %d",
-							 power_handler_status.batt_over_volt_count);
+					log_text(1, LOG_LVL_WARN, "power_handler",
+					         "batt 1 over voltage. Fault count: %d",
+					         power_handler_status.batt_over_volt_count);
 				}
 			} else {
 				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 				power_handler_status.io_error_count++;
-				log_text(1,
-						 LOG_LVL_WARN,
-						 "power_handler",
-						 "adc read failed for battery 1 voltage. IO error count: %d",
-						 power_handler_status.io_error_count);
+				log_text(1, LOG_LVL_WARN, "power_handler",
+				         "adc read failed for battery 1 voltage. IO error count: %d",
+				         power_handler_status.io_error_count);
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(VSENS_BAT2, &adc_value)) {
 				if (adc_value < VBAT_MIN) {
 					board_bitfield |= (1U) << E_BATT_UNDER_VOLT_OFFSET;
 					power_handler_status.batt_under_volt_count++;
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "power_handler",
-							 "batt 2 under voltage. Fault count: %d",
-							 power_handler_status.batt_under_volt_count);
+					log_text(1, LOG_LVL_WARN, "power_handler",
+					         "batt 2 under voltage. Fault count: %d",
+					         power_handler_status.batt_under_volt_count);
 				} else if (adc_value > VBAT_MAX) {
 					board_bitfield |= (1U) << E_BATT_OVER_VOLT_OFFSET;
 					power_handler_status.batt_over_volt_count++;
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "power_handler",
-							 "batt 2 over voltage. Fault count: %d",
-							 power_handler_status.batt_over_volt_count);
+					log_text(1, LOG_LVL_WARN, "power_handler",
+					         "batt 2 over voltage. Fault count: %d",
+					         power_handler_status.batt_over_volt_count);
 				}
 			} else {
 				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 				power_handler_status.io_error_count++;
-				log_text(1,
-						 LOG_LVL_WARN,
-						 "power_handler",
-						 "adc read failed for battery 2 voltage. IO error count: %d",
-						 power_handler_status.io_error_count);
+				log_text(1, LOG_LVL_WARN, "power_handler",
+				         "adc read failed for battery 2 voltage. IO error count: %d",
+				         power_handler_status.io_error_count);
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT1, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
 					board_bitfield |= (1U) << E_BATT_OVER_CURR_OFFSET;
 					power_handler_status.overcurrent_count++;
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "power_handler",
-							 "Bat1 over current! Over current fault count: %d",
-							 power_handler_status.overcurrent_count);
+					log_text(1, LOG_LVL_WARN, "power_handler",
+					         "Bat1 over current! Over current fault count: %d",
+					         power_handler_status.overcurrent_count);
 				}
 			} else {
 				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 				power_handler_status.io_error_count++;
-				log_text(1,
-						 LOG_LVL_WARN,
-						 "power_handler",
-						 "adc read failed for battery 1 current. IO error count: %d",
-						 power_handler_status.io_error_count);
+				log_text(1, LOG_LVL_WARN, "power_handler",
+				         "adc read failed for battery 1 current. IO error count: %d",
+				         power_handler_status.io_error_count);
 			}
 
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT2, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
 					board_bitfield |= (1U) << E_BATT_OVER_CURR_OFFSET;
 					power_handler_status.overcurrent_count++;
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "power_handler",
-							 "Bat2 over current! Over current fault count: %d",
-							 power_handler_status.overcurrent_count);
+					log_text(1, LOG_LVL_WARN, "power_handler",
+					         "Bat2 over current! Over current fault count: %d",
+					         power_handler_status.overcurrent_count);
 				}
 			} else {
 				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
 				power_handler_status.io_error_count++;
-				log_text(1,
-						 LOG_LVL_WARN,
-						 "power_handler",
-						 "adc read failed for battery 2 current. IO error count: %d",
-						 power_handler_status.io_error_count);
+				log_text(1, LOG_LVL_WARN, "power_handler",
+				         "adc read failed for battery 2 current. IO error count: %d",
+				         power_handler_status.io_error_count);
 			}
 
 			log_text(1, LOG_LVL_INFO, "power_handler", "Active power source: BAT");
@@ -515,8 +443,8 @@ w_status_t power_handler_set_5V_external(bool enabled) {
 	if (enabled) {
 		// Prevent enabling when charge line is active
 		if (POWER_INPUT_CHG == get_active_input()) {
-			log_text(
-				10, LOG_LVL_WARN, "power_handler", "Cannot enable 5V external when CHG is active");
+			log_text(10, LOG_LVL_WARN, "power_handler",
+			         "Cannot enable 5V external when CHG is active");
 			return W_FAILURE;
 		}
 
@@ -531,11 +459,9 @@ w_status_t power_handler_set_5V_external(bool enabled) {
 	}
 
 	if (W_SUCCESS != gpio_status) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "gpio write failed while toggling 5v external or charge mux. Error: %d",
-				 gpio_status);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "gpio write failed while toggling 5v external or charge mux. Error: %d",
+		         gpio_status);
 		return gpio_status;
 	}
 
@@ -555,11 +481,8 @@ w_status_t power_handler_set_lipo_state(bool enabled) {
 	gpio_status = gpio_write(GPIO_PIN_PWR_EN, lipo_gpio_state, 5);
 
 	if (W_SUCCESS != gpio_status) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "gpio write failed while toggle lipo. Error code: %d",
-				 gpio_status);
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "gpio write failed while toggle lipo. Error code: %d", gpio_status);
 	} else {
 		power_handler_status.lipo_state = enabled;
 	}
@@ -578,16 +501,14 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 	can_msg_t response_msg = {0};
 
 	if ((W_SUCCESS != get_actuator_id(msg, &actuator_id)) ||
-		(W_SUCCESS != get_cmd_actuator_state(msg, &cmd_state))) {
+	    (W_SUCCESS != get_cmd_actuator_state(msg, &cmd_state))) {
 		log_text(5, LOG_LVL_WARN, "power_handler", "Failed to get actuator id or state.");
 		return W_FAILURE;
 	}
 
 	if (W_SUCCESS != timer_get_ms(&timestamp)) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "power_handler",
-				 "Failed to get timestamp for actuator status can msg.");
+		log_text(1, LOG_LVL_WARN, "power_handler",
+		         "Failed to get timestamp for actuator status can msg.");
 	}
 
 	if (ACTUATOR_CANARD_5V_OUTPUT == actuator_id) {
@@ -595,17 +516,12 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 		status = power_handler_set_5V_external(enable_5v);
 
 		if (W_SUCCESS == status) {
-			build_actuator_status_msg(PRIO_MEDIUM,
-									  (uint16_t)timestamp,
-									  ACTUATOR_CANARD_5V_OUTPUT,
-									  cmd_state,
-									  enable_5v ? ACT_STATE_ON : ACT_STATE_OFF,
-									  &response_msg);
+			build_actuator_status_msg(PRIO_MEDIUM, (uint16_t)timestamp, ACTUATOR_CANARD_5V_OUTPUT,
+			                          cmd_state, enable_5v ? ACT_STATE_ON : ACT_STATE_OFF,
+			                          &response_msg);
 			if (W_SUCCESS != can_handler_transmit(&response_msg)) {
-				log_text(1,
-						 LOG_LVL_WARN,
-						 "power_handler",
-						 "Can message failed to transmit for actruator status.");
+				log_text(1, LOG_LVL_WARN, "power_handler",
+				         "Can message failed to transmit for actruator status.");
 			}
 		} else {
 			log_text(1, LOG_LVL_WARN, "power_handler", "Failed to toggle 5v external power.");
@@ -615,24 +531,19 @@ static w_status_t power_actuator_callback(const can_msg_t *msg) {
 		status = power_handler_set_lipo_state(lipo_enable);
 
 		if (W_SUCCESS == status) {
-			build_actuator_status_msg(PRIO_MEDIUM,
-									  (uint16_t)timestamp,
-									  ACTUATOR_CANARD_LIPO_ON,
-									  cmd_state,
-									  lipo_enable ? ACT_STATE_ON : ACT_STATE_OFF,
-									  &response_msg);
+			build_actuator_status_msg(PRIO_MEDIUM, (uint16_t)timestamp, ACTUATOR_CANARD_LIPO_ON,
+			                          cmd_state, lipo_enable ? ACT_STATE_ON : ACT_STATE_OFF,
+			                          &response_msg);
 			if (W_SUCCESS != can_handler_transmit(&response_msg)) {
-				log_text(1,
-						 LOG_LVL_WARN,
-						 "power_handler",
-						 "Can message failed to transmit for actruator status.");
+				log_text(1, LOG_LVL_WARN, "power_handler",
+				         "Can message failed to transmit for actruator status.");
 			}
 		} else {
 			log_text(1, LOG_LVL_WARN, "power_handler", "Failed to toggle lipo power.");
 		}
 	} else {
-		log_text(
-			1, LOG_LVL_WARN, "power_handler", "Invalid can command. Actuator ID: %d", actuator_id);
+		log_text(1, LOG_LVL_WARN, "power_handler", "Invalid can command. Actuator ID: %d",
+		         actuator_id);
 	}
 
 	return status;
@@ -646,8 +557,8 @@ static w_status_t power_reset_callback(const can_msg_t *msg) {
 	w_status_t status = check_board_need_reset(msg, &need_reset);
 
 	if (W_SUCCESS != status) {
-		log_text(
-			1, LOG_LVL_WARN, "power_handler", "Failed to read reset command. Status: %d", status);
+		log_text(1, LOG_LVL_WARN, "power_handler", "Failed to read reset command. Status: %d",
+		         status);
 		return status;
 	}
 
