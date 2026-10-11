@@ -37,33 +37,40 @@ typedef struct {
 } log_buffer_t;
 
 /**
- * A collection of status variables describing the current health of the logger module.
+ * A collection of status variables describing the current health of the logger
+ * module.
  */
 typedef struct {
-	bool is_init; // log_init() fully succeeded; log_text()/log_data() no-op until set
+	bool is_init; // log_init() fully succeeded; log_text()/log_data() no-op until
+				  // set
 	uint32_t trunc_msgs; // message didn't fit its fixed-size region and was cut short
-	uint32_t
-		full_buffer_moments; // current buffer still full (log_task hasn't drained it); msg dropped
-	uint32_t log_write_timeouts; // couldn't take the buffer mutex within the caller's timeout
-	uint32_t invalid_region_moments; // msg_num >= msgs per buffer; slot-claiming bug, should never
-									 // happen
-	uint32_t queue_send_fails; // xQueueSendToBack() of a full buffer failed; queue is sized to
-							   // never fill
-	uint32_t
-		no_full_buf_moments; // log_task found no buffer to flush; normal while idle, not an error
-	uint32_t
-		buffer_flush_fails; // number of times a log buffer flush failed after retrying max times
-	uint32_t unsafe_buffer_flushes; // xSemaphoreTake failed when attempting to flush a log buffer
+	uint32_t full_buffer_moments; // current buffer still full (log_task hasn't
+								  // drained it); msg dropped
+	uint32_t log_write_timeouts; // couldn't take the buffer mutex within the
+								 // caller's timeout
+	uint32_t invalid_region_moments; // msg_num >= msgs per buffer; slot-claiming
+									 // bug, should never happen
+	uint32_t queue_send_fails; // xQueueSendToBack() of a full buffer failed;
+							   // queue is sized to never fill
+	uint32_t no_full_buf_moments; // log_task found no buffer to flush; normal
+								  // while idle, not an error
+	uint32_t buffer_flush_fails; // number of times a log buffer flush failed
+								 // after retrying max times
+	uint32_t unsafe_buffer_flushes; // xSemaphoreTake failed when attempting to
+									// flush a log buffer
 	uint32_t null_param_count; // number of times a NULL parameter was passed
 	uint32_t file_open_errs; // sd_card_file_open() failed
 	bool buffer_is_full; // flag for full buffer since last health check
 	bool timeout_occurred; // flag for timeout since last health check
 	bool os_error_occurred; // flag for queue send fail
 	bool invalid_param; // flag for NULL/bad-arg call since last health check
-	bool region_overflow; // flag for invalid msg region index since last health check
-	bool fs_open_flush_failed; // flag for SD file open/flush failure since last health check
-	// Init-failure flags. Unlike the flags above, these are set once in log_init() and never
-	// cleared: init is never retried, so the failure lasts until reboot and must keep reporting.
+	bool region_overflow; // flag for invalid msg region index since last health
+						  // check
+	bool fs_open_flush_failed; // flag for SD file open/flush failure since last
+							   // health check
+	// Init-failure flags. Unlike the flags above, these are set once in
+	// log_init() and never cleared: init is never retried, so the failure lasts
+	// until reboot and must keep reporting.
 	bool init_os_failed; // queue/mutex/semaphore creation failed during init
 	bool init_fs_create_write_failed; // SD file create/write failed during init
 } logger_health_t;
@@ -85,7 +92,8 @@ static uint32_t total_data_log_buffers = 0;
 static logger_health_t logger_health = {0};
 
 /**
- * @brief Write a data log message's content to a specific region in a given buffer.
+ * @brief Write a data log message's content to a specific region in a given
+ * buffer.
  * @note Not for external use.
  * @param buffer Pointer to data log buffer to write into
  * @param msg_num Index of the message region to write to
@@ -97,7 +105,8 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 										   log_data_type_t type, uint32_t timestamp,
 										   const log_data_container_t *data) {
 	// Validate arguments
-	// Assumption: logger_health.is_init == true OR (during init) all buffer semaphores are valid
+	// Assumption: logger_health.is_init == true OR (during init) all buffer
+	// semaphores are valid
 	if ((NULL == buffer) || (NULL == data)) {
 		logger_health.null_param_count++;
 		logger_health.invalid_param = true;
@@ -117,7 +126,8 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 	// Write log message type
 	uint32_t type_int = (uint32_t)type;
 	size_t size = sizeof(type_int);
-	// Truncate if write would extend beyond message region excluding last char for newline
+	// Truncate if write would extend beyond message region excluding last char
+	// for newline
 	if (MAX_DATA_MSG_LENGTH - chars_written < size) {
 		size = MAX_DATA_MSG_LENGTH - chars_written;
 		trunc = true;
@@ -153,20 +163,24 @@ static w_status_t log_data_write_to_region(log_buffer_t *const buffer, const uin
 	// If last message in buffer, send buffer to queue
 	if (msg_num == DATA_MSGS_PER_BUFFER - 1) {
 		if (xQueueSendToBack(data_buffers_queue, &buffer, 0) != pdPASS) {
-			// This should never be reached as the queue should have space for all buffers
+			// This should never be reached as the queue should have space for all
+			// buffers
 			logger_health.queue_send_fails++;
 			logger_health.os_error_occurred = true;
 			return W_FAILURE;
 		}
 	}
-	// msg_num is guaranteed not to be greater than DATA_MSGS_PER_BUFFER by condition before write
+	// msg_num is guaranteed not to be greater than DATA_MSGS_PER_BUFFER by
+	// condition before write
 
 	return W_SUCCESS;
 }
 
 /**
- * @brief Reset a log buffer for reuse, and if it's a data buffer, write its buffer header message.
- * @details Resets is_full, next_msg_num, msgs_done_semaphore, and clears the data region
+ * @brief Reset a log buffer for reuse, and if it's a data buffer, write its
+ * buffer header message.
+ * @details Resets is_full, next_msg_num, msgs_done_semaphore, and clears the
+ * data region
  * @param buffer Pointer to the log buffer to reset
  */
 static void log_reset_buffer(log_buffer_t *buffer) {
@@ -187,7 +201,8 @@ static void log_reset_buffer(log_buffer_t *buffer) {
 		log_data_write_to_region(buffer, 0, LOG_TYPE_HEADER, timestamp, &data);
 		total_data_log_buffers++;
 
-		// Reset these last to avoid another task using this buffer before we're done resetting it
+		// Reset these last to avoid another task using this buffer before we're
+		// done resetting it
 		buffer->next_msg_num = 1;
 	} else {
 		buffer->next_msg_num = 0;
@@ -202,9 +217,10 @@ w_status_t log_init(void) {
 	}
 
 	// Note: failures here cannot be reported with log_text(). It no-ops until
-	// logger_health.is_init is set at the end of this function, and every failure path below
-	// returns before that. Record them in logger_health instead; logger_get_status() reports
-	// them over CAN, which is the only channel that still works when the logger is down.
+	// logger_health.is_init is set at the end of this function, and every failure
+	// path below returns before that. Record them in logger_health instead;
+	// logger_get_status() reports them over CAN, which is the only channel that
+	// still works when the logger is down.
 
 	data_buffers_queue = xQueueCreate(NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
 	text_buffers_queue = xQueueCreate(NUM_TEXT_LOG_BUFFERS, sizeof(log_buffer_t *));
@@ -303,9 +319,10 @@ w_status_t log_init(void) {
 w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
 					...) {
 	// Get timestamp as close to time of call as possible
-	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log
-	// message anyway. We're trying to log as much as possible and a missing timestamp does not
-	// inherently critically affect the ability to write the log message
+	// If we fail to get a timestamp, use a dummy value of 0 and continue to write
+	// the log message anyway. We're trying to log as much as possible and a
+	// missing timestamp does not inherently critically affect the ability to
+	// write the log message
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
@@ -341,8 +358,8 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	const uint32_t msg_num = buffer->next_msg_num;
 	buffer->next_msg_num++;
 
-	// If there are no more message regions in this buffer, mark it full and advance to the next
-	// buffer
+	// If there are no more message regions in this buffer, mark it full and
+	// advance to the next buffer
 	if (buffer->next_msg_num >= TEXT_MSGS_PER_BUFFER) {
 		buffer->is_full = true;
 		current_text_buf_num = (current_text_buf_num + 1) % NUM_TEXT_LOG_BUFFERS;
@@ -413,13 +430,15 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	// If last message in buffer, send buffer to queue
 	if (msg_num == TEXT_MSGS_PER_BUFFER - 1) {
 		if (xQueueSendToBack(text_buffers_queue, &buffer, 0) != pdPASS) {
-			// This should never be reached as the queue should have space for all buffers
+			// This should never be reached as the queue should have space for all
+			// buffers
 			logger_health.queue_send_fails++;
 			logger_health.os_error_occurred = true;
 			return W_FAILURE;
 		}
 	}
-	// msg_num is guaranteed not to be greater than TEXT_MSGS_PER_BUFFER by condition before write
+	// msg_num is guaranteed not to be greater than TEXT_MSGS_PER_BUFFER by
+	// condition before write
 
 	return W_SUCCESS;
 }
@@ -462,8 +481,8 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	const uint32_t msg_num = buffer->next_msg_num;
 	buffer->next_msg_num++;
 
-	// If there are no more message regions in this buffer, mark it full and advance to the next
-	// buffer
+	// If there are no more message regions in this buffer, mark it full and
+	// advance to the next buffer
 	if (buffer->next_msg_num >= DATA_MSGS_PER_BUFFER) {
 		buffer->is_full = true;
 		current_data_buf_num = (current_data_buf_num + 1) % NUM_DATA_LOG_BUFFERS;
@@ -474,7 +493,8 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	// Write the message to the buffer
 	w_status_t res = log_data_write_to_region(buffer, msg_num, type, timestamp, data);
 	if (W_INVALID_PARAM == res) {
-		// msg_num was invalid (is_init, buffer, data must all have made sense at this point)
+		// msg_num was invalid (is_init, buffer, data must all have made sense at
+		// this point)
 		logger_health.invalid_region_moments++;
 		logger_health.region_overflow = true;
 		return W_FAILURE;
@@ -491,8 +511,8 @@ void log_task(void *argument) {
 	log_buffer_t *buffer_to_print = NULL;
 
 	// Open persistent streaming files.
-	// Keep these open for the duration of logging to avoid FAT traversal overhead.
-	// write the file names
+	// Keep these open for the duration of logging to avoid FAT traversal
+	// overhead. write the file names
 	memcpy(text_file_ctx.filename, text_log_filename, sizeof(text_file_ctx.filename));
 	memcpy(data_file_ctx.filename, data_log_filename, sizeof(data_file_ctx.filename));
 
@@ -520,7 +540,8 @@ void log_task(void *argument) {
 			continue;
 		}
 
-		// requirement: stop logging during sleepy state to avoid filling sd card uselessly
+		// requirement: stop logging during sleepy state to avoid filling sd card
+		// uselessly
 		if (fsm_get_state() == STATE_SLEEPY) {
 			vTaskDelay(pdMS_TO_TICKS(1000));
 			continue;
@@ -565,21 +586,37 @@ void log_task(void *argument) {
 
 			// try several times to buffer to SD card
 			uint32_t size = 0;
+			uint32_t open_start_ms = 0;
+			uint32_t open_end_ms = 0;
+			bool written = false;
+			bool synced = false;
+
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
-				uint32_t open_start_ms = 0;
 				timer_get_ms(&open_start_ms);
 				if (sd_card_file_write_open(
 						file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE, &size) == W_SUCCESS) {
-					uint32_t open_end_ms = 0;
+					// Write successful
 					timer_get_ms(&open_end_ms);
+					written = true;
+					break;
+				}
+
+				gpio_toggle(GPIO_PIN_RED_LED, 0);
+				vTaskDelay(pdMS_TO_TICKS(2));
+			}
+
+			if (written) {
+				for (uint32_t i = 0; i < log_write_try_count; i++) {
 					/*
 					 * Sync after every buffer for maximum data retention.
 					 * Consider reducing this to periodic syncs once reliability
 					 * is confirmed.
 					 */
+
 					uint32_t sync_start_ms = 0;
 					timer_get_ms(&sync_start_ms);
 					if (sd_card_file_sync(file_ctx) == W_SUCCESS) {
+						// Sync successful
 						uint32_t sync_end_ms = 0;
 						timer_get_ms(&sync_end_ms);
 
@@ -592,6 +629,8 @@ void log_task(void *argument) {
 								 sync_end_ms - sync_start_ms,
 								 i + 1);
 						gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+
+						synced = true;
 						break;
 					} else {
 						log_text(10,
@@ -599,22 +638,19 @@ void log_task(void *argument) {
 								 "logger",
 								 "sd_card_file_sync failed on try %d",
 								 i + 1);
+						gpio_toggle(GPIO_PIN_RED_LED, 0);
+						vTaskDelay(pdMS_TO_TICKS(2));
 					}
-				}
-
-				gpio_toggle(GPIO_PIN_RED_LED, 0);
-
-				if ((log_write_try_count - 1) == i) {
-					logger_health.buffer_flush_fails++;
-					logger_health.fs_open_flush_failed = true;
-					break; // Failed to write after all attempts
-				} else {
-					// Allow SD card time to recover.
-					vTaskDelay(pdMS_TO_TICKS(2));
 				}
 			}
 
+			if (!written || !synced) {
+				logger_health.buffer_flush_fails++;
+				logger_health.fs_open_flush_failed = true;
+			}
+
 			// Reinitialize buffer for reuse
+
 			log_reset_buffer(buffer_to_print);
 		} else {
 			logger_health.no_full_buf_moments++;
@@ -668,8 +704,9 @@ health_status_t logger_get_status(void) {
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_FILE_SYSTEM_OFFSET);
 	}
 
-	// The two init flags below are deliberately not cleared. log_init() is called once and never
-	// retried, so an init failure persists until reboot and must be reported on every health check.
+	// The two init flags below are deliberately not cleared. log_init() is called
+	// once and never retried, so an init failure persists until reboot and must
+	// be reported on every health check.
 	if (logger_health.init_os_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_OS_OFFSET);
@@ -683,7 +720,8 @@ health_status_t logger_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "logger",
-			 "init=%lu, trunc=%lu, full_buff=%lu, log_w_timeouts=%lu, invalid_region=%lu",
+			 "init=%lu, trunc=%lu, full_buff=%lu, log_w_timeouts=%lu, "
+			 "invalid_region=%lu",
 			 logger_health.is_init,
 			 logger_health.trunc_msgs,
 			 logger_health.full_buffer_moments,
@@ -693,7 +731,8 @@ health_status_t logger_get_status(void) {
 	log_text(10,
 			 LOG_LVL_INFO,
 			 "logger",
-			 "q_fail=%lu, no_buf=%lu, flush_fail=%lu, f_open_err=%lu, unsafe_fl=%lu, nparam=%lu",
+			 "q_fail=%lu, no_buf=%lu, flush_fail=%lu, f_open_err=%lu, "
+			 "unsafe_fl=%lu, nparam=%lu",
 			 logger_health.queue_send_fails,
 			 logger_health.no_full_buf_moments,
 			 logger_health.buffer_flush_fails,
