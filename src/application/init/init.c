@@ -93,6 +93,11 @@ const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
 // 	return W_SUCCESS;
 // }
 
+#include "common/benchmark/benchmark.h"
+extern void get_nav_codegen_benchmark_data(benchmark_data_t p_datas[8]);
+extern void get_main_benchmark_data(benchmark_data_t *p_data);
+
+
 static void system_init_task(void *arg) {
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
@@ -208,6 +213,24 @@ static void system_init_task(void *arg) {
 	// 	log_text(0, LOG_LVL_FATAL, "SystemInit", "failed to add calibration callback");
 	// 	ak45_send_disable_cmd();
 	// }
+	// log the data
+	benchmark_data_t main_benchmark_data = {0};
+	get_main_benchmark_data(&main_benchmark_data);
+
+	benchmark_data_t nav_benchmark_datas[8] = {0};
+	get_nav_codegen_benchmark_data(nav_benchmark_datas);
+
+	log_text(0, LOG_LVL_INFO, "SystemInit", "Main S: %lld, C: %ld, Ave %llf", main_benchmark_data.sum, main_benchmark_data.count, main_benchmark_data.average);
+
+	// log the gnc data
+	for(uint8_t j = 0; j < 8; j++) {
+		log_text(0, LOG_LVL_INFO, "SystemInit", "Nav %d S: %lld, C: %ld, Ave %llf", j, nav_benchmark_datas[j].sum, nav_benchmark_datas[j].count, nav_benchmark_datas[j].average);
+	}
+
+	// filler log
+	for(uint8_t i = 0; i < 100; i++) {
+		log_text(10, LOG_LVL_INFO, "SystemInit", "FILLER FILLER FILLER FILLER FLLER.");
+	}
 	// its blinky now
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
