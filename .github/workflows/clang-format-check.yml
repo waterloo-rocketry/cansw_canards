@@ -13,14 +13,14 @@ jobs:
         uses: actions/checkout@v6
         with:
           submodules: 'true'
-      - name: Install clang-format 21
+      - name: Install clang-format 23
         id: llvm-install
         shell: bash
         run: |
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
-          sudo ./llvm.sh 21
-          sudo apt install clang-format-21
+          sudo ./llvm.sh 23
+          sudo apt install clang-format-23
       - name: Run formatting check
         id: format-check
         shell: bash
@@ -38,4 +38,4 @@ jobs:
             src/common/*/*.h
             src/common/*/*.c
             )
-          clang-format-21 --dry-run -Werror --style=file:src/third_party/rocketlib/.clang-format "${files[@]}"
+          clang-format-23 --dry-run -Werror --style=file:src/third_party/rocketlib/.clang-format "${files[@]}"

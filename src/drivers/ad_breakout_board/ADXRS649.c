@@ -19,7 +19,7 @@ static const uint16_t ADS1219_ADDR = 0x40;
 
 // 1000 SPS (Samples per Second), Continuous Conversion, and External Ref
 static const uint8_t ADS1219_CONFIG_SETTINGS =
-	0x0F; // this is the configuration we are operating with
+	0x0f; // this is the configuration we are operating with
 
 // sensor range
 static const float64_t ADXRS649_GYRO_RANGE_DPS = 20000.0;
@@ -62,7 +62,7 @@ static w_status_t adxrs649_self_test() {
 
 	// This is will exit either getting data within bounds or when we reach max retry
 	while ((MAX_NUM_TESTS >= test_num) &&
-		   ((MIN_SELF_TEST_mV > adc_voltage) || (MAX_SELF_TEST_mV < adc_voltage))) {
+	       ((MIN_SELF_TEST_mV > adc_voltage) || (MAX_SELF_TEST_mV < adc_voltage))) {
 		// wait and retest
 		vTaskDelay(pdMS_TO_TICKS(SELF_TEST_DELAY_MS));
 		status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
@@ -96,7 +96,7 @@ static w_status_t adxrs649_self_test() {
 
 	// This is will exit either getting data within bounds or when we reach max retry
 	while ((MAX_NUM_TESTS >= test_num) &&
-		   (((-1 * MIN_SELF_TEST_mV) < adc_voltage) || ((-1 * MAX_SELF_TEST_mV) > adc_voltage))) {
+	       (((-1 * MIN_SELF_TEST_mV) < adc_voltage) || ((-1 * MAX_SELF_TEST_mV) > adc_voltage))) {
 		// wait and retest
 		vTaskDelay(pdMS_TO_TICKS(SELF_TEST_DELAY_MS));
 		status |= ads1219_get_millivolts(&g_ads_handle, &adc_voltage);
@@ -140,8 +140,8 @@ w_status_t adxrs649_init() {
 	adc_setup_status |= ads1219_set_conversion_mode(&g_ads_handle, ADS1219_CM_CONTINUOUS);
 	adc_setup_status |= ads1219_set_gain(&g_ads_handle, ADS1219_GAIN_ONE);
 	adc_setup_status |= ads1219_set_data_rate(&g_ads_handle, ADS1219_DATARATE_1000SPS);
-	adc_setup_status |= ads1219_set_vref(
-		&g_ads_handle, ADS1219_VREF_EXTERNAL, V_EXTERNAL_REF_N_mV, V_EXTERNAL_REF_P_mV);
+	adc_setup_status |= ads1219_set_vref(&g_ads_handle, ADS1219_VREF_EXTERNAL, V_EXTERNAL_REF_N_mV,
+	                                     V_EXTERNAL_REF_P_mV);
 
 	if (adc_setup_status != W_SUCCESS) {
 		log_text(0, LOG_LVL_WARN, "ADXRS649", "Failed to write settings ADC for gyro.");
@@ -261,9 +261,11 @@ w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
  * @return the health status of the ADXRS649
  */
 health_status_t adxrs649_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_ADXRS649,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_ADXRS649,
+		.error_bitfield = 0
+	};
 
 	if (!is_initialized) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
@@ -282,24 +284,17 @@ health_status_t adxrs649_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "ADXRS649",
-			 "init=%d not_init=%" PRIu32 " mv_conv_fail=%" PRIu32 "r_fail=%" PRIu32
-			 " inv_param=%" PRIu32,
-			 is_initialized,
-			 adxrs649_health.not_initialized_calls,
-			 adxrs649_health.millivolt_conversion_fails,
-			 adxrs649_health.read_fails,
-			 adxrs649_health.invalid_params);
+	log_text(1, LOG_LVL_INFO, "ADXRS649",
+	         "init=%d not_init=%" PRIu32 " mv_conv_fail=%" PRIu32 "r_fail=%" PRIu32
+	         " inv_param=%" PRIu32,
+	         is_initialized, adxrs649_health.not_initialized_calls,
+	         adxrs649_health.millivolt_conversion_fails, adxrs649_health.read_fails,
+	         adxrs649_health.invalid_params);
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "ADXRS649",
-			 "drdy_check_fails=%" PRIu32 ", data_r_fails=%" PRIu32 ", null_params=%" PRIu32,
-			 adxrs649_health.data_ready_check_fails,
-			 adxrs649_health.data_read_fails,
-			 adxrs649_health.null_params);
+	log_text(1, LOG_LVL_INFO, "ADXRS649",
+	         "drdy_check_fails=%" PRIu32 ", data_r_fails=%" PRIu32 ", null_params=%" PRIu32,
+	         adxrs649_health.data_ready_check_fails, adxrs649_health.data_read_fails,
+	         adxrs649_health.null_params);
 
 	return status;
 }

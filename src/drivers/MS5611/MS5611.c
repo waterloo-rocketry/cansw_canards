@@ -27,7 +27,7 @@ typedef enum {
 } ms5611_address_t;
 
 // reset command
-#define MS5611_CMD_RESET 0x1E
+#define MS5611_CMD_RESET 0x1e
 
 // pressure conversion commands (D1)
 #define MS5611_CMD_CONVERT_D1_OSR256 0x40
@@ -45,7 +45,7 @@ typedef enum {
 
 // ADC read command
 #define MS5611_CMD_ADC_READ 0x00
-#define MS5611_CMD_PROM_READ_BASE 0xA0 /* OR with (addr << 1) for addr 0..7 */
+#define MS5611_CMD_PROM_READ_BASE 0xa0 /* OR with (addr << 1) for addr 0..7 */
 
 // calibration coefficient indices in PROM readout
 #define MS5611_COEFF_SENS 1
@@ -132,7 +132,7 @@ typedef struct {
 	bool i2c_communication_fail; // I2C read/write fail
 	bool crc_check_failure; // PROM CRC check fail
 	bool invalid_operation; // reinit while already initialized, deinit/read before init, or timer
-							// read failed
+	                        // read failed
 	bool invalid_parameter; // NULL parameter passed in
 	uint32_t semaphore_fail_count; // mutex create (init) or take (task) failed
 	uint32_t i2c_read_fail_count; // any I2C read failed (PROM coefficients, ADC values)
@@ -151,7 +151,7 @@ static const int32_t SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES =
 	2000; /* temperature (in centidegrees) below which second-order compensation is applied */
 static const int32_t SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES =
 	-1500; /* temperature (in centidegrees) below which additional extreme cold compensation is
-			  applied */
+	          applied */
 static const uint32_t RESET_WAIT_TIME_MS = 3;
 
 static uint32_t conv_us_to_ms(uint32_t time_us) {
@@ -166,16 +166,17 @@ static uint32_t s_latest_timestamp_ms = 0;
 static w_status_t s_latest_status = W_FAILURE; /* status of the most recent read attempt */
 
 // modify this struct to toggle barometer settings
-static ms5611_handle_t handle = {.prom_coef = {0}, // will be populated by prom read
-								 .bus = I2C_BUS_5,
-								 .addr =
-									 MS5611_ADDRESS_CSB_LOW, // according to canard board schematic,
-															 // CSB is tied to GND, so addr is 0x77
-								 .osr_pressure = MS5611_OSR_1024,
-								 .osr_temperature = MS5611_OSR_256,
-								 .initialized = false,
-								 .conv_state = MS5611_CONV_TEMP_PRESSURE,
-								 .cached_temp_d2 = 0};
+static ms5611_handle_t handle = {
+	.prom_coef = {0}, // will be populated by prom read
+	.bus = I2C_BUS_5,
+	.addr = MS5611_ADDRESS_CSB_LOW, // according to canard board schematic,
+	                                // CSB is tied to GND, so addr is 0x77
+	.osr_pressure = MS5611_OSR_1024,
+	.osr_temperature = MS5611_OSR_256,
+	.initialized = false,
+	.conv_state = MS5611_CONV_TEMP_PRESSURE,
+	.cached_temp_d2 = 0
+};
 
 /**
  * @brief Delays for a specified number of microseconds.
@@ -248,13 +249,13 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 
 	n_rem = 0x00; /* init 0 */
 	crc_read = n_prom[7]; /* get crc */
-	n_prom[7] = (0xFF00U & (n_prom[7])); /* init prom */
+	n_prom[7] = (0xff00U & (n_prom[7])); /* init prom */
 
 	for (cnt = 0; cnt < 16; cnt++) /* loop all */
 	{
 		if (cnt & 0x1) /* check LSB */
 		{
-			n_rem ^= (uint16_t)((n_prom[cnt >> 1]) & 0x00FF); /* run part1 */
+			n_rem ^= (uint16_t)((n_prom[cnt >> 1]) & 0x00ff); /* run part1 */
 		} else {
 			n_rem ^= (uint16_t)(n_prom[cnt >> 1] >> 8); /* run part1 */
 		}
@@ -268,8 +269,8 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 			}
 		}
 	}
-	n_rem = (0x000F & (n_rem >> 12)); /* get rem */
-	n_prom[7] = (0xFF00U & crc_read); /* set crc read */
+	n_rem = (0x000f & (n_rem >> 12)); /* get rem */
+	n_prom[7] = (0xff00U & crc_read); /* set crc read */
 
 	if (n_rem != crc) {
 		log_text(1, LOG_LVL_WARN, "ms5611", "CRC check failed: expected %u, got %u", crc, n_rem);
@@ -301,7 +302,7 @@ static w_status_t ms5611_prom_read(void) {
 		prom_coef[i] = (((uint16_t)prom_buf[0] << 8) | prom_buf[1]);
 	}
 
-	status |= a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0F));
+	status |= a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0f));
 
 	if (W_SUCCESS == status) {
 		for (i = 0; i < 8; i++) {
@@ -414,8 +415,8 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		}
 
 		delay_us(MAX_CONV_TIME_US[handle.osr_temperature] +
-				 1000); // 2 ms. Additional 1ms is added here for safety - temp conv time for osr256
-						// does not match the datasheet specifications
+		         1000); // 2 ms. Additional 1ms is added here for safety - temp conv time for osr256
+		                // does not match the datasheet specifications
 
 		if (W_FAILURE == baro_read_adc(&(handle.cached_temp_d2))) {
 			return W_IO_ERROR;
@@ -442,11 +443,11 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	/* First-order compensation */
 	dt = (int32_t)handle.cached_temp_d2 - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) << 8);
 	temp = SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES +
-		   (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
+	       (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
 	off = (((int64_t)handle.prom_coef[MS5611_COEFF_OFF]) << 16) +
-		  ((((int64_t)handle.prom_coef[MS5611_COEFF_TCO]) * dt) >> 7);
+	      ((((int64_t)handle.prom_coef[MS5611_COEFF_TCO]) * dt) >> 7);
 	sens = (((int64_t)handle.prom_coef[MS5611_COEFF_SENS]) << 15) +
-		   ((((int64_t)handle.prom_coef[MS5611_COEFF_TCS]) * dt) >> 8);
+	       ((((int64_t)handle.prom_coef[MS5611_COEFF_TCS]) * dt) >> 8);
 
 	/* Second-order cold compensation */
 	T2 = 0;
@@ -456,18 +457,18 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	if (temp < SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) {
 		T2 = ((int64_t)dt * dt) >> 31;
 		off2 = (5 * ((int64_t)(temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) *
-					 (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) >>
-			   1;
+		             (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) >>
+		       1;
 		sens2 = (5 * ((int64_t)(temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) *
-					  (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) >>
-				2;
+		              (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) >>
+		        2;
 
 		if (temp < SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES) {
 			off2 += 7 * ((int64_t)(temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES) *
-						 (temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES));
+			             (temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES));
 			sens2 += (11 * ((int64_t)(temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES) *
-							(temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES))) >>
-					 1;
+			                (temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES))) >>
+			         1;
 		}
 
 		temp -= T2;
@@ -481,8 +482,8 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	result->pressure_centimbar = (int32_t)p;
 
 	*timestamp_ms += (conv_us_to_ms(AVE_CONV_TIME_US[handle.osr_pressure]) /
-					  2); // getting the midpoint of the conversion time for the timestamp to be
-						  // more accurate (tristan suggestion)
+	                  2); // getting the midpoint of the conversion time for the timestamp to be
+	                      // more accurate (tristan suggestion)
 
 	return W_SUCCESS;
 }
@@ -566,9 +567,11 @@ void ms5611_task(void *argument) {
 }
 
 health_status_t ms5611_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_MS5611,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_MS5611,
+		.error_bitfield = 0
+	};
 
 	// Not initialized
 	if (!handle.initialized) {
@@ -612,26 +615,18 @@ health_status_t ms5611_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
 	}
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "ms5611",
-			 "sem_fail=%" PRIu32 ", i2c_r_fail=%" PRIu32 "i2c_w_fail=%" PRIu32
-			 ", reinit_try=%" PRIu32,
-			 ms5611_health.semaphore_fail_count,
-			 ms5611_health.i2c_read_fail_count,
-			 ms5611_health.i2c_write_fail_count,
-			 ms5611_health.reinit_attempt);
+	log_text(10, LOG_LVL_INFO, "ms5611",
+	         "sem_fail=%" PRIu32 ", i2c_r_fail=%" PRIu32 "i2c_w_fail=%" PRIu32
+	         ", reinit_try=%" PRIu32,
+	         ms5611_health.semaphore_fail_count, ms5611_health.i2c_read_fail_count,
+	         ms5611_health.i2c_write_fail_count, ms5611_health.reinit_attempt);
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "ms5611",
-			 "deinit=%" PRIu32 ", r_b4_init=%" PRIu32 "getms_err=%" PRIu32 ", null=%" PRIu32
-			 ", stale_pres=%" PRIu32,
-			 ms5611_health.deinit_before_init,
-			 ms5611_health.read_before_init,
-			 ms5611_health.timer_read_fail,
-			 ms5611_health.null_param_count,
-			 ms5611_health.stale_pressure_read);
+	log_text(10, LOG_LVL_INFO, "ms5611",
+	         "deinit=%" PRIu32 ", r_b4_init=%" PRIu32 "getms_err=%" PRIu32 ", null=%" PRIu32
+	         ", stale_pres=%" PRIu32,
+	         ms5611_health.deinit_before_init, ms5611_health.read_before_init,
+	         ms5611_health.timer_read_fail, ms5611_health.null_param_count,
+	         ms5611_health.stale_pressure_read);
 
 	return status;
 }

@@ -16,7 +16,6 @@ extern "C" {
 #include "stm32h7/stm32h7_can.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"
-#include "third_party/canlib/message_types.h"
 #include "utils/mock_log.hpp"
 
 typedef void (*can_rx_callback_t)(const can_msg_t *message);

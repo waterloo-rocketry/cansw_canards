@@ -2,8 +2,8 @@
 #define AK45_DRIVER_H
 
 #include "FreeRTOS.h"
+#include "rocketlib.h"
 #include "stm32h7xx_hal.h"
-#include "third_party/rocketlib/include/common.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -83,7 +83,7 @@ w_status_t ak45_send_current_cmd(int32_t current_mA);
  * @return W_SUCCESS on success, W_FAILURE on error
  */
 w_status_t ak45_send_pos_velo_cmd(float32_t angle_deg, uint16_t mag_speed_rpm,
-								  int16_t accel_rpm_s2);
+                                  int16_t accel_rpm_s2);
 
 /**
  * @brief Send a disable command to the servo

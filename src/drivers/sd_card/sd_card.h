@@ -10,7 +10,7 @@
 #include "fatfs.h"
 #include "stm32h7xx_hal.h"
 
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 /**
  * @brief Initialize the SD card hardware and create the mutex for thread safety.
@@ -31,7 +31,7 @@ w_status_t sd_card_init(void);
  * @return w_status_t - W_SUCCESS on success. W_FAILURE if file DNE or other fails.
  */
 w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t num_bytes,
-							 uint32_t *bytes_read);
+                             uint32_t *bytes_read);
 
 /**
  * @brief Write data to a file on the SD card.
@@ -48,7 +48,7 @@ w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t num_b
  * @return w_status_t - W_SUCCESS on success, W_FAILURE if file DNE or other fails.
  */
 w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_t num_bytes,
-							  bool append, uint32_t *bytes_written);
+                              bool append, uint32_t *bytes_written);
 
 /**
  * @brief Create a new file on the SD card.
@@ -135,7 +135,7 @@ w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx);
  * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
  */
 w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, uint32_t num_bytes,
-								   uint32_t *bytes_written);
+                                   uint32_t *bytes_written);
 
 /**
  * @brief Sync an opened SD card file.

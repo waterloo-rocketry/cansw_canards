@@ -107,8 +107,8 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 		return W_FAILURE;
 	}
 
-	hal_status = HAL_UART_RegisterCallback(
-		huart, HAL_UART_ERROR_CB_ID, (pUART_CallbackTypeDef)HAL_UART_ErrorCallback);
+	hal_status = HAL_UART_RegisterCallback(huart, HAL_UART_ERROR_CB_ID,
+	                                       (pUART_CallbackTypeDef)HAL_UART_ErrorCallback);
 	if (hal_status != HAL_OK) {
 		vQueueDelete(handle->msg_queue);
 		vSemaphoreDelete(handle->write_mutex);
@@ -154,10 +154,10 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
  */
 
 w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
-					  uint32_t timeout_ms) {
+                      uint32_t timeout_ms) {
 	w_status_t status = W_SUCCESS;
 	if ((channel >= UART_CHANNEL_COUNT) || (NULL == s_uart_handles[channel].huart) ||
-		(buffer == NULL) || (length == 0)) {
+	    (buffer == NULL) || (length == 0)) {
 		status = W_INVALID_PARAM; // Invalid parameter(s)
 		return status;
 	} else if (pdTRUE != xSemaphoreTake(s_uart_handles[channel].write_mutex, timeout_ms)) {
@@ -203,7 +203,7 @@ w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
  * @return Status of the read operation
  */
 w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
-					 uint32_t timeout_ms) {
+                     uint32_t timeout_ms) {
 	/* Validate all parameters before proceeding */
 	if ((channel >= UART_CHANNEL_COUNT) || (NULL == buffer) || (NULL == length)) {
 		return W_INVALID_PARAM;
@@ -319,7 +319,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 		if (s_uart_handles[ch].huart == huart) {
 			// Give the semaphore to signal transfer completion
 			xSemaphoreGiveFromISR(s_uart_handles[ch].transfer_complete,
-								  &higher_priority_task_woken);
+			                      &higher_priority_task_woken);
 			portYIELD_FROM_ISR(higher_priority_task_woken);
 			break; // Exit loop once channel is found
 		}
@@ -349,20 +349,16 @@ health_status_t uart_get_status(void) {
 		uart_stats_t *stats = &s_uart_stats[channel];
 
 		// Log initialization status
-		log_text(0,
-				 LOG_LVL_INFO,
-				 "uart",
-				 "%s: %s timeouts %lu hw_err %lu overflows %lu",
-				 channel_name,
-				 stats->initialized ? "INIT" : "NOT INIT",
-				 stats->timeouts,
-				 stats->hw_errors,
-				 stats->overflows);
+		log_text(0, LOG_LVL_INFO, "uart", "%s: %s timeouts %lu hw_err %lu overflows %lu",
+		         channel_name, stats->initialized ? "INIT" : "NOT INIT", stats->timeouts,
+		         stats->hw_errors, stats->overflows);
 	}
 
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_UART,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_UART,
+		.error_bitfield = 0
+	};
 
 	return status;
 }

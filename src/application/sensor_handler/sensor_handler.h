@@ -7,7 +7,7 @@
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 
 #include "application/health_checks/health_checks.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 typedef struct { // all of these should be just directly register values
 	lsm6dsv32x_raw_imu_data_t raw_board_accel;

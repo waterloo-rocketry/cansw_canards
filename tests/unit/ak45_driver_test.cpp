@@ -7,7 +7,6 @@ extern "C" {
 #include "ak45_driver_test_helpers.h"
 #include "application/logger/log.h"
 #include "application/telemetry/telemetry.h"
-#include "can.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "hal_fdcan_mock.h"
 #include "application/can_handler/can_telemetry_scaling.h"

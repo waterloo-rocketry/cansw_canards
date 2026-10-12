@@ -2,8 +2,7 @@
 #define HEALTH_CHECKS_H
 
 #include "FreeRTOS.h"
-#include "message_types.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 #include "task.h"
 #include <stdbool.h>
 #include <stdint.h>

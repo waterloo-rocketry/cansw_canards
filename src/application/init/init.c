@@ -81,7 +81,7 @@ static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
 	can_actuator_state_t msg_state;
 
 	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
-		(get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
+	    (get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
 		log_text(1, LOG_LVL_WARN, "ak45", "invalid actuator data");
 		return W_FAILURE;
 	}
@@ -160,62 +160,38 @@ static void system_init_task(void *arg) {
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	task_status &= xTaskCreate(fsm_task,
-							   "fsm",
-							   6144, // TODO: set the correct size
-							   NULL,
-							   fsm_task_priority,
-							   &fsm_task_handle);
+	task_status &= xTaskCreate(fsm_task, "fsm",
+	                           6144, // TODO: set the correct size
+	                           NULL, fsm_task_priority, &fsm_task_handle);
 
-	task_status &= xTaskCreate(health_check_task,
-							   "health",
-							   384,
-							   NULL,
-							   health_checks_task_priority,
-							   &health_checks_task_handle);
+	task_status &= xTaskCreate(health_check_task, "health", 384, NULL, health_checks_task_priority,
+	                           &health_checks_task_handle);
 
-	task_status &= xTaskCreate(can_handler_task_rx,
-							   "can handler rx",
-							   256,
-							   NULL,
-							   can_handler_rx_priority,
-							   &can_handler_handle_rx);
+	task_status &= xTaskCreate(can_handler_task_rx, "can handler rx", 256, NULL,
+	                           can_handler_rx_priority, &can_handler_handle_rx);
 
-	task_status &= xTaskCreate(can_handler_task_tx,
-							   "can handler tx",
-							   256,
-							   NULL,
-							   can_handler_tx_priority,
-							   &can_handler_handle_tx);
+	task_status &= xTaskCreate(can_handler_task_tx, "can handler tx", 256, NULL,
+	                           can_handler_tx_priority, &can_handler_handle_tx);
 
-	task_status &= xTaskCreate(
-		movella_task, "movella", 512, NULL, movella_task_priority, &movella_task_handle);
+	task_status &= xTaskCreate(movella_task, "movella", 512, NULL, movella_task_priority,
+	                           &movella_task_handle);
 
-	task_status &= xTaskCreate(ms5611_task,
-							   "ms5611",
-							   256,
-							   NULL,
-							   ms5611_task_priority,
-							   &ms5611_task_handle); // TODO: set the correct size
+	task_status &= xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority,
+	                           &ms5611_task_handle); // TODO: set the correct size
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
-	task_status &= xTaskCreate(ad_breakout_board_task,
-							   "ad board task",
-							   256, // TODO: set when sure of size
-							   NULL,
-							   ad_breakout_task_priority,
-							   &ad_breakout_task_handle);
+	task_status &= xTaskCreate(ad_breakout_board_task, "ad board task",
+	                           256, // TODO: set when sure of size
+	                           NULL, ad_breakout_task_priority, &ad_breakout_task_handle);
 
-	task_status &= xTaskCreate(
-		telemetry_task, "telem module", 336, NULL, telem_task_priority, &telem_task_handle);
+	task_status &= xTaskCreate(telemetry_task, "telem module", 336, NULL, telem_task_priority,
+	                           &telem_task_handle);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
-		log_text(10,
-				 LOG_LVL_FATAL,
-				 "SystemInit",
-				 "CRITICAL: Failed to create one or more FreeRTOS tasks.");
+		log_text(10, LOG_LVL_FATAL, "SystemInit",
+		         "CRITICAL: Failed to create one or more FreeRTOS tasks.");
 		proc_handle_fatal_error("tasks");
 	}
 	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
@@ -228,7 +204,7 @@ static void system_init_task(void *arg) {
 
 	// register motor calibration
 	if (can_handler_act_cmd_register_callback(ACTUATOR_CANARD_MOTOR_CALIBRATION,
-											  &ak45_motor_calibration) != W_SUCCESS) {
+	                                          &ak45_motor_calibration) != W_SUCCESS) {
 		log_text(0, LOG_LVL_FATAL, "SystemInit", "failed to add calibration callback");
 		ak45_send_disable_cmd();
 	}

@@ -57,7 +57,7 @@ typedef struct {
 } lsm6dsv32x_health_t;
 
 // device addresses and configuration
-static const uint16_t LSM6DSV32X_ADDR = 0x6A; // addr sel pin LOW
+static const uint16_t LSM6DSV32X_ADDR = 0x6a; // addr sel pin LOW
 
 // external definition of h2ic for the i2c bus 1;
 extern I2C_HandleTypeDef hi2c1;
@@ -90,8 +90,8 @@ static w_status_t write_1_byte(uint8_t addr, uint8_t reg, uint8_t data) {
  */
 static w_status_t lsm6dsv32x_check_sanity() {
 	if (lsm6dsv32x_ctx.switched_callback) {
-		log_text(
-			1, LOG_LVL_WARN, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
+		log_text(1, LOG_LVL_WARN, "LSM6DSV32X",
+		         "Attempting to reinitialize after switching callback.");
 		lsm6dsv32x_health.post_init_sanity_checks++;
 		return W_FAILURE;
 	}
@@ -127,8 +127,7 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
 
 	memcpy(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER],
-		   lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER],
-		   CTX_BUFFER_SIZE);
+	       lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER] =
 		lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER];
 }
@@ -152,8 +151,8 @@ static void lsm6dsv32x_dma_error_handle(I2C_HandleTypeDef *hi2c) {
  */
 w_status_t lsm6dsv32x_init() {
 	if (lsm6dsv32x_ctx.switched_callback) {
-		log_text(
-			1, LOG_LVL_FATAL, "LSM6DSV32X", "Attempting to reinitialize after switching callback.");
+		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X",
+		         "Attempting to reinitialize after switching callback.");
 		return W_FAILURE;
 	}
 	lsm6dsv32x_ctx.hi2c = &hi2c1;
@@ -178,7 +177,7 @@ w_status_t lsm6dsv32x_init() {
 
 	// set gyro range to +-4000dps
 	// set LPF bandwith to 241 (ODR/4)
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL6_G, 0x0C);
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL6_G, 0x0c);
 
 	// enable gryro LPF
 	// dont touch input impedance
@@ -212,8 +211,8 @@ w_status_t lsm6dsv32x_init() {
 	// function
 	i2c_register_status |= HAL_I2C_RegisterCallback(
 		lsm6dsv32x_ctx.hi2c, HAL_I2C_MEM_RX_COMPLETE_CB_ID, lsm6dsv32x_dma_complete_handle);
-	i2c_register_status |= HAL_I2C_RegisterCallback(
-		lsm6dsv32x_ctx.hi2c, HAL_I2C_ERROR_CB_ID, lsm6dsv32x_dma_error_handle);
+	i2c_register_status |= HAL_I2C_RegisterCallback(lsm6dsv32x_ctx.hi2c, HAL_I2C_ERROR_CB_ID,
+	                                                lsm6dsv32x_dma_error_handle);
 
 	// AFTER THIS POINT NEVER USE OLD I2C OR VERY BAD ERRORS
 
@@ -265,12 +264,8 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	// begin dma read to the main buffer
 	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
 	HAL_StatusTypeDef hal_status =
-		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c,
-							 shifted_address,
-							 OUTX_L_G,
-							 I2C_MEMADD_SIZE_8BIT,
-							 lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER],
-							 CTX_BUFFER_SIZE);
+		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c, shifted_address, OUTX_L_G, I2C_MEMADD_SIZE_8BIT,
+		                     lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	if (hal_status != HAL_OK) {
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
 		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
@@ -289,8 +284,8 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
-										lsm6dsv32x_raw_imu_data_t *raw_acc,
-										lsm6dsv32x_raw_imu_data_t *raw_gyro) {
+                                        lsm6dsv32x_raw_imu_data_t *raw_acc,
+                                        lsm6dsv32x_raw_imu_data_t *raw_gyro) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
 
@@ -339,9 +334,11 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 }
 
 health_status_t lsm6dsv32x_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_LSM6DSV32X,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_LSM6DSV32X,
+		.error_bitfield = 0
+	};
 
 	// I2C errors
 	if (W_IO_ERROR == lsm6dsv32x_ctx.latest_status) {
@@ -356,35 +353,26 @@ health_status_t lsm6dsv32x_get_status(void) {
 	}
 
 	log_text(
-		10,
-		LOG_LVL_INFO,
-		"LSM6DSV32X",
+		10, LOG_LVL_INFO, "LSM6DSV32X",
 		"init=%d, init_failed_write=%d, init_failed_register_cb=%d, is_insane=%d, sanity_checks=%d",
-		lsm6dsv32x_health.is_init,
-		lsm6dsv32x_health.init_failed_write,
-		lsm6dsv32x_health.init_failed_register_callback,
-		lsm6dsv32x_health.is_insane,
+		lsm6dsv32x_health.is_init, lsm6dsv32x_health.init_failed_write,
+		lsm6dsv32x_health.init_failed_register_callback, lsm6dsv32x_health.is_insane,
 		lsm6dsv32x_health.post_init_sanity_checks);
 
 	// expect the unswitched callback count to be high but most importantly constant. it is called
 	// about 10000 times before initialization completes
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "LSM6DSV32X",
-			 "wrong_i2c=%d, unswitched_cb=%d, failed_timer=%d, fail_mem_read=%d",
-			 lsm6dsv32x_health.dma_handle_wrong_i2c,
-			 lsm6dsv32x_health.dma_data_transfer_unswitched_callback,
-			 lsm6dsv32x_health.dma_data_transfer_failed_timer,
-			 lsm6dsv32x_health.dma_data_transfer_failed_mem_read);
+	log_text(10, LOG_LVL_INFO, "LSM6DSV32X",
+	         "wrong_i2c=%d, unswitched_cb=%d, failed_timer=%d, fail_mem_read=%d",
+	         lsm6dsv32x_health.dma_handle_wrong_i2c,
+	         lsm6dsv32x_health.dma_data_transfer_unswitched_callback,
+	         lsm6dsv32x_health.dma_data_transfer_failed_timer,
+	         lsm6dsv32x_health.dma_data_transfer_failed_mem_read);
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "LSM6DSV32X",
-			 "get_data_unswitched_cb=%d, get_data_sts_fail=%d, latest_status=%d, bus_sts=%d",
-			 lsm6dsv32x_health.get_gyro_acc_data_unswitched_callback,
-			 lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure,
-			 lsm6dsv32x_ctx.latest_status,
-			 lsm6dsv32x_ctx.bus_status);
+	log_text(10, LOG_LVL_INFO, "LSM6DSV32X",
+	         "get_data_unswitched_cb=%d, get_data_sts_fail=%d, latest_status=%d, bus_sts=%d",
+	         lsm6dsv32x_health.get_gyro_acc_data_unswitched_callback,
+	         lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure,
+	         lsm6dsv32x_ctx.latest_status, lsm6dsv32x_ctx.bus_status);
 
 	return status;
 }

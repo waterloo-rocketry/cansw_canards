@@ -11,7 +11,7 @@
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/timer/timer.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 // Units are as follows: m/s^2, rad/s, Pa, gauss.
 typedef struct {
@@ -63,7 +63,7 @@ extern adxrs649_health_t adxrs649_health;
 extern adxl380_health_t adxl380_health;
 
 static w_status_t ad_breakout_board_data_logging(uint32_t loop_count, const uint32_t raw_gyro,
-												 const adxl380_raw_accel_data_t *g_raw_accel) {
+                                                 const adxl380_raw_accel_data_t *g_raw_accel) {
 	return W_SUCCESS;
 }
 
@@ -96,7 +96,7 @@ void ad_breakout_board_task(void *argument) {
 			// if no new data then we just skip getting data
 			if (update_gyro_data) {
 				if (adxrs649_get_gyro_data(&(g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].meas),
-										   &raw_gyro) != W_SUCCESS) {
+				                           &raw_gyro) != W_SUCCESS) {
 					g_task_ctx.gyro_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
 					adxrs649_health.comm_failure = true;
 					adxrs649_health.read_fails++;
@@ -123,7 +123,7 @@ void ad_breakout_board_task(void *argument) {
 			// if no new data then we just skip getting data
 			if (update_accel_data) {
 				if (adxl380_get_accel_data(&(g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].meas),
-										   &raw_accel) != W_SUCCESS) {
+				                           &raw_accel) != W_SUCCESS) {
 					g_task_ctx.accel_dual_buffer[AD_WRITE_BUFFER].latest_status = W_IO_ERROR;
 					adxl380_health.comm_failure = true;
 					adxl380_health.read_fails++;

@@ -175,8 +175,7 @@ set(TEST_COMMON_INCS
     ${FFF_DIR}
     ${PROC_SRC_DIR}
     ${PROC_SRC_DIR}/third_party
-    ${PROC_SRC_DIR}/third_party/canlib
-    ${PROC_SRC_DIR}/third_party/rocketlib/include
+    ${PROC_SRC_DIR}/third_party/rocketlib
     ${PROC_SRC_DIR}/third_party/closedrocket/embedded-coder/codegen/lib/GNC_codegen
 )
 

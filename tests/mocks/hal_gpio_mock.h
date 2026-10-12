@@ -2,7 +2,7 @@
 #define HAL_GPIO_MOCK_H
 
 #include "fff.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 #include <stdint.h>
 
 // Copy over HAL GPIO definitions for mocking

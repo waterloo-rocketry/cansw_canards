@@ -7,8 +7,9 @@
 #include "FreeRTOS.h"
 #include "fdcan.h"
 #include "queue.h"
+#include "rocketlib.h"
+#include "rocketlib/stm32h7/stm32h7_can.h"
 #include "stm32h7xx_hal.h"
-#include "third_party/canlib/canlib.h"
 
 #include "application/can_handler/can_handler.h"
 #include "application/can_handler/can_telemetry_scaling.h"
@@ -97,11 +98,8 @@ static w_status_t can_actuator_cmd_callback(const can_msg_t *msg) {
 	}
 	if ((actuator_id < ACTUATOR_ENUM_MAX) && (act_callback_map[actuator_id] != NULL)) {
 		if (act_callback_map[actuator_id](msg) != W_SUCCESS) {
-			log_text(1,
-					 LOG_LVL_WARN,
-					 "CANHandlerRX",
-					 "Callback failed for Act Cmd with Act ID: %d.",
-					 actuator_id);
+			log_text(1, LOG_LVL_WARN, "CANHandlerRX",
+			         "Callback failed for Act Cmd with Act ID: %d.", actuator_id);
 			return W_FAILURE;
 		}
 	}
@@ -214,7 +212,7 @@ static w_status_t can_store_signed(can_types_t type, int32_t value, void *out) {
 // offset is one of SENTINEL_POS_INF / SENTINEL_NEG_INF and selects
 // a code at the top of the type's range (type_max - offset).
 static w_status_t can_store_sentinel(can_types_t type, bool is_unsigned, uint32_t offset,
-									 void *out) {
+                                     void *out) {
 	if (is_unsigned) {
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(type, &maxv);
@@ -246,10 +244,10 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 	}
 
 	if ((W_SUCCESS != can_handler_register_callback(MSG_RESET_CMD, can_reset_callback)) ||
-		(W_SUCCESS != can_handler_register_callback(MSG_LEDS_ON, can_led_on_callback)) ||
-		(W_SUCCESS != can_handler_register_callback(MSG_LEDS_OFF, can_led_off_callback) ||
-		 (W_SUCCESS !=
-		  can_handler_register_callback(MSG_ACTUATOR_CMD, can_actuator_cmd_callback)))) {
+	    (W_SUCCESS != can_handler_register_callback(MSG_LEDS_ON, can_led_on_callback)) ||
+	    (W_SUCCESS != can_handler_register_callback(MSG_LEDS_OFF, can_led_off_callback) ||
+	     (W_SUCCESS !=
+	      can_handler_register_callback(MSG_ACTUATOR_CMD, can_actuator_cmd_callback)))) {
 		log_text(1, LOG_LVL_FATAL, "CANHandler", "Failed to register mandatory CAN callbacks.");
 		return W_FAILURE;
 	}
@@ -258,7 +256,7 @@ w_status_t can_handler_init(FDCAN_HandleTypeDef *hfdcan) {
 }
 
 w_status_t can_handler_act_cmd_register_callback(can_actuator_id_t act_type,
-												 can_callback_t callback) {
+                                                 can_callback_t callback) {
 	if ((NULL == callback) || (act_type >= ACTUATOR_ENUM_MAX)) {
 		return W_INVALID_PARAM;
 	}
@@ -291,11 +289,8 @@ void can_handler_task_rx(void *argument) {
 			can_msg_type_t msg_type = get_message_type(&rx_msg);
 			if (callback_map[msg_type] != NULL) {
 				if (callback_map[msg_type](&rx_msg) != W_SUCCESS) {
-					log_text(1,
-							 LOG_LVL_WARN,
-							 "CANHandlerRX",
-							 "Callback failed for msg type %d.",
-							 msg_type);
+					log_text(1, LOG_LVL_WARN, "CANHandlerRX", "Callback failed for msg type %d.",
+					         msg_type);
 					can_error_stats.rx_callback_errors++; // Track callback execution errors
 				}
 			}
@@ -367,7 +362,7 @@ w_status_t can_encode_scaled_float(can_scaling_types_t sensor, float32_t input, 
 		uint32_t maxv = 0U;
 		can_get_unsigned_max(target_type, &maxv);
 
-		if ((scaled < 0.0f) || (scaled > (float32_t)maxv)) {
+		if ((scaled < 0.0F) || (scaled > (float32_t)maxv)) {
 			return W_OVERFLOW; // TODO: better handling of scaled overflow
 		}
 
@@ -427,24 +422,17 @@ health_status_t can_handler_get_status(void) {
 	uint32_t status_bitfield = 0; // TODO: add meanful errors for health checks
 
 	// Log all error statistics
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "CAN",
-			 "dropped_rx=%lu, dropped_tx=%lu, tx_failures=%lu, ",
-			 dropped_rx_counter,
-			 can_error_stats.dropped_tx_counter,
-			 can_error_stats.tx_failures);
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "CAN",
-			 "rx_callback_errors=%lu, rx_timeouts=%lu, tx_timeouts=%lu",
-			 can_error_stats.rx_callback_errors,
-			 can_error_stats.rx_timeouts,
-			 can_error_stats.tx_timeouts);
+	log_text(0, LOG_LVL_INFO, "CAN", "dropped_rx=%lu, dropped_tx=%lu, tx_failures=%lu, ",
+	         dropped_rx_counter, can_error_stats.dropped_tx_counter, can_error_stats.tx_failures);
+	log_text(0, LOG_LVL_INFO, "CAN", "rx_callback_errors=%lu, rx_timeouts=%lu, tx_timeouts=%lu",
+	         can_error_stats.rx_callback_errors, can_error_stats.rx_timeouts,
+	         can_error_stats.tx_timeouts);
 
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_CAN_HANDLER,
-							  .error_bitfield = status_bitfield};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_CAN_HANDLER,
+		.error_bitfield = status_bitfield
+	};
 
 	return status;
 }

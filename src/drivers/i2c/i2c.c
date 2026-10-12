@@ -7,7 +7,6 @@
 #include "FreeRTOS.h"
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
-#include "message_types.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
 /** @brief Default timeout for I2C operations in milliseconds */
@@ -95,7 +94,7 @@ static w_status_t wait_transfer_complete(i2c_bus_handle_t *handle, i2c_bus_t bus
 	// Wait for transfer semaphore with timeout
 	if (xSemaphoreTake(handle->transfer_sem, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
 		// Timeout occurred - abort transfer and clean up
-		HAL_I2C_Master_Abort_IT(handle->hal_handle, 0xFFFF);
+		HAL_I2C_Master_Abort_IT(handle->hal_handle, 0xffff);
 		handle->transfer_complete = true;
 		i2c_error_stats[bus].timeouts++;
 		handle->transfer_status = W_IO_TIMEOUT;
@@ -154,13 +153,13 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
 	HAL_StatusTypeDef callback_status = HAL_OK;
 
 	// Register HAL callbacks for memory TX and RX complete events
-	callback_status |= HAL_I2C_RegisterCallback(
-		hal_handle, HAL_I2C_MEM_TX_COMPLETE_CB_ID, i2c_transfer_complete_callback);
-	callback_status |= HAL_I2C_RegisterCallback(
-		hal_handle, HAL_I2C_MEM_RX_COMPLETE_CB_ID, i2c_transfer_complete_callback);
+	callback_status |= HAL_I2C_RegisterCallback(hal_handle, HAL_I2C_MEM_TX_COMPLETE_CB_ID,
+	                                            i2c_transfer_complete_callback);
+	callback_status |= HAL_I2C_RegisterCallback(hal_handle, HAL_I2C_MEM_RX_COMPLETE_CB_ID,
+	                                            i2c_transfer_complete_callback);
 	// Register HAL callbacks for Master TX complete events
-	callback_status |= HAL_I2C_RegisterCallback(
-		hal_handle, HAL_I2C_MASTER_TX_COMPLETE_CB_ID, i2c_transfer_complete_callback);
+	callback_status |= HAL_I2C_RegisterCallback(hal_handle, HAL_I2C_MASTER_TX_COMPLETE_CB_ID,
+	                                            i2c_transfer_complete_callback);
 	// Register separate error callback to handle errors using HAL_I2C_GetError
 	callback_status |=
 		HAL_I2C_RegisterCallback(hal_handle, HAL_I2C_ERROR_CB_ID, i2c_error_callback);
@@ -184,7 +183,7 @@ w_status_t i2c_init(i2c_bus_t bus, I2C_HandleTypeDef *hal_handle, uint32_t timeo
 }
 
 w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t *data,
-						uint8_t len) {
+                        uint8_t len) {
 	// Validate input parameters
 	if (bus >= I2C_BUS_COUNT || !data || !len) {
 		return W_INVALID_PARAM;
@@ -230,7 +229,7 @@ w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t
 }
 
 w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const uint8_t *data,
-						 uint8_t len) {
+                         uint8_t len) {
 	// Validate input parameters
 	if (bus >= I2C_BUS_COUNT || !data || !len) {
 		return W_INVALID_PARAM;
@@ -258,8 +257,8 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 	xSemaphoreTake(handle->transfer_sem, 0); // Clear any pending signal
 
 	// Start non-blocking write operation
-	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Write_IT(
-		handle->hal_handle, hal_addr, reg, I2C_MEMADD_SIZE_8BIT, (uint8_t *)data, len);
+	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Write_IT(handle->hal_handle, hal_addr, reg,
+	                                                    I2C_MEMADD_SIZE_8BIT, (uint8_t *)data, len);
 
 	// Handle HAL-level errors
 	if (hal_status != HAL_OK) {
@@ -395,11 +394,8 @@ health_status_t i2c_get_status(void) {
 	}
 
 	// Log initialization status
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "i2c",
-			 "all bus init: %s",
-			 (I2C_BUS_COUNT == num_bus_init) ? "true" : "false");
+	log_text(0, LOG_LVL_INFO, "i2c", "all bus init: %s",
+	         (I2C_BUS_COUNT == num_bus_init) ? "true" : "false");
 
 	// Log per-bus status
 	for (int i = 0; i < I2C_BUS_COUNT; i++) {
@@ -422,20 +418,16 @@ health_status_t i2c_get_status(void) {
 				break;
 		}
 
-		log_text(0,
-				 LOG_LVL_INFO,
-				 "i2c",
-				 "Bus %s: init=%d, timeouts=%lu, nacks=%lu, bus_errs=%lu",
-				 bus_name,
-				 i2c_buses[i].initialized,
-				 i2c_error_stats[i].timeouts,
-				 i2c_error_stats[i].nacks,
-				 i2c_error_stats[i].bus_errors);
+		log_text(0, LOG_LVL_INFO, "i2c", "Bus %s: init=%d, timeouts=%lu, nacks=%lu, bus_errs=%lu",
+		         bus_name, i2c_buses[i].initialized, i2c_error_stats[i].timeouts,
+		         i2c_error_stats[i].nacks, i2c_error_stats[i].bus_errors);
 	}
 
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_I2C,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_I2C,
+		.error_bitfield = 0
+	};
 
 	return status;
 }

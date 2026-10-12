@@ -1,7 +1,7 @@
 #ifndef AK45_DRIVER_TEST_HELPERS
 #define AK45_DRIVER_TEST_HELPERS
 
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib.h"
 #include <stdint.h>
 
 // Resets all static variables for testing

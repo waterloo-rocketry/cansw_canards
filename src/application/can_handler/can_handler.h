@@ -3,8 +3,7 @@
 
 #include <stdint.h>
 
-#include "canlib.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 #include "stm32h7xx_hal.h"
 
 #include "application/can_handler/can_telemetry_scaling.h"
@@ -34,7 +33,7 @@ w_status_t can_handler_transmit(const can_msg_t *message);
  */
 
 w_status_t can_handler_act_cmd_register_callback(can_actuator_id_t act_type,
-												 can_callback_t callback);
+                                                 can_callback_t callback);
 
 /**
  * @brief Binds a callback which will be triggered when we recieve any messages of a particular type

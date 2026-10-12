@@ -14,7 +14,7 @@
 
 // I2C bus and slave address
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
-static const uint8_t IIS2MDC_I2C_ADDR = 0x1E;
+static const uint8_t IIS2MDC_I2C_ADDR = 0x1e;
 
 // HAL takes the 8-bit left shifted address for HAL_I2C_Mem_Read_DMA calls.
 static const uint16_t IIS2MDC_HAL_ADDR = (uint16_t)(IIS2MDC_I2C_ADDR << 1);
@@ -23,7 +23,7 @@ static const uint16_t IIS2MDC_HAL_ADDR = (uint16_t)(IIS2MDC_I2C_ADDR << 1);
 // TODO: Calibration needs to be done in a magnetic field to get offset values written into the
 // offset registers.
 static const uint32_t IIS2MDC_REG_OFFSET_X_L = 0x45;
-static const uint32_t IIS2MDC_REG_WHO_AM_I = 0x4F;
+static const uint32_t IIS2MDC_REG_WHO_AM_I = 0x4f;
 static const uint32_t IIS2MDC_REG_CFG_A = 0x60;
 static const uint32_t IIS2MDC_REG_CFG_B = 0x61;
 static const uint32_t IIS2MDC_REG_CFG_C = 0x62;
@@ -67,7 +67,7 @@ static const uint32_t IIS2MDC_SETTINGS_LOAD_DELAY_MS = 1;
  CFG_REG_C = 0x11  Block data updates to keep data coherent, DRDY_ON_PIN routes data ready to
  interrupt pin
  */
-static const uint32_t IIS2MDC_INIT_CFG_A = 0x8C;
+static const uint32_t IIS2MDC_INIT_CFG_A = 0x8c;
 static const uint32_t IIS2MDC_INIT_CFG_B = 0x02;
 static const uint32_t IIS2MDC_INIT_CFG_C = 0x11;
 
@@ -285,7 +285,7 @@ static w_status_t iis2mdc_self_test(void) {
 
 	// enable self-test and wait 60ms for field to settle (specified in AN 5080)
 	if (W_SUCCESS !=
-		iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C | IIS2MDC_CFG_C_SELF_TEST)) {
+	    iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C | IIS2MDC_CFG_C_SELF_TEST)) {
 		return W_FAILURE;
 	}
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_SELF_TEST_SETTLE_MS));
@@ -306,8 +306,8 @@ static w_status_t iis2mdc_self_test(void) {
 	float64_t dz = fabs(avg_on.z - avg_off.z);
 
 	if ((dx < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dx > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
-		(dy < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dy > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
-		(dz < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dz > IIS2MDC_SELF_TEST_MAX_GAUSS)) {
+	    (dy < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dy > IIS2MDC_SELF_TEST_MAX_GAUSS) ||
+	    (dz < IIS2MDC_SELF_TEST_MIN_GAUSS) || (dz > IIS2MDC_SELF_TEST_MAX_GAUSS)) {
 		log_text(1, LOG_LVL_FATAL, "iis2mdc", "self-test out of range: x=%f y=%f z=%f", dx, dy, dz);
 		iis2mdc_health.out_of_bounds_data = true;
 		return W_FAILURE;
@@ -358,12 +358,9 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
 	}
 	iis2mdc_dma_busy = true;
 
-	if (HAL_OK != HAL_I2C_Mem_Read_DMA(&hi2c4,
-									   IIS2MDC_HAL_ADDR,
-									   IIS2MDC_REG_OUTX_L | IIS2MDC_SUB_AUTO_INC,
-									   I2C_MEMADD_SIZE_8BIT,
-									   iis2mdc_cache.raw_buf,
-									   sizeof(iis2mdc_cache.raw_buf))) {
+	if (HAL_OK != HAL_I2C_Mem_Read_DMA(
+					  &hi2c4, IIS2MDC_HAL_ADDR, IIS2MDC_REG_OUTX_L | IIS2MDC_SUB_AUTO_INC,
+					  I2C_MEMADD_SIZE_8BIT, iis2mdc_cache.raw_buf, sizeof(iis2mdc_cache.raw_buf))) {
 		iis2mdc_health.dma_read_fails++;
 		iis2mdc_health.communication_failure = true;
 		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
@@ -446,8 +443,8 @@ w_status_t iis2mdc_init(void) {
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_POWERUP_MS));
 
 	if ((W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_A, IIS2MDC_INIT_CFG_A)) ||
-		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B)) ||
-		(W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C))) {
+	    (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_B, IIS2MDC_INIT_CFG_B)) ||
+	    (W_SUCCESS != iis2mdc_write_reg(IIS2MDC_REG_CFG_C, IIS2MDC_INIT_CFG_C))) {
 		return W_FAILURE;
 	}
 
@@ -461,8 +458,8 @@ w_status_t iis2mdc_init(void) {
 	// register completion callback on the mag's I2C handle.
 	iis2mdc_dma_busy = false; // make sure dma is not busy
 	if ((HAL_OK !=
-		 HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) ||
-		(HAL_OK != HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_ERROR_CB_ID, iis2mdc_dma_error))) {
+	     HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_MEM_RX_COMPLETE_CB_ID, iis2mdc_dma_complete)) ||
+	    (HAL_OK != HAL_I2C_RegisterCallback(&hi2c4, HAL_I2C_ERROR_CB_ID, iis2mdc_dma_error))) {
 		return W_FAILURE;
 	}
 
@@ -476,7 +473,7 @@ w_status_t iis2mdc_init(void) {
 }
 
 w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
-							uint32_t *timestamp_ms) {
+                            uint32_t *timestamp_ms) {
 	if ((NULL == data) || (NULL == raw_data) || (NULL == timestamp_ms)) {
 		iis2mdc_health.invalid_param = true;
 		iis2mdc_health.get_data_null_param++;
@@ -512,9 +509,11 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 }
 
 health_status_t iis2mdc_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_IIS2MDC,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_IIS2MDC,
+		.error_bitfield = 0
+	};
 
 	// Driver not initialized
 	if (iis2mdc_state != IIS2MDC_STATE_ASYNC_DMA_ACTIVE) {
@@ -564,27 +563,18 @@ health_status_t iis2mdc_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
 	}
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "state=%d, dma_busy=%d, cache_valid=%d"
-			 "dma_b4_switch=%" PRIu32 ", dma_r_fail=%" PRIu32,
-			 iis2mdc_state,
-			 iis2mdc_dma_busy,
-			 iis2mdc_cache.valid,
-			 iis2mdc_health.dma_before_callback_switch,
-			 iis2mdc_health.dma_read_fails);
+	log_text(1, LOG_LVL_INFO, "iis2mdc",
+	         "state=%d, dma_busy=%d, cache_valid=%d"
+	         "dma_b4_switch=%" PRIu32 ", dma_r_fail=%" PRIu32,
+	         iis2mdc_state, iis2mdc_dma_busy, iis2mdc_cache.valid,
+	         iis2mdc_health.dma_before_callback_switch, iis2mdc_health.dma_read_fails);
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "iis2mdc",
-			 "dma_cb_err=%" PRIu32 " i2c_handle_err=%" PRIu32 " dma_busy=%" PRIu32
-			 "inv_cache=%" PRIu32 ", null_param=%" PRIu32,
-			 iis2mdc_health.dma_callback_error,
-			 iis2mdc_health.i2c_handle_mismatch,
-			 iis2mdc_health.get_data_dma_busy,
-			 iis2mdc_health.get_data_invalid_cache,
-			 iis2mdc_health.get_data_null_param);
+	log_text(1, LOG_LVL_INFO, "iis2mdc",
+	         "dma_cb_err=%" PRIu32 " i2c_handle_err=%" PRIu32 " dma_busy=%" PRIu32
+	         "inv_cache=%" PRIu32 ", null_param=%" PRIu32,
+	         iis2mdc_health.dma_callback_error, iis2mdc_health.i2c_handle_mismatch,
+	         iis2mdc_health.get_data_dma_busy, iis2mdc_health.get_data_invalid_cache,
+	         iis2mdc_health.get_data_null_param);
 
 	return status;
 }

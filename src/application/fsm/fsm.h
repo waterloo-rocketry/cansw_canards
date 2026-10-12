@@ -7,7 +7,7 @@
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 typedef struct {
 	navigator_ctx_t *p_navigator_context; // global instance of estimator

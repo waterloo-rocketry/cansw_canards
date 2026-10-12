@@ -1,8 +1,8 @@
 #include "drivers/sd_card/sd_card.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
-#include "canlib.h"
 #include "fatfs.h"
+#include "rocketlib.h"
 #include "semphr.h"
 #include <inttypes.h>
 
@@ -70,7 +70,7 @@ w_status_t sd_card_init(void) {
 }
 
 w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t bytes_to_read,
-							 uint32_t *bytes_read) {
+                             uint32_t *bytes_read) {
 	// ensure init
 	if (!sd_card_health.is_init) {
 		return W_FAILURE;
@@ -121,7 +121,7 @@ w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t bytes
 }
 
 w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_t bytes_to_write,
-							  bool append, uint32_t *bytes_written) {
+                              bool append, uint32_t *bytes_written) {
 	// validate args
 	if (!sd_card_health.is_init) {
 		return W_FAILURE;
@@ -244,9 +244,11 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *sd_handle) {
 }
 
 health_status_t sd_card_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_SD_CARD,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_SD_CARD,
+		.error_bitfield = 0
+	};
 
 	if (!sd_card_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
@@ -272,34 +274,22 @@ health_status_t sd_card_get_status(void) {
 	}
 
 	// Log operation statistics
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "sd_card",
-			 "%s, files_created=%" PRIu32 ", reads=%" PRIu32 ", writes=%" PRIu32,
-			 sd_card_health.is_init ? "init" : "not init",
-			 sd_card_health.file_create_count,
-			 sd_card_health.read_count,
-			 sd_card_health.write_count);
+	log_text(0, LOG_LVL_INFO, "sd_card",
+	         "%s, files_created=%" PRIu32 ", reads=%" PRIu32 ", writes=%" PRIu32,
+	         sd_card_health.is_init ? "init" : "not init", sd_card_health.file_create_count,
+	         sd_card_health.read_count, sd_card_health.write_count);
 
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "sd_card",
-			 "read_err=%" PRIu32 ", write_err=%" PRIu32 ", create_err=%" PRIu32
-			 ", not_writable=%" PRIu32,
-			 sd_card_health.file_read_error,
-			 sd_card_health.file_write_error,
-			 sd_card_health.file_create_error,
-			 sd_card_health.not_writable);
+	log_text(0, LOG_LVL_INFO, "sd_card",
+	         "read_err=%" PRIu32 ", write_err=%" PRIu32 ", create_err=%" PRIu32
+	         ", not_writable=%" PRIu32,
+	         sd_card_health.file_read_error, sd_card_health.file_write_error,
+	         sd_card_health.file_create_error, sd_card_health.not_writable);
 
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "sd_card",
-			 "open_err=%" PRIu32 ", sync_err=%" PRIu32 ", close_err=%" PRIu32
-			 ", reopen_err=%" PRIu32,
-			 sd_card_health.file_open_error,
-			 sd_card_health.file_sync_error,
-			 sd_card_health.file_close_error,
-			 sd_card_health.file_reopen_error);
+	log_text(0, LOG_LVL_INFO, "sd_card",
+	         "open_err=%" PRIu32 ", sync_err=%" PRIu32 ", close_err=%" PRIu32
+	         ", reopen_err=%" PRIu32,
+	         sd_card_health.file_open_error, sd_card_health.file_sync_error,
+	         sd_card_health.file_close_error, sd_card_health.file_reopen_error);
 
 	return status;
 }
@@ -363,9 +353,9 @@ w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx) {
 }
 
 w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, uint32_t num_bytes,
-								   uint32_t *bytes_written) {
+                                   uint32_t *bytes_written) {
 	if ((!sd_card_health.is_init) || (NULL == ctx) || (!ctx->is_open) || (NULL == buffer) ||
-		(NULL == bytes_written)) {
+	    (NULL == bytes_written)) {
 		sd_card_health.file_write_error++;
 		sd_card_health.invalid_param = true;
 		return W_INVALID_PARAM;

@@ -12,9 +12,9 @@
 #include "drivers/ad_breakout_board/adxl38x.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
-static const uint8_t ADXL_ADDRS = 0x1D;
+static const uint8_t ADXL_ADDRS = 0x1d;
 static const uint8_t ADXL_FILTER_MASK = 0x18; // 0001100
 static const uint8_t ADXL_INT0_MASK = 0x01; // 00000001
 
@@ -65,9 +65,8 @@ w_status_t adxl380_init() {
 	bool y_axis_status = false;
 	bool z_axis_status = false;
 
-	if (W_SUCCESS !=
-		adxl38x_selftest(
-			&g_adx380_handle, ADXL38X_MODE_HP, &x_axis_status, &y_axis_status, &z_axis_status)) {
+	if (W_SUCCESS != adxl38x_selftest(&g_adx380_handle, ADXL38X_MODE_HP, &x_axis_status,
+	                                  &y_axis_status, &z_axis_status)) {
 		log_text(0, LOG_LVL_WARN, "ADXL380", "Self-test unable to be completed.");
 		return W_FAILURE;
 
@@ -119,9 +118,7 @@ w_status_t adxl380_init() {
 	MODE_CHANNEL_EN : x, y, z on
 	*/
 	init_setting_status |= adxl38x_register_update_bits(
-		&g_adx380_handle,
-		ADXL38X_DIG_EN,
-		ADXL38X_MASK_CHEN_DIG_EN,
+		&g_adx380_handle, ADXL38X_DIG_EN, ADXL38X_MASK_CHEN_DIG_EN,
 		adxl38x_field_prep_u8(ADXL38X_MASK_CHEN_DIG_EN, ADXL38X_CH_EN_XYZ));
 
 	if (W_SUCCESS != init_setting_status) {
@@ -149,7 +146,7 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
 	uint8_t raw_data_array[6] = {0};
 
 	if (W_SUCCESS !=
-		adxl38x_read_device_data(&g_adx380_handle, ADXL38X_XDATA_H, 6, (uint8_t *)raw_data_array)) {
+	    adxl38x_read_device_data(&g_adx380_handle, ADXL38X_XDATA_H, 6, (uint8_t *)raw_data_array)) {
 		adxl380_health.comm_failure = true;
 		adxl380_health.data_read_fails++;
 		return W_FAILURE;
@@ -188,7 +185,7 @@ w_status_t adxl380_is_data_ready(bool *p_drdy) {
 		uint8_t reg_drdy = 0;
 		// use I2C to get value
 		if (adxl38x_read_device_data(&g_adx380_handle, ADXL38X_STATUS3, 1, &reg_drdy) !=
-			W_SUCCESS) {
+		    W_SUCCESS) {
 			adxl380_health.comm_failure = true;
 			adxl380_health.data_ready_check_fails++;
 			return W_IO_ERROR;
@@ -238,9 +235,11 @@ w_status_t adxl380_get_accel_data(vector3d_t *p_data, adxl380_raw_accel_data_t *
  * @return the health status of the ADXL380
  */
 health_status_t adxl380_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_ADXL380,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_ADXL380,
+		.error_bitfield = 0
+	};
 
 	if (!is_initialized) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
@@ -259,34 +258,21 @@ health_status_t adxl380_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
 	}
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "ADXL380",
-			 "init=%u, not_init_calls=%" PRIu32 ", data_ready_check_fails=%" PRIu32,
-			 is_initialized,
-			 adxl380_health.not_initialized_calls,
-			 adxl380_health.data_ready_check_fails);
+	log_text(1, LOG_LVL_INFO, "ADXL380",
+	         "init=%u, not_init_calls=%" PRIu32 ", data_ready_check_fails=%" PRIu32, is_initialized,
+	         adxl380_health.not_initialized_calls, adxl380_health.data_ready_check_fails);
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "ADXL380",
-			 "read_fails=%" PRIu32 ", get_accel_fails=%" PRIu32 ", null_params=%" PRIu32,
-			 adxl380_health.data_read_fails,
-			 adxl380_health.get_raw_accel_fails,
-			 adxl380_health.null_params);
+	log_text(1, LOG_LVL_INFO, "ADXL380",
+	         "read_fails=%" PRIu32 ", get_accel_fails=%" PRIu32 ", null_params=%" PRIu32,
+	         adxl380_health.data_read_fails, adxl380_health.get_raw_accel_fails,
+	         adxl380_health.null_params);
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "AD BREAKBOARD TASK",
-			 "accel_read_fails=%" PRIu32 ", accel_invalid_params=%" PRIu32,
-			 adxl380_health.read_fails,
-			 adxl380_health.invalid_params);
+	log_text(1, LOG_LVL_INFO, "AD BREAKBOARD TASK",
+	         "accel_read_fails=%" PRIu32 ", accel_invalid_params=%" PRIu32,
+	         adxl380_health.read_fails, adxl380_health.invalid_params);
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "AD BREAKBOARD TASK",
-			 "accel_data_logging_fails=%" PRIu32,
-			 adxl380_health.data_logging_fails);
+	log_text(1, LOG_LVL_INFO, "AD BREAKBOARD TASK", "accel_data_logging_fails=%" PRIu32,
+	         adxl380_health.data_logging_fails);
 
 	return status;
 }

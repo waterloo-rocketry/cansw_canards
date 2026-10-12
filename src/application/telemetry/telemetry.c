@@ -147,11 +147,9 @@ void telemetry_task(void *argument) {
 	w_status_t time_status = timer_get_ms(&curr_time);
 
 	if (time_status != W_SUCCESS) {
-		log_text(1,
-				 LOG_LVL_WARN,
-				 "telemetry module",
-				 "Failed to get current time for updating registered function due dates! Using 0 "
-				 "as curr time.");
+		log_text(1, LOG_LVL_WARN, "telemetry module",
+		         "Failed to get current time for updating registered function due dates! Using 0 "
+		         "as curr time.");
 	}
 
 	telemetry_init_due_dates(curr_time);
@@ -174,8 +172,8 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
 	}
 
 	if (g_telemetry_registry.num_sources >= TELEMETRY_MAX_SOURCES) {
-		log_text(
-			1, LOG_LVL_WARN, "telemetry module", "Maximum number of telemetry sources reached");
+		log_text(1, LOG_LVL_WARN, "telemetry module",
+		         "Maximum number of telemetry sources reached");
 		return W_FAILURE;
 	}
 
@@ -204,9 +202,11 @@ w_status_t telemetry_register(const telemetry_source_config_t *config) {
  * stuff.
  */
 health_status_t telemetry_get_status(void) {
-	health_status_t status = {.error_bitfield = 0,
-							  .module_id = CANARDS_MODULE_ID_TELEMETRY,
-							  .severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK};
+	health_status_t status = {
+		.error_bitfield = 0,
+		.module_id = CANARDS_MODULE_ID_TELEMETRY,
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK
+	};
 
 	if (g_telemetry_stats.failed_transmissions > 0 || g_telemetry_stats.overdue_count > 0) {
 		// status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;

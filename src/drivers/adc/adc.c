@@ -4,12 +4,12 @@
 #include "semphr.h"
 
 #define ADC_CONV_TIMEOUT_TICKS pdMS_TO_TICKS(1)
-#define V_REF 2.5f
-#define ADC1_MAX_COUNTS 0xFFFF // 16 bit full scale, configured in ioc
+#define V_REF 2.5F
+#define ADC1_MAX_COUNTS 0xffff // 16 bit full scale, configured in ioc
 #define ADC1_NUM_CHANNELS 5
-#define ADC2_MAX_COUNTS 0xFFFF // 16 bit full scale, configured in ioc
+#define ADC2_MAX_COUNTS 0xffff // 16 bit full scale, configured in ioc
 #define ADC2_NUM_CHANNELS 2
-#define ADC3_MAX_COUNTS 0x0FFF // 12 bit full scale, configured in ioc
+#define ADC3_MAX_COUNTS 0x0fff // 12 bit full scale, configured in ioc
 #define ADC3_NUM_CHANNELS 2
 
 // Active DMA buffers
@@ -25,15 +25,15 @@ typedef struct {
 } adc_channel_desc_t;
 
 static adc_channel_desc_t adc_map[ADC_CHANNEL_COUNT] = {
-	[VSENS_BAT1] = {adc1_dma_counts, 0, 11.0f, ADC1_MAX_COUNTS},
-	[VSENS_BAT2] = {adc1_dma_counts, 1, 11.0f, ADC1_MAX_COUNTS},
-	[VSENS_RKT] = {adc1_dma_counts, 2, 6.2356f, ADC1_MAX_COUNTS},
-	[ISENS_BAT2] = {adc1_dma_counts, 3, 11111.1f, ADC1_MAX_COUNTS},
-	[ISENS_BAT1] = {adc1_dma_counts, 4, 11111.1f, ADC1_MAX_COUNTS},
-	[VSENS_CHG] = {adc2_dma_counts, 0, 6.2356f, ADC2_MAX_COUNTS},
-	[VSENS_USB] = {adc2_dma_counts, 1, 2.0f, ADC2_MAX_COUNTS},
-	[ISENS_3V3] = {adc3_dma_counts, 0, 2000.0f, ADC3_MAX_COUNTS},
-	[ISENS_5V] = {adc3_dma_counts, 1, 2000.0f, ADC3_MAX_COUNTS},
+	[VSENS_BAT1] = {adc1_dma_counts, 0, 11.0F, ADC1_MAX_COUNTS},
+	[VSENS_BAT2] = {adc1_dma_counts, 1, 11.0F, ADC1_MAX_COUNTS},
+	[VSENS_RKT] = {adc1_dma_counts, 2, 6.2356F, ADC1_MAX_COUNTS},
+	[ISENS_BAT2] = {adc1_dma_counts, 3, 11111.1F, ADC1_MAX_COUNTS},
+	[ISENS_BAT1] = {adc1_dma_counts, 4, 11111.1F, ADC1_MAX_COUNTS},
+	[VSENS_CHG] = {adc2_dma_counts, 0, 6.2356F, ADC2_MAX_COUNTS},
+	[VSENS_USB] = {adc2_dma_counts, 1, 2.0F, ADC2_MAX_COUNTS},
+	[ISENS_3V3] = {adc3_dma_counts, 0, 2000.0F, ADC3_MAX_COUNTS},
+	[ISENS_5V] = {adc3_dma_counts, 1, 2000.0F, ADC3_MAX_COUNTS},
 };
 
 static ADC_HandleTypeDef *adc1_handle;
@@ -52,16 +52,16 @@ w_status_t adc_init(ADC_HandleTypeDef *hadc1, ADC_HandleTypeDef *hadc2, ADC_Hand
 	adc3_handle = hadc3;
 
 	if (HAL_OK != HAL_ADCEx_Calibration_Start(adc1_handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) ||
-		HAL_OK != HAL_ADCEx_Calibration_Start(adc2_handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) ||
-		HAL_OK != HAL_ADCEx_Calibration_Start(adc3_handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED)) {
+	    HAL_OK != HAL_ADCEx_Calibration_Start(adc2_handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) ||
+	    HAL_OK != HAL_ADCEx_Calibration_Start(adc3_handle, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED)) {
 		log_text(1, LOG_LVL_FATAL, "adc", "initfailcal");
 		return W_FAILURE;
 	}
 
 	// Start ADC continuous conversion and circular DMA
 	if (HAL_OK != HAL_ADC_Start_DMA(adc1_handle, (uint32_t *)adc1_dma_counts, ADC1_NUM_CHANNELS) ||
-		HAL_OK != HAL_ADC_Start_DMA(adc2_handle, (uint32_t *)adc2_dma_counts, ADC2_NUM_CHANNELS) ||
-		HAL_OK != HAL_ADC_Start_DMA(adc3_handle, (uint32_t *)adc3_dma_counts, ADC3_NUM_CHANNELS)) {
+	    HAL_OK != HAL_ADC_Start_DMA(adc2_handle, (uint32_t *)adc2_dma_counts, ADC2_NUM_CHANNELS) ||
+	    HAL_OK != HAL_ADC_Start_DMA(adc3_handle, (uint32_t *)adc3_dma_counts, ADC3_NUM_CHANNELS)) {
 		log_text(1, LOG_LVL_FATAL, "adc", "initfaildma");
 		return W_FAILURE;
 	}
@@ -141,19 +141,17 @@ health_status_t adc_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log error statistics
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "adc",
-			 "%s conv_timeouts=%lu, invalid_channels=%lu, "
-			 "overflows=%lu",
-			 adc_error_stats.is_init ? "true" : "false",
-			 adc_error_stats.conversion_timeouts,
-			 adc_error_stats.invalid_channels,
-			 adc_error_stats.overflow_errors);
+	log_text(0, LOG_LVL_INFO, "adc",
+	         "%s conv_timeouts=%lu, invalid_channels=%lu, "
+	         "overflows=%lu",
+	         adc_error_stats.is_init ? "true" : "false", adc_error_stats.conversion_timeouts,
+	         adc_error_stats.invalid_channels, adc_error_stats.overflow_errors);
 
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_ADC,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_ADC,
+		.error_bitfield = 0
+	};
 
 	return status;
 }

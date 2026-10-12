@@ -1,7 +1,7 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 #include <stdint.h>
 // Include headers for structs used in log_data_container_t
 #include "application/health_checks/health_checks.h"
@@ -93,9 +93,9 @@ typedef enum {
 	LOG_TYPE_MOVELLA_PT2 = M(0x08),
 	LOG_TYPE_MOVELLA_PT3 = M(0x09),
 
-	LOG_TYPE_AD_BREAKOUT = M(0x0B),
+	LOG_TYPE_AD_BREAKOUT = M(0x0b),
 
-	LOG_TYPE_SERVO_MOTOR = M(0x0C)
+	LOG_TYPE_SERVO_MOTOR = M(0x0c)
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -213,7 +213,7 @@ typedef union __attribute__((packed)) {
 
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
-			  "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
+              "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
 
 /**
  * @brief Create log buffers and mutexes necessary for logger operation.
@@ -232,7 +232,7 @@ w_status_t log_init(void);
  * @return Status indicating success or failure
  */
 w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
-					...);
+                    ...);
 
 /**
  * @brief Log a message in binary form to the data log file.

@@ -5,7 +5,7 @@
 
 #include "application/health_checks/health_checks.h"
 
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 typedef struct {
 	int32_t temperature_centideg; /* °C × 100, e.g. 2007 = 20.07°C  */

@@ -11,9 +11,9 @@
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "application/telemetry/telemetry.h"
-#include "canlib.h"
 #include "common/gnc/gnc_types.h"
 #include "drivers/timer/timer.h"
+#include "rocketlib.h"
 
 #define DATA_WAIT_MS 10
 #define LOG_WAIT_MS 10
@@ -65,16 +65,16 @@ static w_status_t ctrl_can_telemetry(void) {
 		int16_t coef_canard_lift;
 
 		if (W_SUCCESS !=
-			can_encode_scaled_float(SCALE_CTRL_CMD, ctrl_value_latest_raw.command, &cmd)) {
+		    can_encode_scaled_float(SCALE_CTRL_CMD, ctrl_value_latest_raw.command, &cmd)) {
 			controller_error_stats.can_encode_fail_count++;
 			controller_error_stats.can_telem_tx_fail = true;
 			return W_FAILURE;
 		}
 
 		if (W_SUCCESS !=
-			can_encode_scaled_float(SCALE_CTRL_COEF_OF_ROLL_CTRL,
-									ctrl_value_latest_raw.coefficient_of_roll_control[0],
-									&coef_canard_lift)) {
+		    can_encode_scaled_float(SCALE_CTRL_COEF_OF_ROLL_CTRL,
+		                            ctrl_value_latest_raw.coefficient_of_roll_control[0],
+		                            &coef_canard_lift)) {
 			controller_error_stats.can_encode_fail_count++;
 			controller_error_stats.can_telem_tx_fail = true;
 			return W_FAILURE;
@@ -91,11 +91,8 @@ static w_status_t ctrl_can_telemetry(void) {
 		w_status_t status = W_SUCCESS;
 
 		can_msg_t msg;
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  (uint16_t)timestamp,
-									  SENSOR_CANARD_CTRL_CMD_ANGLE,
-									  (uint16_t)(cmd + TELEMETRY_INT16_OFFSET),
-									  &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_CANARD_CTRL_CMD_ANGLE,
+		                              (uint16_t)(cmd + TELEMETRY_INT16_OFFSET), &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			controller_error_stats.can_telem_tx_fail_count++;
@@ -103,11 +100,8 @@ static w_status_t ctrl_can_telemetry(void) {
 			status |= W_FAILURE;
 		}
 
-		build_analog_sensor_16bit_msg(PRIO_LOW,
-									  (uint16_t)timestamp,
-									  SENSOR_CANARD_CTRL_COEFF_LIFT,
-									  (uint16_t)(coef_canard_lift + TELEMETRY_INT16_OFFSET),
-									  &msg);
+		build_analog_sensor_16bit_msg(PRIO_LOW, (uint16_t)timestamp, SENSOR_CANARD_CTRL_COEFF_LIFT,
+		                              (uint16_t)(coef_canard_lift + TELEMETRY_INT16_OFFSET), &msg);
 
 		if (can_handler_transmit(&msg) != W_SUCCESS) {
 			controller_error_stats.can_telem_tx_fail_count++;
@@ -205,7 +199,7 @@ w_status_t controller_codegen_init(controller_ctx_t *p_ctx) {
 
 // helper to run 1 iteration of the controller algo, including delaying where needed.
 w_status_t controller_step(const controller_input_t *p_input, const uint32_t timestamp_tenth_ms,
-						   controller_ctx_t *p_ctx, controller_output_t *p_output) {
+                           controller_ctx_t *p_ctx, controller_output_t *p_output) {
 	if ((NULL == p_input) || (NULL == p_ctx) || (NULL == p_output)) {
 		controller_error_stats.null_ctx_count++;
 		controller_error_stats.ctx_is_null = true;
@@ -216,8 +210,8 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 	}
 
 	float64_t flight_time_sec = ((float64_t)((uint32_t)(timestamp_tenth_ms * TENTH_MS_TO_MS) -
-											 (p_input->launch_timestamp_ms))) *
-								MS_TO_SEC;
+	                                         (p_input->launch_timestamp_ms))) *
+	                            MS_TO_SEC;
 	float64_t dt_controller_sec =
 		((float64_t)(timestamp_tenth_ms - (p_ctx->last_run_tenth_ms))) * TENTH_MS_TO_MS * MS_TO_SEC;
 
@@ -225,16 +219,10 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 
 	bool is_success = false;
 
-	controller_codegen_entry(p_ctx->p_gnc_stack_data,
-							 flight_time_sec,
-							 dt_controller_sec,
-							 p_input->xR,
-							 p_input->dynamic_pressure,
-							 p_input->canard_angle_rad,
-							 &(p_ctx->gnc_controller_ctx),
-							 &(p_output->canard_command_angle_rad),
-							 p_output->ref_roll,
-							 &is_success);
+	controller_codegen_entry(p_ctx->p_gnc_stack_data, flight_time_sec, dt_controller_sec,
+	                         p_input->xR, p_input->dynamic_pressure, p_input->canard_angle_rad,
+	                         &(p_ctx->gnc_controller_ctx), &(p_output->canard_command_angle_rad),
+	                         p_output->ref_roll, &is_success);
 
 	if (is_success) { // the controller ran
 		// update new timestamp
@@ -264,9 +252,11 @@ w_status_t controller_step(const controller_input_t *p_input, const uint32_t tim
 }
 
 health_status_t controller_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_CONTROLLER,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_CONTROLLER,
+		.error_bitfield = 0
+	};
 
 	if (controller_error_stats.ctx_is_null) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
@@ -298,22 +288,15 @@ health_status_t controller_get_status(void) {
 	}
 
 	// Log all error statistics
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "controller",
-			 "init=%d, null_ctx=%d, not_run=%d, tx_fail=%d",
-			 controller_error_stats.is_init,
-			 controller_error_stats.null_ctx_count,
-			 controller_error_stats.controller_not_run_count,
-			 controller_error_stats.can_telem_tx_fail_count);
+	log_text(10, LOG_LVL_INFO, "controller", "init=%d, null_ctx=%d, not_run=%d, tx_fail=%d",
+	         controller_error_stats.is_init, controller_error_stats.null_ctx_count,
+	         controller_error_stats.controller_not_run_count,
+	         controller_error_stats.can_telem_tx_fail_count);
 
-	log_text(10,
-			 LOG_LVL_INFO,
-			 "controller",
-			 "encode_fail=%d, timestamp_fail=%d, log_data_fail=%d",
-			 controller_error_stats.can_encode_fail_count,
-			 controller_error_stats.timestamp_fail_count,
-			 controller_error_stats.log_data_fail_count);
+	log_text(10, LOG_LVL_INFO, "controller", "encode_fail=%d, timestamp_fail=%d, log_data_fail=%d",
+	         controller_error_stats.can_encode_fail_count,
+	         controller_error_stats.timestamp_fail_count,
+	         controller_error_stats.log_data_fail_count);
 
 	return status;
 }

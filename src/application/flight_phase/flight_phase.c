@@ -8,10 +8,10 @@
 #include "application/flight_phase/flight_phase.h"
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
-#include "canlib.h"
 #include "common/gnc/gnc_types.h"
 #include "common/math/math-algebra3d.h"
 #include "drivers/timer/timer.h"
+#include "rocketlib.h"
 
 // TODO: these are made up values, up to FIDO what these actually are
 // See the flowchart in the design doc for more context on these
@@ -88,13 +88,13 @@ w_status_t flight_phase_init(void) {
 	event_queue = xQueueCreate(3, sizeof(flight_phase_event_t));
 
 	if ((NULL == event_queue) ||
-		(W_SUCCESS !=
-		 can_handler_act_cmd_register_callback(ACTUATOR_OX_INJECTOR_VALVE, act_cmd_callback)) ||
-		(W_SUCCESS != can_handler_act_cmd_register_callback(ACTUATOR_IGNITION, act_cmd_callback)) ||
-		(W_SUCCESS !=
-		 can_handler_act_cmd_register_callback(ACTUATOR_CANARD_PAD_FILTER, act_cmd_callback))) {
-		log_text(
-			1, LOG_LVL_FATAL, "FlightPhase", "Failed to create queues/timers/register callback.");
+	    (W_SUCCESS !=
+	     can_handler_act_cmd_register_callback(ACTUATOR_OX_INJECTOR_VALVE, act_cmd_callback)) ||
+	    (W_SUCCESS != can_handler_act_cmd_register_callback(ACTUATOR_IGNITION, act_cmd_callback)) ||
+	    (W_SUCCESS !=
+	     can_handler_act_cmd_register_callback(ACTUATOR_CANARD_PAD_FILTER, act_cmd_callback))) {
+		log_text(1, LOG_LVL_FATAL, "FlightPhase",
+		         "Failed to create queues/timers/register callback.");
 		return W_FAILURE;
 	}
 
@@ -197,7 +197,7 @@ static w_status_t act_cmd_callback(const can_msg_t *msg) {
 	can_actuator_state_t msg_state;
 
 	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
-		(get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
+	    (get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
 		flight_phase_status.invalid_actuator_data_format = true;
 		flight_phase_status.invalid_actuator_data_count++;
 		return W_FAILURE;
@@ -228,7 +228,7 @@ flight_phase_event_t flight_phase_get_next_event(void) {
  * returned event if we go into STATE_ERROR)
  */
 fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t curr_state,
-									  flight_phase_ctx_t *p_ctx) {
+                                      flight_phase_ctx_t *p_ctx) {
 	if (NULL == p_ctx) {
 		flight_phase_status.null_ctx_count++;
 		flight_phase_status.ctx_is_null = true;
@@ -316,8 +316,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
 	// Only count as a transition if the state actually changed
 	if (new_state != curr_state) {
 		log_gnc_internal_state();
-		log_text(
-			1, LOG_LVL_INFO, "FlightPhase", "State transition: %d -> %d", curr_state, new_state);
+		log_text(1, LOG_LVL_INFO, "FlightPhase", "State transition: %d -> %d", curr_state,
+		         new_state);
 		flight_phase_status.state_transitions++;
 	}
 
@@ -332,8 +332,8 @@ fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t cu
  * @return generated timer event
  */
 static flight_phase_event_t flight_phase_timer_detection(const flight_phase_ctx_t *p_ctx,
-														 const fsm_state_t curr_state,
-														 const uint32_t timestamp_ms) {
+                                                         const fsm_state_t curr_state,
+                                                         const uint32_t timestamp_ms) {
 	if (NULL == p_ctx) {
 		flight_phase_status.null_ctx_count++;
 		flight_phase_status.ctx_is_null = true;
@@ -406,8 +406,8 @@ static void process_imu_meas(bool is_new, const vector3d_t *accel, uint8_t *num_
  * @return generated sensor event
  */
 static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_ctx,
-														  const fsm_state_t curr_state,
-														  const all_sensors_data_t *p_sensor_data) {
+                                                          const fsm_state_t curr_state,
+                                                          const all_sensors_data_t *p_sensor_data) {
 	if ((curr_state != STATE_PAD_FILTER) && (curr_state != STATE_PAD_NAV)) {
 		p_ctx->num_consec_board = 0;
 		p_ctx->num_consec_movella = 0;
@@ -418,10 +418,10 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 	bool mti_imu_new = p_sensor_data->mti_meas.mti_accel.is_new;
 	bool ad_imu_new = p_sensor_data->ad_meas.ad_accel.is_new;
 
-	process_imu_meas(
-		board_imu_new, &p_sensor_data->board_meas.board_imu.accel, &p_ctx->num_consec_board);
-	process_imu_meas(
-		mti_imu_new, &p_sensor_data->mti_meas.mti_accel.meas, &p_ctx->num_consec_movella);
+	process_imu_meas(board_imu_new, &p_sensor_data->board_meas.board_imu.accel,
+	                 &p_ctx->num_consec_board);
+	process_imu_meas(mti_imu_new, &p_sensor_data->mti_meas.mti_accel.meas,
+	                 &p_ctx->num_consec_movella);
 	process_imu_meas(ad_imu_new, &p_sensor_data->ad_meas.ad_accel.meas, &p_ctx->num_consec_ad);
 
 	uint32_t num_imu_detect_launch = 0;
@@ -437,14 +437,10 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
 	}
 
 	if (num_imu_detect_launch >= NUM_IMUS_REQUIRED_FOR_LAUNCH_ACCEL) {
-		log_text(1,
-				 LOG_LVL_INFO,
-				 "FlightPhase",
-				 "Accel-based launch detected: %d IMUs, %d board, %d movella, %d ad",
-				 num_imu_detect_launch,
-				 p_ctx->num_consec_board,
-				 p_ctx->num_consec_movella,
-				 p_ctx->num_consec_ad);
+		log_text(1, LOG_LVL_INFO, "FlightPhase",
+		         "Accel-based launch detected: %d IMUs, %d board, %d movella, %d ad",
+		         num_imu_detect_launch, p_ctx->num_consec_board, p_ctx->num_consec_movella,
+		         p_ctx->num_consec_ad);
 		p_ctx->num_consec_board = 0;
 		p_ctx->num_consec_movella = 0;
 		p_ctx->num_consec_ad = 0;
@@ -463,8 +459,8 @@ static flight_phase_event_t flight_phase_sensor_detection(flight_phase_ctx_t *p_
  * @return the status of function
  */
 w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_state_t curr_state,
-										const uint32_t timestamp_ms,
-										const all_sensors_data_t *p_sensor_data) {
+                                        const uint32_t timestamp_ms,
+                                        const all_sensors_data_t *p_sensor_data) {
 	w_status_t status = W_SUCCESS;
 
 	// timer
@@ -493,9 +489,11 @@ w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_sta
 }
 
 health_status_t flight_phase_get_status(void) {
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_FLIGHT_PHASE,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_FLIGHT_PHASE,
+		.error_bitfield = 0
+	};
 
 	// Full event queue
 	if (flight_phase_status.is_queue_full) {
@@ -537,38 +535,27 @@ health_status_t flight_phase_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
 	}
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "init=%d, null_ctx=%" PRIu32 ", queue_full=%" PRIu32 ", error_state=%" PRIu32,
-			 flight_phase_status.initialized,
-			 flight_phase_status.null_ctx_count,
-			 flight_phase_status.queue_full_count,
-			 flight_phase_status.error_state_count);
+	log_text(1, LOG_LVL_INFO, "FlightPhase",
+	         "init=%d, null_ctx=%" PRIu32 ", queue_full=%" PRIu32 ", error_state=%" PRIu32,
+	         flight_phase_status.initialized, flight_phase_status.null_ctx_count,
+	         flight_phase_status.queue_full_count, flight_phase_status.error_state_count);
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "inv_evt=%" PRIu32 ", inv_act_data=%" PRIu32 ", trans=%" PRIu32 "evt_send_err=%" PRIu32
-			 ", rst=%" PRIu32,
-			 flight_phase_status.invalid_event_count,
-			 flight_phase_status.invalid_actuator_data_count,
-			 flight_phase_status.state_transitions,
-			 flight_phase_status.event_send_fail_count,
-			 flight_phase_status.event_counts.reset);
+	log_text(1, LOG_LVL_INFO, "FlightPhase",
+	         "inv_evt=%" PRIu32 ", inv_act_data=%" PRIu32 ", trans=%" PRIu32 "evt_send_err=%" PRIu32
+	         ", rst=%" PRIu32,
+	         flight_phase_status.invalid_event_count,
+	         flight_phase_status.invalid_actuator_data_count, flight_phase_status.state_transitions,
+	         flight_phase_status.event_send_fail_count, flight_phase_status.event_counts.reset);
 
-	log_text(1,
-			 LOG_LVL_INFO,
-			 "FlightPhase",
-			 "pad_filt=%" PRIu32 " ign=%" PRIu32 " inj=%" PRIu32 " accel=%" PRIu32
-			 "act_delay=%" PRIu32 " recvry=%" PRIu32 " slep=%" PRIu32,
-			 flight_phase_status.event_counts.pad_filter,
-			 flight_phase_status.event_counts.ignitor,
-			 flight_phase_status.event_counts.inj_open,
-			 flight_phase_status.event_counts.launch_accel,
-			 flight_phase_status.event_counts.act_delay_elapsed,
-			 flight_phase_status.event_counts.recovery_rate,
-			 flight_phase_status.event_counts.sleep_rate);
+	log_text(1, LOG_LVL_INFO, "FlightPhase",
+	         "pad_filt=%" PRIu32 " ign=%" PRIu32 " inj=%" PRIu32 " accel=%" PRIu32
+	         "act_delay=%" PRIu32 " recvry=%" PRIu32 " slep=%" PRIu32,
+	         flight_phase_status.event_counts.pad_filter, flight_phase_status.event_counts.ignitor,
+	         flight_phase_status.event_counts.inj_open,
+	         flight_phase_status.event_counts.launch_accel,
+	         flight_phase_status.event_counts.act_delay_elapsed,
+	         flight_phase_status.event_counts.recovery_rate,
+	         flight_phase_status.event_counts.sleep_rate);
 
 	return status;
 }

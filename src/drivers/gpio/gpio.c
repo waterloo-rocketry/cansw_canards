@@ -47,28 +47,23 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 	[GPIO_PIN_BLUE_LED] = {.port = LED_B_GPIO_Port, .pin = LED_B_Pin, .access_mutex = NULL},
 	[GPIO_PIN_FLASH_CS] = {.port = FLASH_CS_GPIO_Port, .pin = FLASH_CS_Pin, .access_mutex = NULL},
 
-	[GPIO_PIN_EN_EXT_5V] = {.port = EN_EXT_5V_GPIO_Port,
-							.pin = EN_EXT_5V_Pin,
-							.access_mutex = NULL},
+	[GPIO_PIN_EN_EXT_5V] =
+		{.port = EN_EXT_5V_GPIO_Port, .pin = EN_EXT_5V_Pin, .access_mutex = NULL},
 	[GPIO_PIN_PWR_EN] = {.port = PWR_EN_GPIO_Port, .pin = PWR_EN_Pin, .access_mutex = NULL},
-	[GPIO_PIN_ADXRS649_ST1] = {.port = ADXRS_ST1_GPIO_Port,
-							   .pin = ADXRS_ST1_Pin,
-							   .access_mutex = NULL},
-	[GPIO_PIN_ADXRS649_ST2] = {.port = ADXRS_ST2_GPIO_Port,
-							   .pin = ADXRS_ST2_Pin,
-							   .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST1] =
+		{.port = ADXRS_ST1_GPIO_Port, .pin = ADXRS_ST1_Pin, .access_mutex = NULL},
+	[GPIO_PIN_ADXRS649_ST2] =
+		{.port = ADXRS_ST2_GPIO_Port, .pin = ADXRS_ST2_Pin, .access_mutex = NULL},
 	[GPIO_PIN_ADS1219_INT] = {.port = ADC_INT_GPIO_Port, .pin = ADC_INT_Pin, .access_mutex = NULL},
-	[GPIO_PIN_ADXL380_INT0] = {.port = ADXL_INT_GPIO_Port,
-							   .pin = ADXL_INT_Pin,
-							   .access_mutex = NULL},
-	[GPIO_PIN_PG_EXT_5V] = {.port = PG_EXT_5V_GPIO_Port,
-							.pin = PG_EXT_5V_Pin,
-							.access_mutex = NULL},
+	[GPIO_PIN_ADXL380_INT0] =
+		{.port = ADXL_INT_GPIO_Port, .pin = ADXL_INT_Pin, .access_mutex = NULL},
+	[GPIO_PIN_PG_EXT_5V] =
+		{.port = PG_EXT_5V_GPIO_Port, .pin = PG_EXT_5V_Pin, .access_mutex = NULL},
 	[GPIO_PIN_BAT_FLT1] = {.port = BAT_FLT1_GPIO_Port, .pin = BAT_FLT1_Pin, .access_mutex = NULL},
 	[GPIO_PIN_BAT_FLT2] = {.port = BAT_FLT2_GPIO_Port, .pin = BAT_FLT2_Pin, .access_mutex = NULL},
-	[GPIO_PIN_CHG_MUX_EN] = {.port = CHG_MUX_EN_GPIO_Port,
-							 .pin = CHG_MUX_EN_Pin,
-							 .access_mutex = NULL},
+	[GPIO_PIN_CHG_MUX_EN] = {
+		.port = CHG_MUX_EN_GPIO_Port, .pin = CHG_MUX_EN_Pin, .access_mutex = NULL
+	},
 };
 
 // Public ---------------------------------------------------------------------
@@ -136,9 +131,8 @@ w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout) {
 	}
 
 	if (xSemaphoreTake(gpio_map[pin].access_mutex, pdMS_TO_TICKS(timeout)) == pdTRUE) {
-		HAL_GPIO_WritePin(gpio_map[pin].port,
-						  gpio_map[pin].pin,
-						  (level == GPIO_LEVEL_HIGH) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(gpio_map[pin].port, gpio_map[pin].pin,
+		                  (level == GPIO_LEVEL_HIGH) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 		gpio_status.accesses++;
 
 		xSemaphoreGive(gpio_map[pin].access_mutex);
@@ -181,17 +175,15 @@ health_status_t gpio_get_status(void) {
 	uint32_t status_bitfield = 0;
 
 	// Log operation statistics
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "gpio",
-			 "%s Successful accesses: %lu, Failed accesses: %lu",
-			 gpio_status.is_init ? "INIT" : "NOT INIT",
-			 gpio_status.accesses,
-			 gpio_status.access_fails);
+	log_text(0, LOG_LVL_INFO, "gpio", "%s Successful accesses: %lu, Failed accesses: %lu",
+	         gpio_status.is_init ? "INIT" : "NOT INIT", gpio_status.accesses,
+	         gpio_status.access_fails);
 
-	health_status_t status = {.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
-							  .module_id = CANARDS_MODULE_ID_GPIO,
-							  .error_bitfield = 0};
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_GPIO,
+		.error_bitfield = 0
+	};
 
 	return status;
 }

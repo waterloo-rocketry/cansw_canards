@@ -9,7 +9,7 @@
 #include "application/logger/log.h"
 #include "drivers/adc/adc.h"
 #include "drivers/gpio/gpio.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 /**
  * Initializes power handler.
