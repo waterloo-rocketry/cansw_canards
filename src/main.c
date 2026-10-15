@@ -73,6 +73,20 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void DWT_Init(void) {
+	// Enable the trace/debug blocks.
+	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+
+	// Unlock DWT registers on Cortex-M7.
+	DWT->LAR = 0xc5acce55UL;
+
+	// Reset and enable the CPU cycle counter.
+	DWT->CYCCNT = 0;
+	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+	__DSB();
+	__ISB();
+}
 
 /* USER CODE END 0 */
 
@@ -134,7 +148,7 @@ int main(void) {
 	MX_FATFS_Init();
 	MX_TIM5_Init();
 	/* USER CODE BEGIN 2 */
-
+	DWT_Init();
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
 	// our actual code
 	init_tasks();

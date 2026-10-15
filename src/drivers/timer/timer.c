@@ -22,6 +22,11 @@ static timer_health_t timer_health = {0};
 // make sure to report error if not initialized
 static bool g_timer_initialized = false;
 
+unsigned long getRunTimeCounterValue(void) {
+	// return DWT->CYCCNT;
+	return __HAL_TIM_GET_COUNTER(&htim2);
+}
+
 /**
  * @brief initialize the HAL TIM for the timer
  * @details Use TIM CHANNEL 2. Without initialization any timer call will be invalid

@@ -110,7 +110,7 @@ w_status_t fsm_init() {
 	g_ctx.p_imu_context = &g_imu_context;
 
 	// initialize fsm state
-	g_ctx.curr_state = STATE_IDLE;
+	g_ctx.curr_state = STATE_PAD_NAV;
 #ifndef HIL
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, &unblock_fsm_loop);
 
@@ -199,6 +199,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			controller_input.canard_angle_rad = p_fsm_input->p_sensor_data->motor_encoder_meas.meas;
 
 			// run controller at 100 hz
+			p_fsm_input->p_sensor_data->motor_encoder_meas.is_new = true;
 			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
 			    ctrl_call_time_elapsed_tenth_ms >= CONTROLLER_PERIOD_TENTH_MS) {
 				controller_step(&controller_input, timestamp_tenth_ms, p_ctx->p_controller_context,
