@@ -5,15 +5,15 @@
 
 #include "application/health_checks/health_checks.h"
 
+#include "rocketlib/common/common.h"
 #include "stm32h7xx_hal.h"
-#include "rocketlib/include/common.h"
 
 /**
  * @brief Initialize the SD card hardware.
  * @pre Must be called after scheduler starts. The HAL sd init inside this uses hal_delay
  * in it, so it will hang forever if the timer interrupt is masked (freertos masks interrupts
  * before scheduler starts).
- * 
+ *
  * Allocate block 0 for pointers and storage tracking.
  * Will reset storage tracking and SD bits to zeros.
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
@@ -30,7 +30,8 @@ w_status_t raw_logger_SD_recover(void);
 /**
  * @brief Get SD card specs, values should get cached during init
  *
- * @param[out] block_count - Number of 512-byte blocks. Block_count * 512 bytes = Total Byte Capacity
+ * @param[out] block_count - Number of 512-byte blocks. Block_count * 512 bytes = Total Byte
+ * Capacity
  * @param[out] erase_size_blocks - The SD cards preferred erase size.
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
@@ -40,7 +41,7 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  * @brief Read data synchronously from the beginning of a block.
  * @pre Buffer should be 32 byte aligned
  * @pre Buffer must reside in IDMA-accessible memory, not DTCM (this is already the case)
- * 
+ *
  * Shall invalidate the cache after DMA completion.
  * Use a binary semaphore, signalling for processes to sleep and wake up.
  * (Architecture allows for future asynchronous implementation)
@@ -56,7 +57,7 @@ w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t
  * @brief Write data synchronously to a block on the SD card.
  * @pre Buffer should be 32 byte aligned for DMA
  * @pre Buffer must reside in IDMA-accessible memory, not DTCM (this is already the case)
- * 
+ *
  * Shall clean the cache line prior to writing.
  * Use a binary semaphore, signalling for processes to sleep and wake up.
  * Shall include storage tracking to see how much storage is left.
@@ -70,7 +71,7 @@ w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, u
 
 /**
  * @brief Check if the SD card is writable.
- * 
+ *
  * This function verifies that the SD card is in the READY state using HAL_SD_GetCardState.
  * Also checks that the module is initialized (semaphore created, etc)
  * @pre MUST be called only after scheduler starts.
@@ -85,7 +86,7 @@ w_status_t raw_logger_SD_is_writable(SD_HandleTypeDef *p_sd_handle);
  * Retrieves and reports SD card error statistics and initialization status
  * through log messages.
  *
- * @return CAN board specific err bitfield
+ * @return callers read CAN board specific err bitfield from the returned struct
  */
 health_status_t raw_logger_SD_get_status(void);
 
