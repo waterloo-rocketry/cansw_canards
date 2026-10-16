@@ -51,7 +51,7 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  *
  * @param[in] block_address - The address of the block to read.
  * @param[in] buffer - The buffer to read the block into.
- * @param[in] num_bytes - Number of bytes to read from the start of the block. 
+ * @param[in] num_bytes - Number of bytes to read from the start of the block.
  * Num_bytes should be multiple of 512, but the driver should handle arbitrary numbers.
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */

@@ -22,7 +22,26 @@ raw_sd_card_health_t raw_sd_card_health = {0};
 
 SemaphoreHandle_t sd_semaphore = NULL;
 
-w_status_t raw_logger_SD_init(void) {
+// w_status_t raw_logger_SD_is_writable(SD_HandleTypeDef *p_sd_handle) {
+// 	/*
+// 	 * It uses HAL_SD_GetCardState() on the SD handle (&hsd1) to check if the card is in the
+// 	 * transfer state (HAL_SD_CARD_TRANSFER). If the card is not ready—due to being busy,
+// 	 * ejected, or in an error state—the function returns W_FAILURE; otherwise, it returns
+// 	 * W_SUCCESS.
+// 	 * NOTE: same hal_delay issue as sd_card_init(). (see comment in sd_card_init for details)
+// 	 */
+// 	HAL_SD_CardStateTypeDef resp = HAL_SD_GetCardState(p_sd_handle);
+
+// 	// HAL transfer is the correct state to be ready for r/w. also module must be initialized
+// 	if ((resp == HAL_SD_CARD_TRANSFER) && raw_sd_card_health.is_init) {
+// 		return W_SUCCESS;
+// 	} else {
+// 		raw_sd_card_health.not_writable++;
+// 		return W_FAILURE;
+// 	}
+// }
+
+w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	// attempting to init the module >1 time is fine
 	if (raw_sd_card_health.is_init) {
 		return W_SUCCESS;
@@ -69,25 +88,6 @@ w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer,
 
 	raw_sd_card_health.write_count++;
 	return W_SUCCESS;
-}
-
-w_status_t raw_logger_SD_is_writable(SD_HandleTypeDef *p_sd_handle) {
-	/*
-	 * It uses HAL_SD_GetCardState() on the SD handle (&hsd1) to check if the card is in the
-	 * transfer state (HAL_SD_CARD_TRANSFER). If the card is not ready—due to being busy,
-	 * ejected, or in an error state—the function returns W_FAILURE; otherwise, it returns
-	 * W_SUCCESS.
-	 * NOTE: same hal_delay issue as sd_card_init(). (see comment in sd_card_init for details)
-	 */
-	HAL_SD_CardStateTypeDef resp = HAL_SD_GetCardState(p_sd_handle);
-
-	// HAL transfer is the correct state to be ready for r/w. also module must be initialized
-	if ((resp == HAL_SD_CARD_TRANSFER) && raw_sd_card_health.is_init) {
-		return W_SUCCESS;
-	} else {
-		raw_sd_card_health.not_writable++;
-		return W_FAILURE;
-	}
 }
 
 health_status_t raw_logger_SD_get_status(void) {
