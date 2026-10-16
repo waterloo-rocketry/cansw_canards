@@ -14,7 +14,7 @@
  * in it, so it will hang forever if the timer interrupt is masked (freertos masks interrupts
  * before scheduler starts).
  * Should also verify that the SD card is writable and in the READY state using HAL_SD_GetCardState.
- * Also checks that the module is initialized (semaphore created, etc)
+ * Also checks that the module is initialized (enum assigned, etc)
  * @param p_sd_handle pointer to the HAL handle for the sd card to check
  *
  * Allocate block 0 for pointers and storage tracking.
@@ -46,8 +46,8 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  * @pre Buffer must reside in IDMA-accessible memory, not DTCM (this is already the case)
  *
  * Shall invalidate the cache after DMA completion.
- * Use a binary semaphore, signalling for processes to sleep and wake up.
- * (Architecture allows for future asynchronous implementation)
+ * Shall use an enum that tracks if an action (or an error) is currently taking place as to
+ * avoid concurrency issues.
  *
  * @param[in] block_address - The address of the block to read.
  * @param[in] buffer - The buffer to read the block into.
@@ -63,8 +63,11 @@ w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t
  * @pre Buffer must reside in IDMA-accessible memory, not DTCM (this is already the case)
  *
  * Shall clean the cache line prior to writing.
- * Use a binary semaphore, signalling for processes to sleep and wake up.
+ * Shall use an enum that tracks if an action (or an error) is currently taking place as to
+ * avoid concurrency issues.
  * Shall include storage tracking to see how much storage is left.
+ * If another write is attempted while a current write is occcuring, create a timeout to
+ * let the current write finish before allowing the next
  *
  * @param[in]  block_address    The address of the block to write to.
  * @param[in]  buffer       Pointer to the data that is to be written.
