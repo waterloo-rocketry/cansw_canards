@@ -10,15 +10,18 @@
 
 /**
  * @brief Initialize the SD card hardware.
- * @pre Must be called after scheduler starts. The HAL sd init inside this uses hal_delay
+ * @pre MUST be called after scheduler starts. The HAL sd init inside this uses hal_delay
  * in it, so it will hang forever if the timer interrupt is masked (freertos masks interrupts
  * before scheduler starts).
+ * Should also verify that the SD card is writable and in the READY state using HAL_SD_GetCardState.
+ * Also checks that the module is initialized (semaphore created, etc)
+ * @param p_sd_handle pointer to the HAL handle for the sd card to check
  *
  * Allocate block 0 for pointers and storage tracking.
  * Will reset storage tracking and SD bits to zeros.
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_init(void);
+w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle);
 
 /**
  * @brief Recover the SDMMC in case of errors via resetting.
@@ -48,10 +51,11 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  *
  * @param[in] block_address - The address of the block to read.
  * @param[in] buffer - The buffer to read the block into.
- * @param[in] num_blocks - Number of blocks (512*n bytes) to read from the start of the block.
+ * @param[in] num_bytes - Number of bytes to read from the start of the block. 
+ * Num_bytes should be multiple of 512, but the driver should handle arbitrary numbers.
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t num_blocks);
+w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t num_bytes);
 
 /**
  * @brief Write data synchronously to a block on the SD card.
@@ -68,17 +72,6 @@ w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
 w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, uint32_t num_blocks);
-
-/**
- * @brief Check if the SD card is writable.
- *
- * This function verifies that the SD card is in the READY state using HAL_SD_GetCardState.
- * Also checks that the module is initialized (semaphore created, etc)
- * @pre MUST be called only after scheduler starts.
- * @param p_sd_handle pointer to the HAL handle for the sd card to check
- * @return w_status_t - W_SUCCESS if the SD card is in READY state, W_FAILURE otherwise.
- */
-w_status_t raw_logger_SD_is_writable(SD_HandleTypeDef *p_sd_handle);
 
 /**
  * @brief Report SD card module health status
