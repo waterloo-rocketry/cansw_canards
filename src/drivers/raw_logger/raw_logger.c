@@ -23,7 +23,7 @@ raw_sd_card_health_t raw_sd_card_health = {0};
 enum Status {
 	WRITING,
 	READING,
-	ERROR,
+	ERROR_OCCURED,
 	READY
 };
 
