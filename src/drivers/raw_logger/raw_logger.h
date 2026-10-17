@@ -53,9 +53,11 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  * @param[in] buffer - The buffer to read the block into.
  * @param[in] num_bytes - Number of bytes to read from the start of the block.
  * Num_bytes should be multiple of 512, but the driver should handle arbitrary numbers.
+ * @param[out] timeout - Number of ticks to wait before determining read is unavailable
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t num_bytes);
+w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t num_bytes,
+                              uint32_t timeout);
 
 /**
  * @brief Write data synchronously to a block on the SD card.
@@ -72,9 +74,12 @@ w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t
  * @param[in]  block_address    The address of the block to write to.
  * @param[in]  buffer       Pointer to the data that is to be written.
  * @param[in]  num_blocks    Number of blocks (512*n bytes) from buffer to write.
+ * @param[out] timeout - Number of ticks to wait before determining write is unavailable
+
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, uint32_t num_blocks);
+w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, uint32_t num_blocks,
+                               uint32_t timeout);
 
 /**
  * @brief Report SD card module health status

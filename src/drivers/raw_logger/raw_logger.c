@@ -27,6 +27,8 @@ enum Status {
 	READY
 };
 
+SD_HandleTypeDef *raw_logger_handle;
+
 static enum Status action_state;
 
 w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
@@ -40,8 +42,12 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	 * This enum will ensure that concurrent tasks do not access the SD card simultaneously,
 	 * which helps prevent data corruption.
 	 */
-
 	action_state = READY;
+
+	// Assigns local SD_HandleTypeDef to the parameter
+	raw_logger_handle = p_sd_handle;
+
+	HAL_SD_Init(raw_logger_handle);
 
 	raw_sd_card_health.is_init = true;
 	return W_SUCCESS;
@@ -55,9 +61,27 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
 	return W_SUCCESS;
 }
 
-w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t num_blocks) {
+w_status_t timeout_wait(uint32_t timeout) {
+	while (timeout > 0) {
+		if (action_state == READY) {
+			return W_SUCCESS;
+		}
+		timeout--;
+	}
+	return W_FAILURE;
+}
+
+w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t num_blocks,
+                              uint32_t timeout) {
 	// ensure init
 	if (!raw_sd_card_health.is_init) {
+		return W_FAILURE;
+	}
+
+	// validate params
+
+	if (timeout_wait(timeout) != W_SUCCESS) {
+		raw_sd_card_health.read_error++;
 		return W_FAILURE;
 	}
 
@@ -65,12 +89,21 @@ w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t
 	return W_SUCCESS;
 }
 
-w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer,
-                               uint32_t num_blocks) {
+w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, uint32_t num_blocks,
+                               uint32_t timeout) {
 	// ensure init
 	if (!raw_sd_card_health.is_init) {
 		return W_FAILURE;
 	}
+
+	// validate params
+
+	if (timeout_wait(timeout) != W_SUCCESS) {
+		raw_sd_card_health.write_error++;
+		return W_FAILURE;
+	}
+
+	// write
 
 	raw_sd_card_health.write_count++;
 	return W_SUCCESS;
