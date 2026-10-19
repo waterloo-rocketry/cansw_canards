@@ -7,7 +7,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 
-#include "fatfs.h"
+// #include "fatfs.h"
 #include "stm32h7xx_hal.h"
 
 #include "rocketlib.h"
