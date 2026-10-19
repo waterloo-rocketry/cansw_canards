@@ -62,12 +62,15 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
 }
 
 w_status_t timeout_wait(uint32_t timeout) {
-	while (timeout > 0) {
+	uint32_t timer = HAL_GetTick();
+
+	// waits for allocated period of time
+	while (HAL_GetTick() - timer < timeout) {
 		if (action_state == READY) {
 			return W_SUCCESS;
 		}
-		timeout--;
 	}
+
 	return W_FAILURE;
 }
 
@@ -96,7 +99,7 @@ w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, u
 		return W_FAILURE;
 	}
 
-	// validate params
+	// validate params somehow
 
 	if (timeout_wait(timeout) != W_SUCCESS) {
 		raw_sd_card_health.write_error++;
