@@ -24,7 +24,6 @@
 #include "cmsis_os2.h"
 #include "cordic.h"
 #include "dma.h"
-#include "fatfs.h"
 #include "fdcan.h"
 #include "fmac.h"
 #include "gpio.h"
@@ -66,7 +65,6 @@ void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
 void MX_FREERTOS_Init(void);
-
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -131,7 +129,6 @@ int main(void) {
 	MX_TIM1_Init();
 	MX_UART7_Init();
 	MX_TIM2_Init();
-	MX_FATFS_Init();
 	MX_TIM5_Init();
 	/* USER CODE BEGIN 2 */
 
