@@ -56,7 +56,7 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  * @param[out] timeout - Number of ticks to wait before determining read is unavailable
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t num_bytes,
+w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t block_address, uint32_t num_bytes,
                               uint32_t timeout);
 
 /**
@@ -78,7 +78,7 @@ w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t
 
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, uint32_t num_blocks,
+w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t block_address, uint32_t num_blocks,
                                uint32_t timeout);
 
 /**

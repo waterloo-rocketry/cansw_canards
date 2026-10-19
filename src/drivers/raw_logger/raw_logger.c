@@ -44,7 +44,7 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	 */
 	action_state = READY;
 
-	// Assigns local SD_HandleTypeDef to the parameter
+	// Assigns local SD_HandleTypeDef to the given pointer
 	raw_logger_handle = p_sd_handle;
 
 	HAL_SD_Init(raw_logger_handle);
@@ -74,7 +74,7 @@ w_status_t timeout_wait(uint32_t timeout) {
 	return W_FAILURE;
 }
 
-w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t num_blocks,
+w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t block_address, uint32_t num_blocks,
                               uint32_t timeout) {
 	// ensure init
 	if (!raw_sd_card_health.is_init) {
@@ -88,11 +88,13 @@ w_status_t raw_logger_SD_read(uint32_t block_address, uint32_t *buffer, uint32_t
 		return W_FAILURE;
 	}
 
+	// read
+
 	raw_sd_card_health.read_count++;
 	return W_SUCCESS;
 }
 
-w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, uint32_t num_blocks,
+w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t block_address, uint32_t num_blocks,
                                uint32_t timeout) {
 	// ensure init
 	if (!raw_sd_card_health.is_init) {
@@ -106,7 +108,13 @@ w_status_t raw_logger_SD_write(uint32_t block_address, const uint32_t *buffer, u
 		return W_FAILURE;
 	}
 
-	// write
+	/* WRITE
+	using HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, block_adress, num_blocks)
+	HAL_SD_WriteBlocks_DMA doesn't take a timeout value, so we take that ourselves
+	Process of:
+	function gets called -> check params/init -> call HAL_SD_WriteBlocks_DMA
+	still need to figure out if we should be using HAL_SD_GetCardState or HAL_SD_TxCpltCallback??
+	*/
 
 	raw_sd_card_health.write_count++;
 	return W_SUCCESS;
