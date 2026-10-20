@@ -1,0 +1,5 @@
+/*
+.def file containing all Files used by the program (E.g programs from /applications, /drivers, etc.).
+Format: FILE(enum_file_name, file_id, file_path)
+*/
+FILE_ID(LOG_C, 0x0001, "application/logger/log.c")

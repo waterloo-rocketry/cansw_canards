@@ -1,0 +1,5 @@
+/*
+.def file containing all Event used by the program.
+Format: EVENT(enum_event_name, event_id, num_args, string_message)
+*/
+EVENT(SD_FLUSH_FAIL, 0x0002, 1, "[SEVERITY] [SOURCE] sample error message text")
