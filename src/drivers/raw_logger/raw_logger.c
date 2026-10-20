@@ -23,17 +23,19 @@ raw_sd_card_health_t raw_sd_card_health = {0};
 enum Status {
 	WRITING,
 	READING,
-	ERROR_OCCURED,
-	READY
+	ERROR_OCCURRED,
+	READY,
+	RECOVERING
 };
 
 SD_HandleTypeDef *raw_logger_handle;
+
+TaskHandle_t task_handler;
 
 // Consider having a previous state?
 static enum Status action_state;
 
 w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
-	// attempting to init the module >1 time is fine
 	if (raw_sd_card_health.is_init) {
 		return W_SUCCESS;
 	}
@@ -45,6 +47,8 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	 */
 	action_state = READY;
 
+	task_handler = NULL;
+
 	// Assigns local SD_HandleTypeDef to the given pointer
 	raw_logger_handle = p_sd_handle;
 
@@ -55,31 +59,56 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 }
 
 w_status_t raw_logger_SD_recover(void) {
-	return W_SUCCESS;
+	/*action_state = RECOVERING;
+
+	HAL_SDMMC_DisableInterrupts();
+
+	HAL_SD_DeInit(&*raw_logger_handle);
+
+	vTaskDelay(pdMS_TO_TICKS(50));
+
+	HAL_SD_Init(&*raw_logger_handle);*/
+
+	return W_FAILURE;
 }
 
-w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks) {
+w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte) {
+	if ((NULL == block_count) || (NULL == erase_size_byte)) {
+		return W_FAILURE;
+	}
+
+	HAL_SD_CardInfoTypeDef SDCardInfo;
+	HAL_SD_CardStatusTypeDef SDCardStatus;
+
+	if ((HAL_OK == HAL_SD_GetCardInfo(raw_logger_handle, &SDCardInfo)) &&
+	    (HAL_OK == HAL_SD_GetCardStatus(raw_logger_handle, &SDCardStatus))) {
+		*block_count = SDCardInfo.BlockNbr;
+		*erase_size_byte = (uint32_t)SDCardStatus.EraseSize * 512;
+	} else {
+		return W_FAILURE;
+	}
+
 	return W_SUCCESS;
 }
-
-/**
- * I'm currently getting errors for both of these overrides, not totally sure why
- * I can't figure out if it's because they're already overridden in one of the
- * headers that we import
- * There's also a change that it's because of CubeMX doing stuff in the background
- * There is a file in cansw_canards/src/third_party/cubemx_autogen/src
- * >> bsp_driver_sd.c
- * Where there is apparently the same function which could maybe be the reason?
- * I just don't know what else it could be really
- */
 
 /**
  * This is an override function that is triggered once DMA is done writing
  * This function is only for WRITING, not for READING
  */
 void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
+	if (action_state == RECOVERING) {
+		return;
+	}
 	// maybe unused here? need to learn more about what it does
 	UNUSED(hsd);
+
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	if (task_handler != xTaskGetCurrentTaskHandle()) {
+		return;
+	}
+
+	vTaskNotifyGiveFromISR(xTaskGetCurrentTaskHandle(), &xHigherPriorityTaskWoken);
 
 	raw_sd_card_health.write_count++;
 	action_state = READY;
@@ -93,69 +122,96 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 	// maybe unused here? need to learn more about what it does
 	UNUSED(hsd);
 
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	if (task_handler != xTaskGetCurrentTaskHandle()) {
+		return;
+	}
+
+	vTaskNotifyGiveFromISR(xTaskGetCurrentTaskHandle(), &xHigherPriorityTaskWoken);
+
 	raw_sd_card_health.read_count++;
 	action_state = READY;
 }
 
-w_status_t timeout_wait(uint32_t timeout) {
-	uint32_t timer = HAL_GetTick();
-
-	// waits for allocated period of time
-	while (HAL_GetTick() - timer < timeout) {
-		if (action_state == READY) {
-			return W_SUCCESS;
-		}
-	}
-
-	return W_FAILURE;
-}
-
-w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t block_address, uint32_t num_blocks,
+w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
                               uint32_t timeout) {
 	// ensure init
 	if (!raw_sd_card_health.is_init) {
 		return W_FAILURE;
 	}
 
-	// validate params
-
-	if (timeout_wait(timeout) != W_SUCCESS) {
-		raw_sd_card_health.read_error++;
+	if (action_state == RECOVERING) {
 		return W_FAILURE;
 	}
 
-	// read
-	return timeout_wait(timeout);
+	// validate params
+	if ((num_bytes % 512 != 0) || (byte_address % 512 != 0)) {
+		return W_FAILURE;
+	}
+
+	if (action_state != READY) {
+		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout)) == 0) {
+			raw_sd_card_health.read_error++;
+			return W_IO_ERROR;
+		}
+	}
+
+	action_state = READING;
+
+	uint32_t num_blocks = num_bytes / 512;
+	uint32_t block_address = byte_address / 512;
+	HAL_SD_ReadBlocks_DMA(raw_logger_handle, &*buffer, num_blocks, block_address);
+
+	task_handler = xTaskGetCurrentTaskHandle();
+
+	if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
+		raw_sd_card_health.read_error++;
+		return W_IO_ERROR;
+	}
+
+	raw_sd_card_health.read_count++;
+	return W_SUCCESS;
 }
 
-w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t block_address, uint32_t num_blocks,
+w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
                                uint32_t timeout) {
 	// ensure init
 	if (!raw_sd_card_health.is_init) {
 		return W_FAILURE;
 	}
 
-	// validate params somehow
-
-	if (timeout_wait(timeout) != W_SUCCESS) {
-		raw_sd_card_health.write_error++;
+	if (action_state == RECOVERING) {
 		return W_FAILURE;
 	}
 
-	/* WRITE
-	using HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, block_adress, num_blocks)
-	HAL_SD_WriteBlocks_DMA doesn't take a timeout value, so we take that ourselves
-	Process of:
-	function gets called -> check params/init -> call HAL_SD_WriteBlocks_DMA
-	still need to figure out if we should be using HAL_SD_GetCardState or HAL_SD_TxCpltCallback??
-	Additionally, need to figure out how to only return success on completion, not on initiation
-	Consider moving raw_sd_card_health.write_count++; to HAL_SD_TxCpltCallback override
-	*/
+	// Validate num_bytes
+	if ((num_bytes % 512 != 0) || (byte_address % 512 != 0)) {
+		return W_FAILURE;
+	}
+
+	if (action_state != READY) {
+		if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
+			raw_sd_card_health.write_error++;
+			return W_IO_ERROR;
+		}
+	}
 
 	action_state = WRITING;
-	// HAL_SD_WriteBlocks_DMA(raw_logger_handle, (*buffer), block_address, num_blocks);
-	// ^ this is erroring for some reason fix that pls ;-;
-	return timeout_wait(timeout);
+
+	uint32_t num_blocks = num_bytes / 512;
+	uint32_t block_address = byte_address / 512;
+	HAL_SD_WriteBlocks_DMA(raw_logger_handle, &*buffer, num_blocks, block_address);
+
+	task_handler = xTaskGetCurrentTaskHandle();
+
+	if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
+		raw_sd_card_health.write_error++;
+		return W_IO_ERROR;
+	}
+
+	raw_sd_card_health.write_count++;
+	return W_SUCCESS;
 }
 
 health_status_t raw_logger_SD_get_status(void) {

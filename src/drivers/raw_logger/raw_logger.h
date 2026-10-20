@@ -44,25 +44,27 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  * @brief Read data synchronously from the beginning of a block.
  * @pre Buffer should be 32 byte aligned
  * @pre Buffer must reside in IDMA-accessible memory, not DTCM (this is already the case)
+ * @pre Byte_address and num_bytes must be 512 byte aligned
  *
  * Shall invalidate the cache after DMA completion.
  * Shall use an enum that tracks if an action (or an error) is currently taking place as to
  * avoid concurrency issues.
  *
- * @param[in] block_address - The address of the block to read.
+ * @param[in] byte_address - The address to read.
  * @param[in] buffer - The buffer to read the block into.
  * @param[in] num_bytes - Number of bytes to read from the start of the block.
  * Num_bytes should be multiple of 512, but the driver should handle arbitrary numbers.
  * @param[out] timeout - Number of ticks to wait before determining read is unavailable
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t block_address, uint32_t num_bytes,
+w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
                               uint32_t timeout);
 
 /**
  * @brief Write data synchronously to a block on the SD card.
  * @pre Buffer should be 32 byte aligned for DMA
  * @pre Buffer must reside in IDMA-accessible memory, not DTCM (this is already the case)
+ * @pre Byte_address and num_bytes must be 512 byte aligned
  *
  * Shall clean the cache line prior to writing.
  * Shall use an enum that tracks if an action (or an error) is currently taking place as to
@@ -71,14 +73,15 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t block_address, uint32_t 
  * If another write is attempted while a current write is occcuring, create a timeout to
  * let the current write finish before allowing the next
  *
- * @param[in]  block_address    The address of the block to write to.
+ * @param[in]  byte_address    The address to write to.
  * @param[in]  buffer       Pointer to the data that is to be written.
- * @param[in]  num_blocks    Number of blocks (512*n bytes) from buffer to write.
- * @param[out] timeout - Number of ticks to wait before determining write is unavailable
+ * @param[in]  num_bytes    Number of bytes from buffer to write.
+ * Num_bytes should be multiple of 512, but the driver should handle arbitrary numbers.
+ * @param[out] timeout    Number of ticks to wait before determining write is unavailable
 
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
-w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t block_address, uint32_t num_blocks,
+w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
                                uint32_t timeout);
 
 /**
