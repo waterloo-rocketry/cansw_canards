@@ -1,0 +1,5 @@
+/*
+.def file containing all Sources used by the program (E.g programs from /applications, /drivers, etc.).
+Format: SOURCE(enum_source_name, source_id, string_source_name)
+*/
+SOURCE(LOG_C, 0x0001, "application/logger/log.c")
