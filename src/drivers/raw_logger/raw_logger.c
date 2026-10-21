@@ -52,8 +52,6 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	// Assigns local SD_HandleTypeDef to the given pointer
 	raw_logger_handle = p_sd_handle;
 
-	HAL_SD_Init(raw_logger_handle);
-
 	raw_sd_card_health.is_init = true;
 	return W_SUCCESS;
 }
@@ -104,11 +102,13 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	if (task_handler != xTaskGetCurrentTaskHandle()) {
+	if (task_handler == NULL) {
 		return;
 	}
 
-	vTaskNotifyGiveFromISR(xTaskGetCurrentTaskHandle(), &xHigherPriorityTaskWoken);
+	vTaskNotifyGiveFromISR(task_handler, &xHigherPriorityTaskWoken);
+
+	task_handler = NULL;
 
 	raw_sd_card_health.write_count++;
 	action_state = READY;
@@ -124,11 +124,13 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	if (task_handler != xTaskGetCurrentTaskHandle()) {
+	if (task_handler == NULL) {
 		return;
 	}
 
-	vTaskNotifyGiveFromISR(xTaskGetCurrentTaskHandle(), &xHigherPriorityTaskWoken);
+	vTaskNotifyGiveFromISR(task_handler, &xHigherPriorityTaskWoken);
+
+	task_handler = NULL;
 
 	raw_sd_card_health.read_count++;
 	action_state = READY;
@@ -161,7 +163,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 
 	uint32_t num_blocks = num_bytes / 512;
 	uint32_t block_address = byte_address / 512;
-	HAL_SD_ReadBlocks_DMA(raw_logger_handle, &*buffer, num_blocks, block_address);
+	HAL_SD_ReadBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address);
 
 	task_handler = xTaskGetCurrentTaskHandle();
 
@@ -201,7 +203,10 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 
 	uint32_t num_blocks = num_bytes / 512;
 	uint32_t block_address = byte_address / 512;
-	HAL_SD_WriteBlocks_DMA(raw_logger_handle, &*buffer, num_blocks, block_address);
+
+	SCB_CleanDCache_by_Addr((uint32_t*)buffer, sizeof(buffer));
+
+	HAL_StatusTypeDef status = HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address);
 
 	task_handler = xTaskGetCurrentTaskHandle();
 
