@@ -204,9 +204,10 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	uint32_t num_blocks = num_bytes / 512;
 	uint32_t block_address = byte_address / 512;
 
-	SCB_CleanDCache_by_Addr((uint32_t*)buffer, sizeof(buffer));
+	SCB_CleanDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
 
-	HAL_StatusTypeDef status = HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address);
+	HAL_StatusTypeDef status =
+		HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address);
 
 	task_handler = xTaskGetCurrentTaskHandle();
 
