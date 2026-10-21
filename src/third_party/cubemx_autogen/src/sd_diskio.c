@@ -62,7 +62,8 @@
  * Notice: This is applicable only for cortex M7 based platform.
  */
 /* USER CODE BEGIN enableSDDmaCacheMaintenance */
-/* #define ENABLE_SD_DMA_CACHE_MAINTENANCE  1 */
+// the D-cache is on, so SDMMC DMA buffers need cleaning before writes and invalidating after reads
+#define ENABLE_SD_DMA_CACHE_MAINTENANCE  1
 /* USER CODE END enableSDDmaCacheMaintenance */
 
 /*
@@ -71,7 +72,9 @@
 * transfer data
 */
 /* USER CODE BEGIN enableScratchBuffer */
-/* #define ENABLE_SCRATCH_BUFFER */
+// buffers that aren't 32-byte aligned go through the aligned scratch buffer: invalidating after a
+// read works on whole cache lines and would otherwise discard FatFs data sharing those lines
+#define ENABLE_SCRATCH_BUFFER
 /* USER CODE END enableScratchBuffer */
 
 /* Private variables ---------------------------------------------------------*/
@@ -259,7 +262,7 @@ DRESULT SD_read(BYTE lun, BYTE *buff, DWORD sector, UINT count)
     else
     {
       /* Slow path, fetch each sector a part and memcpy to destination buffer */
-      int i;
+      UINT i; // MANUAL EDIT: was int, -Wsign-compare against count
 
       for (i = 0; i < count; i++) {
         ret = BSP_SD_ReadBlocks_DMA((uint32_t*)scratch, (uint32_t)sector++, 1);
@@ -321,7 +324,7 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
   uint32_t timeout;
 #if defined(ENABLE_SCRATCH_BUFFER)
   uint8_t ret;
-  int i;
+  UINT i; // MANUAL EDIT: was int, -Wsign-compare against count
 #endif
 
    WriteStatus = 0;
@@ -398,6 +401,11 @@ DRESULT SD_write(BYTE lun, const BYTE *buff, DWORD sector, UINT count)
 
         memcpy((void *)scratch, (void *)buff, BLOCKSIZE);
         buff += BLOCKSIZE;
+#if (ENABLE_SD_DMA_CACHE_MAINTENANCE == 1)
+        // MANUAL EDIT: the copy above is still in the write-back D-cache. Clean it so the DMA
+        // sends it, not stale RAM; the CubeMX template only invalidates scratch.
+        SCB_CleanDCache_by_Addr((uint32_t*)scratch, BLOCKSIZE);
+#endif
 
         ret = BSP_SD_WriteBlocks_DMA((uint32_t*)scratch, (uint32_t)sector++, 1);
         if (ret == MSD_OK) {

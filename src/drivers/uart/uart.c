@@ -6,13 +6,19 @@
 #include "drivers/uart/uart.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
+#include "common/dma_cache/dma_cache.h"
 #include "queue.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
 #include <stdint.h>
 #include <string.h>
-/* Static buffer pool for all channels */
-static uint8_t s_buffer_pool[UART_CHANNEL_COUNT][UART_MAX_LEN * UART_NUM_RX_BUFFERS];
+/* Static buffer pool for all channels. RX DMA writes here, so it starts on a D-cache line, and
+ * UART_MAX_LEN being a multiple of the line size keeps every buffer on its own lines */
+static uint8_t s_buffer_pool[UART_CHANNEL_COUNT]
+							[UART_MAX_LEN * UART_NUM_RX_BUFFERS] DMA_BUFFER_ALIGN;
+#if (UART_MAX_LEN % DCACHE_LINE_SIZE) != 0U
+#error "UART_MAX_LEN must be a multiple of DCACHE_LINE_SIZE so RX buffers don't share cache lines"
+#endif
 
 static uint16_t MAX_UART_ATTEMPTS = 5;
 
@@ -163,6 +169,8 @@ w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
 	} else if (pdTRUE != xSemaphoreTake(s_uart_handles[channel].write_mutex, timeout_ms)) {
 		return W_IO_TIMEOUT; // Could not acquire the mutex in the given time
 	}
+	// the DMA reads RAM directly, so write back anything still in the D-cache
+	dma_cache_clean(buffer, length);
 	HAL_StatusTypeDef transmit_status =
 		HAL_UART_Transmit_DMA(s_uart_handles[channel].huart, buffer, length);
 
@@ -248,6 +256,9 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
 			uart_handle_t *handle = &s_uart_handles[ch];
 			uint8_t curr_buffer = handle->curr_buffer_num;
 			uart_msg_t *msg = &handle->rx_msgs[curr_buffer];
+
+			// the DMA wrote RAM directly; drop any stale cached copy before it is read
+			dma_cache_invalidate(msg->data, size);
 
 			// Store message length
 			msg->len = size;
