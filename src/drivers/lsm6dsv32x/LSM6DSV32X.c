@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include "application/logger/log.h"
+#include "common/dma_cache/dma_cache.h"
 #include "common/math/math.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
@@ -31,7 +32,6 @@ typedef enum {
 typedef struct {
 	I2C_HandleTypeDef *hi2c;
 	uint8_t dev_addr;
-	uint8_t dual_buffer[2][12];
 	uint32_t timestamp_ms[2];
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
@@ -74,7 +74,12 @@ static const uint8_t LSM6DSV32X_EXPECTED_WHO_AM_I = 0x70;
 
 static lsm6dsv32x_ctx_t lsm6dsv32x_ctx = {.switched_callback = false};
 
-static const uint8_t CTX_BUFFER_SIZE = sizeof(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER]);
+#define LSM6DSV32X_SAMPLE_BYTES 12U // gyro + accel output registers
+static const uint8_t CTX_BUFFER_SIZE = LSM6DSV32X_SAMPLE_BYTES;
+
+// [LSM6DSV32X_WRITE_BUFFER] is the DMA target. Kept out of lsm6dsv32x_ctx with each slot on its own
+// D-cache lines, so invalidating the DMA slot can't discard the CPU's writes to anything else
+static uint8_t lsm6dsv32x_dual_buffer[2][DMA_BUFFER_SIZE(LSM6DSV32X_SAMPLE_BYTES)] DMA_BUFFER_ALIGN;
 
 static lsm6dsv32x_health_t lsm6dsv32x_health = {0};
 
@@ -126,8 +131,10 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
 
-	memcpy(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER],
-	       lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
+	// the DMA wrote RAM directly; drop any stale cached copy before reading it
+	dma_cache_invalidate(lsm6dsv32x_dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
+	memcpy(lsm6dsv32x_dual_buffer[LSM6DSV32X_READ_BUFFER],
+	       lsm6dsv32x_dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER] =
 		lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER];
 }
@@ -265,7 +272,7 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
 	HAL_StatusTypeDef hal_status =
 		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c, shifted_address, OUTX_L_G, I2C_MEMADD_SIZE_8BIT,
-		                     lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
+		                     lsm6dsv32x_dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	if (hal_status != HAL_OK) {
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
 		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
@@ -293,7 +300,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		taskENTER_CRITICAL();
 
 		// enter a critical section while copying the data
-		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER], CTX_BUFFER_SIZE);
+		memcpy(raw_bytes, lsm6dsv32x_dual_buffer[LSM6DSV32X_READ_BUFFER], CTX_BUFFER_SIZE);
 		raw_acc->timestamp_ms = lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER];
 		// get status
 		status = lsm6dsv32x_ctx.latest_status;

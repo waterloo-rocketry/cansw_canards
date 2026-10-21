@@ -1,6 +1,7 @@
 #include "drivers/adc/adc.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
+#include "common/dma_cache/dma_cache.h"
 #include "semphr.h"
 
 #define ADC_CONV_TIMEOUT_TICKS pdMS_TO_TICKS(1)
@@ -12,10 +13,15 @@
 #define ADC3_MAX_COUNTS 0x0fff // 12 bit full scale, configured in ioc
 #define ADC3_NUM_CHANNELS 2
 
-// Active DMA buffers
-static uint16_t adc1_dma_counts[ADC1_NUM_CHANNELS];
-static uint16_t adc2_dma_counts[ADC2_NUM_CHANNELS];
-static uint16_t adc3_dma_counts[ADC3_NUM_CHANNELS];
+// buffer length padded to whole D-cache lines
+#define ADC_DMA_BUF_LEN(channels)                                                                  \
+	(DMA_BUFFER_SIZE((channels) * sizeof(uint16_t)) / sizeof(uint16_t))
+
+// Active DMA buffers. The DMA rewrites them continuously, so each sits on its own D-cache lines
+// and is invalidated before every read
+static uint16_t adc1_dma_counts[ADC_DMA_BUF_LEN(ADC1_NUM_CHANNELS)] DMA_BUFFER_ALIGN;
+static uint16_t adc2_dma_counts[ADC_DMA_BUF_LEN(ADC2_NUM_CHANNELS)] DMA_BUFFER_ALIGN;
+static uint16_t adc3_dma_counts[ADC_DMA_BUF_LEN(ADC3_NUM_CHANNELS)] DMA_BUFFER_ALIGN;
 
 typedef struct {
 	uint16_t *buffer; // DMA buffer
@@ -94,6 +100,8 @@ static w_status_t adc_get_raw_counts(adc_channel_t channel, uint32_t *output) {
 		return W_INVALID_PARAM;
 	}
 
+	// drop the cached copy so this reads the DMA's latest sample from RAM
+	dma_cache_invalidate(&adc_desc->buffer[adc_desc->rank], sizeof(uint16_t));
 	*output = adc_desc->buffer[adc_desc->rank];
 
 	if (*output > adc_desc->max_counts) {

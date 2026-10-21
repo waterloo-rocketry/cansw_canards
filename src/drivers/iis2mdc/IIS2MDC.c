@@ -8,6 +8,7 @@
 #include "task.h"
 
 #include "application/logger/log.h"
+#include "common/dma_cache/dma_cache.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
@@ -78,11 +79,17 @@ static const float64_t IIS2MDC_SENSITIVITY_GAUSS_PER_LSB = 0.0015;
 // Also used by iis2mdc_get_data to reject reads while the DMA is mid-burst
 static volatile bool iis2mdc_dma_busy = false;
 
-// cache for newest data sample. BDMA writes raw_buf directly during HAL_I2C_Mem_Read_DMA;
-// timestamp_ms and validity check are done by iis2mdc_dma_complete once the burst finishes.
-// Conversions happen in iis2mdc_get_data
+#define IIS2MDC_SAMPLE_BYTES 6U // X, Y, Z output registers
+
+// raw bytes the BDMA channel writes during HAL_I2C_Mem_Read_DMA. BDMA can only reach SRAM4. Kept
+// out of iis2mdc_cache on its own D-cache lines, so invalidating it can't discard the CPU's writes
+// to timestamp_ms and valid
+static uint8_t iis2mdc_raw_buf[DMA_BUFFER_SIZE(IIS2MDC_SAMPLE_BYTES)] DMA_BUFFER_ALIGN
+	__attribute__((section(".sram4")));
+
+// cache for newest data sample. timestamp_ms and validity check are done by iis2mdc_dma_complete
+// once the burst into iis2mdc_raw_buf finishes. Conversions happen in iis2mdc_get_data
 typedef struct {
-	uint8_t raw_buf[6]; // raw bytes written by the BDMA channel
 	uint32_t timestamp_ms; // when this sample was published
 	bool valid; // true once at least one sample has been cached
 } iis2mdc_cache_t;
@@ -358,9 +365,9 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
 	}
 	iis2mdc_dma_busy = true;
 
-	if (HAL_OK != HAL_I2C_Mem_Read_DMA(
-					  &hi2c4, IIS2MDC_HAL_ADDR, IIS2MDC_REG_OUTX_L | IIS2MDC_SUB_AUTO_INC,
-					  I2C_MEMADD_SIZE_8BIT, iis2mdc_cache.raw_buf, sizeof(iis2mdc_cache.raw_buf))) {
+	if (HAL_OK !=
+	    HAL_I2C_Mem_Read_DMA(&hi2c4, IIS2MDC_HAL_ADDR, IIS2MDC_REG_OUTX_L | IIS2MDC_SUB_AUTO_INC,
+	                         I2C_MEMADD_SIZE_8BIT, iis2mdc_raw_buf, IIS2MDC_SAMPLE_BYTES)) {
 		iis2mdc_health.dma_read_fails++;
 		iis2mdc_health.communication_failure = true;
 		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
@@ -385,6 +392,9 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 		iis2mdc_health.internal_error = true;
 		return;
 	}
+
+	// the BDMA wrote RAM directly; drop any stale cached copy before reading it
+	dma_cache_invalidate(iis2mdc_raw_buf, IIS2MDC_SAMPLE_BYTES);
 
 	// make sure to not block dma if timer fails
 	iis2mdc_dma_busy = false;
@@ -492,14 +502,14 @@ w_status_t iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw_data,
 		return W_IO_ERROR;
 	}
 
-	uint8_t local_buf[6];
+	uint8_t local_buf[IIS2MDC_SAMPLE_BYTES];
 	taskENTER_CRITICAL();
 	if (iis2mdc_dma_busy) {
 		taskEXIT_CRITICAL();
 		iis2mdc_health.get_data_dma_busy++;
 		return W_IO_ERROR;
 	}
-	memcpy(local_buf, iis2mdc_cache.raw_buf, sizeof(local_buf));
+	memcpy(local_buf, iis2mdc_raw_buf, sizeof(local_buf));
 	*timestamp_ms = iis2mdc_cache.timestamp_ms;
 	taskEXIT_CRITICAL();
 
