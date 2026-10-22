@@ -23,9 +23,12 @@ typedef struct {
 static inline void DWT_init(void) {
 	// make sure the function is only called once
 	static bool dwt_initialized = false;
+
 	if (dwt_initialized) {
 		return;
 	}
+
+	dwt_initialized = true;
 
 	// Enable the trace/debug blocks.
 	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
@@ -65,10 +68,14 @@ static inline void DWT_init(void) {
 /**
  * @brief the end point of the i benchmark point
  * @param[in] i (uint8_t) the index of the benchmark point that will be measured
+ * @details an uninitialized start would not be counted or any that are exactly on DWT->CYCNT (the
+ * probability is only 2^-32)
  */
 #define SINGLE_BENCHMARK_END(i)                                                                    \
-	BENCHMARK_TIME_SUMS[i] += (uint32_t)(DWT->CYCCNT - BENCHMARK_TIME_START[i]);                   \
-	BENCHMARK_COUNTERS[i]++
+	if (0 == BENCHMARK_TIME_START[i]) {                                                            \
+		BENCHMARK_TIME_SUMS[i] += (uint32_t)(DWT->CYCCNT - BENCHMARK_TIME_START[i]);               \
+		BENCHMARK_COUNTERS[i]++;                                                                   \
+	}
 
 /**
  * @brief Get data on the i benchmark point
