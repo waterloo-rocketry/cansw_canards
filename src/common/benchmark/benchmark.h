@@ -72,7 +72,7 @@ static inline void DWT_init(void) {
  * probability is only 2^-32)
  */
 #define SINGLE_BENCHMARK_END(i)                                                                    \
-	if (0 == BENCHMARK_TIME_START[i]) {                                                            \
+	if (BENCHMARK_TIME_START[i] != 0) {                                                            \
 		BENCHMARK_TIME_SUMS[i] += (uint32_t)(DWT->CYCCNT - BENCHMARK_TIME_START[i]);               \
 		BENCHMARK_COUNTERS[i]++;                                                                   \
 	}

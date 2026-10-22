@@ -40,7 +40,7 @@ w_status_t timer_init() {
 		return W_SUCCESS;
 	}
 
-	if ((HAL_OK != HAL_TIM_Base_Start(&htim2)) && (HAL_OK != HAL_TIM_Base_Start(&htim23))) {
+	if ((HAL_OK != HAL_TIM_Base_Start(&htim2)) || (HAL_OK != HAL_TIM_Base_Start(&htim23))) {
 		return W_FAILURE;
 	}
 
