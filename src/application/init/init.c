@@ -39,6 +39,7 @@
 
 #include "common/benchmark/benchmark.h"
 extern void get_nav_codegen_benchmark_data(benchmark_data_t p_datas[10]);
+extern void get_fsm_benchmark_data(benchmark_data_t p_datas[3]);
 extern osThreadId_t defaultTaskHandle;
 
 // Maximum number of initialization retries before giving up
@@ -217,6 +218,7 @@ static void system_init_task(void *arg) {
 
 	// benchmark stuff
 	benchmark_data_t nav_benchmark_datas[10] = {0};
+	benchmark_data_t fsm_benchmark_datas[3] = {0};
 	TaskHandle_t timer_task_handle = xTimerGetTimerDaemonTaskHandle();
 	TaskHandle_t default_task_handle = (TaskHandle_t)defaultTaskHandle;
 
@@ -240,6 +242,13 @@ static void system_init_task(void *arg) {
 				log_text(0, LOG_LVL_INFO, "SystemInit", "Nav %u S: %llu, C: %lu, Ave %llf", j,
 				         nav_benchmark_datas[j].sum, nav_benchmark_datas[j].count,
 				         nav_benchmark_datas[j].average);
+			}
+
+			get_fsm_benchmark_data(nav_benchmark_datas);
+			for (uint8_t k = 0; k < 3; k++) {
+				log_text(0, LOG_LVL_INFO, "SystemInit", "FSM %u S: %llu, C: %lu, Ave %llf", k,
+				         nav_benchmark_datas[k].sum, nav_benchmark_datas[k].count,
+				         nav_benchmark_datas[k].average);
 			}
 
 			// FreeRTOS runtime and stack statistics.
