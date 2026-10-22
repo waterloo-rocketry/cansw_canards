@@ -62,6 +62,65 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
+  /* --------------------------------------- CUSTOM --------------------------------------- */
+  /* ITCM Data */
+  /* will need to write startup assembly for copying... */
+  _siitcm = LOADADDR(.itcm_text);
+  .itcm_text :
+  {
+    . = ALIGN(4);
+    _sitcm = .;        /* create a global symbol at itcm start */
+    *GNC_codegen.o(.text)           /* .text sections (code) */
+    *GNC_codegen.o(.text*)          /* .text* sections (code) */
+    *GNC_codegen.o(.glue_7)         /* glue arm to thumb code */
+    *GNC_codegen.o(.glue_7t)        /* glue thumb to arm code */
+    . = ALIGN(4);
+    _eitcm = .;        /* define a global symbol at itcm end */
+  } >ITCMRAM AT>FLASH
+
+  /* DTCM */
+  /* will need to add in startup assembly ways of copying data into dtcm */
+  /* used by the startup to initialize data */
+  _sidtcm_rodata = LOADADDR(.dtcm_rodata);
+  .dtcm_rodata :
+  {
+    . = ALIGN(4);
+    _sdtcm_rodata = .;
+    *GNC_codegen.o(.rodata)         /* .rodata sections (constants, strings, etc.) */
+    *GNC_codegen.o(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
+    . = ALIGN(4);
+    _edtcm_rodata = .;
+  } >DTCMRAM AT>FLASH
+
+  _sidtcm = LOADADDR(.dtcm_data);
+  .dtcm_data :
+  {
+    . = ALIGN(4);
+    _sdtcm = .;        /* create a global symbol at data start */
+    *GNC_codegen.o(.data)           /* .data sections */
+    *GNC_codegen.o(.data*)          /* .data* sections */
+    *GNC_codegen.o(.RamFunc)        /* .RamFunc sections */
+    *GNC_codegen.o(.RamFunc*)       /* .RamFunc* sections */
+    . = ALIGN(4);
+    _edtcm = .;        /* define a global symbol at data end */
+  } >DTCMRAM AT> FLASH
+
+  /* Uninitialized data section */
+  .dtcm_bss :
+  {
+    . = ALIGN(4);
+    /* This is used by the startup in order to initialize the .bss section */
+    _sdtcm_bss = .;         /* define a global symbol at bss start */
+    *GNC_codegen.o(.bss)
+    *GNC_codegen.o(.bss*)
+    *GNC_codegen.o(COMMON)
+
+    . = ALIGN(4);
+    _edtcm_bss = .;         /* define a global symbol at bss end */
+  } >DTCMRAM
+
+  /* --------------------------------------- CUSTOM --------------------------------------- */
+
   /* The program code and other data goes into FLASH */
   .text :
   {
@@ -166,11 +225,14 @@ SECTIONS
     . = ALIGN(8);
   } >RAM_D1
 
+  _sisram4 = LOADADDR(.sram4);
   .sram4 :
   {
     . = ALIGN(4);
+    _ssram4 = .;
     *(.sram4)
     . = ALIGN(4);
+    _esram4 = .;
   } >RAM_D3 AT>FLASH
 
   /* Remove information from the standard libraries */

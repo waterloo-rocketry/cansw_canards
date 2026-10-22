@@ -65,6 +65,7 @@ Reset_Handler:
 /* Call the clock system initialization function.*/
   bl  SystemInit
 
+/* the order of flash to RAM: .data, .sram4, .itcm_text, .dtcm_rodata, .dtcm_data*/ 
 /* Copy the data segment initializers from flash to SRAM */
   ldr r0, =_sdata
   ldr r1, =_edata
@@ -81,7 +82,63 @@ LoopCopyDataInit:
   adds r4, r0, r3
   cmp r4, r1
   bcc CopyDataInit
+
+/* go in order through the different sections of memory that needs to be copied */
+  ldr r1, =_sdata
+  cmp r0, r1
+  bne CopyItcmText 
+  /* moving on flash to sram4 */
+  ldr r0, =_ssram4
+  ldr r1, =_esram4
+  ldr r2, =_sisram4
+  movs r3, #0
+  b LoopCopyDataInit
+
+
+CopyItcmText: 
+  ldr r1, =_ssram4
+  cmp r0, r1
+
+  
+  bne CopyDtcmRoData 
+  
+  /*
+  bne FillZeroBss 
+  */
+
+  /* moving on flash to ITCM Text */
+  ldr r0, =_sitcm
+  ldr r1, =_eitcm
+  ldr r2, =_siitcm
+  movs r3, #0
+  b LoopCopyDataInit
+
+
+
+CopyDtcmRoData: 
+  ldr r1, =_sitcm
+  cmp r0, r1
+  bne CopyDtcmData 
+  /* moving on flash to DTCM RoData */
+  ldr r0, =_sdtcm_rodata
+  ldr r1, =_edtcm_rodata
+  ldr r2, =_sidtcm_rodata
+  movs r3, #0
+  b LoopCopyDataInit
+CopyDtcmData: 
+  ldr r1, =_sdtcm_rodata
+  cmp r0, r1
+  bne FillZeroBss 
+  /* moving on flash to DTCM Data */
+  ldr r0, =_sdtcm
+  ldr r1, =_edtcm
+  ldr r2, =_sidtcm
+  movs r3, #0
+  b LoopCopyDataInit
+
+
 /* Zero fill the bss segment. */
+FillZeroBss:
   ldr r2, =_sbss
   ldr r4, =_ebss
   movs r3, #0
@@ -95,6 +152,19 @@ LoopFillZerobss:
   cmp r2, r4
   bcc FillZerobss
 
+
+  ldr r2, =_ebss
+  cmp r2, r4
+  bne CallStaticConstr 
+
+  /* zero DTCM Bss */
+  ldr r2, =_sdtcm_bss
+  ldr r4, =_edtcm_bss
+  movs r3, #0
+  b LoopFillZerobss
+
+
+CallStaticConstr:
 /* Call static constructors */
     bl __libc_init_array
 /* Call the application's entry point.*/
