@@ -1,10 +1,12 @@
 // Add these includes for hardware handles
 #include "FreeRTOS.h"
 #include "adc.h" // For hadc1
+#include "cmsis_os2.h"
 #include "fdcan.h" // For hfdcan1 and hfdcan3
 #include "i2c.h" // For hi2c2, hi2c4
 #include "stm32h7xx_hal.h"
 #include "task.h"
+#include "timers.h"
 #include "usart.h"
 
 #include "GNC_codegen.h"
@@ -35,13 +37,18 @@
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
+#include "common/benchmark/benchmark.h"
+extern void get_nav_codegen_benchmark_data(benchmark_data_t p_datas[10]);
+extern void get_fsm_benchmark_data(benchmark_data_t p_datas[3]);
+extern osThreadId_t defaultTaskHandle;
+
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
 
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
-static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1; // 10 seconds
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -208,7 +215,15 @@ static void system_init_task(void *arg) {
 		log_text(0, LOG_LVL_FATAL, "SystemInit", "failed to add calibration callback");
 		ak45_send_disable_cmd();
 	}
+
+	// benchmark stuff
+	benchmark_data_t nav_benchmark_datas[10] = {0};
+	benchmark_data_t fsm_benchmark_datas[3] = {0};
+	TaskHandle_t timer_task_handle = xTimerGetTimerDaemonTaskHandle();
+	TaskHandle_t default_task_handle = (TaskHandle_t)defaultTaskHandle;
+
 	// its blinky now
+	uint8_t i = 0;
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
@@ -219,6 +234,80 @@ static void system_init_task(void *arg) {
 				log_text(0, LOG_LVL_FATAL, "SystemInit", "failed motor calibration");
 			}
 		}
+
+		// log all of the data
+		if ((i % 2) == 0) {
+			get_nav_codegen_benchmark_data(nav_benchmark_datas);
+			for (uint8_t j = 0; j < 10; j++) {
+				log_text(0, LOG_LVL_INFO, "SystemInit", "Nav %u S: %llu, C: %lu, Ave %llf", j,
+				         nav_benchmark_datas[j].sum, nav_benchmark_datas[j].count,
+				         nav_benchmark_datas[j].average);
+			}
+
+			get_fsm_benchmark_data(nav_benchmark_datas);
+			for (uint8_t k = 0; k < 3; k++) {
+				log_text(0, LOG_LVL_INFO, "SystemInit", "FSM %u S: %llu, C: %lu, Ave %llf", k,
+				         nav_benchmark_datas[k].sum, nav_benchmark_datas[k].count,
+				         nav_benchmark_datas[k].average);
+			}
+
+			// FreeRTOS runtime and stack statistics.
+			log_text(0, LOG_LVL_INFO, "SystemInit", "SysInit: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(init_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(init_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(init_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "logger: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(log_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(log_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(log_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "fsm: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(fsm_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(fsm_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(fsm_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "can tx: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(can_handler_handle_tx),
+			         (unsigned long)ulTaskGetRunTimePercent(can_handler_handle_tx),
+			         (unsigned long)uxTaskGetStackHighWaterMark(can_handler_handle_tx));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "can rx: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(can_handler_handle_rx),
+			         (unsigned long)ulTaskGetRunTimePercent(can_handler_handle_rx),
+			         (unsigned long)uxTaskGetStackHighWaterMark(can_handler_handle_rx));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "health: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(health_checks_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(health_checks_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(health_checks_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "movella: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(movella_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(movella_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(movella_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "ms5611: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(ms5611_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(ms5611_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(ms5611_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "ad: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(ad_breakout_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(ad_breakout_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(ad_breakout_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "telem: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(telem_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(telem_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(telem_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "Tmr Svc: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(timer_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(timer_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(timer_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit",
+			         "defaultTask: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(default_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(default_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(default_task_handle));
+
+			log_text(0, LOG_LVL_INFO, "SystemInit", "IDLE: TOTAL T: %lu, PERC %lu, # TASK: %lu",
+			         (unsigned long)ulTaskGetIdleRunTimeCounter(),
+			         (unsigned long)ulTaskGetIdleRunTimePercent(), uxTaskGetNumberOfTasks());
+			i = 0;
+		}
+		i++;
 	}
 }
 
