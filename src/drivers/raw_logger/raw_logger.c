@@ -10,7 +10,6 @@
 typedef struct {
 	bool is_init;
 	bool invalid_param;
-	bool semaphore_take_fail;
 	uint32_t read_count;
 	uint32_t write_count;
 	uint32_t read_error;
@@ -147,11 +146,22 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		return W_FAILURE;
 	}
 
-	// validate params
-	if ((num_bytes % 512 != 0) || (byte_address % 512 != 0)) {
+	
+	/** Validate params
+	 * The reason why we require the byte_address to not be 0 is that if you attempt to use DMA
+	 * to write to address 0, you get stick in an infinite loop in stm32h7xx_ll_sdmmc.c due to something
+	 * (not totally sure what) reading the register as 0. If you write to byte address 512 it works,
+	 * but for some reason 0 doesn't. Might be due to OS reading 0 as NULL, or if that block is already
+	 * being used by the microcontroller to store information.
+	 */
+
+	if ((num_bytes % 512 != 0) || (byte_address % 512 != 0) || (buffer == NULL) ||
+	    (byte_address == 0) || ((buffer == NULL))) {
+		raw_sd_card_health.invalid_param = true;
 		return W_FAILURE;
 	}
 
+	//ensure thread-safe reading
 	if (action_state != READY) {
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout)) == 0) {
 			raw_sd_card_health.read_error++;
@@ -187,11 +197,25 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 		return W_FAILURE;
 	}
 
+	/** Validate params
+	 * The reason why we require the byte_address to not be 0 is that if you attempt to use DMA
+	 * to write to address 0, you get stick in an infinite loop in stm32h7xx_ll_sdmmc.c due to something
+	 * (not totally sure what) reading the register as 0. If you write to byte address 512 it works,
+	 * but for some reason 0 doesn't. Might be due to OS reading 0 as NULL, or if that block is already
+	 * being used by the microcontroller to store information.
+	 */
+
+	if ((buffer == NULL) || (byte_address == 0) || (num_bytes == 0)) {
+		raw_sd_card_health.invalid_param = true;
+		return W_FAILURE;
+	}
+
 	// Validate num_bytes
 	if ((num_bytes % 512 != 0) || (byte_address % 512 != 0)) {
 		return W_FAILURE;
 	}
 
+	//ensure thread-safe writing
 	if (action_state != READY) {
 		if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
 			raw_sd_card_health.write_error++;
@@ -236,12 +260,6 @@ health_status_t raw_logger_SD_get_status(void) {
 		raw_sd_card_health.invalid_param = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
-	}
-
-	if (raw_sd_card_health.semaphore_take_fail) {
-		raw_sd_card_health.semaphore_take_fail = false;
-		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_OS_OFFSET);
 	}
 
 	// Log operation statistics
