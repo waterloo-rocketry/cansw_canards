@@ -15,12 +15,18 @@ extern bool done_sys_init;
 
 // external timer handle declaration
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim23;
 
 // Error tracking
 static timer_health_t timer_health = {0};
 
 // make sure to report error if not initialized
 static bool g_timer_initialized = false;
+
+// update the FreeRTOS Counter to use a 1Mhz internal clock
+unsigned long getRunTimeCounterValue(void) {
+	return __HAL_TIM_GET_COUNTER(&htim23);
+}
 
 /**
  * @brief initialize the HAL TIM for the timer
