@@ -61,6 +61,22 @@
 #define M(v) ((((v) & 0xffff) << 16) | LOG_DATA_MAGIC)
 
 /**
+ * Uses macro magic to count the number of variadic arguments  up to 20
+ */
+#define COUNT_ARGS(...) \
+    COUNT_ARGS_(0, __VA_ARGS__, \
+        20, 19, 18, 17, 16, 15, 14, 13, 12, 11, \
+        10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+
+/**
+ * Macro magic helper in counting number of variadic arguments
+ */
+#define COUNT_ARGS_( \
+    _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, \
+    _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, \
+    N, ...) N
+
+/**
  * All possible types of log messages emitted by log_data().
  * Make sure to update scripts/logparse.py too!
  *
@@ -118,13 +134,13 @@ typedef enum {
 typedef enum {
 #define SOURCE(name, id, source_name) SRC_##name = id,
 #include "log_sources.def"
-#undef EVENT
+#undef SOURCE
 } log_source_id_t;
 
 typedef enum {
 #define FILE_ID(name, id, file_path) LOGFILE_##name = id,
 #include "log_files.def"
-#undef EVENT
+#undef FILE_ID
 } log_file_id_t;
 
 // Packed vector3d_f32_t for logging only
@@ -230,6 +246,27 @@ typedef union __attribute__((packed)) {
 
 } log_data_container_t;
 
+typedef struct {
+	uint16_t call_count_data; // first bit is whether it has been called yet, second is for overflow
+	uint32_t last_call_time;
+	log_event_id_t event_id;
+} log_site_t;
+
+typedef struct {
+	log_text_site_t* next;
+	log_site_t site_info;
+	int32_t last_value; 
+} log_text_site_t;
+
+typedef struct {
+	log_aggregate_site_t* next;
+	log_site_t site_info;
+	float32_t min, max, avg, last;
+} log_aggregate_site_t;
+
+static log_text_site_t* log_text_sites_head = NULL;
+static log_text_site_t* log_aggregate_sites_head = NULL;
+
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
               "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
@@ -250,7 +287,7 @@ w_status_t log_init(void);
  * @param ... Optional values to print according to format
  * @return Status indicating success or failure
  */
-w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
+w_status_t log_text(uint32_t timeout, log_level_t level, uint8_t log_count, const char *source, const char *format,
                     ...);
 
 /**
@@ -274,5 +311,53 @@ void log_task(void *argument);
  * @return CAN board status bitfield
  */
 health_status_t logger_get_status(void);
+
+void update_log_text_site(log_text_site_t* site, int arg_count, ...);
+void update_log_aggregate_site(log_aggregate_site_t* site, int arg_count, ...);
+
+/**
+ * Calls the log_text function using a counter which allows at most one log per second or one log every 255 calls to prevent high frequency logs. 
+ * Additionally passes the current count to the log_text function along with all others args passed in.
+ * Keeps the most recent variadic argument
+ */
+#define LOG_TEXT(log_event_id, ...) do { \
+		static log_text_site_t this_site = { \
+			.next = NULL, \
+			.site_info = { \
+				.next = NULL, \
+				.call_count_data = 0, \
+				.last_call_time = 0, \
+				.event_id = log_event_id_t \
+			}, \
+			.last_value = 0 \
+		}; \
+		\
+		update_text_log_site(&this_site, COUNT_ARGS(##__VA_ARGS__), ##__VA_ARGS__); \
+	} while (0)
+
+/**
+ * Calls the log_text function using a counter which allows at most one log per second or one log every 255 calls to prevent high frequency logs. 
+ * Additionally passes the current count to the log_text function along with all others args passed in.
+ * Aggregates vardiac args into a max, min, avg, and latest
+ */
+#define LOG_TEXT_AGGREGATE(timeout, level, source, format, ...) do { \
+		static log_aggregate_site_t this_site = { \
+			.next = NULL, \
+			.site_info = { \
+				.call_count_data = 0, \
+				.last_call_time = 0, \
+				.event_id = log_event_id_t \
+			}, \
+			.last_value = 0 \
+		}; \
+		\
+		update_aggreagate_log_site(&this_site, COUNT_ARGS(##__VA_ARGS__), ##__VA_ARGS__); \
+	} while (0)
+
+/**
+ * Acts like a normal log_text call, calling at an unlimited rate
+ */
+#define LOG_TEXT_UNLIMITED(timeout, level, source, format, ...) \
+	log_text(timeout, level, 1, source, format, ##__VA_ARGS__)
 
 #endif
