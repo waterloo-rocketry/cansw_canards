@@ -15,6 +15,7 @@ typedef struct {
 	uint32_t read_error;
 	uint32_t write_error;
 	uint32_t not_writable;
+	HAL_StatusTypeDef error_state;
 } raw_sd_card_health_t;
 
 raw_sd_card_health_t raw_sd_card_health = {0};
@@ -55,6 +56,9 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	return W_SUCCESS;
 }
 
+/**
+ * Currently not implemented as per Shiming
+ */
 w_status_t raw_logger_SD_recover(void) {
 	/*action_state = RECOVERING;
 
@@ -96,7 +100,7 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
 	if (action_state == RECOVERING) {
 		return;
 	}
-	// maybe unused here? need to learn more about what it does
+
 	UNUSED(hsd);
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -111,6 +115,8 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
 
 	raw_sd_card_health.write_count++;
 	action_state = READY;
+
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 /**
@@ -118,8 +124,9 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
  * This function is only for READING, not for WRITING
  */
 void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
-	// maybe unused here? need to learn more about what it does
-	UNUSED(hsd);
+	if (action_state == RECOVERING) {
+		return;
+	}
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -133,6 +140,8 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 
 	raw_sd_card_health.read_count++;
 	action_state = READY;
+
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
@@ -146,26 +155,25 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		return W_FAILURE;
 	}
 
-	
 	/** Validate params
 	 * The reason why we require the byte_address to not be 0 is that if you attempt to use DMA
-	 * to write to address 0, you get stick in an infinite loop in stm32h7xx_ll_sdmmc.c due to something
-	 * (not totally sure what) reading the register as 0. If you write to byte address 512 it works,
-	 * but for some reason 0 doesn't. Might be due to OS reading 0 as NULL, or if that block is already
-	 * being used by the microcontroller to store information.
+	 * to write to address 0, you get stick in an infinite loop in stm32h7xx_ll_sdmmc.c due to
+	 * something (not totally sure what) reading the register as 0. If you write to byte address 512
+	 * it works, but for some reason 0 doesn't. Might be due to OS reading 0 as NULL, or if that
+	 * block is already being used by the microcontroller to store information.
 	 */
 
 	if ((num_bytes % 512 != 0) || (byte_address % 512 != 0) || (buffer == NULL) ||
 	    (byte_address == 0) || ((buffer == NULL))) {
 		raw_sd_card_health.invalid_param = true;
-		return W_FAILURE;
+		return W_INVALID_PARAM;
 	}
 
-	//ensure thread-safe reading
+	// ensure thread-safe reading
 	if (action_state != READY) {
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout)) == 0) {
 			raw_sd_card_health.read_error++;
-			return W_IO_ERROR;
+			return W_IO_TIMEOUT;
 		}
 	}
 
@@ -173,13 +181,28 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 
 	uint32_t num_blocks = num_bytes / 512;
 	uint32_t block_address = byte_address / 512;
-	HAL_SD_ReadBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address);
 
+	// Do not currently use DCache but still good for implementation in case we do
+	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
+
+	/**
+	 * I'm not sure if this is quite why I was failing to write/read for a while, but essentially
+	 * there's something about calling xTaskGetCurrentTaskHandle() before you read/write, as
+	 * if the interrupt fires while you're still calling xTaskGetCurrentTaskHandle() the callback
+	 * just returns null WITHOUT NOTIFYING ANYTHING and you hang in ISR. When calling it before
+	 * the code runs and benchmarks fine; when calling it after, it gets stuck in tasks.c.
+	 */
 	task_handler = xTaskGetCurrentTaskHandle();
+
+	if (HAL_OK != HAL_SD_ReadBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address)) {
+		task_handler = NULL;
+	}
+
+	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
 
 	if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
 		raw_sd_card_health.read_error++;
-		return W_IO_ERROR;
+		return W_IO_TIMEOUT;
 	}
 
 	raw_sd_card_health.read_count++;
@@ -199,27 +222,27 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 
 	/** Validate params
 	 * The reason why we require the byte_address to not be 0 is that if you attempt to use DMA
-	 * to write to address 0, you get stick in an infinite loop in stm32h7xx_ll_sdmmc.c due to something
-	 * (not totally sure what) reading the register as 0. If you write to byte address 512 it works,
-	 * but for some reason 0 doesn't. Might be due to OS reading 0 as NULL, or if that block is already
-	 * being used by the microcontroller to store information.
+	 * to write to address 0, you get stick in an infinite loop in stm32h7xx_ll_sdmmc.c due to
+	 * something (not totally sure what) reading the register as 0. If you write to byte address 512
+	 * it works, but for some reason 0 doesn't. Might be due to OS reading 0 as NULL, or if that
+	 * block is already being used by the microcontroller to store information.
 	 */
 
 	if ((buffer == NULL) || (byte_address == 0) || (num_bytes == 0)) {
 		raw_sd_card_health.invalid_param = true;
-		return W_FAILURE;
+		return W_INVALID_PARAM;
 	}
 
 	// Validate num_bytes
 	if ((num_bytes % 512 != 0) || (byte_address % 512 != 0)) {
-		return W_FAILURE;
+		return W_INVALID_PARAM;
 	}
 
-	//ensure thread-safe writing
+	// ensure thread-safe writing
 	if (action_state != READY) {
 		if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
 			raw_sd_card_health.write_error++;
-			return W_IO_ERROR;
+			return W_IO_TIMEOUT;
 		}
 	}
 
@@ -228,12 +251,23 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	uint32_t num_blocks = num_bytes / 512;
 	uint32_t block_address = byte_address / 512;
 
+	// Do not currently use DCache but still good for implementation in case we do
 	SCB_CleanDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
 
-	HAL_StatusTypeDef status =
-		HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address);
-
+	/**
+	 * I'm not sure if this is quite why I was failing to write/read for a while, but essentially
+	 * there's something about calling xTaskGetCurrentTaskHandle() before you read/write, as
+	 * if the interrupt fires while you're still calling xTaskGetCurrentTaskHandle() the callback
+	 * just returns null WITHOUT NOTIFYING ANYTHING and you hang in ISR. When calling it before
+	 * the code runs and benchmarks fine; when calling it after, it gets stuck in tasks.c.
+	 */
 	task_handler = xTaskGetCurrentTaskHandle();
+
+	if (HAL_OK != HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address)) {
+		task_handler = NULL;
+	}
+
+	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
 
 	if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
 		raw_sd_card_health.write_error++;
@@ -242,6 +276,28 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 
 	raw_sd_card_health.write_count++;
 	return W_SUCCESS;
+}
+
+void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	raw_sd_card_health.error_state = hsd->ErrorCode;
+
+	if (action_state == WRITING) {
+		raw_sd_card_health.write_error++;
+	} else if (action_state == READING) {
+		raw_sd_card_health.read_error++;
+	}
+
+	action_state = ERROR_OCCURRED;
+
+	if (task_handler == NULL) {
+		return;
+	}
+
+	vTaskNotifyGiveFromISR(task_handler, &xHigherPriorityTaskWoken);
+	task_handler = NULL;
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 health_status_t raw_logger_SD_get_status(void) {
