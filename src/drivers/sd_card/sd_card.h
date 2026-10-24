@@ -7,7 +7,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 
-#include "fatfs.h"
+// #include "fatfs.h"
 #include "stm32h7xx_hal.h"
 
 #include "rocketlib.h"
@@ -101,7 +101,7 @@ health_status_t sd_card_get_status(void);
  */
 typedef struct {
 	char filename[FILENAME_STRING_SIZE];
-	FIL file;
+	// FIL file;
 	bool is_open;
 } sd_card_file_ctx_t;
 

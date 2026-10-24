@@ -24,7 +24,6 @@
 #include "cmsis_os2.h"
 #include "cordic.h"
 #include "dma.h"
-#include "fatfs.h"
 #include "fdcan.h"
 #include "fmac.h"
 #include "gpio.h"
@@ -66,13 +65,26 @@ void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
 void MX_FREERTOS_Init(void);
-
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void DWT_Init(void) {
+	// Enable the trace/debug blocks.
+	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+
+	// Unlock DWT registers on Cortex-M7.
+	DWT->LAR = 0xc5acce55UL;
+
+	// Reset and enable the CPU cycle counter.
+	DWT->CYCCNT = 0;
+	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+	__DSB();
+	__ISB();
+}
 
 /* USER CODE END 0 */
 
@@ -131,9 +143,9 @@ int main(void) {
 	MX_TIM1_Init();
 	MX_UART7_Init();
 	MX_TIM2_Init();
-	MX_FATFS_Init();
 	MX_TIM5_Init();
 	/* USER CODE BEGIN 2 */
+	DWT_Init();
 
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
 	// our actual code
