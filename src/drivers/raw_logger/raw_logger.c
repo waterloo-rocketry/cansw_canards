@@ -20,20 +20,20 @@ typedef struct {
 
 raw_sd_card_health_t raw_sd_card_health = {0};
 
-enum Status {
+typedef enum {
 	WRITING,
 	READING,
 	ERROR_OCCURRED,
 	READY,
 	RECOVERING
-};
+} status_t;
 
-SD_HandleTypeDef *raw_logger_handle;
+static SD_HandleTypeDef *raw_logger_handle = NULL;
 
-TaskHandle_t task_handler;
+static TaskHandle_t task_handler;
 
 // Consider having a previous state?
-static enum Status action_state;
+static status_t action_state;
 
 w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	if (raw_sd_card_health.is_init) {
@@ -45,6 +45,11 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	 * This enum will ensure that concurrent tasks do not access the SD card simultaneously,
 	 * which helps prevent data corruption.
 	 */
+
+	if (NULL == p_sd_handle) {
+		return W_FAILURE;
+	}
+	raw_sd_card_health.is_init = true;
 	action_state = READY;
 
 	task_handler = NULL;
@@ -73,23 +78,36 @@ w_status_t raw_logger_SD_recover(void) {
 	return W_FAILURE;
 }
 
+static uint32_t au_code_to_bytes(uint8_t code) {
+    static const uint32_t au_kb[16] = {
+        0, 16, 32, 64, 128, 256, 512, 1024,
+        2048, 4096, 8192, 12288, 16384, 24576, 32768, 65536
+    };
+    return au_kb[code & 0x0FU] * 1024U;
+}
+
 w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte) {
-	if ((NULL == block_count) || (NULL == erase_size_byte)) {
-		return W_FAILURE;
-	}
+    if ((NULL == block_count) || (NULL == erase_size_byte)) {
+        return W_INVALID_PARAM;
+    }
 
-	HAL_SD_CardInfoTypeDef SDCardInfo;
-	HAL_SD_CardStatusTypeDef SDCardStatus;
+    HAL_SD_CardInfoTypeDef SDCardInfo = {0};
+    HAL_SD_CardStatusTypeDef SDCardStatus = {0};
 
-	if ((HAL_OK == HAL_SD_GetCardInfo(raw_logger_handle, &SDCardInfo)) &&
-	    (HAL_OK == HAL_SD_GetCardStatus(raw_logger_handle, &SDCardStatus))) {
-		*block_count = SDCardInfo.BlockNbr;
-		*erase_size_byte = (uint32_t)SDCardStatus.EraseSize * 512;
-	} else {
-		return W_FAILURE;
-	}
+    if ((HAL_OK != HAL_SD_GetCardInfo(raw_logger_handle, &SDCardInfo)) ||
+        (HAL_OK != HAL_SD_GetCardStatus(raw_logger_handle, &SDCardStatus))) {
+        return W_FAILURE;
+    }
 
-	return W_SUCCESS;
+    uint32_t au_bytes = au_code_to_bytes(SDCardStatus.AllocationUnitSize);
+    if ((0U == au_bytes) || (0U == SDCardStatus.EraseSize)) {
+        return W_FAILURE;
+    }
+
+    *block_count = SDCardInfo.LogBlockNbr;
+    *erase_size_byte = (uint32_t)SDCardStatus.EraseSize * au_bytes;
+
+    return W_SUCCESS;
 }
 
 /**
@@ -97,7 +115,7 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  * This function is only for WRITING, not for READING
  */
 void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
-	if (action_state == RECOVERING) {
+	if (RECOVERING == action_state) {
 		return;
 	}
 
@@ -105,7 +123,7 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	if (task_handler == NULL) {
+	if (NULL == task_handler) {
 		return;
 	}
 
@@ -124,18 +142,18 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
  * This function is only for READING, not for WRITING
  */
 void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
-	if (action_state == RECOVERING) {
+	if (RECOVERING == action_state) {
 		return;
 	}
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	if (task_handler == NULL) {
+	if (NULL == task_handler) {
 		return;
 	}
 
 	vTaskNotifyGiveFromISR(task_handler, &xHigherPriorityTaskWoken);
-
+	
 	task_handler = NULL;
 
 	raw_sd_card_health.read_count++;
@@ -151,7 +169,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		return W_FAILURE;
 	}
 
-	if (action_state == RECOVERING) {
+	if (RECOVERING == action_state) {
 		return W_FAILURE;
 	}
 
@@ -163,15 +181,15 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	 * block is already being used by the microcontroller to store information.
 	 */
 
-	if ((num_bytes % 512 != 0) || (byte_address % 512 != 0) || (buffer == NULL) ||
-	    (byte_address == 0) || ((buffer == NULL))) {
+	if ((0 != (num_bytes % 512)) || (0 != (byte_address % 512)) || (NULL == buffer) ||
+	    (0 == byte_address)) {
 		raw_sd_card_health.invalid_param = true;
 		return W_INVALID_PARAM;
 	}
 
 	// ensure thread-safe reading
 	if (action_state != READY) {
-		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout)) == 0) {
+		if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
 			raw_sd_card_health.read_error++;
 			return W_IO_TIMEOUT;
 		}
@@ -194,16 +212,17 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	 */
 	task_handler = xTaskGetCurrentTaskHandle();
 
-	if (HAL_OK != HAL_SD_ReadBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address)) {
+	if (HAL_OK != HAL_SD_ReadBlocks_DMA(raw_logger_handle, buffer, block_address, num_blocks)) {
 		task_handler = NULL;
 	}
 
-	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
-
 	if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
+		action_state = READY;
 		raw_sd_card_health.read_error++;
 		return W_IO_TIMEOUT;
 	}
+
+	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
 
 	raw_sd_card_health.read_count++;
 	return W_SUCCESS;
@@ -216,7 +235,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 		return W_FAILURE;
 	}
 
-	if (action_state == RECOVERING) {
+	if (RECOVERING == action_state) {
 		return W_FAILURE;
 	}
 
@@ -228,13 +247,13 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	 * block is already being used by the microcontroller to store information.
 	 */
 
-	if ((buffer == NULL) || (byte_address == 0) || (num_bytes == 0)) {
+	if ((NULL == buffer) || (0 == byte_address) || (0 == num_bytes)) {
 		raw_sd_card_health.invalid_param = true;
 		return W_INVALID_PARAM;
 	}
 
 	// Validate num_bytes
-	if ((num_bytes % 512 != 0) || (byte_address % 512 != 0)) {
+	if ((0 != (num_bytes % 512)) || (0 != (byte_address % 512))) {
 		return W_INVALID_PARAM;
 	}
 
@@ -267,12 +286,13 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 		task_handler = NULL;
 	}
 
-	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
-
 	if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
+		action_state = READY;
 		raw_sd_card_health.write_error++;
 		return W_IO_ERROR;
 	}
+
+	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
 
 	raw_sd_card_health.write_count++;
 	return W_SUCCESS;
@@ -283,15 +303,15 @@ void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
 
 	raw_sd_card_health.error_state = hsd->ErrorCode;
 
-	if (action_state == WRITING) {
+	if (WRITING == action_state) {
 		raw_sd_card_health.write_error++;
-	} else if (action_state == READING) {
+	} else if (READING == action_state) {
 		raw_sd_card_health.read_error++;
 	}
 
 	action_state = ERROR_OCCURRED;
 
-	if (task_handler == NULL) {
+	if (NULL == task_handler) {
 		return;
 	}
 
