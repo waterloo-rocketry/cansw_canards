@@ -79,35 +79,33 @@ w_status_t raw_logger_SD_recover(void) {
 }
 
 static uint32_t au_code_to_bytes(uint8_t code) {
-    static const uint32_t au_kb[16] = {
-        0, 16, 32, 64, 128, 256, 512, 1024,
-        2048, 4096, 8192, 12288, 16384, 24576, 32768, 65536
-    };
-    return au_kb[code & 0x0FU] * 1024U;
+	static const uint32_t au_kb[16] = {0,    16,   32,   64,    128,   256,   512,   1024,
+	                                   2048, 4096, 8192, 12288, 16384, 24576, 32768, 65536};
+	return au_kb[code & 0x0fU] * 1024U;
 }
 
 w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte) {
-    if ((NULL == block_count) || (NULL == erase_size_byte)) {
-        return W_INVALID_PARAM;
-    }
+	if ((NULL == block_count) || (NULL == erase_size_byte)) {
+		return W_INVALID_PARAM;
+	}
 
-    HAL_SD_CardInfoTypeDef SDCardInfo = {0};
-    HAL_SD_CardStatusTypeDef SDCardStatus = {0};
+	HAL_SD_CardInfoTypeDef SDCardInfo = {0};
+	HAL_SD_CardStatusTypeDef SDCardStatus = {0};
 
-    if ((HAL_OK != HAL_SD_GetCardInfo(raw_logger_handle, &SDCardInfo)) ||
-        (HAL_OK != HAL_SD_GetCardStatus(raw_logger_handle, &SDCardStatus))) {
-        return W_FAILURE;
-    }
+	if ((HAL_OK != HAL_SD_GetCardInfo(raw_logger_handle, &SDCardInfo)) ||
+	    (HAL_OK != HAL_SD_GetCardStatus(raw_logger_handle, &SDCardStatus))) {
+		return W_FAILURE;
+	}
 
-    uint32_t au_bytes = au_code_to_bytes(SDCardStatus.AllocationUnitSize);
-    if ((0U == au_bytes) || (0U == SDCardStatus.EraseSize)) {
-        return W_FAILURE;
-    }
+	uint32_t au_bytes = au_code_to_bytes(SDCardStatus.AllocationUnitSize);
+	if ((0U == au_bytes) || (0U == SDCardStatus.EraseSize)) {
+		return W_FAILURE;
+	}
 
-    *block_count = SDCardInfo.LogBlockNbr;
-    *erase_size_byte = (uint32_t)SDCardStatus.EraseSize * au_bytes;
+	*block_count = SDCardInfo.LogBlockNbr;
+	*erase_size_byte = (uint32_t)SDCardStatus.EraseSize * au_bytes;
 
-    return W_SUCCESS;
+	return W_SUCCESS;
 }
 
 /**
@@ -153,7 +151,7 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 	}
 
 	vTaskNotifyGiveFromISR(task_handler, &xHigherPriorityTaskWoken);
-	
+
 	task_handler = NULL;
 
 	raw_sd_card_health.read_count++;
