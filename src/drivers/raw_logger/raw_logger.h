@@ -50,11 +50,10 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  * Shall use an enum that tracks if an action (or an error) is currently taking place as to
  * avoid concurrency issues.
  *
- * @param[in] byte_address - The address to read.
+ * @param[in] byte_address - Byte offset on the card to read from; must be 512-byte aligned.
  * @param[in] buffer - The buffer to read the block into.
- * @param[in] num_bytes - Number of bytes to read from the start of the block.
- * Num_bytes should be multiple of 512, but the driver should handle arbitrary numbers.
- * @param[out] timeout - Number of ticks to wait before determining read is unavailable
+ * @param[in] num_bytes - Number of bytes to read; must be a non-zero multiple of 512.
+ * @param[in] timeout - Timeout in milliseconds for acquiring the card and completing the DMA.
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
 w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
@@ -73,12 +72,10 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
  * If another write is attempted while a current write is occcuring, create a timeout to
  * let the current write finish before allowing the next
  *
- * @param[in]  byte_address    The address to write to.
- * @param[in]  buffer       Pointer to the data that is to be written.
- * @param[in]  num_bytes    Number of bytes from buffer to write.
- * Num_bytes should be multiple of 512, but the driver should handle arbitrary numbers.
- * @param[out] timeout    Number of ticks to wait before determining write is unavailable
-
+ * @param[in]  byte_address - Byte offset on the card to read from; must be 512-byte aligned.
+ * @param[in]  buffer - Pointer to the data that is to be written.
+ * @param[in] num_bytes - Number of bytes to write; must be a non-zero multiple of 512.
+ * @param[in] timeout - Number of ticks to wait before determining write is unavailable
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  */
 w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
