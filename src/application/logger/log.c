@@ -560,21 +560,37 @@ void log_task(void *argument) {
 
 			// try several times to buffer to SD card
 			uint32_t size = 0;
+			uint32_t open_start_ms = 0;
+			uint32_t open_end_ms = 0;
+			bool written = false;
+			bool synced = false;
+
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
-				uint32_t open_start_ms = 0;
 				timer_get_ms(&open_start_ms);
 				if (sd_card_file_write_open(file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
 				                            &size) == W_SUCCESS) {
-					uint32_t open_end_ms = 0;
+					// Write successful
 					timer_get_ms(&open_end_ms);
+					written = true;
+					break;
+				}
+
+				gpio_toggle(GPIO_PIN_RED_LED, 0);
+				vTaskDelay(pdMS_TO_TICKS(2));
+			}
+
+			if (written) {
+				for (uint32_t i = 0; i < log_write_try_count; i++) {
 					/*
 					 * Sync after every buffer for maximum data retention.
 					 * Consider reducing this to periodic syncs once reliability
 					 * is confirmed.
 					 */
+
 					uint32_t sync_start_ms = 0;
 					timer_get_ms(&sync_start_ms);
 					if (sd_card_file_sync(file_ctx) == W_SUCCESS) {
+						// Sync successful
 						uint32_t sync_end_ms = 0;
 						timer_get_ms(&sync_end_ms);
 
@@ -583,23 +599,21 @@ void log_task(void *argument) {
 						         "open_time=%d, sync_time=%d, try=%d", open_end_ms - open_start_ms,
 						         sync_end_ms - sync_start_ms, i + 1);
 						gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+
+						synced = true;
 						break;
 					} else {
 						log_text(10, LOG_LVL_WARN, "logger", "sd_card_file_sync failed on try %d",
 						         i + 1);
+						gpio_toggle(GPIO_PIN_RED_LED, 0);
+						vTaskDelay(pdMS_TO_TICKS(2));
 					}
 				}
+			}
 
-				gpio_toggle(GPIO_PIN_RED_LED, 0);
-
-				if ((log_write_try_count - 1) == i) {
-					logger_health.buffer_flush_fails++;
-					logger_health.fs_open_flush_failed = true;
-					break; // Failed to write after all attempts
-				} else {
-					// Allow SD card time to recover.
-					vTaskDelay(pdMS_TO_TICKS(2));
-				}
+			if (!written || !synced) {
+				logger_health.buffer_flush_fails++;
+				logger_health.fs_open_flush_failed = true;
 			}
 
 			// Reinitialize buffer for reuse
