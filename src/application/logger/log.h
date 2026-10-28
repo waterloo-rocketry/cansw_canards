@@ -118,7 +118,7 @@ typedef enum {
 typedef enum {
 #define FILE_ID(name, id, file_path) LOGFILE_##name = id,
 #include "log_files.def"
-#undef EVENT
+#undef FILE_ID
 } log_file_id_t;
 
 // Packed vector3d_f32_t for logging only

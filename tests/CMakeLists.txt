@@ -36,6 +36,7 @@ set(MOCKS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/mocks)
 set(FFF_DIR ${MOCKS_DIR}/fff)
 set(UNIT_TESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/unit)
 # Full path to the file
+set(LOG_DICT_DIR "${CMAKE_SOURCE_DIR}/log_dictionary")
 set(PROC_SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 
 # add ctest
@@ -177,6 +178,7 @@ set(TEST_COMMON_INCS
     ${PROC_SRC_DIR}/third_party
     ${PROC_SRC_DIR}/third_party/rocketlib
     ${PROC_SRC_DIR}/third_party/closedrocket/embedded-coder/codegen/lib/GNC_codegen
+    ${LOG_DICT_DIR}
 )
 
 # Add FFF as a header-only library
