@@ -558,7 +558,7 @@ void log_task(void *argument) {
 				}
 			}
 
-						// try several times to buffer to SD card
+			// try several times to buffer to SD card
 			uint32_t size = 0;
 			uint32_t open_start_ms = 0;
 			uint32_t open_end_ms = 0;
