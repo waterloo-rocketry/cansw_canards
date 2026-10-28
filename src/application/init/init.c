@@ -39,7 +39,7 @@
 
 #include "common/benchmark/benchmark.h"
 extern void get_nav_codegen_benchmark_data(benchmark_data_t p_datas[10]);
-extern void get_fsm_benchmark_data(benchmark_data_t p_datas[3]);
+extern void get_fsm_benchmark_data(benchmark_data_t p_datas[5]);
 extern osThreadId_t defaultTaskHandle;
 
 // Maximum number of initialization retries before giving up
@@ -239,15 +239,15 @@ static void system_init_task(void *arg) {
 		if ((i % 2) == 0) {
 			get_nav_codegen_benchmark_data(nav_benchmark_datas);
 			for (uint8_t j = 0; j < 10; j++) {
-				log_text(0, LOG_LVL_INFO, "SystemInit", "Nav %u S: %llu, C: %lu, Ave %llf", j,
-				         nav_benchmark_datas[j].sum, nav_benchmark_datas[j].count,
+				log_text(0, LOG_LVL_INFO, "SystemInit", "Nav %u S: %llu, C: %lu, M: %lu, Ave %llf", j,
+				         nav_benchmark_datas[j].sum, nav_benchmark_datas[j].count, nav_benchmark_datas[j].max,
 				         nav_benchmark_datas[j].average);
 			}
 
 			get_fsm_benchmark_data(nav_benchmark_datas);
-			for (uint8_t k = 0; k < 3; k++) {
-				log_text(0, LOG_LVL_INFO, "SystemInit", "FSM %u S: %llu, C: %lu, Ave %llf", k,
-				         nav_benchmark_datas[k].sum, nav_benchmark_datas[k].count,
+			for (uint8_t k = 0; k < 5; k++) {
+				log_text(0, LOG_LVL_INFO, "SystemInit", "FSM %u S: %llu, C: %lu, M: %lu, Ave %llf", k,
+				         nav_benchmark_datas[k].sum, nav_benchmark_datas[k].count, nav_benchmark_datas[k].max,
 				         nav_benchmark_datas[k].average);
 			}
 
