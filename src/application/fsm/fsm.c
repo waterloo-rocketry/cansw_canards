@@ -26,14 +26,12 @@
 /****************************************************************/
 #include "rocketlib.h"
 
-#ifdef ENABLE_BENCHMARK
 #include "common/benchmark/benchmark.h"
 
 // 0 being a cycle of time
 // 1 from unblock interrupt to exec complete
 // 2 from recieve notif to exec complete
 BENCHMARK_FILE_INIT(3);
-#endif
 
 extern TaskHandle_t fsm_task_handle;
 
