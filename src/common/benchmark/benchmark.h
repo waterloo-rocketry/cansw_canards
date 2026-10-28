@@ -9,10 +9,13 @@
 #include "rocketlib.h"
 #include "stm32h7xx_hal.h"
 
+#include <stdint.h>
+
 // struct benchmark data
 typedef struct {
 	uint64_t sum;
 	uint32_t count;
+	uint32_t max;
 	float32_t average;
 } benchmark_data_t;
 
@@ -57,7 +60,8 @@ static inline void DWT_init(void) {
 	static uint8_t BENCHMARK_COUNT = number_of_benchmark_points;                                   \
 	static uint32_t BENCHMARK_COUNTERS[number_of_benchmark_points] = {0};                          \
 	static uint32_t BENCHMARK_TIME_START[number_of_benchmark_points] = {0};                        \
-	static uint64_t BENCHMARK_TIME_SUMS[number_of_benchmark_points] = {0}
+	static uint64_t BENCHMARK_TIME_SUMS[number_of_benchmark_points] = {0};                         \
+	static uint32_t BENCHMARK_TIME_MAX[number_of_benchmark_points] = {0}
 
 /**
  * @brief the starting point of the i benchmark point
@@ -70,11 +74,17 @@ static inline void DWT_init(void) {
  * @param[in] i (uint8_t) the index of the benchmark point that will be measured
  * @details an uninitialized start would not be counted or any that are exactly on DWT->CYCNT (the
  * probability is only 2^-32)
+ * The start time is automatically set back 0 after the call
  */
 #define SINGLE_BENCHMARK_END(i)                                                                    \
 	if (BENCHMARK_TIME_START[i] != 0) {                                                            \
-		BENCHMARK_TIME_SUMS[i] += (uint32_t)(DWT->CYCCNT - BENCHMARK_TIME_START[i]);               \
+		BENCHMARK_TIME_START[i] = (uint32_t)(DWT->CYCCNT - BENCHMARK_TIME_START[i]);               \
+		BENCHMARK_TIME_SUMS[i] += BENCHMARK_TIME_START[i];                                         \
+		BENCHMARK_TIME_MAX[i] = (BENCHMARK_TIME_START[i] > BENCHMARK_TIME_MAX[i])                  \
+		                            ? BENCHMARK_TIME_START[i]                                      \
+		                            : BENCHMARK_TIME_MAX[i];                                       \
 		BENCHMARK_COUNTERS[i]++;                                                                   \
+		BENCHMARK_TIME_START[i] = 0;                                                               \
 	}
 
 /**
@@ -85,6 +95,7 @@ static inline void DWT_init(void) {
 #define GET_BENCHMARK_STAT(i, p_data)                                                              \
 	p_data->sum = BENCHMARK_TIME_SUMS[i];                                                          \
 	p_data->count = BENCHMARK_COUNTERS[i];                                                         \
+	p_data->max = BENCHMARK_TIME_MAX[i];                                                           \
 	p_data->average = ((float32_t)BENCHMARK_TIME_SUMS[i]) / ((float32_t)BENCHMARK_COUNTERS[i])
 
 #endif
