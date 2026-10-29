@@ -20,6 +20,7 @@
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/telemetry/telemetry.h"
 #include "drivers/MS5611/MS5611.h"
+#include "drivers/MX25L25645G/MX25L25645G.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -41,7 +42,7 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
-static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10; // 10 seconds
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -141,6 +142,7 @@ static void system_init_task(void *arg) {
 	non_crit_status |= iis2mdc_init();
 	non_crit_status |= adxl380_init();
 	non_crit_status |= adxrs649_init();
+	non_crit_status |= MX25L25645G_init();
 
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
@@ -176,8 +178,9 @@ static void system_init_task(void *arg) {
 	task_status &= xTaskCreate(movella_task, "movella", 512, NULL, movella_task_priority,
 	                           &movella_task_handle);
 
-	task_status &= xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority,
-	                           &ms5611_task_handle); // TODO: set the correct size
+	task_status &=
+		xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority, &ms5611_task_handle);
+	// TODO: set the correct size
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
 
