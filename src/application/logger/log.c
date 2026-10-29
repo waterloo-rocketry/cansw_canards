@@ -24,7 +24,7 @@ extern SD_HandleTypeDef hsd2;
 
 BENCHMARK_FILE_INIT(1);
 
-static uint8_t write_buffer[512];
+static uint8_t write_buffer[2048] __attribute__((aligned(32)));
 static uint8_t read_buffer[LOG_BUFFER_SIZE];
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
@@ -527,14 +527,14 @@ void log_task(void *argument) {
 
 	for (;;) {
 		write_count++;
-		//SINGLE_BENCHMARK_START(0);
-		raw_logger_SD_write(write_buffer, 512, 512, 200);
-		//raw_logger_SD_read(read_buffer, 512, LOG_BUFFER_SIZE, 200);
-		//SINGLE_BENCHMARK_END(0);
+		// SINGLE_BENCHMARK_START(0);
+		raw_logger_SD_write(write_buffer, 512, 2048, 200);
+		// raw_logger_SD_read(read_buffer, 512, LOG_BUFFER_SIZE, 200);
+		// SINGLE_BENCHMARK_END(0);
 
 		/*if (write_count % 1000 == 0) {
-			raw_logger_SD_read(read_buffer, 512, LOG_BUFFER_SIZE, 200);
-			//GET_BENCHMARK_STAT(0, (&pData));
+		    raw_logger_SD_read(read_buffer, 512, LOG_BUFFER_SIZE, 200);
+		    //GET_BENCHMARK_STAT(0, (&pData));
 		}
 
 		if (pData.sum == 1) {}*/
