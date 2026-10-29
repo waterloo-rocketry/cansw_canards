@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file         stm32h7xx_hal_msp.c
-  * @brief        This file provides code for the MSP Initialization
-  *               and de-Initialization codes.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file         stm32h7xx_hal_msp.c
+ * @brief        This file provides code for the MSP Initialization
+ *               and de-Initialization codes.
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -57,40 +57,38 @@
 
 /* USER CODE END 0 */
 /**
-  * Initializes the Global MSP.
-  */
-void HAL_MspInit(void)
-{
+ * Initializes the Global MSP.
+ */
+void HAL_MspInit(void) {
+	/* USER CODE BEGIN MspInit 0 */
 
-  /* USER CODE BEGIN MspInit 0 */
+	/* USER CODE END MspInit 0 */
 
-  /* USER CODE END MspInit 0 */
+	__HAL_RCC_SYSCFG_CLK_ENABLE();
 
-  __HAL_RCC_SYSCFG_CLK_ENABLE();
+	/* System interrupt init*/
+	/* PendSV_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);
 
-  /* System interrupt init*/
-  /* PendSV_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);
+	/** Enable the VREF clock
+	 */
+	__HAL_RCC_VREF_CLK_ENABLE();
 
-  /** Enable the VREF clock
-  */
-  __HAL_RCC_VREF_CLK_ENABLE();
+	/** Configure the internal voltage reference buffer voltage scale
+	 */
+	HAL_SYSCFG_VREFBUF_VoltageScalingConfig(SYSCFG_VREFBUF_VOLTAGE_SCALE0);
 
-  /** Configure the internal voltage reference buffer voltage scale
-  */
-  HAL_SYSCFG_VREFBUF_VoltageScalingConfig(SYSCFG_VREFBUF_VOLTAGE_SCALE0);
+	/** Enable the Internal Voltage Reference buffer
+	 */
+	HAL_SYSCFG_EnableVREFBUF();
 
-  /** Enable the Internal Voltage Reference buffer
-  */
-  HAL_SYSCFG_EnableVREFBUF();
+	/** Configure the internal voltage reference buffer high impedance mode
+	 */
+	HAL_SYSCFG_VREFBUF_HighImpedanceConfig(SYSCFG_VREFBUF_HIGH_IMPEDANCE_DISABLE);
 
-  /** Configure the internal voltage reference buffer high impedance mode
-  */
-  HAL_SYSCFG_VREFBUF_HighImpedanceConfig(SYSCFG_VREFBUF_HIGH_IMPEDANCE_DISABLE);
+	/* USER CODE BEGIN MspInit 1 */
 
-  /* USER CODE BEGIN MspInit 1 */
-
-  /* USER CODE END MspInit 1 */
+	/* USER CODE END MspInit 1 */
 }
 
 /* USER CODE BEGIN 1 */
