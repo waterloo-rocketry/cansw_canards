@@ -86,7 +86,7 @@ void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
  * This function is only for WRITING, not for READING
  */
 void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
-	UNUSED(hsd);
+	(void)hsd;
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -109,6 +109,8 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
  * This function is only for READING, not for WRITING
  */
 void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
+	(void)hsd;
+
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 	if (NULL == task_handler) {
@@ -132,10 +134,10 @@ w_status_t raw_logger_SD_recover(void) {
 
 /**
  * Used for conversion from taken SDCardStatus.AllocationUnitSize
- * uint32_t
+ * as it just gives a register, which we then
  */
 static uint32_t au_code_to_bytes(uint8_t code) {
-	return (au_kb[code & 0x0fU] << 10U);
+	return (au_kb[code & 0b0111] << 10U);
 }
 
 w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte) {
@@ -177,12 +179,13 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	}
 
 	// Initial byte_address cannot be 0 as HAL SDMMC registers 0 as NULL
-	if ((0U != (num_bytes % BLOCKSIZE)) || (0U != (byte_address % BLOCKSIZE))) {
+	if ((NULL == buffer) || (0U == byte_address)) {
 		raw_sd_card_health.invalid_param = true;
 		return W_INVALID_PARAM;
 	}
 
-	if ((NULL == buffer) || (0U == byte_address)) {
+	// Validate alignment
+	if ((0U != (num_bytes % BLOCKSIZE)) || (0U != (byte_address % BLOCKSIZE))) {
 		raw_sd_card_health.invalid_param = true;
 		return W_INVALID_PARAM;
 	}
@@ -209,6 +212,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	uint32_t num_blocks = num_bytes / BLOCKSIZE;
 	uint32_t block_address = byte_address / BLOCKSIZE;
 
+	// you take the task_handle before DMA to avoid race conditions
 	task_handler = xTaskGetCurrentTaskHandle();
 
 	xTaskNotifyStateClear(task_handler);
@@ -254,14 +258,14 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	}
 
 	// Initial byte_address cannot be 0 as HAL SDMMC registers 0 as NULL
-	if ((NULL == buffer) || (0 == byte_address) || (0 == num_bytes)) {
+	if ((NULL == buffer) || (0U == byte_address) || (0U == num_bytes)) {
 		raw_sd_card_health.invalid_param = true;
 		log_text(0, LOG_LVL_WARN, "RAW", "Invalid write params.");
 		return W_INVALID_PARAM;
 	}
 
-	// Validate num_bytes
-	if ((0 != (num_bytes % BLOCKSIZE)) || (0 != (byte_address % BLOCKSIZE))) {
+	// Validate alignment
+	if ((0U != (num_bytes % BLOCKSIZE)) || (0U != (byte_address % BLOCKSIZE))) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Wrong write param sizes.");
 		return W_INVALID_PARAM;
 	}
@@ -289,6 +293,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	uint32_t block_address = byte_address / BLOCKSIZE;
 	int32_t checknumbytes = (int32_t)num_bytes;
 
+	// you take the task_handle before DMA to avoid race conditions
 	task_handler = xTaskGetCurrentTaskHandle();
 
 	xTaskNotifyStateClear(task_handler);
