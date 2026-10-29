@@ -1,6 +1,3 @@
-[submodule "src/third_party/canlib"]
-	path = src/third_party/canlib
-	url = https://github.com/waterloo-rocketry/canlib
 [submodule "src/third_party/rocketlib"]
 	path = src/third_party/rocketlib
 	url = https://github.com/waterloo-rocketry/rocketlib

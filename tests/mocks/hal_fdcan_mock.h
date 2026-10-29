@@ -17,9 +17,25 @@
 #define FDCAN_RX_FIFO1 ((uint32_t)0x00000041U)
 #define FDCAN_DLC_BYTES_1 ((uint32_t)0x00000001U)
 #define FDCAN_DLC_BYTES_4 ((uint32_t)0x00000004U)
+#define FDCAN_DLC_BYTES_8 ((uint32_t)0x00000008U)
 #define FDCAN_IT_RX_FIFO1_NEW_MESSAGE ((uint32_t)0x00000010U)
+#define FDCAN_CCCR_INIT ((uint32_t)0x00000001U)
 
-typedef void *FDCAN_HandleTypeDef; // Mock as a void*
+typedef struct {
+	uint32_t CCCR;
+} FDCAN_GlobalTypeDef;
+
+typedef struct {
+	FDCAN_GlobalTypeDef *Instance;
+} FDCAN_HandleTypeDef;
+
+typedef struct {
+	uint32_t BusOff;
+} FDCAN_ProtocolStatusTypeDef;
+
+#ifndef CLEAR_BIT
+#define CLEAR_BIT(REG, BIT) ((REG) &= ~(BIT))
+#endif
 
 typedef struct __FDCAN_TxHeaderTypeDef {
 	uint32_t Identifier;
@@ -62,10 +78,10 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 
 // Declare mock functions for FDCAN HAL functions here
 // HAL_StatusTypeDef HAL_FDCAN_Start(FDCAN_HandleTypeDef *hfdcan)
-DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_Start, FDCAN_HandleTypeDef);
+DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_Start, FDCAN_HandleTypeDef *);
 
 // HAL_StatusTypeDef HAL_FDCAN_Stop(FDCAN_HandleTypeDef *hfdcan)
-DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_Stop, FDCAN_HandleTypeDef);
+DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_Stop, FDCAN_HandleTypeDef *);
 
 // HAL_StatusTypeDef HAL_FDCAN_AddMessageToTxFifoQ(FDCAN_HandleTypeDef *hfdcan, const
 // FDCAN_TxHeaderTypeDef *pTxHeader, const uint8_t *pTxData);
@@ -74,17 +90,24 @@ DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_AddMessageToTxFifoQ, FDCAN_
 
 // HAL_StatusTypeDef HAL_FDCAN_ConfigFilter(FDCAN_HandleTypeDef *hfdcan, const FDCAN_FilterTypeDef
 // *sFilterConfig)
-DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_ConfigFilter, FDCAN_HandleTypeDef,
+DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_ConfigFilter, FDCAN_HandleTypeDef *,
 						FDCAN_FilterTypeDef *);
 
 // HAL_StatusTypeDef HAL_FDCAN_ActivateNotification(FDCAN_HandleTypeDef *hfdcan, uint32_t ActiveITs,
 // uint32_t BufferIndexes)
-DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_ActivateNotification, FDCAN_HandleTypeDef,
+DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_ActivateNotification, FDCAN_HandleTypeDef *,
 						uint32_t, uint32_t);
 
 // HAL_StatusTypeDef HAL_FDCAN_GetRxMessage(FDCAN_HandleTypeDef *hfdcan, uint32_t RxLocation,
 // FDCAN_RxHeaderTypeDef *pRxHeader, uint8_t *pRxData)
-DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_GetRxMessage, FDCAN_HandleTypeDef, uint32_t,
+DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_FDCAN_GetRxMessage, FDCAN_HandleTypeDef *, uint32_t,
 						FDCAN_RxHeaderTypeDef *, const uint8_t *);
+
+// HAL_StatusTypeDef HAL_FDCAN_GetProtocolStatus(const FDCAN_HandleTypeDef *hfdcan,
+//                                               FDCAN_ProtocolStatusTypeDef *ProtocolStatus)
+DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef,
+						HAL_FDCAN_GetProtocolStatus,
+						const FDCAN_HandleTypeDef *,
+						FDCAN_ProtocolStatusTypeDef *);
 
 #endif // HAL_FDCAN_MOCK_H

@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "common/math/math.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 typedef struct {
 	float pressure; // pascal
@@ -46,8 +46,8 @@ w_status_t altimu_init();
  * @return Status of I2C read
  */
 w_status_t altimu_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
-									altimu_raw_imu_data_t *raw_acc,
-									altimu_raw_imu_data_t *raw_gyro);
+                                    altimu_raw_imu_data_t *raw_acc,
+                                    altimu_raw_imu_data_t *raw_gyro);
 
 /**
  * @brief Retrieves accelerometer data.

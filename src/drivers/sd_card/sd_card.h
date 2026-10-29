@@ -5,21 +5,12 @@
 #include <stdint.h>
 
 #include "application/health_checks/health_checks.h"
+#include "application/logger/log.h"
 
+#include "fatfs.h"
 #include "stm32h7xx_hal.h"
 
-#include "rocketlib/include/common.h"
-
-/**
- * @brief SD card module health stats
- */
-typedef struct {
-	bool is_init;
-	uint32_t file_create_count;
-	uint32_t read_count;
-	uint32_t write_count;
-	uint32_t err_count;
-} sd_card_health_t;
+#include "rocketlib.h"
 
 /**
  * @brief Initialize the SD card hardware and create the mutex for thread safety.
@@ -40,7 +31,7 @@ w_status_t sd_card_init(void);
  * @return w_status_t - W_SUCCESS on success. W_FAILURE if file DNE or other fails.
  */
 w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t num_bytes,
-							 uint32_t *bytes_read);
+                             uint32_t *bytes_read);
 
 /**
  * @brief Write data to a file on the SD card.
@@ -57,7 +48,7 @@ w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t num_b
  * @return w_status_t - W_SUCCESS on success, W_FAILURE if file DNE or other fails.
  */
 w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_t num_bytes,
-							  bool append, uint32_t *bytes_written);
+                              bool append, uint32_t *bytes_written);
 
 /**
  * @brief Create a new file on the SD card.
@@ -102,5 +93,68 @@ w_status_t sd_card_is_writable(SD_HandleTypeDef *p_sd_handle);
  * @return CAN board specific err bitfield
  */
 health_status_t sd_card_get_status(void);
+
+/**
+ * @brief SD card file context used for persistent streaming writes.
+ *
+ * A separate context should be created for each file that remains open.
+ */
+typedef struct {
+	char filename[FILENAME_STRING_SIZE];
+	FIL file;
+	bool is_open;
+} sd_card_file_ctx_t;
+
+/**
+ * @brief Open a file for persistent writing.
+ *
+ * Acquires the SD card mutex, opens the file in append mode, and keeps the
+ * file handle open for future writes. Must be paired with
+ * sd_card_file_close().
+ *
+ * This avoids repeated file open/close overhead during logging.
+ *
+ * @param[in/out] ctx File context to initialize.
+ * please define the file name
+ *
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
+ */
+w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx);
+
+/**
+ * @brief Write data to an opened SD card file.
+ *
+ * Requires a previous successful call to sd_card_file_open().
+ * The file remains open after writing.
+ *
+ * @param[in] ctx File context returned by sd_card_file_open().
+ * @param[in] buffer Pointer to the data to be written.
+ * @param[in] num_bytes Number of bytes from buffer to write.
+ * @param[out] bytes_written Actual number of bytes written.
+ *
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
+ */
+w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, uint32_t num_bytes,
+                                   uint32_t *bytes_written);
+
+/**
+ * @brief Sync an opened SD card file.
+ *
+ * Forces buffered filesystem data to be written to the SD card.
+ *
+ * @param[in] ctx File context returned by sd_card_file_open().
+ *
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
+ */
+w_status_t sd_card_file_sync(sd_card_file_ctx_t *ctx);
+
+/**
+ * @brief Close an opened SD card file.
+ *
+ * @param[in] ctx File context returned by sd_card_file_open().
+ *
+ * @return w_status_t - W_SUCCESS on success, W_FAILURE otherwise.
+ */
+w_status_t sd_card_file_close(sd_card_file_ctx_t *ctx);
 
 #endif // SD_CARD_H

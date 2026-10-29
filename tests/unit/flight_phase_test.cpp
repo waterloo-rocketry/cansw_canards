@@ -9,10 +9,10 @@ extern "C" {
 #include "application/flight_phase/flight_phase.h"
 #include "common/gnc/gnc_types.h"
 #include "application/logger/log.h"
-#include "canlib.h"
+#include "rocketlib.h"
 #include "queue.h"
-#include "rocketlib/include/common.h"
 #include "timers.h"
+#include <stdint.h>
 
 // FAKES
 // w_status_t log_init(void)
@@ -22,14 +22,14 @@ FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *
 // w_status_t log_data(uint32_t id, log_level_t level, log_data_type_t type, const log_data_container_t *data)
 FAKE_VALUE_FUNC(w_status_t, log_data, uint32_t, log_data_type_t, const log_data_container_t *);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
-// w_status_t can_handler_register_callback(can_msg_type_t msg_type, can_callback_t callback)
-FAKE_VALUE_FUNC(w_status_t, can_handler_register_callback, can_msg_type_t, can_callback_t)
-
-FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_t *)
+FAKE_VALUE_FUNC(w_status_t, can_handler_act_cmd_register_callback, can_actuator_id_t, can_callback_t);
+FAKE_VOID_FUNC(log_gnc_internal_state);
+FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_t *);
 
 // w_status_t get_cmd_actuator_state(const can_msg_t *msg, can_actuator_state_t *cmd_actuator_state);
-FAKE_VALUE_FUNC(w_status_t, get_cmd_actuator_state, const can_msg_t *, can_actuator_state_t *)
+FAKE_VALUE_FUNC(w_status_t, get_cmd_actuator_state, const can_msg_t *, can_actuator_state_t *);
 FAKE_VALUE_FUNC(double, math_vector3d_norm, const vector3d_t *);
+FAKE_VALUE_FUNC(fsm_state_t, fsm_get_state);
 
 BaseType_t
 xQueuePeek_state_pad(QueueHandle_t xQueue, void *const pvBuffer, TickType_t xTicksToWait) {
@@ -56,11 +56,12 @@ protected:
         RESET_FAKE(xTimerCreate);
         RESET_FAKE(xQueueOverwrite);
         RESET_FAKE(log_text);
-        RESET_FAKE(can_handler_register_callback);
+        RESET_FAKE(can_handler_act_cmd_register_callback);
         RESET_FAKE(get_actuator_id);
         RESET_FAKE(get_cmd_actuator_state);
         RESET_FAKE(timer_get_ms);
         RESET_FAKE(math_vector3d_norm);
+        RESET_FAKE(fsm_get_state);
         FFF_RESET_HISTORY();
         queue_send_event = EVENT_NONE;
     }
@@ -73,7 +74,7 @@ TEST_F(FlightPhaseTest, InitCreatesMutexes) {
     // Arrange
     xQueueCreate_fake.return_val = (QueueHandle_t)1;
     xTimerCreate_fake.return_val = (TimerHandle_t)1;
-    can_handler_register_callback_fake.return_val = W_SUCCESS;
+    can_handler_act_cmd_register_callback_fake.return_val = W_SUCCESS;
 
     // Act
     w_status_t status = flight_phase_init();
@@ -85,7 +86,7 @@ TEST_F(FlightPhaseTest, InitCreatesMutexes) {
 TEST_F(FlightPhaseTest, InitFailsIfMutexCreationFails) {
     // Arrange
     xQueueCreate_fake.return_val = (QueueHandle_t)NULL;
-    can_handler_register_callback_fake.return_val = W_SUCCESS;
+    can_handler_act_cmd_register_callback_fake.return_val = W_SUCCESS;
 
     // Act
     w_status_t status = flight_phase_init();
@@ -98,7 +99,7 @@ TEST_F(FlightPhaseTest, InitFailsIfRegistrationFails) {
     // // Arrange
     xQueueCreate_fake.return_val = (QueueHandle_t)1;
     xTimerCreate_fake.return_val = (TimerHandle_t)1;
-    can_handler_register_callback_fake.return_val = W_FAILURE;
+    can_handler_act_cmd_register_callback_fake.return_val = W_FAILURE;
 
     // Act
     w_status_t status = flight_phase_init();
@@ -773,39 +774,6 @@ TEST_F(FlightPhaseTest, GenSyncFail) {
     EXPECT_EQ(ctx.num_consec_ad, 0);
 }
 
-TEST_F(FlightPhaseTest, AllThreeImusTriggerLaunchDetection) {
-    // Arrange
-    flight_phase_ctx_t ctx = {0};
-    all_sensors_data_t sensor_data = {0};
-    flight_phase_gen_sync_events(&ctx, STATE_IDLE, 0, &sensor_data);
-
-    sensor_data.board_meas.board_imu.is_new = true;
-    sensor_data.mti_meas.mti_accel.is_new = true;
-    sensor_data.ad_meas.ad_accel.is_new = true;
-
-    double norms[15] = {
-        25.0, 25.0, 50.0, 
-        25.0, 35.0, 45.0, 
-        25.0, 25.0, 35.0, 
-        25.0, 35.0, 25.0, 
-        25.0, 25.0, 35.0, 
-    };
-    SET_RETURN_SEQ(math_vector3d_norm, norms, 15);
-
-    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
-
-    for (int i = 0; i < 4; i++) {
-        queue_send_event = EVENT_NONE;
-        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
-        EXPECT_EQ(queue_send_event, EVENT_NONE);
-    }
-
-    queue_send_event = EVENT_NONE;
-    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
-    EXPECT_EQ(queue_send_event, EVENT_LAUNCH_ACCEL);
-    EXPECT_EQ(math_vector3d_norm_fake.call_count, 15);
-}
-
 TEST_F(FlightPhaseTest, TwoImusTriggerLaunchDetection) {
     // Arrange
     flight_phase_ctx_t ctx = {0};
@@ -814,14 +782,15 @@ TEST_F(FlightPhaseTest, TwoImusTriggerLaunchDetection) {
 
     sensor_data.board_meas.board_imu.is_new = true;
     sensor_data.mti_meas.mti_accel.is_new = true;
-    sensor_data.ad_meas.ad_accel.is_new = true;
+    sensor_data.ad_meas.ad_accel.is_new = false;
 
-    double norms[15] = {
-        25.0, 25.0, 15.0, 
-        25.0, 35.0, 15.0, 
-        25.0, 25.0, 15.0, 
-        25.0, 35.0, 15.0, 
-        25.0, 25.0, 15.0, 
+    double norms[12] = {
+        35.0, 35.0,
+        35.0, 35.0,
+        35.0, 35.0,
+        35.0, 35.0,
+        35.0, 35.0,
+        35.0, 35.0,
     };
     SET_RETURN_SEQ(math_vector3d_norm, norms, 15);
 
@@ -849,10 +818,10 @@ TEST_F(FlightPhaseTest, ImusBelowThresholdDoesNotTriggerLaunchDetection) {
 
     double norms[15] = {
         25.0, 25.0, 25.0, 
-        25.0, 25.0, 25.0, 
-        25.0, 25.0, 25.0, 
-        25.0, 25.0, 25.0, 
-        25.0, 5.0, 5.0, 
+        35.0, 35.0, 35.0, 
+        35.0, 35.0, 25.0, 
+        35.0, 25.0, 35.0, 
+        25.0, 35.0, 35.0, 
     };
     SET_RETURN_SEQ(math_vector3d_norm, norms, 15);
 
@@ -865,19 +834,19 @@ TEST_F(FlightPhaseTest, ImusBelowThresholdDoesNotTriggerLaunchDetection) {
     }
 }
 
-TEST_F(FlightPhaseTest, OnlyOneImuAboveThresholdDoesNotTriggerLaunchDetection) {
+TEST_F(FlightPhaseTest, OneImuAboveThresholdDoesTriggerLaunchDetection) {
     // Arrange
     all_sensors_data_t sensor_data = {0};
     sensor_data.board_meas.board_imu.is_new = true;
     sensor_data.mti_meas.mti_accel.is_new = true;
     sensor_data.ad_meas.ad_accel.is_new = true;
 
-    double norms[30] = {
-        25.0, 5.0, 5.0,
-        25.0, 5.0, 5.0,
-        25.0, 5.0, 5.0,
-        25.0, 5.0, 5.0,
-        25.0, 5.0, 5.0,
+    double norms[15] = {
+        35.0, 5.0, 5.0,
+        35.0, 5.0, 5.0,
+        35.0, 5.0, 5.0,
+        35.0, 5.0, 5.0,
+        35.0, 5.0, 5.0,
     };
     SET_RETURN_SEQ(math_vector3d_norm, norms, 30);
 
@@ -885,65 +854,15 @@ TEST_F(FlightPhaseTest, OnlyOneImuAboveThresholdDoesNotTriggerLaunchDetection) {
     xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
 
 
-    for (int i = 0; i < 5; i++) {
-        queue_send_event = EVENT_NONE;
-        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
-        EXPECT_EQ(queue_send_event, EVENT_NONE);
-    }
-}
-
-TEST_F(FlightPhaseTest, BoardImuDeadTriggersLaunchDetection) {
-    // Arrange
-    all_sensors_data_t sensor_data = {0};
-    sensor_data.board_meas.board_imu.is_new = false;
-    sensor_data.mti_meas.mti_accel.is_new = true;
-    sensor_data.ad_meas.ad_accel.is_new = true;
-
-    double norms[10] = {
-        25.0, 25.0, 
-        25.0, 25.0, 
-        25.0, 25.0, 
-        25.0, 25.0, 
-        25.0, 25.0, 
-    };
-    SET_RETURN_SEQ(math_vector3d_norm, norms, 10);
-
-    flight_phase_ctx_t ctx = {0};
-    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
-
-    // Act + Assert
     for (int i = 0; i < 4; i++) {
         queue_send_event = EVENT_NONE;
         flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
         EXPECT_EQ(queue_send_event, EVENT_NONE);
     }
-
     queue_send_event = EVENT_NONE;
     flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
     EXPECT_EQ(queue_send_event, EVENT_LAUNCH_ACCEL);
-}
 
-TEST_F(FlightPhaseTest, TwoImusDeadDoesNotTriggerLaunchDetection) {
-    all_sensors_data_t sensor_data = {0};
-    sensor_data.board_meas.board_imu.is_new = false;
-    sensor_data.mti_meas.mti_accel.is_new = false;
-    sensor_data.ad_meas.ad_accel.is_new = true;
-
-    flight_phase_ctx_t ctx = {0};
-
-    queue_send_event = EVENT_NONE;
-    xQueueSend_fake.custom_fake = xQueueSend_check_input_event;
-
-    // Act + Assert
-    for (int i = 0; i < 5; i++) {
-        queue_send_event = EVENT_NONE;
-        flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
-        EXPECT_EQ(queue_send_event, EVENT_NONE);
-    }
-    flight_phase_gen_sync_events(&ctx, STATE_PAD_FILTER, 0, &sensor_data);
-    
-    EXPECT_EQ(queue_send_event, EVENT_NONE);
-    EXPECT_EQ(math_vector3d_norm_fake.call_count, 6);
 }
 
 TEST_F(FlightPhaseTest, ThreeImusDeadDoesNotTriggerLaunchAccel) {

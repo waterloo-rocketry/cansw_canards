@@ -1,13 +1,13 @@
 # Canard Board Firmware
 
-Firmware for 2025-26 Canard Board, performing state estimation and control for the 2nd iteration of the canards system. Project documentation can be found in the team Google Drive.
+Firmware for 2025-27 Canard Board, performing state estimation and control for the 2nd & 3rd iteration of the canards system. Project documentation can be found in the team Google Drive.
 In 2024-25, this project was firmware for Processor Board in the first canards system
 
 ## Project Structure
 
 - `src/drivers/`: custom peripheral driver modules
 - `src/application/`: high-level application logic modules
-- `src/third_party/`: third-party libraries, including CubeMX auto-gen files
+- `src/third_party/`: third-party libraries, including CubeMX auto-gen files, `closedrocket` source files, and MATLAB codegen 
 - `src/common/`: shared resources specific to this project
 - `tests/`: everything for [testing](#Unit-Testing)
 
@@ -15,7 +15,7 @@ In 2024-25, this project was firmware for Processor Board in the first canards s
 
 ### 1. Clone repo
 
-- Clone repo and initialize submodules: ` git clone --recurse-submodules https://github.com/waterloo-rocketry/cansw_processor_canards`
+- Clone repo and initialize submodules: ` git clone --recurse-submodules https://github.com/waterloo-rocketry/cansw_canards`
 
 ### 2. Firmware dev in PlatformIO: edit, build, flash, debug
 
@@ -28,11 +28,11 @@ All firmware dev is done in VSCode using PlatformIO (previously using devcontain
 - If needed, switch between debug/release environments: `Ctrl+Shift+P > PlatformIO: Pick Project Environment`
 - Auto-format the project code: `Project Tasks > Custom > Format`
 
-### 2.5 STM32CubeMX
+### 2.1 STM32CubeMX
 
 Steps to configure stuff in CubeMX and auto-generate code:
 
-- Open `cansw_canard_board.ioc` in CubeMX and configure things as needed
+- Open `cansw_canard_board_h733.ioc` and `cansw_canard_board_h723.ioc` in CubeMX and configure things as needed
 - Click `Generate Code` and wait for the pop-up that indicates it's done
 - Run the script `./scripts/cubemx_cleanup.sh` to make the auto-gen files conform to our project setup
 - Run clang-format (see section 2) to format the auto-gen code
@@ -54,9 +54,14 @@ Run tests:
 - Hover over `Build`, click the build icon to build the configuration
     - The build preset should automatically be selected (eg, `Build Firmware (Debug) preset`)
 
+### 4. Build HIL
+- Switch to the HIL build environment: `Ctrl+Shift+P > PlatformIO: Pick Project Environment > env:hil`
+- Build and upload as usual. Now the board will be in HIL mode
+
+
 ## Unit Testing
 
-We use GoogleTest and Fake Function Framework (fff) for unit testing. All testing-related files are in `tests/`.
+We use GoogleTest and [Fake Function Framework (fff)](https://android.googlesource.com/platform/external/fff/+/cacd5f5459dba658e0c88ceff32282a0e9fab0a5/README.md) for unit testing. All testing-related files are in `tests/`.
 
 - Tests are built from `tests/CMakeLists.txt` which is separate from the project's main build config. Building and running tests is done via cmake.
 - Test source code should be written in `tests/unit/`.

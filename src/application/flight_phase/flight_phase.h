@@ -8,7 +8,7 @@
 
 #include "application/health_checks/health_checks.h"
 #include "common/gnc/gnc_types.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 /**
  * Enum representing a state transition event
@@ -55,7 +55,7 @@ flight_phase_event_t flight_phase_get_next_event(void);
  * process 1 transition.
  */
 fsm_state_t flight_phase_update_state(flight_phase_event_t event, fsm_state_t curr_state,
-									  flight_phase_ctx_t *p_ctx);
+                                      flight_phase_ctx_t *p_ctx);
 
 /**
  * @brief Reports the current status of the flight phase module
@@ -74,7 +74,7 @@ health_status_t flight_phase_get_status(void);
  * @return the status of function
  */
 w_status_t flight_phase_gen_sync_events(flight_phase_ctx_t *p_ctx, const fsm_state_t curr_state,
-										const uint32_t timestamp_ms,
-										const all_sensors_data_t *p_sensor_data);
+                                        const uint32_t timestamp_ms,
+                                        const all_sensors_data_t *p_sensor_data);
 
 #endif

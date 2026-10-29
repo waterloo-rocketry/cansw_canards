@@ -31,8 +31,8 @@ format quick reference:
 """
 FORMATS = {
     0x44414548: Spec("header", "<LL", ["version", "index"]),
-    M(0x01): Spec("test", "<f", ["test_val"]),  
-    
+    M(0x01): Spec("test", "<f", ["test_val"]),
+
     M(0x02): Spec("navigator_pt1", "<ffffff",
     [
         "q_w", "q_x", "q_y", "q_z", "altitude", "norm",
@@ -42,9 +42,9 @@ FORMATS = {
         "vel_x", "vel_y", "vel_z",
         "rate_x", "rate_y", "rate_z",
     ]),
-    M(0x04): Spec("controller", "<fff",
+    M(0x04): Spec("controller", "<fffff",
     [
-        "command", "roll_target", "canard_coeff",
+        "command", "canard_coeff", "body_coeff", "roll_angle_target", "roll_rate_target",
     ]),
 
     M(0x05): Spec("board_imu", "<ffffff",
@@ -52,34 +52,33 @@ FORMATS = {
         "accel_x", "accel_y", "accel_z",
         "gyro_x", "gyro_y", "gyro_z",
     ]),
-    M(0x06): Spec("board_baro", "<ff", ["baro", "thermometer"]),
-
-    M(0x07): Spec("board_mag", "<ffffff",
+    M(0x06): Spec("board_mag_baro", "<fffff",
     [
-        "accel_x", "accel_y", "accel_z",
         "mag_x", "mag_y", "mag_z",
+        "baro", "temp",
     ]),
-    M(0x08): Spec("movella_pt1", "<ffffff",
+
+    M(0x07): Spec("movella_pt1", "<ffffff",
     [
         "accel_x", "accel_y", "accel_z",
         "gyro_x", "gyro_y", "gyro_z",
     ]),
-    M(0x09): Spec("movella_pt2", "<ffff",
+    M(0x08): Spec("movella_pt2", "<ffff",
     [
         "mag_x", "mag_y", "mag_z",
         "baro",
     ]),
-    M(0x0A): Spec("movella_pt3", "<ffff",
+    M(0x09): Spec("movella_pt3", "<ffff",
     [
         "q_w", "q_x", "q_y", "q_z",
     ]),
-    M(0x0C): Spec("ad_accel", "<fff",
+    M(0x0B): Spec("ad_breakout", "<ffff",
     [
         "accel_x", "accel_y", "accel_z",
+        "gyro",
     ]),
-    M(0x0D): Spec("ad_gyro", "<f", ["gyro"]),
 
-    M(0x0E): Spec("servo_motor", "<fff",
+    M(0x0C): Spec("servo_motor", "<fff",
     [
         "angle", "curr", "temp",
     ]),

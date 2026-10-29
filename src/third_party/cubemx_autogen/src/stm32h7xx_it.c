@@ -22,6 +22,7 @@
 #include "stm32h7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "application/health_checks/health_checks.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -107,6 +108,9 @@ void HardFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_HardFault_IRQn 0 */
+    #ifndef HARD_FAULT_TEST
+      proc_handle_fatal_error("HARD");
+    #endif
     /* USER CODE END W1_HardFault_IRQn 0 */
   }
 }
@@ -122,6 +126,9 @@ void MemManage_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
+    #ifndef HARD_FAULT_TEST
+      proc_handle_fatal_error("MEM");
+    #endif
     /* USER CODE END W1_MemoryManagement_IRQn 0 */
   }
 }
@@ -137,6 +144,9 @@ void BusFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_BusFault_IRQn 0 */
+    #ifndef HARD_FAULT_TEST
+      proc_handle_fatal_error("BUS");
+    #endif
     /* USER CODE END W1_BusFault_IRQn 0 */
   }
 }
@@ -152,6 +162,9 @@ void UsageFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
+    #ifndef HARD_FAULT_TEST
+      proc_handle_fatal_error("USAGE");
+    #endif
     /* USER CODE END W1_UsageFault_IRQn 0 */
   }
 }

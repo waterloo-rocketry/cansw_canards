@@ -6,7 +6,7 @@
 
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 /**
  * @brief the FreeRTOS Task for getting the sensor data

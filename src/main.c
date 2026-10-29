@@ -115,7 +115,6 @@ int main(void) {
 	MX_MDMA_Init();
 	MX_CORDIC_Init();
 	MX_FMAC_Init();
-	MX_FDCAN2_Init();
 	MX_FDCAN3_Init();
 	MX_I2C1_Init();
 	MX_I2C4_Init();
@@ -203,8 +202,8 @@ void SystemClock_Config(void) {
 	/** Initializes the CPU, AHB and APB buses clocks
 	 */
 	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 |
-								  RCC_CLOCKTYPE_PCLK2 | RCC_CLOCKTYPE_D3PCLK1 |
-								  RCC_CLOCKTYPE_D1PCLK1;
+	                              RCC_CLOCKTYPE_PCLK2 | RCC_CLOCKTYPE_D3PCLK1 |
+	                              RCC_CLOCKTYPE_D1PCLK1;
 	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
 	RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
 	RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
@@ -270,6 +269,24 @@ void MPU_Config(void) {
 	MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
 	MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
 	MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+
+	HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+	/** Initializes and configures the Region and the memory to be protected
+	 */
+	MPU_InitStruct.Number = MPU_REGION_NUMBER1;
+	MPU_InitStruct.BaseAddress = 0x08000000;
+#if defined(STM32H723xx)
+	MPU_InitStruct.Size = MPU_REGION_SIZE_512KB;
+#else
+	MPU_InitStruct.Size = MPU_REGION_SIZE_1MB;
+#endif
+	MPU_InitStruct.SubRegionDisable = 0x0;
+	MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
+	MPU_InitStruct.AccessPermission = MPU_REGION_PRIV_RO;
+	MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_ENABLE;
+	MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+	MPU_InitStruct.IsCacheable = MPU_ACCESS_CACHEABLE;
 
 	HAL_MPU_ConfigRegion(&MPU_InitStruct);
 	/* Enables the MPU */

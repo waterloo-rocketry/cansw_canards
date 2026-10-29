@@ -13,11 +13,11 @@ flags = env.ParseFlags()  # {'CCFLAGS': [...], 'LINKFLAGS': [...]}
 print(flags)
 
 # set configuration
-CLANG_FORMAT_VERSION = "21"
+CLANG_FORMAT_VERSION = "23"
 DOWNLOAD_DIR = Dir('#/scripts').abspath
 SOURCE_DIR  = Dir('#').abspath
 
-BASE_URL = "https://github.com/cpp-linter/clang-tools-static-binaries/releases/download/master-6e612956"
+BASE_URL = "https://github.com/cpp-linter/clang-tools-static-binaries/releases/download/2026.09.01-5fb8802d"
 
 OS_MAP = {
     'Windows': 'clang-format-{ver}_windows-amd64.exe',

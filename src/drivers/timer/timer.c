@@ -7,6 +7,11 @@
 #include "drivers/timer/timer.h"
 #include "application/logger/log.h"
 #include "stm32h7xx_hal.h"
+#ifdef HIL
+#include "application/hil/hil.h"
+
+extern bool done_sys_init;
+#endif
 
 // external timer handle declaration
 extern TIM_HandleTypeDef htim2;
@@ -60,8 +65,16 @@ w_status_t timer_get_ms(uint32_t *p_ms) {
 		return W_FAILURE;
 	}
 
+#ifdef HIL
+	uint32_t timer_count = hil_timestamp_tenth_ms;
+
+	if (!done_sys_init) {
+		timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+	}
+#else
 	// retrieve the current timer count (in clock ticks)
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+#endif
 
 	// convert the timer count to milliseconds
 	// each tick is 0.1 ms, so we divide by 10 to truncate to ms accuracy
@@ -95,8 +108,16 @@ w_status_t timer_get_tenth_ms(uint32_t *p_time) {
 		return W_FAILURE;
 	}
 
+#ifdef HIL
+	uint32_t timer_count = hil_timestamp_tenth_ms;
+
+	if (!done_sys_init) {
+		timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+	}
+#else
 	// retrieve the current timer count (in clock ticks)
 	uint32_t timer_count = __HAL_TIM_GET_COUNTER(&htim2);
+#endif
 
 	// convert the timer count to milliseconds
 	// each tick is 0.1 ms, so we just keep the same value for a tenth of ms accuracy
@@ -111,32 +132,28 @@ health_status_t timer_get_status(void) {
 
 	// Calculate total calls
 	uint32_t total_calls = timer_health.valid_calls + timer_health.invalid_param +
-						   timer_health.timer_stopped + timer_health.timer_invalid;
+	                       timer_health.timer_stopped + timer_health.timer_invalid;
 
 	// Log call statistics
-	log_text(0,
-			 LOG_LVL_INFO,
-			 "timer",
-			 "Call statistics: total=%lu, successful=%lu",
-			 total_calls,
-			 timer_health.valid_calls);
+	log_text(0, LOG_LVL_INFO, "timer", "Call statistics: total=%lu, successful=%lu", total_calls,
+	         timer_health.valid_calls);
 
 	// Log error statistics if any errors occurred
 	uint32_t total_errors =
 		timer_health.invalid_param + timer_health.timer_stopped + timer_health.timer_invalid;
 
 	if (total_errors > 0) {
-		log_text(0,
-				 LOG_LVL_WARN,
-				 "timer",
-				 "Error statistics: invalid_param=%lu, timer_stopped=%lu, timer_invalid=%lu",
-				 timer_health.invalid_param,
-				 timer_health.timer_stopped,
-				 timer_health.timer_invalid);
+		log_text(0, LOG_LVL_WARN, "timer",
+		         "Error statistics: invalid_param=%lu, timer_stopped=%lu, timer_invalid=%lu",
+		         timer_health.invalid_param, timer_health.timer_stopped,
+		         timer_health.timer_invalid);
 	}
 
 	health_status_t status = {
-		.severity = HEALTH_OK, .module_id = MODULE_TIMER, .error_bitfield = 0};
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_TIMER,
+		.error_bitfield = 0
+	};
 
 	return status;
 }

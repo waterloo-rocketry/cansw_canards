@@ -1,7 +1,7 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 #include <stdint.h>
 // Include headers for structs used in log_data_container_t
 #include "application/health_checks/health_checks.h"
@@ -11,6 +11,7 @@
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32768
+// #define LOG_BUFFER_SIZE 16384
 /* Size of each message region in text buffers (bytes) */
 #define MAX_TEXT_MSG_LENGTH 128
 /**
@@ -33,7 +34,10 @@
 /* Number of text log buffers */
 #define NUM_TEXT_LOG_BUFFERS 2
 /* Number of data log buffers */
-#define NUM_DATA_LOG_BUFFERS 2
+#define NUM_DATA_LOG_BUFFERS 4
+
+/* Size of filename string */
+#define FILENAME_STRING_SIZE (8 + 1 + 3 + 1)
 
 /**
  * Version number to identify post-flight how to parse data log messages.
@@ -42,7 +46,7 @@
  *
  * Deprecated values: none
  */
-#define LOG_DATA_FORMAT_VERSION 2
+#define LOG_DATA_FORMAT_VERSION 3
 
 /**
  * Magic number to encode into log_data_type_t values: "DL" encoded as a little-endian 16-bit int.
@@ -69,6 +73,7 @@ typedef enum {
 
 	LOG_TYPE_POLOLU_READING = M(0x07),
 	LOG_TYPE_POLOLU_RAW = M(0x08),
+	LOG_TYPE_MOVELLA_PT4 = M(0x0A),
 	*/
 
 	// Message type values in use
@@ -82,19 +87,15 @@ typedef enum {
 
 	LOG_TYPE_BOARD_IMU = M(0x05),
 
-	LOG_TYPE_BOARD_BAROMETER = M(0x06),
+	LOG_TYPE_BOARD_MAG_BARO = M(0x06),
 
-	LOG_TYPE_BOARD_MAG = M(0x07),
+	LOG_TYPE_MOVELLA_PT1 = M(0x07),
+	LOG_TYPE_MOVELLA_PT2 = M(0x08),
+	LOG_TYPE_MOVELLA_PT3 = M(0x09),
 
-	LOG_TYPE_MOVELLA_PT1 = M(0x08),
-	LOG_TYPE_MOVELLA_PT2 = M(0x09),
-	LOG_TYPE_MOVELLA_PT3 = M(0x0A),
-	LOG_TYPE_MOVELLA_PT4 = M(0x0B),
+	LOG_TYPE_AD_BREAKOUT = M(0x0b),
 
-	LOG_TYPE_AD_ACCEL = M(0x0C),
-	LOG_TYPE_AD_GYRO = M(0x0D),
-
-	LOG_TYPE_SERVO_MOTOR = M(0x0E)
+	LOG_TYPE_SERVO_MOTOR = M(0x0c)
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -156,10 +157,11 @@ typedef union __attribute__((packed)) {
 
 	// LOG_TYPE_CONTROLLER:
 	struct __attribute__((packed)) {
-		// the 3 vars in roll_state_t
-		float command; // deg
-		float roll_target; // deg
+		float command; // rad
 		float canard_coeff;
+		float body_coeff;
+		float roll_angle_target; // rad
+		float roll_rate_target; // rad/s
 	} controller;
 
 	// LOG_TYPE_BOARD_IMU:
@@ -168,17 +170,12 @@ typedef union __attribute__((packed)) {
 		vector3d_f32_packed_t gyroscope; // rad/s
 	} board_imu;
 
-	// LOG_TYPE_BOARD_BAROMETER:
+	// LOG_TYPE_BOARD_MAG_BARO:
 	struct __attribute__((packed)) {
+		vector3d_f32_packed_t magnetometer; // Gauss
 		float barometer; // Pa
 		float thermometer; // C
-	} board_barometer;
-
-	// LOG_TYPE_BOARD_MAG:
-	struct __attribute__((packed)) {
-		vector3d_f32_packed_t accelerometer; // m/s^2
-		vector3d_f32_packed_t magnetometer; // Gauss
-	} board_mag;
+	} board_mag_baro;
 
 	// LOG_TYPE_MOVELLA
 	// note: dont use the all_imus_input_t struct here because packing isn't recursive
@@ -202,17 +199,13 @@ typedef union __attribute__((packed)) {
 	// LOG_TYPE_AD_ACCEL:
 	struct __attribute__((packed)) {
 		vector3d_f32_packed_t accelerometer; // m/s^2
-	} ad_accel;
-
-	// LOG_TYPE_AD_GYRO:
-	struct __attribute__((packed)) {
 		float gyroscope; // rad/s
-	} ad_gyro;
+	} ad_breakout;
 
 	// LOG_TYPE_SERVO_MOTOR:
 	struct __attribute__((packed)) {
 		float motor_angle; // deg
-		float motor_current; // mA
+		float motor_current; // A
 		float motor_temperature; // C
 	} servo_motor;
 
@@ -220,24 +213,7 @@ typedef union __attribute__((packed)) {
 
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
-			  "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
-
-/**
- * A collection of status variables describing the current health of the logger module.
- */
-typedef struct {
-	bool is_init;
-	uint32_t dropped_txt_msgs;
-	uint32_t dropped_data_msgs;
-	uint32_t trunc_msgs;
-	uint32_t full_buffer_moments;
-	uint32_t log_write_timeouts;
-	uint32_t invalid_region_moments;
-	uint32_t crit_errs;
-	uint32_t no_full_buf_moments;
-	uint32_t buffer_flush_fails;
-	uint32_t unsafe_buffer_flushes;
-} logger_health_t;
+              "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
 
 /**
  * @brief Create log buffers and mutexes necessary for logger operation.
@@ -256,7 +232,7 @@ w_status_t log_init(void);
  * @return Status indicating success or failure
  */
 w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
-					...);
+                    ...);
 
 /**
  * @brief Log a message in binary form to the data log file.

@@ -2,7 +2,7 @@
 #define CONTROLLER_H_
 
 #include "FreeRTOS.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -11,26 +11,6 @@
 #include "common/gnc/gnc_types.h"
 
 /* Enums/Types */
-
-// main controller state using in task
-typedef struct {
-	uint32_t last_ms; // currently unused...
-	uint32_t can_send_errors;
-	uint32_t data_miss_counter;
-} controller_t;
-
-/**
- * @brief Structure to track controller errors and status
- */
-typedef struct {
-	bool is_init; /**< Initialization status flag */
-	uint32_t can_send_errors; /**< Number of CAN send failures */
-	uint32_t data_miss_counter; /**< Number of missed data updates from estimator */
-	uint32_t timestamp_errors; /**< Number of timer/timestamp retrieval failures */
-	uint32_t gain_interpolation_errors; /**< Number of gain interpolation failures */
-	uint32_t angle_calculation_errors; /**< Number of commanded angle calculation failures */
-	uint32_t log_errors; /**< Number of logging failures */
-} controller_error_data_t;
 
 /**
  * state of a controller instance.
@@ -48,6 +28,8 @@ typedef struct {
  */
 w_status_t controller_init(void);
 
+w_status_t controller_codegen_init(controller_ctx_t *p_ctx);
+
 /**
  * @brief run 1 step of the controller
  * @param p_input pointer to new inputs for this iteration
@@ -56,7 +38,7 @@ w_status_t controller_init(void);
  * @param p_output pointer to the output struct to update with new command
  */
 w_status_t controller_step(const controller_input_t *p_input, const uint32_t timestamp_tenth_ms,
-						   controller_ctx_t *p_ctx, controller_output_t *p_output);
+                           controller_ctx_t *p_ctx, controller_output_t *p_output);
 
 /**
  * Controller task function for RTOS

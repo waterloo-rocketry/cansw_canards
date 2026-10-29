@@ -9,7 +9,7 @@
 
 #include "application/health_checks/health_checks.h"
 
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 /**
  * Enum representing GPIO pin level

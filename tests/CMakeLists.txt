@@ -175,8 +175,7 @@ set(TEST_COMMON_INCS
     ${FFF_DIR}
     ${PROC_SRC_DIR}
     ${PROC_SRC_DIR}/third_party
-    ${PROC_SRC_DIR}/third_party/canlib
-    ${PROC_SRC_DIR}/third_party/rocketlib/include
+    ${PROC_SRC_DIR}/third_party/rocketlib
     ${PROC_SRC_DIR}/third_party/closedrocket/embedded-coder/codegen/lib/GNC_codegen
 )
 
@@ -305,6 +304,27 @@ add_test_group(test_ak45_driver
     # test file(s)
     ${UNIT_TESTS_DIR}/ak45_driver_test.cpp
     ${UNIT_TESTS_DIR}/ak45_driver_test_helpers.c # source file included here
+)
+
+add_test_group(test_power_handler
+    # test file(s)
+    ${UNIT_TESTS_DIR}/power_handler_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/power_handler/power_handler.c
+)
+
+add_test_group(test_can_handler
+    # test file(s)
+    ${UNIT_TESTS_DIR}/can_handler_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/can_handler/can_handler.c  
+)
+
+add_test_group(test_telemetry
+    # test file(s)
+    ${UNIT_TESTS_DIR}/telemetry_module_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/telemetry/telemetry.c
 )
 
 # TODO: add fsm unit tes once get a good version of codegen

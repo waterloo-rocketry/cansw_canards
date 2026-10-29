@@ -133,10 +133,6 @@ void Error_Handler(void);
 #define ADI_SCL_GPIO_Port GPIOB
 #define ADI_SDA_Pin GPIO_PIN_11
 #define ADI_SDA_GPIO_Port GPIOB
-#define M_CAN_RX_Pin GPIO_PIN_12
-#define M_CAN_RX_GPIO_Port GPIOB
-#define M_CAN_TX_Pin GPIO_PIN_13
-#define M_CAN_TX_GPIO_Port GPIOB
 #define SD_D0_Pin GPIO_PIN_14
 #define SD_D0_GPIO_Port GPIOB
 #define SD_D1_Pin GPIO_PIN_15

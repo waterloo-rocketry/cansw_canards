@@ -3,10 +3,11 @@
 
 #include "application/controller/controller.h"
 #include "application/flight_phase/flight_phase.h"
+#include "application/health_checks/health_checks.h"
 #include "application/navigator/navigator.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
-#include "rocketlib/include/common.h"
+#include "rocketlib.h"
 
 typedef struct {
 	navigator_ctx_t *p_navigator_context; // global instance of estimator
@@ -33,8 +34,23 @@ w_status_t fsm_init();
 fsm_state_t fsm_get_state();
 
 /**
+ * @brief Report FSM module health status
+ *
+ * Retrieves and reports FSM error statistics and initialization status
+ * through log messages.
+ *
+ * @return CAN board specific health status
+ */
+health_status_t fsm_get_status(void);
+
+/**
  * run in 500 hz freertos task
  */
 void fsm_task(void *args);
+
+/**
+ * @brief use log_text() to log everything in gnc_navigator_ctx_t
+ */
+void log_gnc_internal_state();
 
 #endif

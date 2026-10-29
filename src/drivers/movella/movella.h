@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "common/math/math.h"
-#include "third_party/rocketlib/include/common.h"
+#include "rocketlib.h"
 
 typedef struct {
 	vector3d_t acc; // (x, y, z) m/s^2
@@ -32,4 +32,8 @@ w_status_t movella_get_data(movella_data_t *out_data, uint32_t timeout_ms);
 
 // FreeRTOS task function
 void movella_task(void *parameters);
+
+// Health checks for the Movella
+health_status_t movella_get_status(void);
+
 #endif

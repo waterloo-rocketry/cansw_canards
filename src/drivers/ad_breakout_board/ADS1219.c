@@ -67,8 +67,8 @@ w_status_t ads1219_init(ads1219_handle_t *p_handle, i2c_bus_t bus, uint8_t addr)
 	// assumes to use internal vref
 	p_handle->bus = bus;
 	p_handle->i2c_addr = addr;
-	p_handle->aref_n = 0.0f;
-	p_handle->aref_p = 2048.0f;
+	p_handle->aref_n = 0.0F;
+	p_handle->aref_p = 2048.0F;
 	p_handle->initialized = false;
 
 	/* Reset the device to known defaults */
@@ -176,7 +176,7 @@ w_status_t ads1219_get_vref(ads1219_handle_t *p_handle, uint8_t *vref) {
  * @return status of function
  */
 w_status_t ads1219_set_vref(ads1219_handle_t *p_handle, uint8_t vref, float64_t aref_n,
-							float64_t aref_p) {
+                            float64_t aref_p) {
 	uint8_t value;
 	if (vref == ADS1219_VREF_INTERNAL) {
 		value = 0;
@@ -195,8 +195,8 @@ w_status_t ads1219_set_vref(ads1219_handle_t *p_handle, uint8_t vref, float64_t 
 		p_handle->aref_n = aref_n;
 		p_handle->aref_p = aref_p;
 	} else {
-		p_handle->aref_n = 0.0f;
-		p_handle->aref_p = 2048.0f;
+		p_handle->aref_n = 0.0F;
+		p_handle->aref_p = 2048.0F;
 	}
 	return W_SUCCESS;
 }
@@ -315,7 +315,7 @@ w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
 	// preserve two's-complement in 32 bit
 	raw = (raw ^ 0x00800000) - 0x00800000;
 
-	if ((0x7FFFFF < raw) && (0xFF800001 > raw)) {
+	if ((0x7fffff < raw) && (0xff800001 > raw)) {
 		return W_OVERFLOW;
 	}
 

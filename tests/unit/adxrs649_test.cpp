@@ -563,7 +563,7 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMax){
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_FLOAT_EQ((global_adc_output_mv / 0.1), data);
+    EXPECT_FLOAT_EQ(global_adc_output_mv, data);
     EXPECT_EQ(1, raw_data);
 };
 
@@ -583,7 +583,7 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorMin){
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_FLOAT_EQ((global_adc_output_mv / 0.1), data);
+    EXPECT_FLOAT_EQ((global_adc_output_mv), data);
     EXPECT_EQ(1, raw_data);
 };
 
@@ -623,6 +623,6 @@ TEST_F(ADXRS649, getGyroDataSuccessWithoutErrorRegular){
     uint32_t raw_data = 0;
     w_status_t status= adxrs649_get_gyro_data(&data, &raw_data);
     EXPECT_EQ(W_SUCCESS, status);
-    EXPECT_FLOAT_EQ((global_adc_output_mv / 0.1), data);
+    EXPECT_FLOAT_EQ((global_adc_output_mv), data);
     EXPECT_EQ(1, raw_data);
 };
