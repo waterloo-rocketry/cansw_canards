@@ -6,7 +6,9 @@
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
+#include "common/benchmark/benchmark.h"
 #include "drivers/gpio/gpio.h"
+#include "drivers/raw_logger/raw_logger.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "queue.h"
@@ -17,6 +19,13 @@
 // number of times to try writing a log message in case fails once
 #define DATA_WRITE_TRY_COUNT 50
 #define TEXT_WRITE_TRY_COUNT 20
+
+extern SD_HandleTypeDef hsd2;
+
+BENCHMARK_FILE_INIT(1);
+
+static uint8_t write_buffer[512];
+static uint8_t read_buffer[LOG_BUFFER_SIZE];
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
 
@@ -483,7 +492,7 @@ static sd_card_file_ctx_t data_file_ctx;
 void log_task(void *argument) {
 	(void)argument;
 
-	log_buffer_t *buffer_to_print = NULL;
+	/*log_buffer_t *buffer_to_print = NULL;
 
 	// Open persistent streaming files.
 	// Keep these open for the duration of logging to avoid FAT traversal overhead.
@@ -496,117 +505,39 @@ void log_task(void *argument) {
 	const bool data_open_failed = (sd_card_file_open(&data_file_ctx) != W_SUCCESS);
 
 	if (text_open_failed || data_open_failed) {
-		logger_health.file_open_errs += (uint32_t)text_open_failed + (uint32_t)data_open_failed;
-		logger_health.fs_open_flush_failed = true;
+	    logger_health.file_open_errs += (uint32_t)text_open_failed + (uint32_t)data_open_failed;
+	    logger_health.fs_open_flush_failed = true;
 	}
 
 	uint32_t last_text_logging_time = 0;
 	if (timer_get_ms(&last_text_logging_time) != W_SUCCESS) {
-		last_text_logging_time = UINT32_MAX;
+	    last_text_logging_time = UINT32_MAX;
 	}
 
-	uint32_t cur_timestamps = 0;
+	uint32_t cur_timestamps = 0;*/
+
+	raw_logger_SD_init(&hsd2);
+
+	memset(write_buffer, 1, sizeof(write_buffer));
+	memset(read_buffer, 0, sizeof(read_buffer));
+
+	uint32_t write_count = 0;
+
+	benchmark_data_t pData = {0};
 
 	for (;;) {
-		// Must not do anything in the task if init failed.
-		// This allows non-critical init to fail and board to not kill itself
-		if (!logger_health.is_init) {
-			vTaskDelay(pdMS_TO_TICKS(10000));
-			continue;
+		write_count++;
+		//SINGLE_BENCHMARK_START(0);
+		raw_logger_SD_write(write_buffer, 512, 512, 200);
+		//raw_logger_SD_read(read_buffer, 512, LOG_BUFFER_SIZE, 200);
+		//SINGLE_BENCHMARK_END(0);
+
+		/*if (write_count % 1000 == 0) {
+			raw_logger_SD_read(read_buffer, 512, LOG_BUFFER_SIZE, 200);
+			//GET_BENCHMARK_STAT(0, (&pData));
 		}
 
-		// requirement: stop logging during sleepy state to avoid filling sd card uselessly
-		if (fsm_get_state() == STATE_SLEEPY) {
-			vTaskDelay(pdMS_TO_TICKS(1000));
-			continue;
-		}
-
-		// this is kept in case any other issues require this fix
-		// bool must_log_txt = (timer_get_ms(&cur_timestamps) == W_SUCCESS) &&
-		// ((last_text_logging_time + MAX_TXT_LOGGING_PERIOD_MS) < cur_timestamps);
-
-		bool must_log_txt = false;
-		bool have_msg = false;
-		uint32_t msgs_done = 0;
-		uint32_t max_msgs = DATA_MSGS_PER_BUFFER;
-		sd_card_file_ctx_t *file_ctx = &data_file_ctx;
-		uint32_t log_write_try_count = 0;
-		// check data
-		if ((xQueueReceive(data_buffers_queue, &buffer_to_print, 100) == pdPASS) &&
-		    (!must_log_txt)) {
-			log_write_try_count = DATA_WRITE_TRY_COUNT;
-			have_msg = true;
-		} else if (xQueueReceive(text_buffers_queue, &buffer_to_print, 10) == pdPASS) {
-			log_write_try_count = TEXT_WRITE_TRY_COUNT;
-			max_msgs = TEXT_MSGS_PER_BUFFER;
-			file_ctx = &text_file_ctx;
-			have_msg = true;
-
-			if (timer_get_ms(&cur_timestamps) == W_SUCCESS) {
-				last_text_logging_time = cur_timestamps;
-			}
-		}
-
-		if (have_msg) {
-			while (msgs_done < max_msgs) {
-				if (xSemaphoreTake(buffer_to_print->msgs_done_semaphore, 10) == pdPASS) {
-					msgs_done++;
-				} else {
-					logger_health.unsafe_buffer_flushes++;
-					logger_health.os_error_occurred = true;
-					break;
-				}
-			}
-
-			// try several times to buffer to SD card
-			uint32_t size = 0;
-			for (uint32_t i = 0; i < log_write_try_count; i++) {
-				uint32_t open_start_ms = 0;
-				timer_get_ms(&open_start_ms);
-				if (sd_card_file_write_open(file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
-				                            &size) == W_SUCCESS) {
-					uint32_t open_end_ms = 0;
-					timer_get_ms(&open_end_ms);
-					/*
-					 * Sync after every buffer for maximum data retention.
-					 * Consider reducing this to periodic syncs once reliability
-					 * is confirmed.
-					 */
-					uint32_t sync_start_ms = 0;
-					timer_get_ms(&sync_start_ms);
-					if (sd_card_file_sync(file_ctx) == W_SUCCESS) {
-						uint32_t sync_end_ms = 0;
-						timer_get_ms(&sync_end_ms);
-
-						// REMOVE BEFORE FLIGHT
-						log_text(10, LOG_LVL_INFO, "logger_write",
-						         "open_time=%d, sync_time=%d, try=%d", open_end_ms - open_start_ms,
-						         sync_end_ms - sync_start_ms, i + 1);
-						gpio_toggle(GPIO_PIN_BLUE_LED, 0);
-						break;
-					} else {
-						log_text(10, LOG_LVL_WARN, "logger", "sd_card_file_sync failed on try %d",
-						         i + 1);
-					}
-				}
-
-				gpio_toggle(GPIO_PIN_RED_LED, 0);
-
-				if ((log_write_try_count - 1) == i) {
-					logger_health.buffer_flush_fails++;
-					logger_health.fs_open_flush_failed = true;
-					break; // Failed to write after all attempts
-				} else {
-					// Allow SD card time to recover.
-					vTaskDelay(pdMS_TO_TICKS(2));
-				}
-			}
-
-			// Reinitialize buffer for reuse
-			log_reset_buffer(buffer_to_print);
-		} else {
-			logger_health.no_full_buf_moments++;
-		}
+		if (pData.sum == 1) {}*/
 	}
 }
 

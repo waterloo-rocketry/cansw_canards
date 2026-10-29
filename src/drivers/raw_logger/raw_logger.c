@@ -34,31 +34,25 @@ static SD_HandleTypeDef *raw_logger_handle = NULL;
 
 static TaskHandle_t task_handler = NULL;
 
-// Consider having a previous state?
+// TODO: consider having a previous state
 static raw_logger_action_status_t action_state = RAW_UNINIT;
+
+uint32_t au_kb[16] = {0x00,    0x10,   0x20,   0x40,    0x80,   0x100,   0x200,   0x400,
+	                                   0x800, 0x1000, 0x2000, 0x3000, 0x4000, 0x6000, 0x8000, 0x10000};
 
 w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	if (raw_sd_card_health.is_init) {
 		return W_SUCCESS;
 	}
 
-	/*
-	 * Initialize enum Status for thread-safe SD card operations.
-	 * This enum will ensure that concurrent tasks do not access the SD card simultaneously,
-	 * which helps prevent data corruption.
-	 */
-
 	if (NULL == p_sd_handle) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Given task handler does not exist.");
 		return W_FAILURE;
 	}
 
-	action_state = RAW_READY;
-
-	task_handler = NULL;
-
-	// Assigns local SD_HandleTypeDef to the given pointer
 	raw_logger_handle = p_sd_handle;
+
+	action_state = RAW_READY;
 
 	raw_sd_card_health.is_init = true;
 	return W_SUCCESS;
@@ -92,9 +86,6 @@ void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
  * This function is only for WRITING, not for READING
  */
 void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
-	if (RAW_RECOVERING == action_state) {
-		return;
-	}
 
 	UNUSED(hsd);
 
@@ -119,9 +110,6 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
  * This function is only for READING, not for WRITING
  */
 void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
-	if (RAW_RECOVERING == action_state) {
-		return;
-	}
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -139,17 +127,17 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-/**
- * Currently not implemented as per Shiming
- */
+// TODO: Implement this later once recovery is figured out
 w_status_t raw_logger_SD_recover(void) {
 	return W_FAILURE;
 }
 
+/**
+ * Used for conversion from taken SDCardStatus.AllocationUnitSize
+ * uint32_t
+ */
 static uint32_t au_code_to_bytes(uint8_t code) {
-	static const uint32_t au_kb[16] = {0,    16,   32,   64,    128,   256,   512,   1024,
-	                                   2048, 4096, 8192, 12288, 16384, 24576, 32768, 65536};
-	return au_kb[code & 0x0fU] * 1024U;
+	return (au_kb[code & 0x0fU] << 10U);
 }
 
 w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte) {
@@ -163,13 +151,13 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
 
 	if ((HAL_OK != HAL_SD_GetCardInfo(raw_logger_handle, &SDCardInfo)) ||
 	    (HAL_OK != HAL_SD_GetCardStatus(raw_logger_handle, &SDCardStatus))) {
-		log_text(0, LOG_LVL_WARN, "RAW", "Unable to recieve card information.");
+		log_text(0, LOG_LVL_WARN, "RAW", "Unable to receive card information.");
 		return W_FAILURE;
 	}
 
 	uint32_t au_bytes = au_code_to_bytes(SDCardStatus.AllocationUnitSize);
 	if ((0U == au_bytes) || (0U == SDCardStatus.EraseSize)) {
-		log_text(0, LOG_LVL_WARN, "RAW", "Unable to recieve allocation unit size.");
+		log_text(0, LOG_LVL_WARN, "RAW", "Unable to receive allocation unit size.");
 		return W_FAILURE;
 	}
 
@@ -181,7 +169,6 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
 
 w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
                               uint32_t timeout) {
-	// ensure init
 	if (!raw_sd_card_health.is_init) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Not initialized.");
 		return W_FAILURE;
@@ -191,21 +178,18 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		return W_FAILURE;
 	}
 
-	/** Validate params
-	 * The reason why we require the byte_address to not be 0 is that if you attempt to use DMA
-	 * to write to address 0, you get stick in an infinite loop in stm32h7xx_ll_sdmmc.c due to
-	 * something (not totally sure what) reading the register as 0. If you write to byte address 512
-	 * it works, but for some reason 0 doesn't. Might be due to OS reading 0 as NULL, or if that
-	 * block is already being used by the microcontroller to store information.
-	 */
-
-	if ((0 != (num_bytes % 512)) || (0 != (byte_address % 512)) || (NULL == buffer) ||
-	    (0 == byte_address)) {
+	// Initial byte_address cannot be 0 as HAL SDMMC registers 0 as NULL
+	if ((0U != (num_bytes % BLOCKSIZE)) || (0U != (byte_address % BLOCKSIZE))) {
 		raw_sd_card_health.invalid_param = true;
 		return W_INVALID_PARAM;
 	}
 
-	// ensure thread-safe reading
+	if ((NULL == buffer) || (0U == byte_address)){
+		raw_sd_card_health.invalid_param = true;
+		return W_INVALID_PARAM;
+	}
+
+	// Ensure thread-safe reading
 	if (RAW_READY != action_state) {
 		if (RAW_ERROR_OCCURRED == action_state) {
 			action_state = RAW_READY;
@@ -213,7 +197,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 			return W_FAILURE;
 		}
 		xTaskNotifyStateClear(task_handler);
-		if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
+		if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
 			action_state = RAW_READY;
 			raw_sd_card_health.timed_out = true;
 			raw_sd_card_health.read_error++;
@@ -224,29 +208,25 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 
 	action_state = RAW_READING;
 
-	uint32_t num_blocks = num_bytes / 512;
-	uint32_t block_address = byte_address / 512;
+	uint32_t num_blocks = num_bytes / BLOCKSIZE;
+	uint32_t block_address = byte_address / BLOCKSIZE;
 
 	// Do not currently use DCache but still good for implementation in case we do
-	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
+	SCB_InvalidateDCache_by_Addr((void *)buffer, (int32_t)num_bytes);
 
-	/**
-	 * I'm not sure if this is quite why I was failing to write/read for a while, but essentially
-	 * there's something about calling xTaskGetCurrentTaskHandle() before you read/write, as
-	 * if the interrupt fires while you're still calling xTaskGetCurrentTaskHandle() the callback
-	 * just returns null WITHOUT NOTIFYING ANYTHING and you hang in ISR. When calling it before
-	 * the code runs and benchmarks fine; when calling it after, it gets stuck in tasks.c.
-	 */
 	task_handler = xTaskGetCurrentTaskHandle();
 
 	xTaskNotifyStateClear(task_handler);
 
 	if (HAL_OK != HAL_SD_ReadBlocks_DMA(raw_logger_handle, buffer, block_address, num_blocks)) {
-		log_text(0, LOG_LVL_WARN, "RAW", "HAL unable to read.");
+		raw_sd_card_health.error_state = raw_logger_handle->ErrorCode;
+		log_text(0, LOG_LVL_WARN, "RAW", "HAL unable to read", "error code=%d", (int)(raw_sd_card_health.error_state));
 		task_handler = NULL;
+		action_state = RAW_ERROR_OCCURRED;
+		return W_FAILURE;
 	}
 
-	if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
+	if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
 		action_state = RAW_READY;
 		raw_sd_card_health.read_error++;
 		log_text(0, LOG_LVL_WARN, "RAW", "Read timed out.");
@@ -260,7 +240,9 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		return W_FAILURE;
 	}
 
-	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
+	int32_t checknumbytes = (int32_t)num_bytes;
+
+	SCB_InvalidateDCache_by_Addr((void *)buffer, checknumbytes);
 
 	raw_sd_card_health.read_count++;
 	return W_SUCCESS;
@@ -268,7 +250,6 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 
 w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
                                uint32_t timeout) {
-	// ensure init
 	if (!raw_sd_card_health.is_init) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Not initialized.");
 		return W_FAILURE;
@@ -277,15 +258,8 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	if (RAW_RECOVERING == action_state) {
 		return W_FAILURE;
 	}
-
-	/** Validate params
-	 * The reason why we require the byte_address to not be 0 is that if you attempt to use DMA
-	 * to write to address 0, you get stick in an infinite loop in stm32h7xx_ll_sdmmc.c due to
-	 * something (not totally sure what) reading the register as 0. If you write to byte address 512
-	 * it works, but for some reason 0 doesn't. Might be due to OS reading 0 as NULL, or if that
-	 * block is already being used by the microcontroller to store information.
-	 */
-
+	
+	// Initial byte_address cannot be 0 as HAL SDMMC registers 0 as NULL
 	if ((NULL == buffer) || (0 == byte_address) || (0 == num_bytes)) {
 		raw_sd_card_health.invalid_param = true;
 		log_text(0, LOG_LVL_WARN, "RAW", "Invalid write params.");
@@ -293,7 +267,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	}
 
 	// Validate num_bytes
-	if ((0 != (num_bytes % 512)) || (0 != (byte_address % 512))) {
+	if ((0 != (num_bytes % BLOCKSIZE)) || (0 != (byte_address % BLOCKSIZE))) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Wrong write param sizes.");
 		return W_INVALID_PARAM;
 	}
@@ -306,7 +280,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 			return W_FAILURE;
 		}
 		xTaskNotifyStateClear(task_handler);
-		if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
+		if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
 			action_state = RAW_READY;
 			raw_sd_card_health.timed_out = true;
 			raw_sd_card_health.write_error++;
@@ -317,11 +291,16 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 
 	action_state = RAW_WRITING;
 
-	uint32_t num_blocks = num_bytes / 512;
-	uint32_t block_address = byte_address / 512;
+	uint32_t num_blocks = num_bytes / BLOCKSIZE;
+	uint32_t block_address = byte_address / BLOCKSIZE;
 
 	// Do not currently use DCache but still good for implementation in case we do
-	SCB_CleanDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
+
+	int32_t checknumbytes = (int32_t)num_bytes;
+	if (checknumbytes) {
+		
+	}
+	SCB_CleanDCache_by_Addr((uint32_t *)(uintptr_t)buffer, (int32_t)num_bytes);
 
 	/**
 	 * I'm not sure if this is quite why I was failing to write/read for a while, but essentially
@@ -335,11 +314,14 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	xTaskNotifyStateClear(task_handler);
 
 	if (HAL_OK != HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, num_blocks, block_address)) {
-		log_text(0, LOG_LVL_WARN, "RAW", "HAL unable to write.");
+		raw_sd_card_health.error_state = raw_logger_handle->ErrorCode;
+		log_text(0, LOG_LVL_WARN, "RAW", "HAL unable to write", "error code=%d", (int)(raw_sd_card_health.error_state));
+		action_state = RAW_ERROR_OCCURRED;
 		task_handler = NULL;
+		return W_FAILURE;
 	}
 
-	if (0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
+	if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
 		action_state = RAW_READY;
 		raw_sd_card_health.write_error++;
 		log_text(0, LOG_LVL_WARN, "RAW", "Write timed out.");
@@ -353,7 +335,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 		return W_FAILURE;
 	}
 
-	SCB_InvalidateDCache_by_Addr((uint32_t *)buffer, sizeof(buffer));
+	SCB_InvalidateDCache_by_Addr((void *)buffer, (int32_t)num_bytes);
 
 	raw_sd_card_health.write_count++;
 	return W_SUCCESS;
