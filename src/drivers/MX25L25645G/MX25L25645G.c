@@ -440,13 +440,14 @@ static w_status_t flash_erase_sector(uint32_t address) {
 		return W_FAILURE;
 	}
 
-	// write
-	OSPI_RegularCmdTypeDef cmd_erase = {0};
-	cmd_erase.Instruction = 0x20;
-	cmd_erase.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
-	cmd_erase.DataMode = HAL_OSPI_DATA_NONE;
-	cmd_erase.DummyCycles = 0;
-	cmd_erase.NbData = 0;
+    // write
+    OSPI_RegularCmdTypeDef cmd_erase = {0};
+    cmd_erase.Instruction = 0x20;
+    cmd_erase.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
+    cmd_erase.DataMode = HAL_OSPI_DATA_NONE;
+    cmd_erase.DummyCycles = 0;
+    cmd_erase.NbData = 32;
+    cmd_erase.Address = address;
 #if (defined(SPI_4_ENABLED) && defined(QPI_ENABLED))
 	cmd_erase.InstructionMode = HAL_OSPI_INSTRUCTION_4_LINES;
 	cmd_erase.AddressMode = HAL_OSPI_ADDRESS_4_LINES;

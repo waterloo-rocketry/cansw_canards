@@ -144,10 +144,41 @@ static void system_init_task(void *arg) {
 	non_crit_status |= adxrs649_init();
 	non_crit_status |= MX25L25645G_init();
 
-	if (non_crit_status != W_SUCCESS) {
-		// Log non-critical initialization failure
-		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx (log)", non_crit_status);
-	}
+    // The following is testing code for the flash chip
+    //TODO: REMOVE BEFORE MERGING TO MAIN
+    lfs_t lfs;
+    lfs_file_t file;
+
+    int err = MX25L25645G_lfs_mount(&lfs, 0);
+
+    if (err)
+    {
+        lfs_format(&lfs, lfs.cfg);
+        lfs_mount(&lfs, lfs.cfg);
+    }
+
+    uint32_t boot_count = 0;
+    lfs_file_open(&lfs, &file, "boot_count", LFS_O_RDWR | LFS_O_CREAT);
+    lfs_file_read(&lfs, &file, &boot_count, sizeof(boot_count));
+
+    // update boot count
+    boot_count += 1;
+    lfs_file_rewind(&lfs, &file);
+    lfs_file_write(&lfs, &file, &boot_count, sizeof(boot_count));
+
+    // remember the storage is not updated until the file is closed successfully
+    lfs_file_close(&lfs, &file);
+
+    // release any resources we were using
+    lfs_unmount(&lfs);
+    // End of flash chip testing code
+
+    if (non_crit_status != W_SUCCESS)
+    {
+        // Log non-critical initialization failure
+        log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx (log)",
+                 non_crit_status);
+    }
 
 	// cannot continue if any of the critical inits fail
 	if (crit_status != W_SUCCESS) {
