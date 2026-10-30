@@ -25,6 +25,7 @@
 /* USER CODE END 0 */
 
 OSPI_HandleTypeDef hospi1;
+MDMA_HandleTypeDef hmdma_octospi1_fifo_th;
 
 /* OCTOSPI1 init function */
 void MX_OCTOSPI1_Init(void)
@@ -121,6 +122,38 @@ void HAL_OSPI_MspInit(OSPI_HandleTypeDef* ospiHandle)
     GPIO_InitStruct.Alternate = GPIO_AF9_OCTOSPIM_P1;
     HAL_GPIO_Init(FLASH_CLK_GPIO_Port, &GPIO_InitStruct);
 
+    /* OCTOSPI1 MDMA Init */
+    /* OCTOSPI1_FIFO_TH Init */
+    hmdma_octospi1_fifo_th.Instance = MDMA_Channel0;
+    hmdma_octospi1_fifo_th.Init.Request = MDMA_REQUEST_OCTOSPI1_FIFO_TH;
+    hmdma_octospi1_fifo_th.Init.TransferTriggerMode = MDMA_BUFFER_TRANSFER;
+    hmdma_octospi1_fifo_th.Init.Priority = MDMA_PRIORITY_LOW;
+    hmdma_octospi1_fifo_th.Init.Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
+    hmdma_octospi1_fifo_th.Init.SourceInc = MDMA_SRC_INC_BYTE;
+    hmdma_octospi1_fifo_th.Init.DestinationInc = MDMA_DEST_INC_BYTE;
+    hmdma_octospi1_fifo_th.Init.SourceDataSize = MDMA_SRC_DATASIZE_BYTE;
+    hmdma_octospi1_fifo_th.Init.DestDataSize = MDMA_DEST_DATASIZE_BYTE;
+    hmdma_octospi1_fifo_th.Init.DataAlignment = MDMA_DATAALIGN_PACKENABLE;
+    hmdma_octospi1_fifo_th.Init.BufferTransferLength = 1;
+    hmdma_octospi1_fifo_th.Init.SourceBurst = MDMA_SOURCE_BURST_SINGLE;
+    hmdma_octospi1_fifo_th.Init.DestBurst = MDMA_DEST_BURST_SINGLE;
+    hmdma_octospi1_fifo_th.Init.SourceBlockAddressOffset = 0;
+    hmdma_octospi1_fifo_th.Init.DestBlockAddressOffset = 0;
+    if (HAL_MDMA_Init(&hmdma_octospi1_fifo_th) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    if (HAL_MDMA_ConfigPostRequestMask(&hmdma_octospi1_fifo_th, 0, 0) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(ospiHandle,hmdma,hmdma_octospi1_fifo_th);
+
+    /* OCTOSPI1 interrupt Init */
+    HAL_NVIC_SetPriority(OCTOSPI1_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(OCTOSPI1_IRQn);
   /* USER CODE BEGIN OCTOSPI1_MspInit 1 */
 
   /* USER CODE END OCTOSPI1_MspInit 1 */
@@ -150,6 +183,11 @@ void HAL_OSPI_MspDeInit(OSPI_HandleTypeDef* ospiHandle)
 
     HAL_GPIO_DeInit(GPIOB, FLASH_IO1_Pin|FLASH_IO0_Pin|FLASH_CLK_Pin);
 
+    /* OCTOSPI1 MDMA DeInit */
+    HAL_MDMA_DeInit(ospiHandle->hmdma);
+
+    /* OCTOSPI1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(OCTOSPI1_IRQn);
   /* USER CODE BEGIN OCTOSPI1_MspDeInit 1 */
 
   /* USER CODE END OCTOSPI1_MspDeInit 1 */
