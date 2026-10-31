@@ -132,12 +132,6 @@ typedef enum {
 } log_event_id_t;
 
 typedef enum {
-#define SOURCE(name, id, source_name) SRC_##name = id,
-#include "log_sources.def"
-#undef SOURCE
-} log_source_id_t;
-
-typedef enum {
 #define FILE_ID(name, id, file_path) LOGFILE_##name = id,
 #include "log_files.def"
 #undef FILE_ID
