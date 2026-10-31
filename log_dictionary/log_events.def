@@ -11,22 +11,19 @@
 *   num_args   Number of format arguments the message takes
 *   message    printf-style message string
 *
-* event_id layout (8 hex digits = 32 bits):
+* event_id layout (16-bit number):
 *
-*     0x  SSS  V  CCCC
-*         |    |  |
-*         |    |  +-- Event code (4 digits): identifies the specific event
-*         |    +----- Severity (1 digit): see table below
-*         +---------- File/Source ID (3 digits): subsystem that emitted the event
+*     0x  SS CCC
+*         |  |
+*         |  +-- Event code (3 digits): identifies the specific event
+*         |    
+*         +---------- File/Source ID (2 digits): subsystem that emitted the event
 *
-* Severity values:
-*   1 = FATAL  Errors (non-recoverable)
-*   2 = WARN   Warnings (recoverable issues)
-*   3 = INFO   Info (data from sensors, etc)
-*   4 = DEBUG  Only for debugging on the ground
 *
-* Example: 0x00220007
-*   Source = 0x002, Severity = 2 (WARN), Code = 0x0007
+* Example: 1001
+*   Source = 01 Code = 001
+*
+* Note: Error Codes cannot starting with leading 0's or else C will compile it incorrectly.
 */
 
 /* ==========================================================================
@@ -37,7 +34,7 @@
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
-EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
+EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 
 /* --- INFO (severity 3) --- */
 
@@ -148,7 +145,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* power_handler.c            source_id = 00A
+* power_handler.c            source_id = 010
 * ===========================================================================
 */
 
@@ -162,7 +159,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 
 // sensor_handler.c, source_id = 00B
 /* ==========================================================================
-* flight_phase.c            source_id = 00B
+* flight_phase.c            source_id = 011
 * ===========================================================================
 */
 
@@ -175,7 +172,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* telemetry.c            source_id = 00C
+* telemetry.c            source_id = 012
 * ===========================================================================
 */
 
@@ -188,7 +185,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* adxl380.c            source_id = 00D
+* adxl380.c            source_id = 013
 * ===========================================================================
 */
 
@@ -201,7 +198,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* adxrs649.c            source_id = 00E
+* adxrs649.c            source_id = 014
 * ===========================================================================
 */
 
@@ -215,7 +212,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 
 // adc.c, source_id = 00F
 /* ==========================================================================
-* adc.c            source_id = 00F
+* adc.c            source_id = 015
 * ===========================================================================
 */
 
@@ -229,7 +226,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 
 // ak45_driver.c, source_id = 010
 /* ==========================================================================
-* ak45_driver.c            source_id = 010
+* ak45_driver.c            source_id = 016
 * ===========================================================================
 */
 
@@ -242,7 +239,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* altimu_10.c            source_id = 011
+* altimu_10.c            source_id = 017
 * ===========================================================================
 */
 
@@ -256,7 +253,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 
 // gpio.c, source_id = 012
 /* ==========================================================================
-* gpio.c            source_id = 012
+* gpio.c            source_id = 018
 * ===========================================================================
 */
 
@@ -269,7 +266,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* i2c.c            source_id = 013
+* i2c.c            source_id = 019
 * ===========================================================================
 */
 
@@ -283,7 +280,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 
 // IIS2MDC.c, source_id = 014
 /* ==========================================================================
-* IIS2MDC.c            source_id = 014
+* IIS2MDC.c            source_id = 020
 * ===========================================================================
 */
 
@@ -297,7 +294,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 
 // LSM6DSV32X.c, source_id = 015
 /* ==========================================================================
-* LSM6DSV32X.c            source_id = 015
+* LSM6DSV32X.c            source_id = 021
 * ===========================================================================
 */
 
@@ -310,7 +307,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* movella.c            source_id = 016
+* movella.c            source_id = 022
 * ===========================================================================
 */
 
@@ -323,7 +320,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* MS5611.c            source_id = 017
+* MS5611.c            source_id = 023
 * ===========================================================================
 */
 
@@ -336,7 +333,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* raw_logger.c            source_id = 018
+* raw_logger.c            source_id = 024
 * ===========================================================================
 */
 
@@ -349,7 +346,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* sd_card.c            source_id = 019
+* sd_card.c            source_id = 025
 * ===========================================================================
 */
 
@@ -362,7 +359,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* timer.c            source_id = 01A
+* timer.c            source_id = 026
 * ===========================================================================
 */
 
@@ -375,7 +372,7 @@ EVENT(CAN_CALLBACK, 0x00120001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* uart.c            source_id = 01B
+* uart.c            source_id = 027
 * ===========================================================================
 */
 
