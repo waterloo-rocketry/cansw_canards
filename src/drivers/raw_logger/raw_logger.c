@@ -134,7 +134,7 @@ w_status_t raw_logger_SD_recover(void) {
 
 /**
  * Used for conversion from taken SDCardStatus.AllocationUnitSize
- * as it just gives an enum, which we then shift to represent 
+ * as it just gives an enum, which we then shift to represent
  * the actual value of the allocation unit size
  */
 static uint32_t au_code_to_bytes(uint8_t code) {
@@ -209,7 +209,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
-	    vTaskDelay(pdMS_TO_TICKS(1)); // Sleep for 1ms to let other tasks run
+		vTaskDelay(pdMS_TO_TICKS(1)); // Sleep for 1ms to let other tasks run
 	}
 
 	action_state = RAW_READING;
@@ -289,10 +289,10 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 			log_text(0, LOG_LVL_WARN, "RAW", "Previous timed out.");
 			return W_IO_TIMEOUT;
 		}
-	}	
+	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
-	    vTaskDelay(pdMS_TO_TICKS(1)); // Sleep for 1ms to let other tasks run
+		vTaskDelay(pdMS_TO_TICKS(1)); // Sleep for 1ms to let other tasks run
 	}
 
 	action_state = RAW_WRITING;
