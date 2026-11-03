@@ -148,16 +148,40 @@ static void system_init_task(void *arg) {
     //TODO: REMOVE BEFORE MERGING TO MAIN
     lfs_t lfs;
     lfs_file_t file;
+	lfs_dir_t dir;
+	struct lfs_info info;
 
-    int err = MX25L25645G_lfs_mount(&lfs, 0);
+    int err= MX25L25645G_lfs_mount(&lfs, 0);
 
-    if (err)
+    if (err || err==0)
     {
         lfs_format(&lfs, lfs.cfg);
         lfs_mount(&lfs, lfs.cfg);
     }
+//	lfs_mkdir(&lfs, "/");
+	int err1 =lfs_mkdir(&lfs, "/testdir");
+	err1= lfs_dir_open(&lfs, &dir, "/testdir");//this worked
+	int err2 = lfs_file_open(&lfs, &file, "/testdir/testfile", LFS_O_RDWR | LFS_O_CREAT);	int err3= lfs_file_rewind(&lfs, &file);
+	lfs_file_write(&lfs, &file, "testdata", 8);
+	int err4= lfs_file_close(&lfs, &file);
+	int err6= lfs_dir_rewind(&lfs, &dir);
+	int res1= lfs_dir_read(&lfs, &dir, &info);
+	int res2= lfs_dir_read(&lfs, &dir, &info);
+	int res3= lfs_dir_read(&lfs, &dir, &info);
+	lfs_dir_close(&lfs, &dir);
 
-    uint32_t boot_count = 0;
+	uint8_t type=info.type;
+	lfs_size_t size=info.size;
+//	char name[LFS_NAME_MAX+1];
+	int err5= lfs_stat(&lfs, "/testdir/testfile", &info);
+
+	if (err1 || err4|| err5|| err6|| res1 || res2 || res3)
+	{
+		lfs_unmount(&lfs);
+		lfs_mount(&lfs, lfs.cfg);
+	}
+
+    uint32_t boot_count = 0; 
     lfs_file_open(&lfs, &file, "boot_count", LFS_O_RDWR | LFS_O_CREAT);
     lfs_file_read(&lfs, &file, &boot_count, sizeof(boot_count));
 
@@ -165,10 +189,9 @@ static void system_init_task(void *arg) {
     boot_count += 1;
     lfs_file_rewind(&lfs, &file);
     lfs_file_write(&lfs, &file, &boot_count, sizeof(boot_count));
-
+	lfs_soff_t res= lfs_file_size(&lfs, &file); //can I see res=4 when i step in, but not when i dont step in...
     // remember the storage is not updated until the file is closed successfully
     lfs_file_close(&lfs, &file);
-
     // release any resources we were using
     lfs_unmount(&lfs);
     // End of flash chip testing code
