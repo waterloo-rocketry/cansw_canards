@@ -16,7 +16,7 @@ typedef struct {
 	uint32_t read_error;
 	uint32_t write_error;
 	uint32_t not_writable;
-	HAL_StatusTypeDef error_state;
+	uint32_t error_state;
 } raw_sd_card_health_t;
 
 raw_sd_card_health_t raw_sd_card_health = {0};
@@ -34,11 +34,10 @@ static SD_HandleTypeDef *raw_logger_handle = NULL;
 
 static TaskHandle_t task_handler = NULL;
 
+static SemaphoreHandle_t sd_mutex = NULL;
+
 // TODO: consider having a previous state
 static raw_logger_action_status_t action_state = RAW_UNINIT;
-
-uint32_t au_kb[16] = {0x00,  0x10,   0x20,   0x40,   0x80,   0x100,  0x200,  0x400,
-                      0x800, 0x1000, 0x2000, 0x3000, 0x4000, 0x6000, 0x8000, 0x10000};
 
 w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	if (raw_sd_card_health.is_init) {
@@ -47,6 +46,12 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 
 	if (NULL == p_sd_handle) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Given task handler does not exist.");
+		return W_FAILURE;
+	}
+
+	sd_mutex = xSemaphoreCreateMutex();
+
+	if (NULL == sd_mutex){
 		return W_FAILURE;
 	}
 
@@ -59,7 +64,12 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 }
 
 void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
-	log_text(0, LOG_LVL_WARN, "RAW", "HAL Error callback triggered.");
+	(void)hsd;
+	if ((RAW_WRITING != action_state) && (RAW_READING != action_state)){
+		return;
+	}
+
+	//log_text(0, LOG_LVL_WARN, "RAW", "HAL Error callback triggered.");
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 	raw_sd_card_health.error_state = hsd->ErrorCode;
@@ -72,13 +82,15 @@ void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
 
 	action_state = RAW_ERROR_OCCURRED;
 
-	if (NULL == task_handler) {
-		return;
+	TaskHandle_t task = task_handler;
+	task_handler = NULL;
+
+	if (NULL != task) {
+		vTaskNotifyGiveFromISR(task, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
 
-	vTaskNotifyGiveFromISR(task_handler, &xHigherPriorityTaskWoken);
-	task_handler = NULL;
-	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	return;
 }
 
 /**
@@ -87,6 +99,9 @@ void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
  */
 void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
 	(void)hsd;
+	if (RAW_WRITING != action_state){
+		return;
+	}
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -94,14 +109,16 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
 		return;
 	}
 
-	vTaskNotifyGiveFromISR(task_handler, &xHigherPriorityTaskWoken);
-
-	task_handler = NULL;
-
 	raw_sd_card_health.write_count++;
 	action_state = RAW_READY;
 
-	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	TaskHandle_t task = task_handler;
+	task_handler = NULL;
+
+	if (NULL != task){
+		vTaskNotifyGiveFromISR(task, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
 }
 
 /**
@@ -110,6 +127,9 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
  */
 void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 	(void)hsd;
+	if (RAW_READING != action_state){
+		return;
+	}
 
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -117,28 +137,46 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 		return;
 	}
 
-	vTaskNotifyGiveFromISR(task_handler, &xHigherPriorityTaskWoken);
-
-	task_handler = NULL;
-
 	raw_sd_card_health.read_count++;
 	action_state = RAW_READY;
 
-	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	TaskHandle_t task = task_handler;
+	task_handler = NULL;
+
+	if (NULL != task){
+		vTaskNotifyGiveFromISR(task, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
 }
 
 // TODO: Implement this later once recovery is figured out
+// When we implement recovery, 
 w_status_t raw_logger_SD_recover(void) {
 	return W_FAILURE;
 }
 
+#define SD_AU_TABLE_SIZE (16U)
+
+static const uint32_t AU_SIZE_KB_LOOKUP[SD_AU_TABLE_SIZE] = {
+    0U,     16U,    32U,    64U,    128U,   256U,   512U,   1024U,
+    2048U,  4096U,  8192U,  12288U, 16384U, 24576U, 32768U, 65536U
+};
+
 /**
- * Used for conversion from taken SDCardStatus.AllocationUnitSize
- * as it just gives an enum, which we then shift to represent
- * the actual value of the allocation unit size
+ * @brief Converts SD Status AU (Allocation Unit) code to size in bytes
+ *
+ * @param[in] code 4-bit Allocation Unit code from SD_STATUS register
+ * @return uint32_t AU size in bytes, or 0U if code is invalid/unspecified
  */
 static uint32_t au_code_to_bytes(uint8_t code) {
-	return (au_kb[code & 0b0111] << 10U);
+    uint8_t index = code & 0x0FU;
+
+    if (index == 0U) {
+        return 0U; 
+    }
+
+    // convert KiB to bytes 
+    return AU_SIZE_KB_LOOKUP[index] << 10U;
 }
 
 w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte) {
@@ -180,7 +218,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	}
 
 	// Initial byte_address cannot be 0 as HAL SDMMC registers 0 as NULL
-	if ((NULL == buffer) || (0U == byte_address)) {
+	if ((NULL == buffer) || (0U == byte_address) || (0U == num_bytes)) {
 		raw_sd_card_health.invalid_param = true;
 		return W_INVALID_PARAM;
 	}
@@ -191,62 +229,69 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		return W_INVALID_PARAM;
 	}
 
-	// Ensure thread-safe reading
+	if (pdTRUE != xSemaphoreTake(sd_mutex, pdMS_TO_TICKS(timeout))){
+		raw_sd_card_health.timed_out = true;
+		return W_IO_TIMEOUT;
+	}
+
 	if (RAW_READY != action_state) {
-		if (RAW_ERROR_OCCURRED == action_state) {
-			action_state = RAW_READY;
-			raw_sd_card_health.read_error++;
-			return W_FAILURE;
-		}
-		xTaskNotifyStateClear(task_handler);
-		if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
-			action_state = RAW_READY;
+		xSemaphoreGive(sd_mutex);
+    	return W_FAILURE;
+	}
+
+	TickType_t start = xTaskGetTickCount();
+	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
+		if ((xTaskGetTickCount() - start) >= pdMS_TO_TICKS(timeout)){
+			action_state = RAW_RECOVERING;
 			raw_sd_card_health.timed_out = true;
-			raw_sd_card_health.read_error++;
-			log_text(0, LOG_LVL_WARN, "RAW", "Previous timed out.");
+			xSemaphoreGive(sd_mutex);
 			return W_IO_TIMEOUT;
 		}
+		vTaskDelay(1);
 	}
-
-	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
-		vTaskDelay(pdMS_TO_TICKS(1)); // Sleep for 1ms to let other tasks run
-	}
-
+	
 	action_state = RAW_READING;
 
 	uint32_t num_blocks = num_bytes / BLOCKSIZE;
 	uint32_t block_address = byte_address / BLOCKSIZE;
 
-	// you take the task_handle before DMA to avoid race conditions
 	task_handler = xTaskGetCurrentTaskHandle();
 
-	xTaskNotifyStateClear(task_handler);
+	ulTaskNotifyTake(pdTRUE, 0);
 
 	if (HAL_OK != HAL_SD_ReadBlocks_DMA(raw_logger_handle, buffer, block_address, num_blocks)) {
 		raw_sd_card_health.error_state = raw_logger_handle->ErrorCode;
-		log_text(0, LOG_LVL_WARN, "RAW", "HAL unable to read", "error code=%d",
-		         (int)(raw_sd_card_health.error_state));
+		log_text(0, LOG_LVL_WARN, "RAW", "HAL unable to read", "error code=0x%08lX",
+		         (unsigned long)(raw_sd_card_health.error_state));
 		task_handler = NULL;
 		action_state = RAW_ERROR_OCCURRED;
+		raw_sd_card_health.read_error++;
+		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}
 
 	if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
-		action_state = RAW_READY;
+		action_state = RAW_RECOVERING;
+		task_handler = NULL;
 		raw_sd_card_health.read_error++;
+		raw_sd_card_health.timed_out = true;
 		log_text(0, LOG_LVL_WARN, "RAW", "Read timed out.");
-		return W_FAILURE;
+		xSemaphoreGive(sd_mutex);
+		return W_IO_TIMEOUT;
 	}
 
 	if (RAW_ERROR_OCCURRED == action_state) {
-		action_state = RAW_READY;
-		raw_sd_card_health.read_error++;
 		log_text(0, LOG_LVL_WARN, "RAW", "Read failed.");
+		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}
 
-	int32_t checknumbytes = (int32_t)num_bytes;
+	if (RAW_READY != action_state){
+		xSemaphoreGive(sd_mutex);
+		return W_FAILURE;
+	}
 
+	xSemaphoreGive(sd_mutex);
 	return W_SUCCESS;
 }
 
@@ -254,10 +299,6 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
                                uint32_t timeout) {
 	if (!raw_sd_card_health.is_init) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Not initialized.");
-		return W_FAILURE;
-	}
-
-	if (RAW_RECOVERING == action_state) {
 		return W_FAILURE;
 	}
 
@@ -270,65 +311,74 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 
 	// Validate alignment
 	if ((0U != (num_bytes % BLOCKSIZE)) || (0U != (byte_address % BLOCKSIZE))) {
+		raw_sd_card_health.invalid_param = true;
 		log_text(0, LOG_LVL_WARN, "RAW", "Wrong write param sizes.");
 		return W_INVALID_PARAM;
 	}
 
-	// ensure thread-safe writing
+	if (pdTRUE != xSemaphoreTake(sd_mutex, pdMS_TO_TICKS(timeout))){
+		raw_sd_card_health.timed_out = true;
+		return W_IO_TIMEOUT;
+	}
+
 	if (RAW_READY != action_state) {
-		if (RAW_ERROR_OCCURRED == action_state) {
-			action_state = RAW_READY;
-			raw_sd_card_health.write_error++;
-			return W_FAILURE;
-		}
-		xTaskNotifyStateClear(task_handler);
-		if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
-			action_state = RAW_READY;
+		xSemaphoreGive(sd_mutex);
+    	return W_FAILURE;
+	}
+
+	TickType_t start = xTaskGetTickCount();
+	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
+		if ((xTaskGetTickCount() - start) >= pdMS_TO_TICKS(timeout)){
+			// action_state = RAW_RECOVERING;
 			raw_sd_card_health.timed_out = true;
-			raw_sd_card_health.write_error++;
-			log_text(0, LOG_LVL_WARN, "RAW", "Previous timed out.");
+			xSemaphoreGive(sd_mutex);
 			return W_IO_TIMEOUT;
 		}
+		vTaskDelay(1);
 	}
-
-	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
-		vTaskDelay(pdMS_TO_TICKS(1)); // Sleep for 1ms to let other tasks run
-	}
-
+	
 	action_state = RAW_WRITING;
 
 	uint32_t num_blocks = num_bytes / BLOCKSIZE;
 	uint32_t block_address = byte_address / BLOCKSIZE;
-	int32_t checknumbytes = (int32_t)num_bytes;
 
-	// you take the task_handle before DMA to avoid race conditions
 	task_handler = xTaskGetCurrentTaskHandle();
 
-	xTaskNotifyStateClear(task_handler);
+	ulTaskNotifyTake(pdTRUE, 0);
 
 	if (HAL_OK != HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, block_address, num_blocks)) {
 		raw_sd_card_health.error_state = raw_logger_handle->ErrorCode;
-		log_text(0, LOG_LVL_WARN, "RAW", "HAL unable to write", "error code=%d",
-		         (int)(raw_sd_card_health.error_state));
+		log_text(0, LOG_LVL_WARN, "RAW", "HAL unable to write", "error code=0x%08lX",
+		         (unsigned long)(raw_sd_card_health.error_state));
 		action_state = RAW_ERROR_OCCURRED;
 		task_handler = NULL;
+		raw_sd_card_health.write_error++;
+		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}
 
 	if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout))) {
-		action_state = RAW_READY;
+		action_state = RAW_RECOVERING;
+		task_handler = NULL;
 		raw_sd_card_health.write_error++;
+		raw_sd_card_health.timed_out = true;
 		log_text(0, LOG_LVL_WARN, "RAW", "Write timed out.");
+		xSemaphoreGive(sd_mutex);
 		return W_IO_TIMEOUT;
 	}
 
 	if (RAW_ERROR_OCCURRED == action_state) {
-		action_state = RAW_READY;
-		raw_sd_card_health.write_error++;
 		log_text(0, LOG_LVL_WARN, "RAW", "Write failed.");
+		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}
 
+	if (RAW_READY != action_state){
+		xSemaphoreGive(sd_mutex);
+		return W_FAILURE;
+	}
+
+	xSemaphoreGive(sd_mutex);
 	return W_SUCCESS;
 }
 
