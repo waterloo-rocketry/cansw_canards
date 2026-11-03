@@ -41,7 +41,7 @@ w_status_t raw_logger_SD_recover(void);
  *
  * @implements FIRM-LLR-RSD-008, FIRM-LLR-RSD-009
  */
-w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks);
+w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks, uint32_t timeout);
 
 /**
  * @brief Read data synchronously from the beginning of a block.

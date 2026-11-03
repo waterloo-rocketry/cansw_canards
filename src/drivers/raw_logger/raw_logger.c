@@ -178,7 +178,7 @@ static uint32_t au_code_to_bytes(uint8_t code) {
 	return AU_SIZE_KB_LOOKUP[index] << 10U;
 }
 
-w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte) {
+w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte, uint32_t timeout) {
 	if ((NULL == block_count) || (NULL == erase_size_byte)) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Invalid spec parameters.");
 		return W_INVALID_PARAM;
@@ -186,6 +186,11 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
 
 	HAL_SD_CardInfoTypeDef SDCardInfo = {0};
 	HAL_SD_CardStatusTypeDef SDCardStatus = {0};
+
+	if (pdTRUE != xSemaphoreTake(sd_mutex, pdMS_TO_TICKS(timeout))) {
+		raw_sd_card_health.timed_out = true;
+		return W_IO_TIMEOUT;
+	}
 
 	if ((HAL_OK != HAL_SD_GetCardInfo(raw_logger_handle, &SDCardInfo)) ||
 	    (HAL_OK != HAL_SD_GetCardStatus(raw_logger_handle, &SDCardStatus))) {
@@ -279,18 +284,17 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		return W_IO_TIMEOUT;
 	}
 
+	xSemaphoreGive(sd_mutex);
+
 	if (RAW_ERROR_OCCURRED == action_state) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Read failed.");
-		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}
 
 	if (RAW_READY != action_state) {
-		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}
 
-	xSemaphoreGive(sd_mutex);
 	return W_SUCCESS;
 }
 
@@ -366,18 +370,17 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 		return W_IO_TIMEOUT;
 	}
 
+	xSemaphoreGive(sd_mutex);
+
 	if (RAW_ERROR_OCCURRED == action_state) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Write failed.");
-		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}
 
 	if (RAW_READY != action_state) {
-		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}
 
-	xSemaphoreGive(sd_mutex);
 	return W_SUCCESS;
 }
 
