@@ -178,7 +178,8 @@ static uint32_t au_code_to_bytes(uint8_t code) {
 	return AU_SIZE_KB_LOOKUP[index] << 10U;
 }
 
-w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte, uint32_t timeout) {
+w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte,
+                                   uint32_t timeout) {
 	if ((NULL == block_count) || (NULL == erase_size_byte)) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Invalid spec parameters.");
 		return W_INVALID_PARAM;
