@@ -29,6 +29,7 @@
 #include "fmac.h"
 #include "gpio.h"
 #include "i2c.h"
+#include "mdma.h"
 #include "octospi.h"
 #include "sdmmc.h"
 #include "tim.h"
@@ -111,6 +112,7 @@ int main(void) {
 	MX_GPIO_Init();
 	MX_DMA_Init();
 	MX_BDMA_Init();
+	MX_MDMA_Init();
 	MX_CORDIC_Init();
 	MX_FMAC_Init();
 	MX_FDCAN3_Init();
