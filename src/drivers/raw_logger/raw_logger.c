@@ -51,7 +51,7 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 
 	sd_mutex = xSemaphoreCreateMutex();
 
-	if (NULL == sd_mutex){
+	if (NULL == sd_mutex) {
 		return W_FAILURE;
 	}
 
@@ -65,11 +65,11 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 
 void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
 	(void)hsd;
-	if ((RAW_WRITING != action_state) && (RAW_READING != action_state)){
+	if ((RAW_WRITING != action_state) && (RAW_READING != action_state)) {
 		return;
 	}
 
-	//log_text(0, LOG_LVL_WARN, "RAW", "HAL Error callback triggered.");
+	// log_text(0, LOG_LVL_WARN, "RAW", "HAL Error callback triggered.");
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
 	raw_sd_card_health.error_state = hsd->ErrorCode;
@@ -99,7 +99,7 @@ void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
  */
 void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
 	(void)hsd;
-	if (RAW_WRITING != action_state){
+	if (RAW_WRITING != action_state) {
 		return;
 	}
 
@@ -115,7 +115,7 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
 	TaskHandle_t task = task_handler;
 	task_handler = NULL;
 
-	if (NULL != task){
+	if (NULL != task) {
 		vTaskNotifyGiveFromISR(task, &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
@@ -127,7 +127,7 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
  */
 void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 	(void)hsd;
-	if (RAW_READING != action_state){
+	if (RAW_READING != action_state) {
 		return;
 	}
 
@@ -143,24 +143,23 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 	TaskHandle_t task = task_handler;
 	task_handler = NULL;
 
-	if (NULL != task){
+	if (NULL != task) {
 		vTaskNotifyGiveFromISR(task, &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
 }
 
 // TODO: Implement this later once recovery is figured out
-// When we implement recovery, 
 w_status_t raw_logger_SD_recover(void) {
 	return W_FAILURE;
 }
 
 #define SD_AU_TABLE_SIZE (16U)
 
-static const uint32_t AU_SIZE_KB_LOOKUP[SD_AU_TABLE_SIZE] = {
-    0U,     16U,    32U,    64U,    128U,   256U,   512U,   1024U,
-    2048U,  4096U,  8192U,  12288U, 16384U, 24576U, 32768U, 65536U
-};
+static const uint32_t AU_SIZE_KB_LOOKUP[SD_AU_TABLE_SIZE] = {0U,     16U,    32U,    64U,
+                                                             128U,   256U,   512U,   1024U,
+                                                             2048U,  4096U,  8192U,  12288U,
+                                                             16384U, 24576U, 32768U, 65536U};
 
 /**
  * @brief Converts SD Status AU (Allocation Unit) code to size in bytes
@@ -169,14 +168,14 @@ static const uint32_t AU_SIZE_KB_LOOKUP[SD_AU_TABLE_SIZE] = {
  * @return uint32_t AU size in bytes, or 0U if code is invalid/unspecified
  */
 static uint32_t au_code_to_bytes(uint8_t code) {
-    uint8_t index = code & 0x0FU;
+	uint8_t index = code & 0x0fU;
 
-    if (index == 0U) {
-        return 0U; 
-    }
+	if (index == 0U) {
+		return 0U;
+	}
 
-    // convert KiB to bytes 
-    return AU_SIZE_KB_LOOKUP[index] << 10U;
+	// convert KiB to bytes
+	return AU_SIZE_KB_LOOKUP[index] << 10U;
 }
 
 w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte) {
@@ -229,19 +228,19 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		return W_INVALID_PARAM;
 	}
 
-	if (pdTRUE != xSemaphoreTake(sd_mutex, pdMS_TO_TICKS(timeout))){
+	if (pdTRUE != xSemaphoreTake(sd_mutex, pdMS_TO_TICKS(timeout))) {
 		raw_sd_card_health.timed_out = true;
 		return W_IO_TIMEOUT;
 	}
 
 	if (RAW_READY != action_state) {
 		xSemaphoreGive(sd_mutex);
-    	return W_FAILURE;
+		return W_FAILURE;
 	}
 
 	TickType_t start = xTaskGetTickCount();
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
-		if ((xTaskGetTickCount() - start) >= pdMS_TO_TICKS(timeout)){
+		if ((xTaskGetTickCount() - start) >= pdMS_TO_TICKS(timeout)) {
 			action_state = RAW_RECOVERING;
 			raw_sd_card_health.timed_out = true;
 			xSemaphoreGive(sd_mutex);
@@ -249,7 +248,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		}
 		vTaskDelay(1);
 	}
-	
+
 	action_state = RAW_READING;
 
 	uint32_t num_blocks = num_bytes / BLOCKSIZE;
@@ -286,7 +285,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 		return W_FAILURE;
 	}
 
-	if (RAW_READY != action_state){
+	if (RAW_READY != action_state) {
 		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}
@@ -316,19 +315,19 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 		return W_INVALID_PARAM;
 	}
 
-	if (pdTRUE != xSemaphoreTake(sd_mutex, pdMS_TO_TICKS(timeout))){
+	if (pdTRUE != xSemaphoreTake(sd_mutex, pdMS_TO_TICKS(timeout))) {
 		raw_sd_card_health.timed_out = true;
 		return W_IO_TIMEOUT;
 	}
 
 	if (RAW_READY != action_state) {
 		xSemaphoreGive(sd_mutex);
-    	return W_FAILURE;
+		return W_FAILURE;
 	}
 
 	TickType_t start = xTaskGetTickCount();
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
-		if ((xTaskGetTickCount() - start) >= pdMS_TO_TICKS(timeout)){
+		if ((xTaskGetTickCount() - start) >= pdMS_TO_TICKS(timeout)) {
 			// action_state = RAW_RECOVERING;
 			raw_sd_card_health.timed_out = true;
 			xSemaphoreGive(sd_mutex);
@@ -336,7 +335,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 		}
 		vTaskDelay(1);
 	}
-	
+
 	action_state = RAW_WRITING;
 
 	uint32_t num_blocks = num_bytes / BLOCKSIZE;
@@ -373,7 +372,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 		return W_FAILURE;
 	}
 
-	if (RAW_READY != action_state){
+	if (RAW_READY != action_state) {
 		xSemaphoreGive(sd_mutex);
 		return W_FAILURE;
 	}

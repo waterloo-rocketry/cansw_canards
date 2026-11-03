@@ -38,7 +38,7 @@ w_status_t raw_logger_SD_recover(void);
  * @param[out] erase_size_blocks    The SD cards preferred erase size.
  *
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
- * 
+ *
  * @implements FIRM-LLR-RSD-008, FIRM-LLR-RSD-009
  */
 w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_blocks);
@@ -59,7 +59,7 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
  *
  * @return w_status_t W_SUCCESS on completion, W_FAILURE, W_INVALID PARAM,
  *         or W_IO_TIMEOUT on timeout or error.
- * 
+ *
  * @implements FIRM-LLR-RSD-003, FIRM-LLR-RSD-006
  */
 w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
