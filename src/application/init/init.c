@@ -142,7 +142,7 @@ static void system_init_task(void *arg) {
 	non_crit_status |= iis2mdc_init();
 	non_crit_status |= adxl380_init();
 	non_crit_status |= adxrs649_init();
-	non_crit_status |= MX25L25645G_init();
+	non_crit_status |= mx25l25645g_init();
 
     // The following is testing code for the flash chip
     //TODO: REMOVE BEFORE MERGING TO MAIN
@@ -151,7 +151,7 @@ static void system_init_task(void *arg) {
 	lfs_dir_t dir;
 	struct lfs_info info;
 
-    int err= MX25L25645G_lfs_mount(&lfs, 0);
+    int err = mx25l25645g_mount(&lfs, 0);
 
     if (err || err==0)
     {
@@ -181,7 +181,7 @@ static void system_init_task(void *arg) {
 		lfs_mount(&lfs, lfs.cfg);
 	}
 
-    uint32_t boot_count = 0; 
+    uint32_t boot_count = 0;
     lfs_file_open(&lfs, &file, "boot_count", LFS_O_RDWR | LFS_O_CREAT);
     lfs_file_read(&lfs, &file, &boot_count, sizeof(boot_count));
 

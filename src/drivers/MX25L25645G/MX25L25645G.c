@@ -607,6 +607,19 @@ static int MX25L25645G_lfs_sync(const struct lfs_config *c) {
 	return LFS_ERR_OK;
 }
 
+static bool mx25l25645g_is_file_open(lfs_t * p_lfs, lfs_file_t * p_file)
+{
+    for (struct lfs_mlist ** p = &(p_lfs->mlist); *p; p = &(*p)->next)
+    {
+        if (*p == (struct lfs_mlist *) p_file)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // TODO: set static buffers!!!!!!!!!!!!!
 // configuration of the filesystem is provided by this struct
 const struct lfs_config cfg = {
@@ -637,10 +650,12 @@ const struct lfs_config cfg = {
 	.inline_max = -1
 };
 
-w_status_t MX25L25645G_init() {
-	if (g_flash_ctx.is_init) {
-		return W_FAILURE;
-	}
+w_status_t mx25l25645g_init()
+{
+    if (g_flash_ctx.is_init)
+    {
+        return W_FAILURE;
+    }
 
 	g_flash_ctx.spi_state = FLASH_SPI_READY;
 
@@ -705,31 +720,138 @@ w_status_t MX25L25645G_init() {
 	return W_SUCCESS;
 }
 
-w_status_t MX25L25645G_lfs_mount(lfs_t *lfs, uint32_t first_block_offset) {
-	// make sure is init
-	if (!(g_flash_ctx.is_init)) {
-		return W_FAILURE;
-	}
+w_status_t mx25l25645g_mount(lfs_t * p_lfs, const uint32_t first_block_offset)
+{
+    // make sure is init
+    if (!(g_flash_ctx.is_init))
+    {
+        return W_FAILURE;
+    }
 
-	if ((first_block_offset % (cfg.block_size)) != 0) {
-		return W_INVALID_PARAM; // because I am lazy
-	}
-	memset(lfs, 0, sizeof(lfs_t));
+    if ((first_block_offset % (cfg.block_size)) != 0)
+    {
+        return W_INVALID_PARAM; // because I am lazy
+    }
+    memset(p_lfs, 0, sizeof(lfs_t));
 
-	g_flash_ctx.lfs_first_block_offset = first_block_offset;
+    g_flash_ctx.lfs_first_block_offset = first_block_offset;
 
-	int res = lfs_mount(lfs, &cfg);
-	if (res != 0) {
-		// try to reformat
-		res = lfs_format(lfs, &cfg);
-		if (res != 0) {
-			return W_FAILURE;
-		}
-		res = lfs_mount(lfs, &cfg);
-		if (res != 0) {
-			return W_FAILURE;
-		}
-	}
+    int res = lfs_mount(p_lfs, &cfg);
+    if (res != 0)
+    {
+        // try to reformat
+        res = lfs_format(p_lfs, &cfg);
+        if (res != 0)
+        {
+            return W_FAILURE;
+        }
+        res = lfs_mount(p_lfs, &cfg);
+        if (res != 0)
+        {
+            return W_FAILURE;
+        }
+    }
 
-	return W_SUCCESS;
+    return W_SUCCESS;
+}
+
+int mx25l25645g_format(lfs_t * p_lfs, const struct lfs_config * cfg_i)
+{
+    if (cfg_i->block_count == 0)
+    {
+        return E_LFS_FORMAT_EMPTY;
+    }
+    return lfs_format(p_lfs, cfg_i);
+}
+
+int mx25l25645g_unmount(lfs_t * p_lfs)
+{
+    return lfs_unmount(p_lfs);
+}
+
+
+int mx25l25645g_file_open(lfs_t * p_lfs, lfs_file_t * p_file,
+                          const char * p_path,
+                          const int16_t flags)
+{
+    if (mx25l25645g_is_file_open(p_lfs, p_file))
+    {
+        return E_LFS_FILE_ALREADY_OPEN;
+        // Error code for file already opened
+    }
+    return lfs_file_open(p_lfs, p_file, p_path, flags);
+}
+
+lfs_soff_t mx25l25645g_file_seek(lfs_t * p_lfs, lfs_file_t * p_file,
+                                 const lfs_soff_t off, const int whence)
+{
+    if (!mx25l25645g_is_file_open(p_lfs, p_file))
+    {
+        return E_LFS_FILE_NOT_OPEN;
+    }
+
+    return lfs_file_seek(p_lfs, p_file, off, whence);
+}
+
+
+lfs_ssize_t mx25l25645g_file_read(lfs_t * p_lfs, lfs_file_t * p_file,
+                                  void * p_buffer,
+                                  const lfs_size_t size,
+                                  const lfs_soff_t offset,
+                                  const enum lfs_whence_flags whence)
+{
+    if (!mx25l25645g_is_file_open(p_lfs, p_file))
+    {
+        return E_LFS_FILE_NOT_OPEN;
+    }
+    if ((p_file->flags & LFS_O_RDONLY) != LFS_O_RDONLY)
+    {
+        return LFS_ERR_INVAL;
+    }
+    const int err = lfs_file_seek(p_lfs, p_file, offset, whence);
+    if (err < 0)
+    {
+        return err;
+    }
+    return lfs_file_read(p_lfs, p_file, p_buffer, size);
+}
+
+lfs_ssize_t mx25l25645g_file_write(lfs_t * p_lfs, lfs_file_t * p_file,
+                                   const void * p_buffer,
+                                   const lfs_size_t size)
+{
+    if (!mx25l25645g_is_file_open(p_lfs, p_file))
+    {
+        return E_LFS_FILE_NOT_OPEN;
+    }
+    if ((p_file->flags & LFS_O_WRONLY) != LFS_O_WRONLY)
+    {
+        return LFS_ERR_INVAL;
+    }
+    return lfs_file_write(p_lfs, p_file, p_buffer, size);
+}
+
+
+int mx25l25645g_file_close(lfs_t * p_lfs, lfs_file_t * p_file)
+{
+    if (!mx25l25645g_is_file_open(p_lfs, p_file))
+    {
+        return E_LFS_FILE_NOT_OPEN;
+        // Error code accessing a file that isn't open.
+    }
+    return lfs_file_close(p_lfs, p_file);
+}
+
+int mx25l25645g_file_truncate(lfs_t * p_lfs, lfs_file_t * p_file,
+                              lfs_off_t size)
+{
+    if (!mx25l25645g_is_file_open(p_lfs, p_file))
+    {
+        return E_LFS_FILE_NOT_OPEN;
+    }
+    if ((p_file->flags & LFS_O_WRONLY) != LFS_O_WRONLY)
+    {
+        return LFS_ERR_INVAL;
+    }
+    return lfs_file_truncate(p_lfs, p_file, size);
 }
