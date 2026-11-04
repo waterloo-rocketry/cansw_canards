@@ -124,17 +124,17 @@ typedef enum {
 	LOG_LVL_DEBUG // Only for debugging on the ground
 } log_level_t;
 
-// Macros to automatically build the enums for the log events, sources, and files.
+// Macros to automatically build the enums for events and files.
 typedef enum {
-#define EVENT(name, id, num_args, message) EVENT_##name = id,
-#include "log_events.def"
-#undef EVENT
+	#define EVENT(name, id, num_args, message) EVENT_##name = id,
+	#include "log_events.def"
+	#undef EVENT
 } log_event_id_t;
 
 typedef enum {
-#define FILE_ID(name, id, file_path) LOGFILE_##name = id,
-#include "log_files.def"
-#undef FILE_ID
+	#define FILE_ID(name, id, file_path) LOGFILE_##name = id,
+	#include "log_files.def"
+	#undef FILE_ID
 } log_file_id_t;
 
 // Packed vector3d_f32_t for logging only
