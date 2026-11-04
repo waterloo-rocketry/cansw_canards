@@ -194,6 +194,54 @@ static void log_reset_buffer(log_buffer_t *buffer) {
 	buffer->is_full = false;
 }
 
+void update_log_text_site(log_text_site_t* site, int arg_count, ...) {
+	// Update time
+	(void)timer_get_ms(&site->site_info.last_call_time);
+	
+	// Check if the macro has not been reached yet
+	if (((site->site_info.call_count_data >> 15) & 1) == 0) { 
+		site->site_info.call_count_data |= (1U << 15);
+		
+		// Add current site to end of linked list
+		if (log_text_sites_head) {
+			log_text_site_t* cursor = log_text_sites_head;
+			while (cursor->next) {
+				cursor = cursor->next;
+			}
+			
+			cursor->next = site; 
+		}
+		// Set head to current site if null head
+		else { 
+			log_text_sites_head = site; 
+		} 
+	} 
+	
+	// Check if the macro has overflown, otherwise increment count by one
+	if (site->site_info.call_count_data & 0x3FFF == 0x3FFF) { 
+		site->site_info.call_count_data |= (1U << 14);
+	}
+	// Increment the call count
+	else { 
+		site->site_info.call_count_data++; 
+	}
+
+	// TODO: improve acquisition and reading of argument information
+	va_list args;
+	va_start(args, arg_count);
+	va_end(args);
+	int argument = va_arg(args, int32_t);
+
+	if (argument != site->last_value) {
+		// TODO: insert log text call
+		site->last_value = argument;
+	}
+}
+
+void update_log_aggregate_site(log_aggregate_site_t* site, int arg_count, ...) {
+	
+}
+
 w_status_t log_init(void) {
 	// alr init so its good to go
 	if (logger_health.is_init) {
@@ -299,7 +347,7 @@ w_status_t log_init(void) {
 	return status;
 }
 
-w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
+w_status_t log_text(uint32_t timeout, log_level_t level, uint8_t log_count, const char *source, const char *format,
                     ...) {
 	// Get timestamp as close to time of call as possible
 	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log
@@ -477,10 +525,30 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	return res;
 }
 
+// Called once a second to flush out all logs created in the past second
+w_status_t log_sites_flush() {
+	// Flush log text sites
+	log_text_site_t* log_text_cursor = log_text_sites_head;
+	while (log_text_cursor) {
+		// TODO: insert log text call once we figure out what the parameters will be
+
+		log_text_cursor = log_text_cursor->next;
+	}
+
+	// Flush log text aggregate sites
+	log_aggregate_site_t* log_agg_cursor = log_aggregate_sites_head;
+	while (log_agg_cursor) {
+		// TODO: insert log text call once we figure out what the parameters will be
+
+		log_agg_cursor = log_agg_cursor->next;
+	}
+}
+
 static sd_card_file_ctx_t text_file_ctx;
 static sd_card_file_ctx_t data_file_ctx;
 
 void log_task(void *argument) {
+	log_text_sites_flush();
 	(void)argument;
 
 	log_buffer_t *buffer_to_print = NULL;
