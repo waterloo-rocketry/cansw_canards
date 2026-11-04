@@ -168,7 +168,8 @@ static void system_init_task(void *arg) {
 	                           &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx, "can handler rx", 256, NULL,
-	                           can_handler_rx_priority, &can_handler_handle_rx);
+	                           can_handler_rx_priority, &can_handler_handle_rx), 
+							   watchdog_register_task(can_handler_handle_rx, 1000);
 
 	task_status &= xTaskCreate(can_handler_task_tx, "can handler tx", 256, NULL,
 	                           can_handler_tx_priority, &can_handler_handle_tx);
