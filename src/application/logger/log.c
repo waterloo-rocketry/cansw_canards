@@ -564,23 +564,21 @@ void log_task(void *argument) {
 			uint32_t open_end_ms = 0;
 			bool written = false;
 			bool synced = false;
+			FSIZE_t expected_size = 0;
 
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
-				timer_get_ms(&open_start_ms);
-				if (sd_card_file_write_open(file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
-				                            &size) == W_SUCCESS) {
-					// Write successful
-					timer_get_ms(&open_end_ms);
-					written = true;
-					break;
+				if (!written) {
+					timer_get_ms(&open_start_ms);
+					if (sd_card_file_write_open(file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
+					                            &size) == W_SUCCESS) {
+						// Write successful
+						timer_get_ms(&open_end_ms);
+						written = true;
+						expected_size = f_size(&file_ctx->file);
+					}
 				}
 
-				gpio_toggle(GPIO_PIN_RED_LED, 0);
-				vTaskDelay(pdMS_TO_TICKS(2));
-			}
-
-			if (written) {
-				for (uint32_t i = 0; i < log_write_try_count; i++) {
+				if (written) {
 					/*
 					 * Sync after every buffer for maximum data retention.
 					 * Consider reducing this to periodic syncs once reliability
@@ -590,28 +588,35 @@ void log_task(void *argument) {
 					uint32_t sync_start_ms = 0;
 					timer_get_ms(&sync_start_ms);
 					if (sd_card_file_sync(file_ctx) == W_SUCCESS) {
-						// Sync successful
-						uint32_t sync_end_ms = 0;
-						timer_get_ms(&sync_end_ms);
+						if (f_size(&file_ctx->file) == expected_size) {
+							// Sync successful
+							uint32_t sync_end_ms = 0;
+							timer_get_ms(&sync_end_ms);
 
-						// REMOVE BEFORE FLIGHT
-						log_text(10, LOG_LVL_INFO, "logger_write",
-						         "open_time=%d, sync_time=%d, try=%d", open_end_ms - open_start_ms,
-						         sync_end_ms - sync_start_ms, i + 1);
-						gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+							// REMOVE BEFORE FLIGHT
+							log_text(10, LOG_LVL_INFO, "logger_write",
+							         "open_time=%d, sync_time=%d, try=%d",
+							         open_end_ms - open_start_ms, sync_end_ms - sync_start_ms,
+							         i + 1);
+							gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 
-						synced = true;
-						break;
+							synced = true;
+							break;
+						}
+						log_text(10, LOG_LVL_WARN, "logger",
+						         "buffer lost on file reopen, rewriting (try %d)", i + 1);
+						written = false;
 					} else {
 						log_text(10, LOG_LVL_WARN, "logger", "sd_card_file_sync failed on try %d",
 						         i + 1);
-						gpio_toggle(GPIO_PIN_RED_LED, 0);
-						vTaskDelay(pdMS_TO_TICKS(2));
 					}
 				}
+
+				gpio_toggle(GPIO_PIN_RED_LED, 0);
+				vTaskDelay(pdMS_TO_TICKS(2));
 			}
 
-			if (!written || !synced) {
+			if (!synced) {
 				logger_health.buffer_flush_fails++;
 				logger_health.fs_open_flush_failed = true;
 			}
