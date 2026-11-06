@@ -14,6 +14,9 @@
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/init/init.h"
+#ifdef ENABLE_BENCHMARK
+#include "application/benchmark/cordic_benchmark.h"
+#endif
 #include "application/logger/log.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
@@ -223,6 +226,14 @@ static void system_init_task(void *arg) {
 }
 
 w_status_t init_tasks(void) {
+#ifdef ENABLE_BENCHMARK
+	cordic_benchmark_run();
+	cordic_benchmark_done();
+	// Benchmark firmware stops here; normal application tasks are never started.
+	while (1) {
+		__NOP();
+	}
+#endif
 	// create first task that will run system_init_task
 	BaseType_t task_status =
 		xTaskCreate(system_init_task, "SysInit", 1024, NULL, configMAX_PRIORITIES - 1, NULL);
