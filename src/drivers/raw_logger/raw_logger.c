@@ -191,6 +191,11 @@ static uint32_t au_code_to_bytes(uint8_t code) {
 
 w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_byte,
                                    uint32_t timeout_ms) {
+	if (!raw_sd_card_health.is_init) {
+		log_text(0, LOG_LVL_WARN, "RAW", "Not initialized.");
+		return W_FAILURE;
+	}
+
 	if ((NULL == block_count) || (NULL == erase_size_byte)) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Invalid spec parameters.");
 		return W_INVALID_PARAM;
@@ -202,6 +207,11 @@ w_status_t raw_logger_get_SD_specs(uint32_t *block_count, uint32_t *erase_size_b
 	if (pdTRUE != xSemaphoreTake(sd_mutex, pdMS_TO_TICKS(timeout_ms))) {
 		raw_sd_card_health.timed_out = true;
 		return W_IO_TIMEOUT;
+	}
+
+	if (RAW_READY != action_state) {
+		xSemaphoreGive(sd_mutex);
+		return W_FAILURE;
 	}
 
 	if ((HAL_OK != HAL_SD_GetCardInfo(raw_logger_handle, &SDCardInfo)) ||
@@ -264,6 +274,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
+		vTaskDelay(1);
 		uint32_t cur_time_ms = 0;
 		if (timer_get_ms(&cur_time_ms) != W_SUCCESS) {
 			xSemaphoreGive(sd_mutex);
@@ -275,16 +286,11 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 			xSemaphoreGive(sd_mutex);
 			return W_IO_TIMEOUT;
 		}
-		vTaskDelay(1);
 	}
 
 	uint32_t pre_DMA_time_ms = 0;
-	if (timer_get_ms(&pre_DMA_time_ms) != W_SUCCESS) {
-		xSemaphoreGive(sd_mutex);
-		return W_FAILURE;
-	}
-
-	if ((pre_DMA_time_ms - start_time_ms) >= timeout_ms) {
+	if ((timer_get_ms(&pre_DMA_time_ms) != W_SUCCESS) ||
+	    ((pre_DMA_time_ms - start_time_ms) >= timeout_ms)) {
 		raw_sd_card_health.timed_out = true;
 		xSemaphoreGive(sd_mutex);
 		return W_IO_TIMEOUT;
@@ -311,27 +317,9 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	}
 
 	uint32_t cur_time_ms = 0;
-	if (W_SUCCESS != timer_get_ms(&cur_time_ms)) {
-		action_state = RAW_RECOVERING;
-		task_handler = NULL;
-		xSemaphoreGive(sd_mutex);
-		return W_FAILURE;
-	}
-
-	uint32_t elapsed_time_ms = cur_time_ms - start_time_ms;
-	if (elapsed_time_ms >= timeout_ms) {
-		action_state = RAW_RECOVERING;
-		task_handler = NULL;
-		raw_sd_card_health.read_error++;
-		raw_sd_card_health.timed_out = true;
-		log_text(0, LOG_LVL_WARN, "RAW", "Read timed out.");
-		xSemaphoreGive(sd_mutex);
-		return W_IO_TIMEOUT;
-	}
-
-	uint32_t remaining_ms = timeout_ms - elapsed_time_ms;
-
-	if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(remaining_ms))) {
+	if ((W_SUCCESS != timer_get_ms(&cur_time_ms)) ||
+	    ((cur_time_ms - start_time_ms) >= timeout_ms) ||
+	    (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
 		action_state = RAW_RECOVERING;
 		task_handler = NULL;
 		raw_sd_card_health.read_error++;
@@ -359,6 +347,10 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
                                uint32_t timeout_ms) {
 	if (!raw_sd_card_health.is_init) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Not initialized.");
+		return W_FAILURE;
+	}
+
+	if (RAW_RECOVERING == action_state) {
 		return W_FAILURE;
 	}
 
@@ -392,6 +384,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
+		vTaskDelay(1);
 		uint32_t cur_time_ms = 0;
 		if (timer_get_ms(&cur_time_ms) != W_SUCCESS) {
 			xSemaphoreGive(sd_mutex);
@@ -403,16 +396,11 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 			xSemaphoreGive(sd_mutex);
 			return W_IO_TIMEOUT;
 		}
-		vTaskDelay(1);
 	}
 
 	uint32_t pre_DMA_time_ms = 0;
-	if (timer_get_ms(&pre_DMA_time_ms) != W_SUCCESS) {
-		xSemaphoreGive(sd_mutex);
-		return W_FAILURE;
-	}
-
-	if ((pre_DMA_time_ms - start_time_ms) >= timeout_ms) {
+	if ((timer_get_ms(&pre_DMA_time_ms) != W_SUCCESS) ||
+	    ((pre_DMA_time_ms - start_time_ms) >= timeout_ms)) {
 		raw_sd_card_health.timed_out = true;
 		xSemaphoreGive(sd_mutex);
 		return W_IO_TIMEOUT;
@@ -439,27 +427,9 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	}
 
 	uint32_t cur_time_ms = 0;
-	if (W_SUCCESS != timer_get_ms(&cur_time_ms)) {
-		action_state = RAW_RECOVERING;
-		task_handler = NULL;
-		xSemaphoreGive(sd_mutex);
-		return W_FAILURE;
-	}
-
-	uint32_t elapsed_time_ms = cur_time_ms - start_time_ms;
-	if (elapsed_time_ms >= timeout_ms) {
-		action_state = RAW_RECOVERING;
-		task_handler = NULL;
-		raw_sd_card_health.write_error++;
-		raw_sd_card_health.timed_out = true;
-		log_text(0, LOG_LVL_WARN, "RAW", "Write timed out.");
-		xSemaphoreGive(sd_mutex);
-		return W_IO_TIMEOUT;
-	}
-
-	uint32_t remaining_ms = timeout_ms - elapsed_time_ms;
-
-	if (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(remaining_ms))) {
+	if ((W_SUCCESS != timer_get_ms(&cur_time_ms)) ||
+	    ((cur_time_ms - start_time_ms) >= timeout_ms) ||
+	    (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
 		action_state = RAW_RECOVERING;
 		task_handler = NULL;
 		raw_sd_card_health.write_error++;
