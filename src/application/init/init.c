@@ -168,8 +168,15 @@ static void system_init_task(void *arg) {
 	                           &health_checks_task_handle);
 
 	task_status &= xTaskCreate(can_handler_task_rx, "can handler rx", 256, NULL,
-	                           can_handler_rx_priority, &can_handler_handle_rx), 
-							   watchdog_register_task(can_handler_handle_rx, 1000);
+	                           can_handler_rx_priority, &can_handler_handle_rx);
+
+	// if can_handler doesnt exists and registration is not successfull
+	if (can_handler_handle_rx == NULL || watchdog_register_task(can_handler_handle_rx, 1000) != W_SUCCESS) {
+
+		// log fatal eerror message
+		log_text(0, LOG_LVL_FATAL, "watchdog", "WOMP WOMP Failed to register CAN RX task");
+		proc_handle_fatal_error("watchdog");
+	}
 
 	task_status &= xTaskCreate(can_handler_task_tx, "can handler tx", 256, NULL,
 	                           can_handler_tx_priority, &can_handler_handle_tx);
