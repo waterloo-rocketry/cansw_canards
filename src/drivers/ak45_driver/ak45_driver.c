@@ -7,6 +7,7 @@
 
 #include "application/can_handler/can_handler.h"
 #include "application/logger/log.h"
+// #include "application/logger/log_definitions.h"
 #include "application/telemetry/telemetry.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/timer/timer.h"
@@ -410,7 +411,9 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 
 	// return error if no response from motor
 	if (!received_can_msg) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Unable to connect to AK45 CAN");
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45",
+		         "Unable to connect to AK45 CAN ENUM EXISTENCE %d",
+		         LOG_EVENTS_AK45_INVALID_POINTERS);
 		ak45_health.init_fdcan_timeout++;
 		ak45_stop_can();
 		return W_FAILURE;

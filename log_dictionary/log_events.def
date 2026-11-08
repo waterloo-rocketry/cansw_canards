@@ -6,7 +6,7 @@
 * Each entry has the form:
 *   EVENT(enum_name, event_id, num_args, message)
 *
-*   enum_name  Identifier used in code (e.g. EVT_SENSOR_TIMEOUT)
+*   enum_name  Identifier used in code (e.g. SENSOR_TIMEOUT) <- Note: A LOG_EVENTS prefix will be automatically added to the enum name
 *   event_id   32-bit ID, described below
 *   num_args   Number of format arguments the message takes
 *   message    printf-style message string
@@ -32,9 +32,21 @@
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(CAN_INITQ_FAIL, 1006, 0, "[FATAL] [CAN] initfailq")
+EVENT(CANHandler_INIT_STM_FAIL, 1007, 0, "[FATAL] [CAN Handler] can_init_stm failed.")
+EVENT(CANHandler_CALLBACK_REGISTER_FAIL, 1008, 0, "[FATAL] [CAN Handler] Failed to register mandatory CAN callbacks.")
 
 /* --- WARN (severity 2) --- */
-EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
+EVENT(CANCallback_READ_FAIL, 1001, 0, "[WARN] [CAN Callback] Failed to read board reset.")
+EVENT(CANCallback_LED_ON_FAIL, 1002, 0, "[WARN] [CAN Callback] LED ON callback failed to set GPIO.")
+EVENT(CANCallback_LED_OFF_FAIL, 1003, 0, "[WARN] [CAN Callback] LED OFF callback failed to set GPIO.")
+EVENT(CANHandlerRX_NO_ACT_ID, 1004, 0, "[WARN] [CAN Handler RX] Can't get the actuator id.")
+EVENT(CANHandlerRX_NO_ACT_CALLBACK_FAIL, 1005, 1, "[WARN] [CAN Handler RX] Callback failed for Act Cmd with Act ID: %d.")
+EVENT(CANHandler_TX_QUEUE_FAIL, 1009, 0, "[WARN] [CAN Handler TX] Failed to queue message for TX. Queue full?")
+EVENT(CANHandlerRX_CALLBACK_MSG_TYPE_FAIL, 1010, 1, "[WARN] [CAN Handler RX] Callback failed for msg type %d.")
+EVENT(CANHandlerRX_MSG_TIMEOUT, 1011, 0, "[WARN] [CAN Handler RX] Timed out waiting for RX message.")
+EVENT(CAN_TX_SEND_FAIL, 1012, 0, "[WARN] [CAN TX] CAN send failed!")
+EVENT(CANHandlerTX_NO_QUEUE_MSG, 1013, 0, "[WARN] [CAN Handler TX] no tx msg in queue!")
 
 /* --- INFO (severity 3) --- */
 
@@ -48,6 +60,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(CONTROLLER_QUEUE_MALLOC_FAIL, 2001, 0, "[WARN] [Controller] Unable to allocate memory for queue.")
 
 /* --- INFO (severity 3) --- */
 
@@ -59,6 +72,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(FP_CREATE_QTR_CALLBACK_FAIL, 3001, 0, "[FATAL] [Flight Phase] Failed to create queues/timers/register callback.")
 
 /* --- WARN (severity 2) --- */
 
@@ -74,6 +88,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(FSM_PAD_FILTER_INIT_FAIL, 4001, 0, "[WARN] [FSM] pad_filter_init failed")
 
 /* --- INFO (severity 3) --- */
 
@@ -87,6 +102,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(HC_TIMER_FAIL, 5001, 0, "[WARN] [Health Checks] timer_get_ms failure.")
 
 /* --- INFO (severity 3) --- */
 
@@ -100,6 +116,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(HIL_CDC_TRANSMIT_HS_FAIL, 6001, 1, "[WARN] [HIL] CDC_Transmit_HS fail. usb_status: %d")
 
 /* --- INFO (severity 3) --- */
 
@@ -113,6 +130,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(NON_CRIT_INIT_FAIL, 7001, 0, "[WARN] [Init] Non-crit init fail 0x%lx (log)")
 
 /* --- INFO (severity 3) --- */
 
@@ -126,6 +144,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(LOG_SD_CARD_FILE_SYNC_FAIL, 8001, 1, "[WARN] [Log] sd_card_file_sync failed on try %d")
 
 /* --- INFO (severity 3) --- */
 
@@ -139,6 +158,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(NAVIGATOR_REGISTER_TELEMETRY_SOURCES_FAIL, 9001, 0, "[WARN] [Navigator] Failed to register telemetry sources")
 
 /* --- INFO (severity 3) --- */
 
@@ -152,20 +172,21 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(PH_ADC_COMM_FAIL, 10001, 1, "[WARN] [Power Handler] ADC Communication failed while getting charge voltage. Status: %d")
 
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */
 
-// sensor_handler.c, source_id = 00B
 /* ==========================================================================
-* flight_phase.c            source_id = 011
+* sensor_handler.c            source_id = 011
 * ===========================================================================
 */
 
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(SH_TX_TIMESTAMP_FAIL, 11001, 0, "[WARN] [Sensor Handler] Failed to get timestamp fo can msg tx")
 
 /* --- INFO (severity 3) --- */
 
@@ -179,6 +200,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(TELEMETRY_MODULE_ALREADY_INITIALIZED, 12001, 0, "[WARN] [Telemetry Module] Telemetry module already initialized")
 
 /* --- INFO (severity 3) --- */
 
@@ -192,6 +214,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(ADXL380_UNAUTHORIZED_REINITIALIZATION, 13001, 0, "[WARN] [ADXL380] Reinitialization is not allowed.")
 
 /* --- INFO (severity 3) --- */
 
@@ -203,6 +226,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(ADXRS649_ST1_LOW_FAIL, 14001, 0, "[FATAL] [ADXRS649] Failed to set ST1 to LOW.")
 
 /* --- WARN (severity 2) --- */
 
@@ -210,13 +234,13 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 
 /* --- DEBUG (severity 4) --- */
 
-// adc.c, source_id = 00F
 /* ==========================================================================
 * adc.c            source_id = 015
 * ===========================================================================
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(ADC_INIT_FAIL_CAL, 15001, 0, "[FATAL] [ADC] initfailcal")
 
 /* --- WARN (severity 2) --- */
 
@@ -224,7 +248,6 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 
 /* --- DEBUG (severity 4) --- */
 
-// ak45_driver.c, source_id = 010
 /* ==========================================================================
 * ak45_driver.c            source_id = 016
 * ===========================================================================
@@ -233,6 +256,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(AK45_INVALID_POINTERS, 16001, 0, "[WARN] [AK45] Invalid pointers.")
 
 /* --- INFO (severity 3) --- */
 
@@ -244,6 +268,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(ALTIMU_INIT_FAIL, 17001, 0, "[FATAL] [Altimu] Init fail.")
 
 /* --- WARN (severity 2) --- */
 
@@ -251,13 +276,13 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 
 /* --- DEBUG (severity 4) --- */
 
-// gpio.c, source_id = 012
 /* ==========================================================================
 * gpio.c            source_id = 018
 * ===========================================================================
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(GPIO_INIT_FAIL, 18001, 1, "[Fatal] [GPIO] Init fail %d.")
 
 /* --- WARN (severity 2) --- */
 
@@ -278,7 +303,6 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 
 /* --- DEBUG (severity 4) --- */
 
-// IIS2MDC.c, source_id = 014
 /* ==========================================================================
 * IIS2MDC.c            source_id = 020
 * ===========================================================================
@@ -292,9 +316,8 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 
 /* --- DEBUG (severity 4) --- */
 
-// LSM6DSV32X.c, source_id = 015
 /* ==========================================================================
-* LSM6DSV32X.c            source_id = 021
+* LSM6DSV32X.c            source_id = 015
 * ===========================================================================
 */
 
@@ -307,7 +330,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* movella.c            source_id = 022
+* movella.c            source_id = 016
 * ===========================================================================
 */
 
@@ -320,7 +343,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* MS5611.c            source_id = 023
+* MS5611.c            source_id = 017
 * ===========================================================================
 */
 
@@ -333,7 +356,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* raw_logger.c            source_id = 024
+* raw_logger.c            source_id = 018
 * ===========================================================================
 */
 
@@ -346,7 +369,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* sd_card.c            source_id = 025
+* sd_card.c            source_id = 019
 * ===========================================================================
 */
 
@@ -359,7 +382,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* timer.c            source_id = 026
+* timer.c            source_id = 01A
 * ===========================================================================
 */
 
@@ -372,7 +395,7 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* uart.c            source_id = 027
+* uart.c            source_id = 01B
 * ===========================================================================
 */
 
@@ -383,3 +406,5 @@ EVENT(CAN_CALLBACK_FAIL, 1001, 0, "Failed to read board reset.")
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */
+
+

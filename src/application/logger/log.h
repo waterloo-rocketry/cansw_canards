@@ -110,13 +110,13 @@ typedef enum {
 
 // Macros to automatically build the enums for the log events, sources, and files.
 typedef enum {
-#define EVENT(name, id, num_args, message) EVENT_##name = id,
+#define EVENT(name, id, num_args, message) LOG_EVENTS_##name = id,
 #include "log_events.def"
 #undef EVENT
 } log_event_id_t;
 
 typedef enum {
-#define FILE_ID(name, id, file_path) LOGFILE_##name = id,
+#define FILE_ID(name, id, file_path) LOG_FILES_##name = id,
 #include "log_files.def"
 #undef FILE_ID
 } log_file_id_t;
