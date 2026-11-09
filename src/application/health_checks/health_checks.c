@@ -342,6 +342,9 @@ void health_check_task(void *argument) {
 
 	for (;;) {
 		health_check_exec();
+		
+		watchdog_kick();
+
 		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TASK_DELAY_MS));
 	}
 }

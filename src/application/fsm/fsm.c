@@ -340,7 +340,10 @@ void fsm_task(void *args) {
 		// run actions based on new curr state
 		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
 		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
+		
+		watchdog_kick();
 	}
+	
 }
 
 health_status_t fsm_get_status(void) {

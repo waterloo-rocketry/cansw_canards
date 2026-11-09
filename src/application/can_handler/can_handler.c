@@ -332,6 +332,7 @@ void can_handler_task_tx(void *argument) {
 				last_tx_warn_tick = now;
 			}
 		}
+		watchdog_kick();
 	}
 }
 

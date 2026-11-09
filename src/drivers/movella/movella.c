@@ -209,6 +209,7 @@ void movella_task(void *parameters) {
 			s_movella.latest_data.is_dead = true;
 			movella_health.recent_dead_data_count++;
 		}
+		watchdog_kick();
 	}
 }
 

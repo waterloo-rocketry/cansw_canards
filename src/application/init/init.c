@@ -163,26 +163,57 @@ static void system_init_task(void *arg) {
 	task_status &= xTaskCreate(fsm_task, "fsm",
 	                           6144, // TODO: set the correct size
 	                           NULL, fsm_task_priority, &fsm_task_handle);
+							   
+							   // if can_handler doesnt exists and registration is not successfull
+		if (fsm_task_handle == NULL || watchdog_register_task(fsm_task_handle, pdMS_TO_TICKS(10)) != W_SUCCESS) {
+
+			// log fatal eerror message
+			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register FSM task");
+			proc_handle_fatal_error("watchdog");
+		}
 
 	task_status &= xTaskCreate(health_check_task, "health", 384, NULL, health_checks_task_priority,
 	                           &health_checks_task_handle);
 
+		if (health_checks_task_handle == NULL || watchdog_register_task(health_checks_task_handle, pdMS_TO_TICKS(2000)) != W_SUCCESS) {
+
+			// log fatal eerror message
+			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register health check task");
+			proc_handle_fatal_error("watchdog");
+		}
+
 	task_status &= xTaskCreate(can_handler_task_rx, "can handler rx", 256, NULL,
 	                           can_handler_rx_priority, &can_handler_handle_rx);
 
-	// if can_handler doesnt exists and registration is not successfull
-	if (can_handler_handle_rx == NULL || watchdog_register_task(can_handler_handle_rx, 1000) != W_SUCCESS) {
+		// if can_handler doesnt exists and registration is not successfull
+		if (can_handler_handle_rx == NULL || watchdog_register_task(can_handler_handle_rx, 250) != W_SUCCESS) {
 
-		// log fatal eerror message
-		log_text(0, LOG_LVL_FATAL, "watchdog", "WOMP WOMP Failed to register CAN RX task");
-		proc_handle_fatal_error("watchdog");
-	}
+			// log fatal eerror message
+			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register CAN RX task");
+			proc_handle_fatal_error("watchdog");
+		}
 
 	task_status &= xTaskCreate(can_handler_task_tx, "can handler tx", 256, NULL,
 	                           can_handler_tx_priority, &can_handler_handle_tx);
 
+		// if can_handler doesnt exists and registration is not successfull
+		if (can_handler_handle_tx == NULL || watchdog_register_task(can_handler_handle_tx, pdMS_TO_TICKS(10)) != W_SUCCESS) {
+
+			// log fatal eerror message
+			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register CAN TX task");
+			proc_handle_fatal_error("watchdog");
+		}
+
 	task_status &= xTaskCreate(movella_task, "movella", 512, NULL, movella_task_priority,
 	                           &movella_task_handle);
+
+		// if can_handler doesnt exists and registration is not successfull
+		if (movella_task_handle == NULL || watchdog_register_task(movella_task_handle, pdMS_TO_TICKS(30)) != W_SUCCESS) {
+
+			// log fatal eerror message
+			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register movella task");
+			proc_handle_fatal_error("watchdog");
+		}
 
 	task_status &= xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority,
 	                           &ms5611_task_handle); // TODO: set the correct size
