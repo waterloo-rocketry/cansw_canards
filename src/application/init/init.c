@@ -216,16 +216,48 @@ static void system_init_task(void *arg) {
 		}
 
 	task_status &= xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority,
-	                           &ms5611_task_handle); // TODO: set the correct size
+	                          &ms5611_task_handle); // TODO: set the correct size、
+
+		//if ms5611_task doesnt exits or registration is not successful
+		if(ms5611_task_handle == NULL || watchdog_register_task(ms5611_task_handle, pdMS_TO_TICKS(30))!= W_SUCCESS){
+
+			//log fatal error message
+			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register ms5611 task");
+			proc_handle_fatal_error("watchdog");
+		}
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
+
+	//if log_task doesnt exits or registration is not successful
+		if(log_task_handle == NULL || watchdog_register_task(log_task_handle, pdMS_TO_TICKS(1000))!= W_SUCCESS){
+
+			//log fatal error message
+			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register log task");
+			proc_handle_fatal_error("watchdog");
+		}
 
 	task_status &= xTaskCreate(ad_breakout_board_task, "ad board task",
 	                           256, // TODO: set when sure of size
 	                           NULL, ad_breakout_task_priority, &ad_breakout_task_handle);
 
+	//if ad_breakout_board_task doesnt exits or registration is not successful
+		if(ad_breakout_task_handle == NULL || watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(6))!= W_SUCCESS){
+
+			//log fatal error message
+			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register ad_breakout_board task");
+			proc_handle_fatal_error("watchdog");
+		}
+
 	task_status &= xTaskCreate(telemetry_task, "telem module", 336, NULL, telem_task_priority,
 	                           &telem_task_handle);
+
+	//if telemetry_task doesnt exits or registration is not successful
+		if(telem_task_handle == NULL || watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(3))!= W_SUCCESS){
+
+			//log fatal error message
+			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register telemetry task");
+			proc_handle_fatal_error("watchdog");
+		}
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure
@@ -258,12 +290,21 @@ static void system_init_task(void *arg) {
 				log_text(0, LOG_LVL_FATAL, "SystemInit", "failed motor calibration");
 			}
 		}
+		watchdog_kick();
 	}
 }
 
 w_status_t init_tasks(void) {
 	// create first task that will run system_init_task
 	BaseType_t task_status =
-		xTaskCreate(system_init_task, "SysInit", 1024, NULL, configMAX_PRIORITIES - 1, NULL);
+		xTaskCreate(system_init_task, "SysInit", 1024, NULL, configMAX_PRIORITIES - 1, &init_task_handle);
+
+	//if Sysinit_task doesnt exits or registration is not successful
+		if(init_task_handle == NULL || watchdog_register_task(init_task_handle, pdMS_TO_TICKS(1500))!= W_SUCCESS){
+
+			//log fatal error message
+			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register SysInit task");
+			proc_handle_fatal_error("watchdog");
+		}
 	return (task_status == pdTRUE) ? W_SUCCESS : W_FAILURE;
 }

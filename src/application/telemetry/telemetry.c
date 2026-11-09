@@ -158,6 +158,8 @@ void telemetry_task(void *argument) {
 		telemetry_run_once(); // abstracted for unit testing
 
 		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TELEMETRY_TASK_PERIOD_MS));
+
+		watchdog_kick();
 	}
 }
 

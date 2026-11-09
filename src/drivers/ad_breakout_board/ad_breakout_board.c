@@ -165,6 +165,8 @@ void ad_breakout_board_task(void *argument) {
 		loop_count++;
 
 		vTaskDelayUntil(&last_wake_time, period);
+		
+		watchdog_kick();
 	}
 }
 
