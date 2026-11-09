@@ -7,7 +7,7 @@ typedef enum {
 	LOGGING_FORMATTING_DATA,
 	LOGGING_FORMATTING_ERROR,
 	LOGGING_FORMATTING_TEXT
-} logging_formatter_data_type;
+} logging_formatter_data_type_t;
 
 /**
  * @brief Searches for the last unwritten, uncorrupted chunk to write to.
@@ -31,6 +31,6 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle);
  * FIRM-LLR-LFO-007
  */
 w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
-                                    logging_formatter_data_type data_type);
+                                    logging_formatter_data_type_t data_type);
 
 #endif // logging_formatter_H
