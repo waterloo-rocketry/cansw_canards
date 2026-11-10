@@ -1,3 +1,4 @@
+#include "common/benchmark/benchmark.h"
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
@@ -17,6 +18,10 @@
 #include "common/math/math.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(3);
+#endif
 
 #define UINT24_MAX (1U << 24) - 1U // maximum value for a 24-bit unsigned integer
 #define INT24_MIN -(1 << 23) // minimum value for a 24-bit signed integer
@@ -107,10 +112,20 @@ static w_status_t can_actuator_cmd_callback(const can_msg_t *msg) {
 }
 
 void can_handle_rx_message(const can_msg_t *message) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	// software filter: only queue messages with registered callbacks
 	can_msg_type_t msg_type = get_message_type(message);
 	// drop any message types without a registered handler
 	if (NULL == callback_map[msg_type]) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
+
 		return; // drop unregistered IDs immediately
 	}
 	// enqueue message for RX task; track if higher-priority task should run
@@ -120,6 +135,10 @@ void can_handle_rx_message(const can_msg_t *message) {
 	}
 	// request context switch if needed
 	portYIELD_FROM_ISR(higher_priority_task_woken);
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 }
 
 static void can_get_signed_limits(can_types_t type, int32_t *min_out, int32_t *max_out) {
@@ -270,11 +289,25 @@ w_status_t can_handler_register_callback(can_msg_type_t msg_type, can_callback_t
 }
 
 w_status_t can_handler_transmit(const can_msg_t *message) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
 	if (pdPASS != xQueueSend(bus_queue_tx, message, 0)) {
 		log_text(1, LOG_LVL_WARN, "CANHandler", "Failed to queue message for TX. Queue full?");
 		can_error_stats.dropped_tx_counter++; // Track dropped TX messages
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_FAILURE;
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(0);
+#endif
 	return W_SUCCESS;
 }
 
@@ -314,11 +347,22 @@ void can_handler_task_tx(void *argument) {
 		can_msg_t tx_msg;
 
 		if (xQueueReceive(bus_queue_tx, &tx_msg, pdMS_TO_TICKS(5)) == pdPASS) {
+#ifdef ENABLE_BENCHMARK
+			if (done_sys_init) {
+				SINGLE_BENCHMARK_START(2);
+			}
+#endif
+
 			// send to CAN bus; log errors
 			if (!stm32h7_can_send(&tx_msg)) {
 				can_error_stats.tx_failures++;
 				log_text(3, LOG_LVL_WARN, "CAN tx", "CAN send failed!");
 			}
+
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(2);
+#endif
+
 			// hardware limitation stm32 backtoback tx fifo queue has 2 msgs..
 			// but trying to do 2 in a row didnt work so just delay between every tx
 			// also 1ms delay didnt work so 2ms???
@@ -436,3 +480,9 @@ health_status_t can_handler_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_can_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif

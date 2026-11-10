@@ -1,10 +1,15 @@
 #include "drivers/sd_card/sd_card.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
+#include "common/benchmark/benchmark.h"
 #include "fatfs.h"
 #include "rocketlib.h"
 #include "semphr.h"
 #include <inttypes.h>
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(2);
+#endif
 
 FATFS g_fs_obj;
 
@@ -354,16 +359,30 @@ w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx) {
 
 w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, uint32_t num_bytes,
                                    uint32_t *bytes_written) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
 	if ((!sd_card_health.is_init) || (NULL == ctx) || (!ctx->is_open) || (NULL == buffer) ||
 	    (NULL == bytes_written)) {
 		sd_card_health.file_write_error++;
 		sd_card_health.invalid_param = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_INVALID_PARAM;
 	}
 
 	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
 		sd_card_health.file_write_error++;
 		sd_card_health.semaphore_take_fail = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_FAILURE;
 	}
 
@@ -378,23 +397,45 @@ w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, 
 
 		// try to reopen the file
 		sd_card_file_reopen(ctx);
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_FAILURE;
 	}
 
 	sd_card_health.write_count++;
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(0);
+#endif
 	return W_SUCCESS;
 }
 
 w_status_t sd_card_file_sync(sd_card_file_ctx_t *ctx) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	if ((!sd_card_health.is_init) || (NULL == ctx) || (!ctx->is_open)) {
 		sd_card_health.file_sync_error++;
 		sd_card_health.invalid_param = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_INVALID_PARAM;
 	}
 
 	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
 		sd_card_health.file_sync_error++;
 		sd_card_health.semaphore_take_fail = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
 
@@ -409,9 +450,16 @@ w_status_t sd_card_file_sync(sd_card_file_ctx_t *ctx) {
 
 		// try to reopen the file
 		sd_card_file_reopen(ctx);
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 	return W_SUCCESS;
 }
 
@@ -442,3 +490,9 @@ w_status_t sd_card_file_close(sd_card_file_ctx_t *ctx) {
 
 	return W_SUCCESS;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_sd_card_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif

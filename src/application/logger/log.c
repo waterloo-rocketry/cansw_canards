@@ -1,3 +1,4 @@
+#include "common/benchmark/benchmark.h"
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -13,6 +14,10 @@
 #include "rocketlib.h"
 #include "semphr.h"
 #include "third_party/printf/printf.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(3);
+#endif
 
 // number of times to try writing a log message in case fails once
 #define DATA_WRITE_TRY_COUNT 50
@@ -301,6 +306,12 @@ w_status_t log_init(void) {
 
 w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
                     ...) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(2);
+	}
+#endif
+
 	// Get timestamp as close to time of call as possible
 	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log
 	// message anyway. We're trying to log as much as possible and a missing timestamp does not
@@ -310,12 +321,19 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 
 	// Validate arguments
 	if (!logger_health.is_init) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_FAILURE;
 	}
 
 	if ((NULL == source) || (NULL == format)) {
 		logger_health.null_param_count++;
 		logger_health.invalid_param = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_INVALID_PARAM;
 	}
 
@@ -323,6 +341,10 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	if (xSemaphoreTake(log_text_write_mutex, pdMS_TO_TICKS(timeout)) != pdPASS) {
 		logger_health.log_write_timeouts++;
 		logger_health.timeout_occurred = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_FAILURE;
 	}
 
@@ -333,6 +355,10 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 		xSemaphoreGive(log_text_write_mutex);
 		logger_health.full_buffer_moments++;
 		logger_health.buffer_is_full = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_FAILURE;
 	}
 
@@ -352,6 +378,10 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 	if (msg_num >= TEXT_MSGS_PER_BUFFER) {
 		logger_health.invalid_region_moments++;
 		logger_health.region_overflow = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_FAILURE;
 	}
 
@@ -411,21 +441,37 @@ w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, con
 			// This should never be reached as the queue should have space for all buffers
 			logger_health.queue_send_fails++;
 			logger_health.os_error_occurred = true;
+
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(2);
+#endif
 			return W_FAILURE;
 		}
 	}
 	// msg_num is guaranteed not to be greater than TEXT_MSGS_PER_BUFFER by condition before write
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(2);
+#endif
 	return W_SUCCESS;
 }
 
 w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_container_t *data) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	// Get timestamp as close to time of call as possible
 	// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
 	if (!logger_health.is_init) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
 
@@ -433,6 +479,10 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	if (NULL == data) {
 		logger_health.null_param_count++;
 		logger_health.invalid_param = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_INVALID_PARAM;
 	}
 
@@ -440,6 +490,10 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	if (xSemaphoreTake(log_data_write_mutex, pdMS_TO_TICKS(timeout)) != pdPASS) {
 		logger_health.log_write_timeouts++;
 		logger_health.timeout_occurred = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
 
@@ -450,6 +504,10 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 		xSemaphoreGive(log_data_write_mutex);
 		logger_health.full_buffer_moments++;
 		logger_health.buffer_is_full = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
 
@@ -472,8 +530,16 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 		// msg_num was invalid (is_init, buffer, data must all have made sense at this point)
 		logger_health.invalid_region_moments++;
 		logger_health.region_overflow = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 	return res;
 }
 
@@ -548,6 +614,12 @@ void log_task(void *argument) {
 		}
 
 		if (have_msg) {
+#ifdef ENABLE_BENCHMARK
+			if (done_sys_init) {
+				SINGLE_BENCHMARK_START(0);
+			}
+#endif
+
 			while (msgs_done < max_msgs) {
 				if (xSemaphoreTake(buffer_to_print->msgs_done_semaphore, 10) == pdPASS) {
 					msgs_done++;
@@ -604,6 +676,11 @@ void log_task(void *argument) {
 
 			// Reinitialize buffer for reuse
 			log_reset_buffer(buffer_to_print);
+
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(0);
+#endif
+
 		} else {
 			logger_health.no_full_buf_moments++;
 		}
@@ -683,3 +760,9 @@ health_status_t logger_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_log_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif
