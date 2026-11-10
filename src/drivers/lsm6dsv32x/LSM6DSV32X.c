@@ -34,8 +34,6 @@ typedef struct {
 	I2C_HandleTypeDef *hi2c;
 	uint8_t dev_addr;
 	uint8_t dual_buffer[2][LSM6DSV32X_FIFO_THRESHOLD][7];
-	size_t gyro_sample_count;
-	size_t accel_sample_count;
 	uint32_t timestamp_ms[2];
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
@@ -429,8 +427,8 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(vector3d_t acc_data[], vector3d_t g
 				status = W_FAILURE;
 				lsm6dsv32x_health.wrong_fifo_tag++;
 			}
-			lsm6dsv32x_ctx.gyro_sample_count = gyro_index;
-			lsm6dsv32x_ctx.accel_sample_count = accel_index;
+			*gyro_sample_count = gyro_index;
+			*acc_sample_count = accel_index;
 		}
 
 		if (W_FAILURE == status) {
