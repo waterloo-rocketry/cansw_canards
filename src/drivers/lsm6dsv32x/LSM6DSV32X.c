@@ -331,17 +331,17 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		}
 
 		// Parse gyroscope raw data (first 6 bytes)
-		raw_gyro->x = (uint16_t)(((uint16_t)latest_gyro_bytes[0] << 8) | latest_gyro_bytes[1]);
-		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[2] << 8) | latest_gyro_bytes[3]);
-		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[4] << 8) | latest_gyro_bytes[5]);
+		raw_gyro->x = (uint16_t)(((uint16_t)latest_gyro_bytes[1] << 8) | latest_gyro_bytes[0]);
+		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[3] << 8) | latest_gyro_bytes[2]);
+		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[5] << 8) | latest_gyro_bytes[4]);
 
 		raw_gyro->timestamp_ms = raw_acc->timestamp_ms; // grab time from accel since it's the smae
 		                                                // timestamp
 
 		// Parse accelerometer raw data (next 6 bytes)
-		raw_acc->x = (uint16_t)(((uint16_t)latest_acc_bytes[0] << 8) | latest_acc_bytes[1]);
-		raw_acc->y = (uint16_t)(((uint16_t)latest_acc_bytes[2] << 8) | latest_acc_bytes[3]);
-		raw_acc->z = (uint16_t)(((uint16_t)latest_acc_bytes[4] << 8) | latest_acc_bytes[5]);
+		raw_acc->x = (uint16_t)(((uint16_t)latest_acc_bytes[1] << 8) | latest_acc_bytes[0]);
+		raw_acc->y = (uint16_t)(((uint16_t)latest_acc_bytes[3] << 8) | latest_acc_bytes[2]);
+		raw_acc->z = (uint16_t)(((uint16_t)latest_acc_bytes[5] << 8) | latest_acc_bytes[4]);
 
 		// Convert to physical units
 		gyro_data->x = ((float64_t)((int16_t)raw_gyro->x)) * GYRO_FS;
@@ -395,9 +395,9 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(vector3d_t acc_data[], vector3d_t g
 		size_t accel_index = 0, gyro_index = 0;
 		for (size_t i = 0; i < LSM6DSV32X_FIFO_THRESHOLD; i++) {
 			uint8_t tag = raw_bytes[i][0] >> 3;
-			uint16_t x = (uint16_t)(raw_bytes[i][1] << 8) | raw_bytes[i][2];
-			uint16_t y = (uint16_t)(raw_bytes[i][3] << 8) | raw_bytes[i][4];
-			uint16_t z = (uint16_t)(raw_bytes[i][5] << 8) | raw_bytes[i][6];
+			uint16_t x = (uint16_t)(raw_bytes[i][2] << 8) | raw_bytes[i][1];
+			uint16_t y = (uint16_t)(raw_bytes[i][4] << 8) | raw_bytes[i][3];
+			uint16_t z = (uint16_t)(raw_bytes[i][6] << 8) | raw_bytes[i][5];
 
 			if (tag == GYRO_TAG) {
 				// gyro sample
