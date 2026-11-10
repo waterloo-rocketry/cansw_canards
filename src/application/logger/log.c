@@ -19,6 +19,7 @@
 #define TEXT_WRITE_TRY_COUNT 20
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
+static const uint32_t SD_RETRY_DELAY_MS = 2; // let SD card recover between write/sync retries
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
@@ -613,7 +614,11 @@ void log_task(void *argument) {
 				}
 
 				gpio_toggle(GPIO_PIN_RED_LED, 0);
-				vTaskDelay(pdMS_TO_TICKS(2));
+
+				// Allow SD card time to recover before the next attempt
+				if (i + 1 < log_write_try_count) {
+					vTaskDelay(pdMS_TO_TICKS(SD_RETRY_DELAY_MS));
+				}
 			}
 
 			if (!synced) {
