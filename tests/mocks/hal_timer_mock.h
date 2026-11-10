@@ -34,5 +34,6 @@ DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_TIM_Base_Start, TIM_HandleTypeDef
 
 // timer handle mock
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim23;
 
 #endif // HAL_TIMER_MOCK_H

@@ -1,4 +1,5 @@
 #include "FreeRTOS.h"
+#include "common/benchmark/benchmark.h"
 #include "queue.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
@@ -11,6 +12,10 @@
 #include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(1);
+#endif
 
 #define UART_TX_TIMEOUT_MS 100
 // should be every 5 ms but allow some leeway before erroring
@@ -198,6 +203,12 @@ void movella_task(void *parameters) {
 		w_status_t status =
 			uart_read(UART_MOVELLA, movella_rx_buffer, &rx_length, UART_RX_TIMEOUT_MS);
 
+#ifdef ENABLE_BENCHMARK
+		if (done_sys_init) {
+			SINGLE_BENCHMARK_START(0);
+		}
+#endif
+
 		// TODO: avoid race condition on s_movella.latest_data.is_dead cuz it could be read by
 		// imu handler while this is in progress? idt it matters in practice much cuz its a bool
 		// and should rarely change values so its fine to keep this sus for now. doesn't affect
@@ -209,6 +220,10 @@ void movella_task(void *parameters) {
 			s_movella.latest_data.is_dead = true;
 			movella_health.recent_dead_data_count++;
 		}
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 	}
 }
 
@@ -247,3 +262,9 @@ health_status_t movella_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_movella_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif

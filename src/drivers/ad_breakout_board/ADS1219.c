@@ -10,6 +10,7 @@ Based on above repository
  * C port of ADS1219.cpp (Arduino / Wire) adapted for the project's I2C layer.
  */
 
+#include "common/benchmark/benchmark.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -20,6 +21,10 @@ Based on above repository
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/ad_breakout_board/ADS1219_reg.h"
 #include "drivers/i2c/i2c.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(3);
+#endif
 
 static const uint8_t INIT_DELAY_MS = 10;
 
@@ -32,7 +37,17 @@ static w_status_t ads1219_send_cmd(ads1219_handle_t *p_handle, uint8_t cmd) {
 }
 
 static w_status_t ads1219_read_register(ads1219_handle_t *p_handle, uint8_t reg, uint8_t *data) {
-	return i2c_read_reg(p_handle->bus, p_handle->i2c_addr, reg, data, 1);
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
+	w_status_t benchmark_result_0 = i2c_read_reg(p_handle->bus, p_handle->i2c_addr, reg, data, 1);
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(0);
+#endif
+	return benchmark_result_0;
 }
 
 static w_status_t ads1219_write_register(ads1219_handle_t *p_handle, uint8_t data) {
@@ -268,14 +283,28 @@ w_status_t ads1219_set_conversion_mode(ads1219_handle_t *p_handle, uint8_t mode)
  * @return status of function
  */
 w_status_t ads1219_conversion_ready(ads1219_handle_t *p_handle, bool *ready) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	uint8_t stat;
 	w_status_t status = ads1219_read_register(p_handle, ADS1219_CMD_RREG_STATUS, &stat);
 	if (status != W_SUCCESS) {
 		*ready = false;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return status;
 	}
 
 	*ready = ((stat & 0x80) == 0x80);
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 	return W_SUCCESS;
 }
 
@@ -296,6 +325,12 @@ w_status_t ads1219_set_channel(ads1219_handle_t *p_handle, uint8_t mux) {
  * @return status of function
  */
 w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(2);
+	}
+#endif
+
 	uint8_t buf[3] = {0};
 
 	/*
@@ -306,6 +341,9 @@ w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
 	w_status_t status = i2c_read_reg(p_handle->bus, p_handle->i2c_addr, ADS1219_CMD_RDATA, buf, 3);
 
 	if (W_SUCCESS != status) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return status;
 	}
 
@@ -316,11 +354,17 @@ w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
 	raw = (raw ^ 0x00800000) - 0x00800000;
 
 	if ((0x7fffff < raw) && (0xff800001 > raw)) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_OVERFLOW;
 	}
 
 	*value = raw;
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(2);
+#endif
 	return W_SUCCESS;
 }
 
@@ -379,3 +423,9 @@ w_status_t ads1219_sanity_check(ads1219_handle_t *p_handle, uint8_t config_setti
 	}
 	return W_SUCCESS;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_ads1219_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif

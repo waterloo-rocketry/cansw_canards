@@ -1,10 +1,12 @@
 // Add these includes for hardware handles
 #include "FreeRTOS.h"
 #include "adc.h" // For hadc1
+#include "cmsis_os2.h"
 #include "fdcan.h" // For hfdcan1 and hfdcan3
 #include "i2c.h" // For hi2c2, hi2c4
 #include "stm32h7xx_hal.h"
 #include "task.h"
+#include "timers.h"
 #include "usart.h"
 
 #include "GNC_codegen.h"
@@ -34,6 +36,29 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+
+#include "common/benchmark/benchmark.h"
+extern void get_nav_codegen_benchmark_data(benchmark_data_t p_datas[10]);
+extern void get_fsm_benchmark_data(benchmark_data_t p_datas[5]);
+extern osThreadId_t defaultTaskHandle;
+
+#ifdef ENABLE_BENCHMARK
+extern void get_can_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_log_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_baro_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_ads1219_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_adxl_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_adxrs_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_ad_board_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_adxl_i2c_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_motor_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_gpio_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_mag_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_imu_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_movella_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_sd_card_benchmark_data(uint8_t index, benchmark_data_t *data);
+extern void get_uart_benchmark_data(uint8_t index, benchmark_data_t *data);
+#endif
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -208,7 +233,15 @@ static void system_init_task(void *arg) {
 		log_text(0, LOG_LVL_FATAL, "SystemInit", "failed to add calibration callback");
 		ak45_send_disable_cmd();
 	}
+
+	// benchmark stuff
+	benchmark_data_t nav_benchmark_datas[10] = {0};
+	benchmark_data_t fsm_benchmark_datas[5] = {0};
+	TaskHandle_t timer_task_handle = xTimerGetTimerDaemonTaskHandle();
+	TaskHandle_t default_task_handle = (TaskHandle_t)defaultTaskHandle;
+
 	// its blinky now
+	uint8_t i = 0;
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
@@ -219,6 +252,313 @@ static void system_init_task(void *arg) {
 				log_text(0, LOG_LVL_FATAL, "SystemInit", "failed motor calibration");
 			}
 		}
+
+		// log all of the data
+		if ((i % 2) == 0) {
+			taskENTER_CRITICAL();
+			get_nav_codegen_benchmark_data(nav_benchmark_datas);
+			taskEXIT_CRITICAL();
+			for (uint8_t j = 0; j < 10; j++) {
+				log_text(0, LOG_LVL_INFO, "SystemInit", "Nav %u S: %llu, C: %lu, M: %lu, Ave %llf",
+				         j, nav_benchmark_datas[j].sum, nav_benchmark_datas[j].count,
+				         nav_benchmark_datas[j].max, nav_benchmark_datas[j].average);
+			}
+
+			// FSM: 0 loop period, 1 notification-to-completion, 2 loop processing,
+			// 3 sensor retrieval, 4 state-action execution. All are DWT cycles.
+			taskENTER_CRITICAL();
+			get_fsm_benchmark_data(fsm_benchmark_datas);
+			taskEXIT_CRITICAL();
+			for (uint8_t k = 0; k < 5; k++) {
+				log_text(0, LOG_LVL_INFO, "SystemInit", "FSM %u S: %llu, C: %lu, M: %lu, Ave %llf",
+				         k, fsm_benchmark_datas[k].sum, fsm_benchmark_datas[k].count,
+				         fsm_benchmark_datas[k].max, fsm_benchmark_datas[k].average);
+			}
+
+#ifdef ENABLE_BENCHMARK
+			// DWT cycles: S=sum, C=count, M=max, Ave=S/C. Nested measurements overlap.
+			// Function spans include preemption/waits; latency ends at the DMA/IT callback.
+			benchmark_data_t io_data;
+			// can indices:
+			// 0: Application CAN transmit queue submission.
+			// 1: Application CAN receive callback and queue submission.
+			// 2: CAN frame construction and HAL enqueue, excluding queue and pacing waits.
+			for (uint8_t index = 0; index < 3; index++) {
+				taskENTER_CRITICAL();
+				get_can_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "can %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// log indices:
+			// 0: Full logger buffer flush, including writer waits and retries.
+			// 1: Binary log serialization and buffer submission.
+			// 2: Text formatting and log buffer submission.
+			for (uint8_t index = 0; index < 3; index++) {
+				taskENTER_CRITICAL();
+				get_log_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "log %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// baro indices:
+			// 0: MS5611 custom I2C read.
+			// 1: MS5611 i2c_write_data call, including completion wait.
+			// 2: MS5611 ADC acquisition and byte decoding.
+			// 3: MS5611 full acquisition, conversion delays and compensation.
+			// 4: MS5611 acquisition cycle and cached publication, excluding periodic delay.
+			for (uint8_t index = 0; index < 5; index++) {
+				taskENTER_CRITICAL();
+				get_baro_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "baro %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// ads1219 indices:
+			// 0: ADS1219 custom I2C register read.
+			// 1: ADS1219 I2C data-ready check.
+			// 2: ADS1219 raw acquisition and sign extension.
+			for (uint8_t index = 0; index < 3; index++) {
+				taskENTER_CRITICAL();
+				get_ads1219_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "ads1219 %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// adxl indices:
+			// 0: ADXL data-ready check, including GPIO or I2C fallback.
+			// 1: ADXL raw acquisition and byte decoding.
+			// 2: ADXL acquisition and conversion.
+			for (uint8_t index = 0; index < 3; index++) {
+				taskENTER_CRITICAL();
+				get_adxl_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "adxl %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// adxrs indices:
+			// 0: AD gyro data-ready check, including GPIO or I2C fallback.
+			// 1: AD gyro acquisition and conversion.
+			for (uint8_t index = 0; index < 2; index++) {
+				taskENTER_CRITICAL();
+				get_adxrs_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "adxrs %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// ad_board indices:
+			// 0: AD task acquisition, conversion and buffer publication, excluding periodic delay.
+			for (uint8_t index = 0; index < 1; index++) {
+				taskENTER_CRITICAL();
+				get_ad_board_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "ad_board %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// adxl_i2c indices:
+			// 0: ADXL custom I2C read wrapper.
+			for (uint8_t index = 0; index < 1; index++) {
+				taskENTER_CRITICAL();
+				get_adxl_i2c_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "adxl_i2c %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// motor indices:
+			// 0: Motor CAN frame construction and HAL enqueue.
+			// 1: Motor position command including CAN enqueue.
+			// 2: Motor CAN feedback read, decode and queue overwrite.
+			for (uint8_t index = 0; index < 3; index++) {
+				taskENTER_CRITICAL();
+				get_motor_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "motor %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// gpio indices:
+			// 0: gpio_read including mutex access.
+			// 1: gpio_write including mutex access.
+			// 2: gpio_toggle including mutex access.
+			// 3: GPIO EXTI dispatch including sensor DRDY handlers.
+			for (uint8_t index = 0; index < 4; index++) {
+				taskENTER_CRITICAL();
+				get_gpio_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "gpio %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// mag indices:
+			// 0: Magnetometer DRDY handler including DMA launch.
+			// 1: Magnetometer DMA completion and timestamp publication.
+			// 2: Magnetometer DMA error callback.
+			// 3: Magnetometer DMA launch to completion/error callback.
+			for (uint8_t index = 0; index < 4; index++) {
+				taskENTER_CRITICAL();
+				get_mag_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "mag %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// imu indices:
+			// 0: IMU DRDY handler including DMA launch.
+			// 1: IMU DMA completion and buffer publication.
+			// 2: IMU DMA error callback.
+			// 3: IMU DMA launch to completion/error callback.
+			for (uint8_t index = 0; index < 4; index++) {
+				taskENTER_CRITICAL();
+				get_imu_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "imu %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// movella indices:
+			// 0: Movella parsing and publication, excluding UART receive wait.
+			for (uint8_t index = 0; index < 1; index++) {
+				taskENTER_CRITICAL();
+				get_movella_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "movella %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// sd_card indices:
+			// 0: Streaming file write including FatFs and waits.
+			// 1: Streaming file sync including FatFs and waits.
+			for (uint8_t index = 0; index < 2; index++) {
+				taskENTER_CRITICAL();
+				get_sd_card_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "sd_card %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+			// uart indices:
+			// 0: uart_write body, including waits where present.
+			// 1: HAL_UARTEx_RxEventCallback body, including waits where present.
+			// 2: HAL_UART_TxCpltCallback body, including waits where present.
+			// 3: HAL_UART_ErrorCallback body, including waits where present.
+			// 4: UART HAL DMA submission call, excluding completion wait.
+			// 5: Movella UART DMA transmit launch to completion/error callback.
+			for (uint8_t index = 0; index < 6; index++) {
+				taskENTER_CRITICAL();
+				get_uart_benchmark_data(index, &io_data);
+				taskEXIT_CRITICAL();
+				if (io_data.count) {
+					log_text(0, LOG_LVL_INFO, "IOBench", "uart %u S:%llu C:%lu M:%lu Ave:%.1f",
+					         index, io_data.sum, (unsigned long)io_data.count,
+					         (unsigned long)io_data.max, (double)io_data.average);
+				}
+			}
+
+#endif
+
+			// FreeRTOS runtime and stack statistics.
+			log_text(0, LOG_LVL_INFO, "SystemInit", "SysInit: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(init_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(init_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(init_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "logger: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(log_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(log_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(log_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "fsm: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(fsm_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(fsm_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(fsm_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "can tx: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(can_handler_handle_tx),
+			         (unsigned long)ulTaskGetRunTimePercent(can_handler_handle_tx),
+			         (unsigned long)uxTaskGetStackHighWaterMark(can_handler_handle_tx));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "can rx: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(can_handler_handle_rx),
+			         (unsigned long)ulTaskGetRunTimePercent(can_handler_handle_rx),
+			         (unsigned long)uxTaskGetStackHighWaterMark(can_handler_handle_rx));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "health: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(health_checks_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(health_checks_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(health_checks_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "movella: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(movella_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(movella_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(movella_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "ms5611: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(ms5611_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(ms5611_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(ms5611_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "ad: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(ad_breakout_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(ad_breakout_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(ad_breakout_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit", "Tmr Svc: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(timer_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(timer_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(timer_task_handle));
+			log_text(0, LOG_LVL_INFO, "SystemInit",
+			         "defaultTask: TOTAL T: %lu, PERC %lu, MIN S: %lu",
+			         (unsigned long)ulTaskGetRunTimeCounter(default_task_handle),
+			         (unsigned long)ulTaskGetRunTimePercent(default_task_handle),
+			         (unsigned long)uxTaskGetStackHighWaterMark(default_task_handle));
+
+			log_text(0, LOG_LVL_INFO, "SystemInit", "IDLE: TOTAL T: %lu, PERC %lu, # TASK: %lu",
+			         (unsigned long)ulTaskGetIdleRunTimeCounter(),
+			         (unsigned long)ulTaskGetIdleRunTimePercent(), uxTaskGetNumberOfTasks());
+			i = 0;
+		}
+		i++;
 	}
 }
 

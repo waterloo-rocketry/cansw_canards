@@ -6,11 +6,17 @@
 #include "drivers/uart/uart.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
+#include "common/benchmark/benchmark.h"
 #include "queue.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
 #include <stdint.h>
 #include <string.h>
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(6);
+#endif
+
 /* Static buffer pool for all channels */
 static uint8_t s_buffer_pool[UART_CHANNEL_COUNT][UART_MAX_LEN * UART_NUM_RX_BUFFERS];
 
@@ -155,23 +161,70 @@ w_status_t uart_init(uart_channel_t channel, UART_HandleTypeDef *huart, uint32_t
 
 w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
                       uint32_t timeout_ms) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
 	w_status_t status = W_SUCCESS;
 	if ((channel >= UART_CHANNEL_COUNT) || (NULL == s_uart_handles[channel].huart) ||
 	    (buffer == NULL) || (length == 0)) {
 		status = W_INVALID_PARAM; // Invalid parameter(s)
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return status;
 	} else if (pdTRUE != xSemaphoreTake(s_uart_handles[channel].write_mutex, timeout_ms)) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_IO_TIMEOUT; // Could not acquire the mutex in the given time
 	}
-	HAL_StatusTypeDef transmit_status =
-		HAL_UART_Transmit_DMA(s_uart_handles[channel].huart, buffer, length);
+
+#ifdef ENABLE_BENCHMARK
+	bool benchmark_transfer = done_sys_init && (BENCHMARK_TIME_START[5] == 0);
+
+	if (benchmark_transfer) {
+		SINGLE_BENCHMARK_START(5);
+	}
+#endif
+
+	HAL_StatusTypeDef transmit_status;
+	{
+#ifdef ENABLE_BENCHMARK
+		if (done_sys_init) {
+			SINGLE_BENCHMARK_START(4);
+		}
+#endif
+
+		transmit_status = HAL_UART_Transmit_DMA(s_uart_handles[channel].huart, buffer, length);
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(4);
+#endif
+	}
 
 	if (HAL_OK != transmit_status) {
+#ifdef ENABLE_BENCHMARK
+		if (benchmark_transfer) {
+			BENCHMARK_TIME_START[5] = 0;
+		}
+#endif
+
 		xSemaphoreGive(s_uart_handles[channel].write_mutex); // Release mutex on failure
 		if (HAL_ERROR == transmit_status) {
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(0);
+#endif
 			return W_IO_ERROR;
 		} else if (HAL_BUSY == transmit_status) {
 			s_uart_stats[channel].timeouts++;
+
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(0);
+#endif
 			return W_IO_TIMEOUT;
 		}
 	}
@@ -184,12 +237,30 @@ w_status_t uart_write(uart_channel_t channel, uint8_t *buffer, uint16_t length,
 		} else {
 			s_uart_stats[channel].messages_sent++;
 		}
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return status;
 	} else {
+#ifdef ENABLE_BENCHMARK
+		if (benchmark_transfer) {
+			BENCHMARK_TIME_START[5] = 0;
+		}
+#endif
+
 		s_uart_stats[channel].timeouts++;
 		status = W_IO_TIMEOUT;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return status;
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(0);
+#endif
 	return status;
 }
 
@@ -239,6 +310,12 @@ w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
  * @param size Number of bytes received
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	uart_channel_t ch;
 	BaseType_t higher_priority_task_woken = pdFALSE;
 
@@ -270,6 +347,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
 			break;
 		}
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 }
 
 /**
@@ -278,6 +359,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
  * @param huart HAL UART handle that triggered the error
  */
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(3);
+	}
+#endif
+
 	uart_channel_t ch;
 	BaseType_t higher_priority_task_woken = pdFALSE;
 
@@ -303,6 +390,10 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
 			break;
 		}
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(3);
+#endif
 }
 
 /**
@@ -311,12 +402,22 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
  * @param huart HAL UART handle that triggered the callback
  */
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(2);
+	}
+#endif
+
 	uart_channel_t ch; // Initialize ch
 	BaseType_t higher_priority_task_woken = pdFALSE; // Moved initialization here
 
 	// Find the UART channel associated with the handle
 	for (ch = 0; ch < UART_CHANNEL_COUNT; ch++) {
 		if (s_uart_handles[ch].huart == huart) {
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(5);
+#endif
+
 			// Give the semaphore to signal transfer completion
 			xSemaphoreGiveFromISR(s_uart_handles[ch].transfer_complete,
 			                      &higher_priority_task_woken);
@@ -324,6 +425,10 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 			break; // Exit loop once channel is found
 		}
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(2);
+#endif
 }
 
 /**
@@ -362,3 +467,9 @@ health_status_t uart_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_uart_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif

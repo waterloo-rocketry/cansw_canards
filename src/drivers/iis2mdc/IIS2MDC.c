@@ -1,3 +1,4 @@
+#include "common/benchmark/benchmark.h"
 #include <inttypes.h>
 #include <math.h>
 #include <string.h>
@@ -11,6 +12,10 @@
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(4);
+#endif
 
 // I2C bus and slave address
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
@@ -347,24 +352,55 @@ static w_status_t iis2mdc_sanity_check(void) {
 }
 
 w_status_t iis2mdc_handle_drdy_irq(void) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
 	// stand down unless ASYNC_DMA_ACTIVE
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		iis2mdc_health.dma_before_callback_switch++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_FAILURE;
 	}
 	// stand down if last DMA is still in progress
 	if (iis2mdc_dma_busy) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_FAILURE;
 	}
 	iis2mdc_dma_busy = true;
 
+#ifdef ENABLE_BENCHMARK
+	bool benchmark_transfer = done_sys_init && (BENCHMARK_TIME_START[3] == 0);
+
+	if (benchmark_transfer) {
+		SINGLE_BENCHMARK_START(3);
+	}
+#endif
+
 	if (HAL_OK != HAL_I2C_Mem_Read_DMA(
 					  &hi2c4, IIS2MDC_HAL_ADDR, IIS2MDC_REG_OUTX_L | IIS2MDC_SUB_AUTO_INC,
 					  I2C_MEMADD_SIZE_8BIT, iis2mdc_cache.raw_buf, sizeof(iis2mdc_cache.raw_buf))) {
+#ifdef ENABLE_BENCHMARK
+		if (benchmark_transfer) {
+			BENCHMARK_TIME_START[3] = 0;
+		}
+#endif
+
 		iis2mdc_health.dma_read_fails++;
 		iis2mdc_health.communication_failure = true;
 		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(0);
+#endif
 	return W_SUCCESS;
 }
 
@@ -374,51 +410,105 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
  *       sign interpretation, and scaling to gauss are deferred to iis2mdc_get_data.
  */
 static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	if (hi2c != &hi2c4) {
 		iis2mdc_health.invalid_param = true;
 		iis2mdc_health.i2c_handle_mismatch++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
+
 		return;
 	}
 	// this function needs DMA to be active
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		iis2mdc_health.dma_before_callback_switch++;
 		iis2mdc_health.internal_error = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
+
 		return;
 	}
 
 	// make sure to not block dma if timer fails
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(3);
+#endif
+
 	iis2mdc_dma_busy = false;
 	iis2mdc_cache.valid = false; // invalidate data if fail get time
 
 	uint32_t timestamp_ms = 0;
 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
 		iis2mdc_health.internal_error = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
+
 		return;
 	}
 
 	iis2mdc_cache.timestamp_ms = timestamp_ms;
 	iis2mdc_cache.valid = true;
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 }
 
 /**
  * @brief i2c dma error handler
  */
 static void iis2mdc_dma_error(I2C_HandleTypeDef *hi2c) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(2);
+	}
+#endif
+
 	if (hi2c != &hi2c4) {
 		iis2mdc_health.i2c_handle_mismatch++;
 		iis2mdc_health.invalid_param = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
+
 		return;
 	}
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		iis2mdc_health.dma_before_callback_switch++;
 		iis2mdc_health.internal_error = true;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
+
 		return;
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(3);
+#endif
 
 	iis2mdc_dma_busy = false;
 	iis2mdc_cache.valid = false; // error
 	iis2mdc_health.communication_failure = true;
 	iis2mdc_health.dma_callback_error++;
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(2);
+#endif
 }
 
 w_status_t iis2mdc_init(void) {
@@ -578,3 +668,9 @@ health_status_t iis2mdc_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_mag_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif
