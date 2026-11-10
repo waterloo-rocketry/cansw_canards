@@ -56,6 +56,23 @@ static w_status_t i2c_read_reg_custom_fake_false_whoami(
     return W_SUCCESS;
 }
 
+// DMA fake: puts one gyro word then one accel word at the end of the FIFO buffer
+// word = tag byte (sensor tag << 3), X_L, X_H, Y_L, Y_H, Z_L, Z_H
+static HAL_StatusTypeDef dma_read_custom_fake_two_words(I2C_HandleTypeDef *hi2c, uint16_t dev,
+                                                        uint16_t reg, uint16_t reg_size,
+                                                        uint8_t *data, uint16_t size) {
+    (void)hi2c;
+    (void)dev;
+    (void)reg;
+    (void)reg_size;
+    const uint8_t words[14] = {
+        0x01 << 3, 0x10, 0x00, 0x20, 0x00, 0x30, 0x00, // gyro:  x=16, y=32, z=48
+        0x02 << 3, 0x40, 0x00, 0x50, 0x00, 0x60, 0x00, // accel: x=64, y=80, z=96
+    };
+    memcpy(&data[size - sizeof(words)], words, sizeof(words));
+    return HAL_OK;
+}
+
 class Lsm6dsv32xTest : public ::testing::Test {
 
     void SetUp() override {
@@ -112,7 +129,8 @@ TEST_F(Lsm6dsv32xTest, GetGyroAccDataEvenIfNotFresh) {
     w_status_t status = lsm6dsv32x_get_gyro_acc_data(&acc_data, &gyro_data, &raw_acc, &raw_gyro);
 
     // Assert
-    EXPECT_EQ(status, W_SUCCESS);
+    // buffer holds no gyro/acc samples yet
+    EXPECT_EQ(status, W_FAILURE);
 }
 
 
@@ -127,7 +145,7 @@ TEST_F(Lsm6dsv32xTest, GetGyroAccDataDataReady) {
     lsm6dsv32x_init();
 
 
-    HAL_I2C_Mem_Read_DMA_fake.return_val = HAL_OK;
+    HAL_I2C_Mem_Read_DMA_fake.custom_fake = dma_read_custom_fake_two_words;
     // got dma callback
     lsm6dsv32x_int1_isr_handler();
     lsm6dsv32x_dma_complete_handle(&hi2c1);
@@ -142,6 +160,8 @@ TEST_F(Lsm6dsv32xTest, GetGyroAccDataDataReady) {
 
     // Assert
     EXPECT_EQ(status, W_SUCCESS);
+    EXPECT_EQ(raw_gyro.x, 16);
+    EXPECT_EQ(raw_acc.z, 96);
 }
 
 TEST_F(Lsm6dsv32xTest, InteruptSuccessOnNotInit) {

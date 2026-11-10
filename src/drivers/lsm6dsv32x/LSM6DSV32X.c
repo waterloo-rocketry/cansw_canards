@@ -182,7 +182,7 @@ w_status_t lsm6dsv32x_init() {
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL2, 0x00);
 	// set accel and gyro ODR to 7.6Khz
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL3, 0xcc);
-	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x00);
+	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x01);
 
 	// set gyro range to +-4000dps
 	// set LPF bandwith to 241 (ODR/4)
@@ -315,14 +315,14 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		uint8_t *latest_acc_bytes = NULL;
 		size_t i = LSM6DSV32X_FIFO_THRESHOLD - 1;
 		do {
-			uint8_t tag = raw_bytes[i][0];
+			uint8_t tag = raw_bytes[i][0] >> 3;
 			if (tag == GYRO_TAG && latest_gyro_bytes == NULL) {
 				latest_gyro_bytes = &raw_bytes[i][1];
 			} else if (tag == ACC_TAG && latest_acc_bytes == NULL) {
 				latest_acc_bytes = &raw_bytes[i][1];
 			}
 			i--;
-		} while (i > 0 && latest_gyro_bytes == NULL && latest_acc_bytes == NULL);
+		} while (i > 0 && (latest_gyro_bytes == NULL || latest_acc_bytes == NULL));
 
 		if (i == 0 && (latest_gyro_bytes == NULL || latest_acc_bytes == NULL)) {
 			// can't read, we got only samples of one type
@@ -406,9 +406,9 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(vector3d_t acc_data[], vector3d_t g
 				raw_gyros[gyro_index].z = z;
 				raw_gyros[gyro_index].timestamp_ms = timestamp_ms;
 
-				gyro_data[i].x = ((int16_t)x) * GYRO_FS;
-				gyro_data[i].y = ((int16_t)y) * GYRO_FS;
-				gyro_data[i].z = ((int16_t)z) * GYRO_FS;
+				gyro_data[gyro_index].x = ((int16_t)x) * GYRO_FS;
+				gyro_data[gyro_index].y = ((int16_t)y) * GYRO_FS;
+				gyro_data[gyro_index].z = ((int16_t)z) * GYRO_FS;
 
 				gyro_index++;
 			} else if (tag == ACC_TAG) {
@@ -418,9 +418,9 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(vector3d_t acc_data[], vector3d_t g
 				raw_accs[accel_index].z = z;
 				raw_accs[accel_index].timestamp_ms = timestamp_ms;
 
-				acc_data[i].x = ((int16_t)x) * ACC_FS;
-				acc_data[i].y = ((int16_t)y) * ACC_FS;
-				acc_data[i].z = ((int16_t)z) * ACC_FS;
+				acc_data[accel_index].x = ((int16_t)x) * ACC_FS;
+				acc_data[accel_index].y = ((int16_t)y) * ACC_FS;
+				acc_data[accel_index].z = ((int16_t)z) * ACC_FS;
 
 				accel_index++;
 			} else {
