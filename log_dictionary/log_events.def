@@ -37,7 +37,7 @@ EVENT(CANHandler_INIT_STM_FAIL, 1007, 0, "[FATAL] [CAN Handler] can_init_stm fai
 EVENT(CANHandler_CALLBACK_REGISTER_FAIL, 1008, 0, "[FATAL] [CAN Handler] Failed to register mandatory CAN callbacks.")
 
 /* --- WARN (severity 2) --- */
-EVENT(CANCallback_READ_FAIL, 1001, 0, "[WARN] [CAN Callback] Failed to read board reset.")
+EVENT(CANCallback_READ_FAIL, 1001, 0, "[WARN] [CAN Callback] Failed to read board reset")
 EVENT(CANCallback_LED_ON_FAIL, 1002, 0, "[WARN] [CAN Callback] LED ON callback failed to set GPIO.")
 EVENT(CANCallback_LED_OFF_FAIL, 1003, 0, "[WARN] [CAN Callback] LED OFF callback failed to set GPIO.")
 EVENT(CANHandlerRX_NO_ACT_ID, 1004, 0, "[WARN] [CAN Handler RX] Can't get the actuator id.")
@@ -46,7 +46,7 @@ EVENT(CANHandler_TX_QUEUE_FAIL, 1009, 0, "[WARN] [CAN Handler TX] Failed to queu
 EVENT(CANHandlerRX_CALLBACK_MSG_TYPE_FAIL, 1010, 1, "[WARN] [CAN Handler RX] Callback failed for msg type %d.")
 EVENT(CANHandlerRX_MSG_TIMEOUT, 1011, 0, "[WARN] [CAN Handler RX] Timed out waiting for RX message.")
 EVENT(CAN_TX_SEND_FAIL, 1012, 0, "[WARN] [CAN TX] CAN send failed!")
-EVENT(CANHandlerTX_NO_QUEUE_MSG, 1013, 0, "[WARN] [CAN Handler TX] no tx msg in queue!")
+EVENT(CANHandlerTX_NO_QUEUE_MSG, 1013, 0, "[WARN] [CAN Handler TX] no tx msg in queue")
 
 /* --- INFO (severity 3) --- */
 
@@ -60,7 +60,8 @@ EVENT(CANHandlerTX_NO_QUEUE_MSG, 1013, 0, "[WARN] [CAN Handler TX] no tx msg in 
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
-EVENT(CONTROLLER_QUEUE_MALLOC_FAIL, 2001, 0, "[WARN] [Controller] Unable to allocate memory for queue.")
+EVENT(CONTROLLER_QUEUE_MALLOC_FAIL, 2001, 0, "[WARN] [Controller] unable to allocate memory for queue.")
+EVENT(CONTROLLER_TELEMETRY_REGISTER_FAIL, 2002, 0, "[WARN] [Controller] Failed to register telemetry sources.")
 
 /* --- INFO (severity 3) --- */
 
@@ -89,10 +90,34 @@ EVENT(FP_CREATE_QTR_CALLBACK_FAIL, 3001, 0, "[FATAL] [Flight Phase] Failed to cr
 
 /* --- WARN (severity 2) --- */
 EVENT(FSM_PAD_FILTER_INIT_FAIL, 4001, 0, "[WARN] [FSM] pad_filter_init failed")
+EVENT(FSM_HIL_INIT_FAIL, 4002, 0, "[WARN] [HIL] init fail")
+EVENT(FSM_HIL_SEND_CMD_FAIL, 4003, 1, "[WARN] [HIL] Failed to send cmd to simulink: %d")
+EVENT(FSM_HIL_SENSOR_DATA_FAIL, 4004, 0, "[WARN] [HIL] Failed to get latest sensor data")
+EVENT(FSM_NAV_BGY_MGY, 4005, 6, "[WARN] [Nav] Bgy %.3g %.3g %.3g Mgy %.3g %.3g %.3g")
+EVENT(FSM_NAV_AGY_BMA, 4006, 6, "[WARN] [Nav] Agy %.3g %.3g %.3g Bma %.3g %.3g %.3g")
+EVENT(FSM_NAV_MMA_BB_MB, 4007, 5, "[WARN] [Nav] Mma %.3g %.3g %.3g Bb %.3g Mb %.3g")
+EVENT(FSM_NAV_BA_BG, 4008, 6, "[WARN] [Nav] Ba %.3g %.3g %.3g Bg %.3g %.3g %.3g")
+EVENT(FSM_NAV_MA_MG, 4009, 6, "[WARN] [Nav] Ma %.3g %.3g %.3g Mg %.3g %.3g %.3g")
+EVENT(FSM_NAV_AA_AG, 4010, 6, "[WARN] [Nav] Aa %.3g %.3g %.3g Ag %.3g %.3g %.3g")
+EVENT(FSM_NAV_BB_BM_MB_MM, 4011, 8, "[WARN] [Nav] Bb %.3g Bm %.3g %.3g %.3g Mb %.3g Mm %.3g %.3g %.3g")
+EVENT(FSM_NAV_P0, 4012, 10, "[WARN] [Nav] P0 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P10, 4013, 10, "[WARN] [Nav] P10 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P20, 4014, 10, "[WARN] [Nav] P20 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P30, 4015, 10, "[WARN] [Nav] P30 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P40, 4016, 10, "[WARN] [Nav] P40 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P50, 4017, 10, "[WARN] [Nav] P50 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P60, 4018, 10, "[WARN] [Nav] P60 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P70, 4019, 10, "[WARN] [Nav] P70 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P80, 4020, 10, "[WARN] [Nav] P80 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P90, 4021, 10, "[WARN] [Nav] P90 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P100, 4022, 10, "[WARN] [Nav] P100 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P110, 4023, 10, "[WARN] [Nav] P110 %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g %.3g")
+EVENT(FSM_NAV_P120, 4024, 1, "[WARN] [Nav] P120 %.3g")
 
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */
+EVENT(FSM_HIL_SENT_CMD, 4025, 3, "[DEBUG] [HIL] Sent cmd to simulink %f, %f, %f")
 
 /* ==========================================================================
 * health_checks.c            source_id = 005
@@ -102,11 +127,18 @@ EVENT(FSM_PAD_FILTER_INIT_FAIL, 4001, 0, "[WARN] [FSM] pad_filter_init failed")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
-EVENT(HC_TIMER_FAIL, 5001, 0, "[WARN] [Health Checks] timer_get_ms failure.")
+EVENT(HC_TIMER_FAIL, 5001, 0, "[WARN] [Health Checks] timer_get_ms failure")
+EVENT(HC_INVALID_WATCHDOG_ARGS, 5002, 0, "[WARN] [Health Checks] invalid arguments into watchdog register")
+EVENT(HC_MAX_WATCHDOG_TASKS, 5003, 0, "[WARN] [Health Checks] max watchdog tasks reached")
+EVENT(HC_DUPLICATE_WATCHDOG_TASK, 5004, 1, "[WARN] [Health Checks] duplicate task registration:%p")
+EVENT(HC_WATCHDOG_TIMEOUT_TX_FAIL, 5005, 0, "[WARN] [Health] CAN send failure for watchdog timeout msg")
+EVENT(HC_WATCHDOG_TASK_TIMEOUT, 5006, 1, "[WARN] [Health Checks] task timeout: %d")
+EVENT(HC_MODULE_STATUS, 5007, 3, "[WARN] [Health] module=%d: sev=%d, err=%d")
+EVENT(HC_MODULE_STATUS_TX_FAIL, 5008, 0, "[WARN] [Health] CAN send failure for module status msg")
+EVENT(HC_NULL_STATUS_FN, 5009, 1, "[WARN] [Health Checks] Null element in module_get_status_fns array at index %d")
+EVENT(HC_STATUS_TX_FAIL, 5010, 0, "[WARN] [Health] CAN send failure for status msg")
 
 /* --- INFO (severity 3) --- */
-
-/* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
 * hil.c            source_id = 006
@@ -121,6 +153,8 @@ EVENT(HIL_CDC_TRANSMIT_HS_FAIL, 6001, 1, "[WARN] [HIL] CDC_Transmit_HS fail. usb
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */
+EVENT(HIL_START_SEND_TX_USB, 6002, 1, "[DEBUG] [HIL] start send tx usb %lf")
+EVENT(HIL_ATT_RATES_VEL_ALT, 6003, 11, "[DEBUG] [HIL] att %f, %f, %f, %f rates %f, %f, %f vel %f, %f, %f alt %f")
 
 /* ==========================================================================
 * init.c            source_id = 007
@@ -128,9 +162,14 @@ EVENT(HIL_CDC_TRANSMIT_HS_FAIL, 6001, 1, "[WARN] [HIL] CDC_Transmit_HS fail. usb
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(INIT_CRIT_FAIL, 7003, 1, "[FATAL] [Init] crit init fail (status: 0x%lx).")
+EVENT(INIT_TASK_CREATION_FAIL, 7004, 0, "[FATAL] [SystemInit] CRITICAL: Failed to create one or more FreeRTOS tasks.")
+EVENT(INIT_ADD_CALIBRATION_CALLBACK_FAIL, 7005, 0, "[FATAL] [SystemInit] failed to add calibration callback")
+EVENT(INIT_MOTOR_CALIBRATION_FAIL, 7006, 0, "[FATAL] [SystemInit] failed motor calibration")
 
 /* --- WARN (severity 2) --- */
-EVENT(NON_CRIT_INIT_FAIL, 7001, 0, "[WARN] [Init] Non-crit init fail 0x%lx (log)")
+EVENT(NON_CRIT_INIT_FAIL, 7001, 1, "[WARN] [Init] Non-crit init fail 0x%lx (log)")
+EVENT(INIT_INVALID_ACTUATOR_DATA, 7002, 0, "[WARN] [Init] invalid actuator data")
 
 /* --- INFO (severity 3) --- */
 
@@ -156,9 +195,10 @@ EVENT(LOG_SD_CARD_FILE_SYNC_FAIL, 8001, 1, "[WARN] [Log] sd_card_file_sync faile
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(NAVIGATOR_QUEUE_MALLOC_FAIL, 9002, 0, "[FATAL] [Navigator] unable to allocate memory for queue.")
 
 /* --- WARN (severity 2) --- */
-EVENT(NAVIGATOR_REGISTER_TELEMETRY_SOURCES_FAIL, 9001, 0, "[WARN] [Navigator] Failed to register telemetry sources")
+EVENT(NAVIGATOR_REGISTER_TELEMETRY_SOURCES_FAIL, 9001, 0, "[WARN] [Navigator] Failed to register telemetry sources.")
 
 /* --- INFO (severity 3) --- */
 
@@ -172,7 +212,48 @@ EVENT(NAVIGATOR_REGISTER_TELEMETRY_SOURCES_FAIL, 9001, 0, "[WARN] [Navigator] Fa
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
-EVENT(PH_ADC_COMM_FAIL, 10001, 1, "[WARN] [Power Handler] ADC Communication failed while getting charge voltage. Status: %d")
+EVENT(PH_ADC_COMM_FAIL, 10001, 1, "[WARN] [Power Handler] adc communication failed while getting charge voltage. Status: %d")
+EVENT(PH_ADC_ROCKET_COMM_FAIL, 10002, 1, "[WARN] [Power Handler] adc communication failed while getting rocket voltage.Status: %d")
+EVENT(PH_ADC_BAT1_COMM_FAIL, 10003, 1, "[WARN] [Power Handler] adc communication failed while getting battery 1 voltage.Status: %d")
+EVENT(PH_ADC_BAT2_COMM_FAIL, 10004, 1, "[WARN] [Power Handler] adc communication failed while getting battery 2 voltage.Status: %d")
+EVENT(PH_POWER_STATUS_TIMESTAMP_FAIL, 10005, 0, "[WARN] [Power Handler] Failed to get timestamp for power status can msg.")
+EVENT(PH_CURRENT_VOLTAGE_TX_FAIL, 10006, 0, "[WARN] [Power Handler] CAN tx for i and v failed.")
+EVENT(PH_STATUS_GPIO_READ_FAIL, 10007, 1, "[WARN] [Power Handler] ERROR: gpio read failed during get status. Code:%lx")
+EVENT(PH_BAT1_POWER_FAULT, 10008, 1, "[WARN] [Power Handler] bat 1 power fault. Fault count: %d")
+EVENT(PH_BAT2_POWER_FAULT, 10009, 1, "[WARN] [Power Handler] bat 2 power fault. Fault count: %d")
+EVENT(PH_EXT_5V_GPIO_READ_FAIL, 10010, 1, "[WARN] [Power Handler] gpio read failed for ext 5v power good. IO error count: %d")
+EVENT(PH_EXT_5V_OUTPUT_FAULT, 10011, 1, "[WARN] [Power Handler] ext 5v output fault. Fault count: %d")
+EVENT(PH_5V_CURRENT_FAULT, 10012, 1, "[WARN] [Power Handler] 5v power rail current fault. Fault count: %d")
+EVENT(PH_5V_CURRENT_READ_FAIL, 10013, 1, "[WARN] [Power Handler] adc read failed for 5v rail current. IO error count: %d")
+EVENT(PH_3V3_CURRENT_FAULT, 10014, 1, "[WARN] [Power Handler] 3v3 power rail current fault. Fault count: %d")
+EVENT(PH_3V3_CURRENT_READ_FAIL, 10015, 1, "[WARN] [Power Handler] adc read failed for 3v3 rail current. IO error count: %d")
+EVENT(PH_CHARGE_RAIL_OVERVOLTAGE, 10016, 1, "[WARN] [Power Handler] charge rail over voltage. Fault count: %d")
+EVENT(PH_CHARGE_VOLTAGE_READ_FAIL, 10017, 1, "[WARN] [Power Handler] adc read failed for charge voltage. IO error count: %d")
+EVENT(PH_ROCKET_RAIL_UNDERVOLTAGE, 10018, 1, "[WARN] [Power Handler] 12v rocket rail under voltage. Fault count: %d")
+EVENT(PH_ROCKET_RAIL_OVERVOLTAGE, 10019, 1, "[WARN] [Power Handler] 12v rocket rail over voltage. Fault count: %d")
+EVENT(PH_ROCKET_VOLTAGE_READ_FAIL, 10020, 1, "[WARN] [Power Handler] adc read failed for rocket voltage. IO error count: %d")
+EVENT(PH_BAT1_UNDERVOLTAGE, 10021, 1, "[WARN] [Power Handler] batt 1 under voltage. Fault count: %d")
+EVENT(PH_BAT1_OVERVOLTAGE, 10022, 1, "[WARN] [Power Handler] batt 1 over voltage. Fault count: %d")
+EVENT(PH_BAT1_VOLTAGE_READ_FAIL, 10023, 1, "[WARN] [Power Handler] adc read failed for battery 1 voltage. IO error count: %d")
+EVENT(PH_BAT2_UNDERVOLTAGE, 10024, 1, "[WARN] [Power Handler] batt 2 under voltage. Fault count: %d")
+EVENT(PH_BAT2_OVERVOLTAGE, 10025, 1, "[WARN] [Power Handler] batt 2 over voltage. Fault count: %d")
+EVENT(PH_BAT2_VOLTAGE_READ_FAIL, 10026, 1, "[WARN] [Power Handler] adc read failed for battery 2 voltage. IO error count: %d")
+EVENT(PH_BAT1_OVERCURRENT, 10027, 1, "[WARN] [Power Handler] Bat1 over current! Over current fault count: %d")
+EVENT(PH_BAT1_CURRENT_READ_FAIL, 10028, 1, "[WARN] [Power Handler] adc read failed for battery 1 current. IO error count: %d")
+EVENT(PH_BAT2_OVERCURRENT, 10029, 1, "[WARN] [Power Handler] Bat2 over current! Over current fault count: %d")
+EVENT(PH_BAT2_CURRENT_READ_FAIL, 10030, 1, "[WARN] [Power Handler] adc read failed for battery 2 current. IO error count: %d")
+EVENT(PH_EXT_5V_ENABLE_WHILE_CHARGING, 10031, 0, "[WARN] [Power Handler] Cannot enable 5V external when CHG is active")
+EVENT(PH_GPIO_WRITE_EXT_5V_FAIL, 10032, 1, "[WARN] [Power Handler] gpio write failed while toggling 5v external or charge mux. Error: %d")
+EVENT(PH_GPIO_WRITE_LIPO_FAIL, 10033, 1, "[WARN] [Power Handler] gpio write failed while toggle lipo. Error code: %d")
+EVENT(PH_ACTUATOR_ID_STATE_FAIL, 10034, 0, "[WARN] [Power Handler] Failed to get actuator id or state.")
+EVENT(PH_ACTUATOR_STATUS_TIMESTAMP_FAIL, 10035, 0, "[WARN] [Power Handler] Failed to get timestamp for actuator status can msg.")
+EVENT(PH_ACTUATOR_STATUS_TX_FAIL, 10036, 0, "[WARN] [Power Handler] Can message failed to transmit for actruator status.")
+EVENT(PH_EXT_5V_TOGGLE_FAIL, 10037, 0, "[WARN] [Power Handler] Failed to toggle 5v external power.")
+EVENT(PH_LIPO_TOGGLE_FAIL, 10038, 0, "[WARN] [Power Handler] Failed to toggle lipo power.")
+EVENT(PH_INVALID_CAN_COMMAND, 10039, 1, "[WARN] [Power Handler] Invalid can command. Actuator ID: %d")
+EVENT(PH_RESET_COMMAND_READ_FAIL, 10040, 1, "[WARN] [Power Handler] Failed to read reset command. Status: %d")
+EVENT(PH_INIT_GPIO_WRITE_FAIL, 10041, 0, "[WARN] [Power Handler] Failed with gpio write during init.")
+EVENT(PH_CAN_CALLBACK_REGISTER_FAIL, 10042, 0, "[WARN] [Power Handler] Failed to register CAN callbacks during init.")
 
 /* --- INFO (severity 3) --- */
 
@@ -184,9 +265,19 @@ EVENT(PH_ADC_COMM_FAIL, 10001, 1, "[WARN] [Power Handler] ADC Communication fail
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(SH_CREATE_MAILBOX_FAIL, 11009, 0, "[FATAL] [Sensor Handler] Failed to create sensor data mailbox.")
+EVENT(SH_INVALID_POINTERS, 11010, 0, "[FATAL] [Sensor Handler] invalid ptrs.")
+EVENT(SH_GET_TIME_FAIL, 11011, 0, "[FATAL] [Sensor Handler] Failed to get current time.")
 
 /* --- WARN (severity 2) --- */
-EVENT(SH_TX_TIMESTAMP_FAIL, 11001, 0, "[WARN] [Sensor Handler] Failed to get timestamp fo can msg tx")
+EVENT(SH_TX_TIMESTAMP_FAIL, 11001, 0, "[WARN] [Sensor Handler] Failed to get timestamp for can msg tx")
+EVENT(SH_BOARD_MAG_ENCODE_FAIL, 11002, 0, "[WARN] [Sensor Handler] Failed to encode board mag.")
+EVENT(SH_MTI_ACCEL_ENCODE_FAIL, 11003, 0, "[WARN] [Sensor Handler] Failed to encode MTI accel.")
+EVENT(SH_MTI_GYRO_ENCODE_FAIL, 11004, 0, "[WARN] [Sensor Handler] Failed to encode MTI gyro.")
+EVENT(SH_MTI_MAG_ENCODE_FAIL, 11005, 0, "[WARN] [Sensor Handler] Failed to encode MTI mag.")
+EVENT(SH_MTI_BARO_ENCODE_FAIL, 11006, 0, "[WARN] [Sensor Handler] Failed to encode MTI baro.")
+EVENT(SH_TELEMETRY_REGISTER_FAIL, 11007, 0, "[WARN] [Sensor Handler] Failed to register telemetry sources.")
+EVENT(SH_MOTOR_FAULT_CODE, 11008, 1, "[WARN] [Sensor Handler] Motor fault code: %d")
 
 /* --- INFO (severity 3) --- */
 
@@ -201,6 +292,10 @@ EVENT(SH_TX_TIMESTAMP_FAIL, 11001, 0, "[WARN] [Sensor Handler] Failed to get tim
 
 /* --- WARN (severity 2) --- */
 EVENT(TELEMETRY_MODULE_ALREADY_INITIALIZED, 12001, 0, "[WARN] [Telemetry Module] Telemetry module already initialized")
+EVENT(TELEMETRY_GET_TIME_FAIL, 12002, 0, "[WARN] [Telemetry Module] Failed to get current time for updating registered function due dates! Using 0 as curr time.")
+EVENT(TELEMETRY_MODULE_NOT_INITIALIZED, 12003, 0, "[WARN] [Telemetry Module] Telemetry module not initialized")
+EVENT(TELEMETRY_MAX_SOURCES_REACHED, 12004, 0, "[WARN] [Telemetry Module] Maximum number of telemetry sources reached")
+EVENT(TELEMETRY_INVALID_SOURCE_CONFIG, 12005, 0, "[WARN] [Telemetry Module] Invalid telemetry source configuration")
 
 /* --- INFO (severity 3) --- */
 
@@ -215,6 +310,13 @@ EVENT(TELEMETRY_MODULE_ALREADY_INITIALIZED, 12001, 0, "[WARN] [Telemetry Module]
 
 /* --- WARN (severity 2) --- */
 EVENT(ADXL380_UNAUTHORIZED_REINITIALIZATION, 13001, 0, "[WARN] [ADXL380] Reinitialization is not allowed.")
+EVENT(ADXL380_DRIVER_INIT_FAIL, 13002, 0, "[WARN] [ADXL380] NO-OS based driver failed to init.")
+EVENT(ADXL380_SOFT_RESET_FAIL, 13003, 0, "[WARN] [ADXL380] Soft reset of registers failed.")
+EVENT(ADXL380_SELF_TEST_INCOMPLETE, 13004, 0, "[WARN] [ADXL380] Self-test unable to be completed.")
+EVENT(ADXL380_X_SELF_TEST_FAIL, 13005, 0, "[WARN] [ADXL380] x-axis self-test failed.")
+EVENT(ADXL380_Y_SELF_TEST_FAIL, 13006, 0, "[WARN] [ADXL380] y-axis self-test failed.")
+EVENT(ADXL380_Z_SELF_TEST_FAIL, 13007, 0, "[WARN] [ADXL380] z-axis self-test failed.")
+EVENT(ADXL380_INITIAL_REGISTER_SETUP_FAIL, 13008, 0, "[WARN] [ADXL380] Failed to set up the correct initial register bit.")
 
 /* --- INFO (severity 3) --- */
 
@@ -226,9 +328,20 @@ EVENT(ADXL380_UNAUTHORIZED_REINITIALIZATION, 13001, 0, "[WARN] [ADXL380] Reiniti
 */
 
 /* --- FATAL (severity 1) --- */
-EVENT(ADXRS649_ST1_LOW_FAIL, 14001, 0, "[FATAL] [ADXRS649] Failed to set ST1 to LOW.")
+EVENT(ADXRS649_ST1_LOW_FAIL, 14001, 0, "[FATAL] [ADXRS649] Failed to set ST1 to LOW")
+EVENT(ADXRS649_ST1_FAIL, 14002, 0, "[FATAL] [ADXRS649] Failed ST1.")
+EVENT(ADXRS649_ST2_LOW_FAIL, 14003, 0, "[FATAL] [ADXRS649] Failed to set ST2 to LOW")
+EVENT(ADXRS649_ST2_FAIL, 14004, 0, "[FATAL] [ADXRS649] Failed ST2.")
 
 /* --- WARN (severity 2) --- */
+EVENT(ADXRS649_UNAUTHORIZED_REINITIALIZATION, 14005, 0, "[WARN] [ADXRS649] Reinitialization is not allowed.")
+EVENT(ADXRS649_ADC_INIT_FAIL, 14006, 0, "[WARN] [ADXRS649] Unable to initialize the ADC.")
+EVENT(ADXRS649_ADC_SETTINGS_FAIL, 14007, 0, "[WARN] [ADXRS649] Failed to write settings ADC for gyro.")
+EVENT(ADXRS649_ADC_CONTINUOUS_CONVERSION_FAIL, 14008, 0, "[WARN] [ADXRS649] Failed to start continuous conversion for the ADC.")
+EVENT(ADXRS649_ADC_SANITY_CHECK_FAIL, 14009, 0, "[WARN] [ADXRS649] Failed ADC sanity check.")
+EVENT(ADXRS649_ST1_LOW_WARN, 14010, 0, "[WARN] [ADXRS649] Failed to set ST1 to LOW")
+EVENT(ADXRS649_ST2_LOW_WARN, 14011, 0, "[WARN] [ADXRS649] Failed to set ST2 to LOW")
+EVENT(ADXRS649_GYRO_SELF_TEST_FAIL, 14012, 0, "[WARN] [ADXRS649] Failed gyro self-test.")
 
 /* --- INFO (severity 3) --- */
 
@@ -241,6 +354,7 @@ EVENT(ADXRS649_ST1_LOW_FAIL, 14001, 0, "[FATAL] [ADXRS649] Failed to set ST1 to 
 
 /* --- FATAL (severity 1) --- */
 EVENT(ADC_INIT_FAIL_CAL, 15001, 0, "[FATAL] [ADC] initfailcal")
+EVENT(ADC_INIT_FAIL_DMA, 15002, 0, "[FATAL] [ADC] initfaildma")
 
 /* --- WARN (severity 2) --- */
 
@@ -256,7 +370,26 @@ EVENT(ADC_INIT_FAIL_CAL, 15001, 0, "[FATAL] [ADC] initfailcal")
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
-EVENT(AK45_INVALID_POINTERS, 16001, 0, "[WARN] [AK45] Invalid pointers.")
+EVENT(AK45_INVALID_POINTERS, 16001, 0, "[WARN] [AK45] Invalid pointers")
+EVENT(AK45_FEEDBACK_QUEUE_ALLOC_FAIL, 16002, 0, "[WARN] [AK45] Lack of memory to create feedback queue")
+EVENT(AK45_FDCAN_FILTER_CONFIG_FAIL, 16003, 0, "[WARN] [AK45] FDCAN filter config failed")
+EVENT(AK45_FDCAN_START_FAIL, 16004, 0, "[WARN] [AK45] FDCAN start failed")
+EVENT(AK45_FDCAN_NOTIFICATION_FAIL, 16005, 0, "[WARN] [AK45] FDCAN activate notification failed")
+EVENT(AK45_GET_TIME_FAIL, 16006, 0, "[WARN] [AK45] Failed to get time")
+EVENT(AK45_CAN_ENUM_CONNECTION_FAIL, 16007, 1, "[WARN] [AK45] Unable to connect to AK45 CAN ENUM EXISTENCE %d")
+EVENT(AK45_RESET_ZERO_FAIL, 16008, 0, "[WARN] [AK45] failed to reset to 0")
+EVENT(AK45_TELEMETRY_REGISTER_FAIL, 16009, 0, "[WARN] [AK45] Failed to register telemetry sources.")
+EVENT(AK45_CALIBRATION_FAIL, 16010, 0, "[WARN] [AK45] Failed calibration.")
+EVENT(AK45_RETURN_ZERO_FAIL, 16011, 0, "[WARN] [AK45] Failed to return to zero.")
+EVENT(AK45_POSITIVE_TAP1_CALIBRATION_FAIL, 16012, 0, "[WARN] [AK45] Failed positive tap 1 calibration.")
+EVENT(AK45_BACKOFF_FAIL, 16013, 0, "[WARN] [AK45] Failed to back off.")
+EVENT(AK45_POSITIVE_TAP2_CALIBRATION_FAIL, 16014, 0, "[WARN] [AK45] Failed positive tap 2 calibration.")
+EVENT(AK45_POSITIVE_CALIBRATION_FAIL, 16015, 0, "[WARN] [AK45] Failed positive calibration.")
+EVENT(AK45_NEGATIVE_TAP1_CALIBRATION_FAIL, 16016, 0, "[WARN] [AK45] Failed negative tap 1 calibration.")
+EVENT(AK45_NEGATIVE_TAP2_CALIBRATION_FAIL, 16017, 0, "[WARN] [AK45] Failed negative tap 2 calibration.")
+EVENT(AK45_NEGATIVE_CALIBRATION_FAIL, 16018, 0, "[WARN] [AK45] Failed negative calibration.")
+EVENT(AK45_GO_TO_NEW_ZERO_FAIL, 16019, 0, "[WARN] [AK45] Failed to go to new zero.")
+EVENT(AK45_SET_NEW_ZERO_FAIL, 16020, 0, "[WARN] [AK45] Failed to set new zero.")
 
 /* --- INFO (severity 3) --- */
 
@@ -268,7 +401,7 @@ EVENT(AK45_INVALID_POINTERS, 16001, 0, "[WARN] [AK45] Invalid pointers.")
 */
 
 /* --- FATAL (severity 1) --- */
-EVENT(ALTIMU_INIT_FAIL, 17001, 0, "[FATAL] [Altimu] Init fail.")
+EVENT(ALTIMU_INIT_FAIL, 17001, 0, "[FATAL] [Altimu] initfail")
 
 /* --- WARN (severity 2) --- */
 
@@ -282,7 +415,7 @@ EVENT(ALTIMU_INIT_FAIL, 17001, 0, "[FATAL] [Altimu] Init fail.")
 */
 
 /* --- FATAL (severity 1) --- */
-EVENT(GPIO_INIT_FAIL, 18001, 1, "[Fatal] [GPIO] Init fail %d.")
+EVENT(GPIO_INIT_FAIL, 18001, 1, "[FATAL] [GPIO] initfail %d")
 
 /* --- WARN (severity 2) --- */
 
@@ -296,6 +429,13 @@ EVENT(GPIO_INIT_FAIL, 18001, 1, "[Fatal] [GPIO] Init fail %d.")
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(I2C_INIT_BUS_FAIL, 19001, 1, "[FATAL] [I2C] initbusfail %d")
+EVENT(I2C_INIT_MUTEX_FAIL, 19002, 1, "[FATAL] [I2C] initmtx %d")
+EVENT(I2C_CALLBACKS_NOT_REGISTERED, 19003, 0, "[FATAL] [I2C] callbacks not resitered")
+
+/* --- WARN (severity 2) --- */
+EVENT(I2C_MUTEX_ACQUIRE_FAIL, 19004, 0, "[WARN] [I2C] ERROR: unable to obtain mutex")
+EVENT(I2C_CALLBACKS_UNREGISTER_FAIL, 19005, 0, "[WARN] [I2C] ERROR: some callbacks not unregistered")
 
 /* --- WARN (severity 2) --- */
 
@@ -309,6 +449,7 @@ EVENT(GPIO_INIT_FAIL, 18001, 1, "[Fatal] [GPIO] Init fail %d.")
 */
 
 /* --- FATAL (severity 1) --- */
+EVENT(IIS2MDC_SELF_TEST_OUT_OF_RANGE, 20001, 3, "[FATAL] [IIS2MDC] self-test out of range: x=%f y=%f z=%f")
 
 /* --- WARN (severity 2) --- */
 
@@ -317,7 +458,52 @@ EVENT(GPIO_INIT_FAIL, 18001, 1, "[Fatal] [GPIO] Init fail %d.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* LSM6DSV32X.c            source_id = 015
+* LSM6DSV32X.c            source_id = 021
+* ===========================================================================
+*/
+
+/* --- FATAL (severity 1) --- */
+EVENT(LSM6DSV32X_SWITCH_CALLBACK_REINIT_FATAL, 21001, 0, "[FATAL] [LSM6DSV32X] Attempting to reinitialize after switching callback.")
+EVENT(LSM6DSV32X_REREGISTER_I2C_CALLBACKS_FAIL, 21002, 0, "[FATAL] [LSM6DSV32X] Failed to reregister I2C callbacks")
+EVENT(LSM6DSV32X_INIT_FAIL, 21003, 0, "[FATAL] [LSM6DSV32X] initfail")
+
+/* --- WARN (severity 2) --- */
+EVENT(LSM6DSV32X_SWITCH_CALLBACK_REINIT_WARN, 21004, 0, "[WARN] [LSM6DSV32X] Attempting to reinitialize after switching callback.")
+
+/* --- INFO (severity 3) --- */
+
+/* --- DEBUG (severity 4) --- */
+
+/* ==========================================================================
+* movella.c            source_id = 022
+* ===========================================================================
+*/
+
+/* --- FATAL (severity 1) --- */
+
+/* --- WARN (severity 2) --- */
+EVENT(MOVELLA_TIMESTAMP_FAIL, 22001, 0, "[WARN] [MTI] Unable to get timestamp")
+
+/* --- INFO (severity 3) --- */
+
+/* --- DEBUG (severity 4) --- */
+
+/* ==========================================================================
+* MS5611.c            source_id = 023
+* ===========================================================================
+*/
+
+/* --- FATAL (severity 1) --- */
+
+/* --- WARN (severity 2) --- */
+EVENT(MS5611_CRC_CHECK_FAIL, 23001, 2, "[WARN] [MS5611] CRC check failed: expected %u, got %u")
+
+/* --- INFO (severity 3) --- */
+
+/* --- DEBUG (severity 4) --- */
+
+/* ==========================================================================
+* raw_logger.c            source_id = 024
 * ===========================================================================
 */
 
@@ -330,81 +516,51 @@ EVENT(GPIO_INIT_FAIL, 18001, 1, "[Fatal] [GPIO] Init fail %d.")
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* movella.c            source_id = 016
+* sd_card.c            source_id = 025
 * ===========================================================================
 */
 
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(SD_CLOSE_FOR_REOPEN_FAIL, 25001, 0, "[WARN] [SD] Fail to close for reopen file")
+EVENT(SD_REOPEN_FILE_FAIL, 25002, 0, "[WARN] [SD] Fail to reopen file")
+EVENT(SD_WRITE_FAIL, 25003, 1, "[WARN] [SD] Write Fail %d")
+EVENT(SD_SYNC_FAIL, 25004, 1, "[WARN] [SD] sync Fail %d")
 
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* MS5611.c            source_id = 017
+* timer.c            source_id = 026
 * ===========================================================================
 */
 
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(TIMER_ERROR_STATISTICS, 26001, 3, "[WARN] [Timer] Error statistics: invalid_param=%lu, timer_stopped=%lu, timer_invalid=%lu")
 
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */
 
 /* ==========================================================================
-* raw_logger.c            source_id = 018
+* uart.c            source_id = 027
 * ===========================================================================
 */
 
 /* --- FATAL (severity 1) --- */
 
 /* --- WARN (severity 2) --- */
+EVENT(UART_INIT_MUTEX_FAIL, 27001, 1, "[WARN] [UART] initmtxfail %d")
+EVENT(UART_INIT_QUEUE_FAIL, 27002, 1, "[WARN] [UART] initqfail %d")
+EVENT(UART_INIT_CALLBACK_FAIL, 27003, 1, "[WARN] [UART] initcbfail %d")
+EVENT(UART_INIT_FAIL, 27004, 1, "[WARN] [UART] initfail %d")
+EVENT(UART_INIT_ISR_FAIL, 27005, 1, "[WARN] [UART] initisr %d")
+EVENT(UART_INIT_RX_FAIL, 27006, 1, "[WARN] [UART] initrx %d")
 
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */
-
-/* ==========================================================================
-* sd_card.c            source_id = 019
-* ===========================================================================
-*/
-
-/* --- FATAL (severity 1) --- */
-
-/* --- WARN (severity 2) --- */
-
-/* --- INFO (severity 3) --- */
-
-/* --- DEBUG (severity 4) --- */
-
-/* ==========================================================================
-* timer.c            source_id = 01A
-* ===========================================================================
-*/
-
-/* --- FATAL (severity 1) --- */
-
-/* --- WARN (severity 2) --- */
-
-/* --- INFO (severity 3) --- */
-
-/* --- DEBUG (severity 4) --- */
-
-/* ==========================================================================
-* uart.c            source_id = 01B
-* ===========================================================================
-*/
-
-/* --- FATAL (severity 1) --- */
-
-/* --- WARN (severity 2) --- */
-
-/* --- INFO (severity 3) --- */
-
-/* --- DEBUG (severity 4) --- */
-
-
