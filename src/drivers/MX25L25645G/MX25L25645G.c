@@ -186,7 +186,7 @@ static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status, b
 
 	// ready to recieve data
 	g_flash_ctx.spi_state = FLASH_SPI_READING;
-	hal_status = HAL_OSPI_Receive_IT(&hospi1, status);
+	hal_status = HAL_OSPI_Receive_DMA(&hospi1, status);
 	// make sure command is fully sent
 	if ((hal_status != HAL_OK) || (wait_flash_complete(FLASH_SINGLE_DELAY_MS) != W_SUCCESS)) {
 		g_flash_ctx.spi_state = FLASH_SPI_READY;
@@ -299,7 +299,7 @@ static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 	}
 
 	g_flash_ctx.spi_state = FLASH_SPI_READING;
-	hal_status = HAL_OSPI_Receive_IT((g_flash_ctx.spi_handle), data);
+	hal_status = HAL_OSPI_Receive_DMA((g_flash_ctx.spi_handle), data);
 	// MANDATORY: Wait for the hardware peripheral to physically finish
 	// If you don't do this, the next line will pull CS high while bits are still moving.
 	if ((hal_status != HAL_OK) || (wait_flash_complete(FLASH_SINGLE_DELAY_MS) != W_SUCCESS)) {
@@ -346,7 +346,7 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	}
 
 	g_flash_ctx.spi_state = FLASH_SPI_WRITING;
-	hal_status = HAL_OSPI_Transmit_IT((g_flash_ctx.spi_handle), data);
+	hal_status = HAL_OSPI_Transmit_DMA((g_flash_ctx.spi_handle), data);
 	// MANDATORY: Wait for the hardware peripheral to physically finish
 	// If you don't do this, the next line will pull CS high while bits are still moving.
 	if ((hal_status != HAL_OK) || (wait_flash_complete(FLASH_SINGLE_DELAY_MS) != W_SUCCESS)) {

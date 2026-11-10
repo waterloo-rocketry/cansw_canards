@@ -72,6 +72,7 @@ void OTG_HS_IRQHandler(void);
 void OCTOSPI1_IRQHandler(void);
 void I2C4_EV_IRQHandler(void);
 void I2C4_ER_IRQHandler(void);
+void MDMA_IRQHandler(void);
 void SDMMC2_IRQHandler(void);
 void BDMA_Channel0_IRQHandler(void);
 void I2C5_EV_IRQHandler(void);
