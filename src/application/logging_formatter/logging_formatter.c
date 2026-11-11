@@ -1,16 +1,15 @@
 #include "application/logging_formatter/logging_formatter.h"
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include <inttypes.h>
+
 
 typedef struct {
 	bool is_init;
 	bool invalid_param;
 	bool timed_out;
-	uint32_t read_count;
 	uint32_t write_count;
-	uint32_t read_error;
 	uint32_t write_error;
-	uint32_t not_writable;
-	uint32_t error_state;
 } logging_formatter_health_t;
 
 typedef struct {
@@ -54,7 +53,7 @@ w_status_t logging_formatter_identifier(uint8_t *buffer, uint32_t length, uint32
 }
 
 // 16 bit calculations via cpu atm, but can use crc peripheral later on.
-//  TODO: finish this
+// TODO: finish this
 uint32_t logging_formatter_calc_crc(uint8_t *buffer) {
 	if (NULL == buffer) {
 		return -1;
@@ -65,23 +64,23 @@ uint32_t logging_formatter_calc_crc(uint8_t *buffer) {
 	return CRC_footer;
 }
 
-w_status_t logging_formatter_header_init(uint8_t *buffer) {
+static w_status_t logging_formatter_header_init(uint8_t *buffer) {
 	uint16_t identifier = buffer[4];
 	identifier = (identifier << 5) + (buffer[5] >> 3) + 1;
 	formatter_buffer.writing_buffer[4] = identifier >> 5;
 
-	uint8_t identifier_data = ((identifier & 0b111) << 3) + formatter_buffer.data_type;
+	uint8_t identifier_data = ((identifier & 0b11111) << 3) + (uint8_t)formatter_buffer.data_type;
 	formatter_buffer.writing_buffer[5] = identifier_data;
 
 	return W_SUCCESS;
 }
 
-w_status_t logging_formatter_segment_increment() {
+static w_status_t logging_formatter_segment_increment() {
 	uint32_t counter = formatter_buffer.segment_counter++;
 
 	for (int i = 9; i >= 6; i--) {
-		formatter_buffer.writing_buffer[i] = counter & 0b1111;
-		counter = counter >> 4;
+		formatter_buffer.writing_buffer[i] = counter & 0b11111111;
+		counter = counter >> 8;
 	}
 
 	return W_SUCCESS;
@@ -161,8 +160,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	return W_SUCCESS;
 }
 
-// TODO: finish dis and also function for writing the segment counter, data type. can just use
-// memcpy for the data imo
+//TODO: must remember to include CRC footer
 w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
                                     logging_formatter_data_type_t data_type) {
 	if (!logging_formatter_health.is_init) {
@@ -182,11 +180,50 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 	logging_formatter_segment_increment();
 
 	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
+	
+	logging_formatter_calc_crc(buffer);
 
 	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer,
 	                                     formatter_buffer.byte_address, LOG_BUFFER_SIZE, 200)) {
+		logging_formatter_health.write_error++;
 		return W_FAILURE;
 	}
 
+	formatter_buffer.byte_address += LOG_BUFFER_SIZE;
+	logging_formatter_health.write_count++;
+
 	return W_SUCCESS;
+}
+
+//TODO: this needs a module update in health checks for it to be actually done
+health_status_t sd_card_get_status(void) {
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		.module_id = CANARDS_MODULE_ID_SD_CARD,
+		.error_bitfield = 0
+	};
+
+	if (!logging_formatter_health.is_init) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
+	}
+
+	if (logging_formatter_health.invalid_param) {
+		logging_formatter_health.invalid_param = false;
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
+	}
+
+	// Log operation statistics
+	log_text(0, LOG_LVL_INFO, "formatter",
+	         "%s, files_created=%" PRIu32 ", reads=%" PRIu32 ", writes=%" PRIu32,
+	         logging_formatter_health.is_init ? "init" : "not init",
+	         logging_formatter_health.write_count);
+
+	log_text(0, LOG_LVL_INFO, "formatter",
+	         "read_err=%" PRIu32 ", write_err=%" PRIu32 ", create_err=%" PRIu32
+	         ", not_writable=%" PRIu32,
+	         logging_formatter_health.write_error);
+
+	return status;
 }
