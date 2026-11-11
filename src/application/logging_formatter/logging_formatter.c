@@ -14,8 +14,8 @@ typedef struct {
 } logging_formatter_health_t;
 
 typedef struct {
-	char writing_buffer[LOG_BUFFER_SIZE];
-	uint32_t byte_address;
+	uint8_t writing_buffer[LOG_BUFFER_SIZE];
+	uint64_t byte_address;
 	uint16_t file_counter;
 	logging_formatter_data_type_t data_type;
 	uint32_t segment_counter;
@@ -27,16 +27,16 @@ static logging_formatter_buffer_t formatter_buffer;
 
 static SD_HandleTypeDef *logging_formatter_handle = NULL;
 
-static const uint32_t header = 0x676bcfff;
+static const uint8_t header[4] = {67, 107, 207, 255};
 
 static uint16_t CRC_footer = 0;
 
-static const uint32_t header_footer_size = 80;
+static const uint32_t header_footer_size = 10;
 
-uint32_t logging_formatter_read_binary(uint8_t *buffer, uint32_t length, uint32_t start,
-                                       int32_t end) {
+w_status_t logging_formatter_identifier(uint8_t *buffer, uint32_t length, uint32_t start,
+                                        int32_t end) {
 	if ((NULL == buffer) || (0 == length)) {
-		return -1;
+		return W_FAILURE;
 	}
 
 	uint32_t offset = 1;
@@ -50,7 +50,7 @@ uint32_t logging_formatter_read_binary(uint8_t *buffer, uint32_t length, uint32_
 		offset *= 2;
 	}
 
-	return counter;
+	return W_SUCCESS;
 }
 
 // 16 bit calculations via cpu atm, but can use crc peripheral later on.
@@ -66,45 +66,24 @@ uint32_t logging_formatter_calc_crc(uint8_t *buffer) {
 }
 
 w_status_t logging_formatter_header_init(uint8_t *buffer) {
-	uint32_t local_header = header;
+	uint16_t identifier = buffer[4];
+	identifier = (identifier << 5) + (buffer[5] >> 3) + 1;
+	formatter_buffer.writing_buffer[4] = identifier >> 5;
 
-	for (int i = 31; i >= 0; i--) {
-		formatter_buffer.writing_buffer[i] = local_header & 1;
-		local_header = local_header >> 1;
+	uint8_t identifier_data = ((identifier & 0b111) << 3) + formatter_buffer.data_type;
+	formatter_buffer.writing_buffer[5] = identifier_data;
+
+	return W_SUCCESS;
+}
+
+w_status_t logging_formatter_segment_increment() {
+	uint32_t counter = formatter_buffer.segment_counter++;
+
+	for (int i = 9; i >= 6; i--) {
+		formatter_buffer.writing_buffer[i] = counter & 0b1111;
+		counter = counter >> 4;
 	}
 
-	local_header = formatter_buffer.file_counter;
-
-	for (int i = 44; i >= 32; i--) {
-		formatter_buffer.writing_buffer[i] = local_header & 1;
-		local_header = local_header >> 1;
-	}
-
-	// TODO: i think that this section should be moved to another file as it's these aren't constant
-	// per reboot
-	//       and the header init should only be called in init.
-	/*
-	local_header = formatter_buffer.data_type;
-
-	for (int i = 47; i >= 45; i--) {
-	    formatter_buffer.writing_buffer[i] = local_header & 1;
-	    local_header = local_header >> 1;
-	}
-
-	local_header = formatter_buffer.segment_counter;
-
-	for (int i = 79; i >= 48; i--) {
-	    formatter_buffer.writing_buffer[i] = local_header & 1;
-	    local_header = local_header >> 1;
-	}
-
-	local_header = formatter_buffer.crc_footer;
-
-	for (int i = LOG_BUFFER_SIZE; i >= LOG_BUFFER_SIZE - 32; i--) {
-	    formatter_buffer.writing_buffer[i] = local_header & 1;
-	    local_header = local_header >> 1;
-	}
-	*/
 	return W_SUCCESS;
 }
 
@@ -123,7 +102,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	uint8_t reading_buffer[BLOCKSIZE] = {0};
 	uint8_t checking_buffer[BLOCKSIZE] = {0};
 
-	uint32_t curr_address = LOG_BUFFER_SIZE;
+	uint64_t curr_address = LOG_BUFFER_SIZE;
 
 	uint8_t zero_buffer[BLOCKSIZE];
 	memset(&zero_buffer, 0, BLOCKSIZE);
@@ -150,7 +129,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	bool found_address = false;
 
 	// binary search!
-	while (!found_address || (offset > LOG_BUFFER_SIZE)) {
+	while (!(found_address || (offset > LOG_BUFFER_SIZE))) {
 		if (raw_logger_SD_read(reading_buffer, curr_address, BLOCKSIZE, 200) != W_SUCCESS ||
 		    raw_logger_SD_read(checking_buffer, (curr_address - LOG_BUFFER_SIZE), BLOCKSIZE, 200)) {
 			return W_FAILURE;
@@ -171,10 +150,8 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		return W_FAILURE;
 	}
 
-	formatter_buffer.file_counter =
-		logging_formatter_read_binary(reading_buffer, BLOCKSIZE, 32, 44) + 1;
-
 	memset(formatter_buffer.writing_buffer, 0, LOG_BUFFER_SIZE);
+	memcpy(formatter_buffer.writing_buffer, header, 4);
 
 	if (W_SUCCESS != logging_formatter_header_init(reading_buffer)) {
 		return W_FAILURE;
@@ -202,7 +179,14 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 
 	formatter_buffer.data_type = data_type;
 
-	logging_formatter_data_type_t address = formatter_buffer.byte_address;
+	logging_formatter_segment_increment();
+
+	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
+
+	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer,
+	                                     formatter_buffer.byte_address, LOG_BUFFER_SIZE, 200)) {
+		return W_FAILURE;
+	}
 
 	return W_SUCCESS;
 }
