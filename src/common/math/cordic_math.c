@@ -1,15 +1,18 @@
+#include <math.h>
+
+#include "stm32h7xx_ll_cordic.h"
+#include "cordic.h"
+
 #include "common/math/cordic_math.h"
 #include "common/math/math.h"
 
-#include "cordic.h"
-#include <math.h>
-#include <stddef.h>
+// 2^31
+static const float64_t Q31_SCALE = 2147483648.0;
 
-static const double Q31_SCALE = 2147483648.0;
-
+/*
 // clamp before casting; q1.31 cannot represent +1
-static int32_t to_q31(double value) {
-	double scaled = value * Q31_SCALE;
+static int32_t to_q31(float64_t value) {
+	float64_t scaled = value * Q31_SCALE;
 	if (scaled >= INT32_MAX) {
 		return INT32_MAX;
 	}
@@ -18,105 +21,170 @@ static int32_t to_q31(double value) {
 	}
 	return (int32_t)scaled;
 }
+*/
 
-static bool calculate(uint32_t function, uint32_t reads, const int32_t input[2],  int32_t output[2]) {
-	const CORDIC_ConfigTypeDef config = {
-		.Function = function,
-		.Precision = CORDIC_PRECISION_6CYCLES,
-		.Scale = CORDIC_SCALE_0,
-		.NbWrite = CORDIC_NBWRITE_2,
-		.NbRead = reads,
-		.InSize = CORDIC_INSIZE_32BITS,
-		.OutSize = CORDIC_OUTSIZE_32BITS,
-	};
+bool cordic_math_sincos(float64_t radians, float64_t *sin_out, float64_t *cos_out)
+{
+    const float64_t scaled = radians * (Q31_SCALE / M_PI);
+    const int32_t angle = scaled >= Q31_SCALE
+                        ? INT32_MAX
+                        : (int32_t)scaled;
 
-	// configure each call; sincos and atan2 use different modes
-	return HAL_CORDIC_Configure(&hcordic, &config) == HAL_OK &&
-	       HAL_CORDIC_Calculate(&hcordic, input, output, 1U, 1U) == HAL_OK;
+    const CORDIC_ConfigTypeDef config = {
+        .Function = CORDIC_FUNCTION_COSINE,
+        .Precision = CORDIC_PRECISION_6CYCLES,
+        .Scale = CORDIC_SCALE_0,
+        .NbWrite = CORDIC_NBWRITE_2,
+        .NbRead = CORDIC_NBREAD_2,
+        .InSize = CORDIC_INSIZE_32BITS,
+        .OutSize = CORDIC_OUTSIZE_32BITS,
+    };
+
+    const int32_t input[2] = {angle, INT32_MAX};
+    int32_t output[2];
+
+    if (HAL_CORDIC_Configure(&hcordic, &config) != HAL_OK ||
+        HAL_CORDIC_Calculate(&hcordic, input, output, 1U, 1U) != HAL_OK) {
+        *sin_out = NAN;
+        *cos_out = NAN;
+        return false;
+    }
+
+    *cos_out = (float64_t)output[0] / Q31_SCALE;
+    *sin_out = (float64_t)output[1] / Q31_SCALE;
+    return true;
 }
 
-bool cordic_math_sincos(double radians, double *sin_out, double *cos_out) {
-	if (sin_out != NULL) {
-		*sin_out = NAN;
-	}
-	if (cos_out != NULL) {
-		*cos_out = NAN;
-	}
-	if ((sin_out == NULL) || (cos_out == NULL) || (sin_out == cos_out) || !isfinite(radians)) {
-		return false;
-	}
+// assumes valid inputs (distinct valid pointers for outputs; radians in [-pi, pi) )
+void cordic_math_sincos_ll(float64_t radians, float64_t *sin_out, float64_t *cos_out)
+{
+    const float64_t scaled = radians * (2147483648.0 / M_PI);
 
-	if ((radians < -M_PI) || (radians >= M_PI)) {
-		radians = fmod(radians, 2.0 * M_PI);
-		if (radians >= M_PI) {
-			radians -= 2.0 * M_PI;
-		} else if (radians < -M_PI) {
-			radians += 2.0 * M_PI;
-		}
-	}
+	// might be able to drop?
+    const int32_t angle = scaled >= 2147483648.0 ? INT32_MAX : (int32_t)scaled;
 
-	// set the modulus to ~1; atan2 uses the second argument for y
-	const int32_t input[2] = {to_q31(radians / M_PI), INT32_MAX};
-	int32_t output[2];
-	if (!calculate(CORDIC_FUNCTION_COSINE, CORDIC_NBREAD_2, input, output)) {
-		return false;
-	}
-	*cos_out = output[0] / Q31_SCALE;
-	*sin_out = output[1] / Q31_SCALE;
-	return true;
+    LL_CORDIC_Config(CORDIC,
+                     LL_CORDIC_FUNCTION_COSINE,
+                     LL_CORDIC_PRECISION_6CYCLES,
+                     LL_CORDIC_SCALE_0,
+                     LL_CORDIC_NBWRITE_2,
+                     LL_CORDIC_NBREAD_2,
+                     LL_CORDIC_INSIZE_32BITS,
+                     LL_CORDIC_OUTSIZE_32BITS);
+
+    LL_CORDIC_WriteData(CORDIC, (uint32_t)angle);
+	LL_CORDIC_WriteData(CORDIC, (uint32_t)INT32_MAX);
+
+    const int32_t cos = (int32_t)LL_CORDIC_ReadData(CORDIC);
+    const int32_t sin = (int32_t)LL_CORDIC_ReadData(CORDIC);
+
+    *sin_out = (float64_t)cos / Q31_SCALE;
+    *cos_out   = (float64_t)sin / Q31_SCALE;
 }
 
-double cordic_math_sin(double radians) {
-	double sine, cosine;
-	cordic_math_sincos(radians, &sine, &cosine);
+float64_t cordic_math_sin(float64_t radians) {
+	float64_t sine, cosine;
+	cordic_math_sincos_ll(radians, &sine, &cosine);
 	return sine;
 }
 
-double cordic_math_cos(double radians) {
-	double sine, cosine;
+float64_t cordic_math_cos(float64_t radians) {
+	float64_t sine, cosine;
 	cordic_math_sincos(radians, &sine, &cosine);
 	return cosine;
 }
 
-double cordic_math_atan2(double y, double x) {
-	if (!isfinite(x) || !isfinite(y)) {
-		return NAN;
-	}
-	if (y == 0.0) {
-		return copysign(signbit(x) ? M_PI : 0.0, y);
-	}
-	if (x == 0.0) {
-		return copysign(M_PI / 2.0, y);
-	}
+// Assumes finite x and y, and exclusive access to CORDIC.
+float64_t cordic_math_atan2(float64_t y, float64_t x)
+{
+    if (y == 0.0) {
+        return copysign(signbit(x) ? M_PI : 0.0, y);
+    }
+    if (x == 0.0) {
+        return copysign(M_PI / 2.0, y);
+    }
 
-	// scale both coordinates equally into [-0.5, 0.5] 
-	double magnitude = fmax(fabs(x), fabs(y));
-	const int32_t input[2] = {to_q31(0.5 * (x / magnitude)), to_q31(0.5 * (y / magnitude))};
-	int32_t output[2];
+    const float64_t ax = fabs(x);
+    const float64_t ay = fabs(y);
+    const float64_t magnitude = ax > ay ? ax : ay;
 
-	if (!calculate(CORDIC_FUNCTION_PHASE, CORDIC_NBREAD_1, input, output)) {
-		return NAN;
-	}
-	return (output[0] / Q31_SCALE) * M_PI;
+    // Normalize into [-0.5, 0.5], then convert directly to Q31.
+    const int32_t input[2] = {
+        (int32_t)((x / magnitude) * (Q31_SCALE / 2.0)),
+        (int32_t)((y / magnitude) * (Q31_SCALE / 2.0)),
+    };
+    int32_t phase;
+
+    const CORDIC_ConfigTypeDef config = {
+        .Function = CORDIC_FUNCTION_PHASE,
+        .Precision = CORDIC_PRECISION_6CYCLES,
+        .Scale = CORDIC_SCALE_0,
+        .NbWrite = CORDIC_NBWRITE_2,
+        .NbRead = CORDIC_NBREAD_1,
+        .InSize = CORDIC_INSIZE_32BITS,
+        .OutSize = CORDIC_OUTSIZE_32BITS,
+    };
+
+    if (HAL_CORDIC_Configure(&hcordic, &config) != HAL_OK ||
+        HAL_CORDIC_Calculate(&hcordic, input, &phase, 1U, 1U) != HAL_OK) {
+        return NAN;
+    }
+
+    return (float64_t)phase * (M_PI / Q31_SCALE);
 }
 
-static bool inverse_sincos_input_valid(double x) {
+float64_t cordic_math_atan2_ll(float64_t y, float64_t x)
+{
+    if (y == 0.0) {
+        return copysign(signbit(x) ? M_PI : 0.0, y);
+    }
+    if (x == 0.0) {
+        return copysign(M_PI / 2.0, y);
+    }
+
+    const float64_t ax = fabs(x);
+    const float64_t ay = fabs(y);
+    const float64_t magnitude = ax > ay ? ax : ay;
+
+    const int32_t x_q31 = (int32_t)((x / magnitude) * (Q31_SCALE / 2.0));
+    const int32_t y_q31 = (int32_t)((y / magnitude) * (Q31_SCALE / 2.0));
+
+    LL_CORDIC_Config(CORDIC,
+                     LL_CORDIC_FUNCTION_PHASE,
+                     LL_CORDIC_PRECISION_6CYCLES,
+                     LL_CORDIC_SCALE_0,
+                     LL_CORDIC_NBWRITE_2,
+                     LL_CORDIC_NBREAD_1,
+                     LL_CORDIC_INSIZE_32BITS,
+                     LL_CORDIC_OUTSIZE_32BITS);
+
+    LL_CORDIC_WriteData(CORDIC, (uint32_t)x_q31);
+    LL_CORDIC_WriteData(CORDIC, (uint32_t)y_q31);
+
+    const int32_t phase = (int32_t)LL_CORDIC_ReadData(CORDIC);
+
+    return (float64_t)phase * (M_PI / Q31_SCALE);
+}
+
+
+// will have to rewrite all of the asin/acos;
+static bool inverse_sincos_input_valid(float64_t x) {
 	return fabs(x) <= 1.0;
 }
 
-double cordic_math_asin(double x) {
+float64_t cordic_math_asin(float64_t x) {
 	if (!inverse_sincos_input_valid(x)) {
 		return NAN;
 	}
 	// compute in double first; casting x to float could round it to +/-1
-	double adjacent = sqrtf((float)((1.0 - x) * (1.0 + x)));
+	float64_t adjacent = sqrtf((float32_t)((1.0 - x) * (1.0 + x)));
 	return cordic_math_atan2(x, adjacent);
 }
 
-double cordic_math_acos(double x) {
+float64_t cordic_math_acos(float64_t x) {
 	if (!inverse_sincos_input_valid(x)) {
 		return NAN;
 	}
-	double opposite = sqrtf((float)((1.0 - x) * (1.0 + x)));
+	float64_t opposite = sqrtf((float32_t)((1.0 - x) * (1.0 + x)));
 	return cordic_math_atan2(opposite, x);
 }

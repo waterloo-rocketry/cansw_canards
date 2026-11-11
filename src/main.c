@@ -147,8 +147,8 @@ int main(void) {
 
 #ifdef ENABLE_BENCHMARK
 	cordic_benchmark_run();
-	cordic_benchmark_done();
-	// stop benchmark firmware here  so normal application tasks are never started.
+	
+	// stop benchmark firmware here so normal application tasks are never started.
 	while (1) {
 		__NOP();
 	}
