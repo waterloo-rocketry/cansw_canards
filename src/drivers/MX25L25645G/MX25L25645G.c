@@ -643,7 +643,7 @@ const struct lfs_config cfg = {
 	.prog_buffer = lfs_flash_prog_buffer,
 	.lookahead_buffer = lfs_flash_lookahead_buffer,
 
-	.name_max = 0,
+	.name_max = 8,
 	.file_max = 0,
 	.attr_max = 0,
 	.metadata_max = 0,
