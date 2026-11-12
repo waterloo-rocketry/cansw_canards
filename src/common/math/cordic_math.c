@@ -9,20 +9,6 @@
 // 2^31
 static const float64_t Q31_SCALE = 2147483648.0;
 
-/*
-// clamp before casting; q1.31 cannot represent +1
-static int32_t to_q31(float64_t value) {
-	float64_t scaled = value * Q31_SCALE;
-	if (scaled >= INT32_MAX) {
-		return INT32_MAX;
-	}
-	if (scaled <= INT32_MIN) {
-		return INT32_MIN;
-	}
-	return (int32_t)scaled;
-}
-*/
-
 bool cordic_math_sincos(float64_t radians, float64_t *sin_out, float64_t *cos_out)
 {
     const float64_t scaled = radians * (Q31_SCALE / M_PI);
@@ -192,6 +178,8 @@ float64_t cordic_math_atan2_ll(float64_t y, float64_t x)
 }
 
 
+
+
 // will have to rewrite all of the asin/acos;
 static bool inverse_sincos_input_valid(float64_t x) {
 	return fabs(x) <= 1.0;
@@ -213,3 +201,6 @@ float64_t cordic_math_acos(float64_t x) {
 	float64_t opposite = sqrtf((float32_t)((1.0 - x) * (1.0 + x)));
 	return cordic_math_atan2(opposite, x);
 }
+
+
+// do smth for sqrts

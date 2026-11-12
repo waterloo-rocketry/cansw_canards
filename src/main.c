@@ -146,7 +146,7 @@ int main(void) {
 #endif
 
 #ifdef ENABLE_BENCHMARK
-	cordic_benchmark_run();
+	cordic_benchmark_atan2_run();
 	
 	// stop benchmark firmware here so normal application tasks are never started.
 	while (1) {

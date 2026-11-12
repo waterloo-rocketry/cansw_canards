@@ -16,6 +16,7 @@ typedef struct {
 
 extern volatile cordic_benchmark_results_t cordic_benchmark_results;
 
-void cordic_benchmark_run(void);
+void cordic_benchmark_sincos_run(void);
+void cordic_benchmark_atan2_run(void);
 
 #endif // CORDIC_BENCHMARK_H
