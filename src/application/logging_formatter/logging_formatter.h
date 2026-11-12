@@ -4,9 +4,9 @@
 #include "drivers/raw_logger/raw_logger.h"
 
 typedef enum {
-	LOGGING_FORMATTING_DATA,
-	LOGGING_FORMATTING_ERROR,
-	LOGGING_FORMATTING_TEXT
+	LOGGING_FORMATTING_DATA = 1,
+	LOGGING_FORMATTING_ERROR = 2,
+	LOGGING_FORMATTING_TEXT = 4
 } logging_formatter_data_type_t;
 
 /**

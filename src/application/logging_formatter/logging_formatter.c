@@ -3,7 +3,6 @@
 #include "application/logger/log.h"
 #include <inttypes.h>
 
-
 typedef struct {
 	bool is_init;
 	bool invalid_param;
@@ -32,6 +31,8 @@ static uint16_t CRC_footer = 0;
 
 static const uint32_t header_footer_size = 10;
 
+static uint64_t curr_address = 0;
+
 w_status_t logging_formatter_identifier(uint8_t *buffer, uint32_t length, uint32_t start,
                                         int32_t end) {
 	if ((NULL == buffer) || (0 == length)) {
@@ -54,17 +55,33 @@ w_status_t logging_formatter_identifier(uint8_t *buffer, uint32_t length, uint32
 
 // 16 bit calculations via cpu atm, but can use crc peripheral later on.
 // TODO: finish this
-uint32_t logging_formatter_calc_crc(uint8_t *buffer) {
+static uint16_t crc16_table[256];
+
+void init_crc_table(void){
+	    for (uint16_t i = 0; i < 256; i++) {
+        uint16_t crc = i;
+        for (int j = 0; j < 8; j++) {
+            crc = (crc & 1) ? (crc >> 1) ^ 0xA001 : (crc >> 1);
+        }
+        crc16_table[i] = crc;
+    }
+}
+
+uint16_t logging_formatter_calc_crc(uint8_t *buffer, size_t length) {
 	if (NULL == buffer) {
-		return -1;
+		return 0;
 	}
 
-	uint16_t CRC_footer;
+	uint16_t CRC_footer = 0xFFFF;
+	for (size_t i = 0; i < length; i++){
+		uint8_t index = (CRC_footer ^ buffer[i]) & 0xFF;
+		CRC_footer = (CRC_footer >> 8) ^ crc16_table[index];
+	}
 
 	return CRC_footer;
 }
 
-static w_status_t logging_formatter_header_init(uint8_t *buffer) {
+static w_status_t logging_formatter_header_init(const uint8_t *buffer) {
 	uint16_t identifier = buffer[4];
 	identifier = (identifier << 5) + (buffer[5] >> 3) + 1;
 	formatter_buffer.writing_buffer[4] = identifier >> 5;
@@ -76,11 +93,15 @@ static w_status_t logging_formatter_header_init(uint8_t *buffer) {
 }
 
 static w_status_t logging_formatter_segment_increment() {
-	uint32_t counter = formatter_buffer.segment_counter++;
+	uint32_t counter = formatter_buffer.segment_counter;
+	formatter_buffer.segment_counter++;
 
 	for (int i = 9; i >= 6; i--) {
 		formatter_buffer.writing_buffer[i] = counter & 0b11111111;
 		counter = counter >> 8;
+	}
+	if (counter == 20) {
+		counter = 0;
 	}
 
 	return W_SUCCESS;
@@ -90,18 +111,24 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	if (logging_formatter_health.is_init) {
 		return W_SUCCESS;
 	}
-
 	if (NULL == p_sd_handle) {
-		log_text(0, LOG_LVL_WARN, "RAW", "Given task handler does not exist.");
+		// log_text(0, LOG_LVL_WARN, "RAW", "Given task handler does not exist.");
+		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != raw_logger_SD_init(p_sd_handle)) {
 		return W_FAILURE;
 	}
 
 	logging_formatter_handle = p_sd_handle;
 
+	formatter_buffer.file_counter = 0;
+	formatter_buffer.segment_counter = 0;
+
 	uint8_t reading_buffer[BLOCKSIZE] = {0};
 	uint8_t checking_buffer[BLOCKSIZE] = {0};
 
-	uint64_t curr_address = LOG_BUFFER_SIZE;
+	curr_address = LOG_BUFFER_SIZE;
 
 	uint8_t zero_buffer[BLOCKSIZE];
 	memset(&zero_buffer, 0, BLOCKSIZE);
@@ -110,9 +137,11 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		return W_FAILURE;
 	}
 
+	bool found_address = false;
+
 	if (0 == memcmp(&reading_buffer, &zero_buffer, 200)) {
 		formatter_buffer.byte_address = curr_address;
-		return W_SUCCESS;
+		found_address = true;
 	}
 
 	uint32_t erase_size_blocks = 0;
@@ -123,14 +152,13 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	curr_address = (curr_address * BLOCKSIZE) / 2;
-	uint32_t offset = (curr_address / 2);
-
-	bool found_address = false;
+	uint64_t offset = (curr_address / 2);
 
 	// binary search!
-	while (!(found_address || (offset > LOG_BUFFER_SIZE))) {
+	while (!found_address && (offset >= LOG_BUFFER_SIZE)) {
 		if (raw_logger_SD_read(reading_buffer, curr_address, BLOCKSIZE, 200) != W_SUCCESS ||
-		    raw_logger_SD_read(checking_buffer, (curr_address - LOG_BUFFER_SIZE), BLOCKSIZE, 200)) {
+		    raw_logger_SD_read(checking_buffer, (curr_address - LOG_BUFFER_SIZE), BLOCKSIZE, 200) !=
+		        W_SUCCESS) {
 			return W_FAILURE;
 		}
 
@@ -160,7 +188,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	return W_SUCCESS;
 }
 
-//TODO: must remember to include CRC footer
+// TODO: must remember to include CRC footer
 w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
                                     logging_formatter_data_type_t data_type) {
 	if (!logging_formatter_health.is_init) {
@@ -180,8 +208,8 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 	logging_formatter_segment_increment();
 
 	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
-	
-	logging_formatter_calc_crc(buffer);
+
+	// logging_formatter_calc_crc(buffer);
 
 	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer,
 	                                     formatter_buffer.byte_address, LOG_BUFFER_SIZE, 200)) {
@@ -195,8 +223,8 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 	return W_SUCCESS;
 }
 
-//TODO: this needs a module update in health checks for it to be actually done
-health_status_t sd_card_get_status(void) {
+// TODO: this needs a module update in health checks for it to be actually done
+health_status_t logging_formatter_get_status(void) {
 	health_status_t status = {
 		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
 		.module_id = CANARDS_MODULE_ID_SD_CARD,
