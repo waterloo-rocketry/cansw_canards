@@ -558,9 +558,9 @@ EVENT(UART_INIT_MUTEX_FAIL, 27001, 1, "[WARN] [UART] initmtxfail %d")
 EVENT(UART_INIT_QUEUE_FAIL, 27002, 1, "[WARN] [UART] initqfail %d")
 EVENT(UART_INIT_CALLBACK_FAIL, 27003, 1, "[WARN] [UART] initcbfail %d")
 EVENT(UART_INIT_FAIL, 27004, 1, "[WARN] [UART] initfail %d")
-EVENT(UART_INIT_ISR_FAIL, 27005, 1, "[WARN] [UART] initisr %d")
+EVENT(UART_INIT_ISR_FAIL, 27005, 1, "[WARN] [UART] initis %d")
 EVENT(UART_INIT_RX_FAIL, 27006, 1, "[WARN] [UART] initrx %d")
-
+event xyz failed  
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */
