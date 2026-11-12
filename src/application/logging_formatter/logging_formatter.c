@@ -57,31 +57,31 @@ w_status_t logging_formatter_identifier(uint8_t *buffer, uint32_t length, uint32
 // TODO: finish this
 static uint16_t crc16_table[256];
 
-void init_crc_table(void){
-	    for (uint16_t i = 0; i < 256; i++) {
-        uint16_t crc = i;
-        for (int j = 0; j < 8; j++) {
-            crc = (crc & 1) ? (crc >> 1) ^ 0xA001 : (crc >> 1);
-        }
-        crc16_table[i] = crc;
+static w_status_t crc_table_init(void){
+	for (uint16_t i = 0; i < 256; i++) {
+		uint16_t crc = i;
+		for (int j = 0; j < 8; j++) {
+			crc = (crc & 1) ? (crc >> 1) ^ 0xA001 : (crc >> 1);
+		}
+		crc16_table[i] = crc;
     }
+
+	return W_SUCCESS;
 }
 
-uint16_t logging_formatter_calc_crc(uint8_t *buffer, size_t length) {
+uint16_t logging_formatter_calc_crc(const uint8_t *buffer, size_t length) {
 	if (NULL == buffer) {
 		return 0;
 	}
-
 	uint16_t CRC_footer = 0xFFFF;
 	for (size_t i = 0; i < length; i++){
 		uint8_t index = (CRC_footer ^ buffer[i]) & 0xFF;
 		CRC_footer = (CRC_footer >> 8) ^ crc16_table[index];
 	}
-
 	return CRC_footer;
 }
 
-static w_status_t logging_formatter_header_init(const uint8_t *buffer) {
+static w_status_t logging_formatter_header_init(uint8_t *buffer) {
 	uint16_t identifier = buffer[4];
 	identifier = (identifier << 5) + (buffer[5] >> 3) + 1;
 	formatter_buffer.writing_buffer[4] = identifier >> 5;
@@ -150,14 +150,16 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	if (raw_logger_get_SD_specs(&curr_address, &erase_size_blocks, 200) != W_SUCCESS) {
 		return W_FAILURE;
 	}
+	////31283200 blocks * 512 bytes = 16,016,998,400 bytes
 
-	curr_address = (curr_address * BLOCKSIZE) / 2;
 	uint64_t offset = (curr_address / 2);
 
+	//first 64 blocks are reserved
+
 	// binary search!
-	while (!found_address && (offset >= LOG_BUFFER_SIZE)) {
-		if (raw_logger_SD_read(reading_buffer, curr_address, BLOCKSIZE, 200) != W_SUCCESS ||
-		    raw_logger_SD_read(checking_buffer, (curr_address - LOG_BUFFER_SIZE), BLOCKSIZE, 200) !=
+	while (!found_address && (offset >= 1)) {
+		if (raw_logger_SD_read(reading_buffer, curr_address * BLOCKSIZE, BLOCKSIZE, 200) != W_SUCCESS ||
+		    raw_logger_SD_read(checking_buffer, (curr_address * BLOCKSIZE - LOG_BUFFER_SIZE), BLOCKSIZE, 200) !=
 		        W_SUCCESS) {
 			return W_FAILURE;
 		}
@@ -181,6 +183,10 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	memcpy(formatter_buffer.writing_buffer, header, 4);
 
 	if (W_SUCCESS != logging_formatter_header_init(reading_buffer)) {
+		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != crc_table_init()) {
 		return W_FAILURE;
 	}
 
@@ -209,7 +215,7 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 
 	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
 
-	// logging_formatter_calc_crc(buffer);
+	formatter_buffer.crc_footer = logging_formatter_calc_crc(buffer, LOG_BUFFER_SIZE);
 
 	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer,
 	                                     formatter_buffer.byte_address, LOG_BUFFER_SIZE, 200)) {

@@ -229,7 +229,7 @@ w_status_t raw_logger_get_SD_specs(uint64_t *block_count, uint32_t *erase_size_b
 		return W_FAILURE;
 	}
 
-	*block_count = SDCardInfo.LogBlockNbr;
+	*block_count = SDCardInfo.LogBlockNbr; 
 	*erase_size_byte = (uint32_t)SDCardStatus.EraseSize * au_bytes;
 
 	return W_SUCCESS;

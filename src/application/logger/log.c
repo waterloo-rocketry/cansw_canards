@@ -516,6 +516,13 @@ void log_task(void *argument) {
 
 	uint8_t zero_buffer[BLOCKSIZE];
 	memset(&zero_buffer, 0, BLOCKSIZE);
+
+	HAL_StatusTypeDef erased = HAL_SD_Erase(&hsd2, 300000, 23554432);
+
+	if (erased == 0){
+		erased = HAL_OK;
+	}
+
 	raw_logger_SD_init(&hsd2);
 	//raw_logger_SD_write(zero_buffer, LOG_BUFFER_SIZE, 512, 200);
 	raw_logger_SD_read(read_buffer, LOG_BUFFER_SIZE, 512, 200);
