@@ -8,6 +8,8 @@
 #include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
 
+#define LSM6DSV32X_FIFO_THRESHOLD 30
+
 /**
  * raw data from imu/mag registers
  */
@@ -42,6 +44,23 @@ w_status_t lsm6dsv32x_int1_isr_handler();
 w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
                                         lsm6dsv32x_raw_imu_data_t *raw_acc,
                                         lsm6dsv32x_raw_imu_data_t *raw_gyro);
+
+/**
+ * @brief Retrieves all samples of gyro and acc data stored in the FIFO
+ * @param[out] acc_data          Processed accelerometer data (gravities)
+ * @param[out] gyro_data         Processed gyroscope data (deg/s)
+ * @param[out] raw_acc           Raw accelerometer data
+ * @param[out] raw_gyro          Raw gyroscope data
+ * @param[out] gyro_sample_count The number of gyro samples in the FIFO
+ * @param[out] acc_sample_count  The number of acc samples in the FIFO
+ * @return Status of the operation
+ */
+w_status_t
+lsm6dsv32x_get_full_gyro_acc_data(vector3d_t acc_data[LSM6DSV32X_FIFO_THRESHOLD],
+                                  vector3d_t gyro_data[LSM6DSV32X_FIFO_THRESHOLD],
+                                  lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_THRESHOLD],
+                                  lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_THRESHOLD],
+                                  size_t *gyro_sample_count, size_t *acc_sample_count);
 
 /**
  * @brief Get and report the lsm6dsv32x status for the health check system
