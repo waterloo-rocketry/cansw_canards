@@ -41,6 +41,7 @@
 
 #ifdef ENABLE_BENCHMARK
 #include "common/benchmark/benchmark.h"
+#include "application/benchmark/cordic_benchmark.h"
 #endif
 /* USER CODE END Includes */
 
@@ -142,6 +143,15 @@ int main(void) {
 
 #ifdef ENABLE_BENCHMARK
 	DWT_init();
+#endif
+
+#ifdef ENABLE_BENCHMARK
+	cordic_benchmark_atan2_run();
+	
+	// stop benchmark firmware here so normal application tasks are never started.
+	while (1) {
+		__NOP();
+	}
 #endif
 
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
