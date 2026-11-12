@@ -60,7 +60,7 @@ void cordic_math_sincos_ll(float64_t radians, float64_t *sin_out, float64_t *cos
 {
     const float64_t scaled = radians * (2147483648.0 / M_PI);
 
-	// might be able to drop?
+	// might be able to drop clamping? if i can guarantee [-M_PI, M_PI)
     const int32_t angle = scaled >= 2147483648.0 ? INT32_MAX : (int32_t)scaled;
 
     LL_CORDIC_Config(CORDIC,
@@ -78,8 +78,33 @@ void cordic_math_sincos_ll(float64_t radians, float64_t *sin_out, float64_t *cos
     const int32_t cos = (int32_t)LL_CORDIC_ReadData(CORDIC);
     const int32_t sin = (int32_t)LL_CORDIC_ReadData(CORDIC);
 
-    *sin_out = (float64_t)cos / Q31_SCALE;
-    *cos_out   = (float64_t)sin / Q31_SCALE;
+    *cos_out = (float64_t)cos / Q31_SCALE;
+    *sin_out   = (float64_t)sin / Q31_SCALE;
+}
+
+void cordic_math_sincos_reg(float64_t radians, float64_t *sin_out, float64_t *cos_out)
+{
+    const float64_t scaled = radians * (Q31_SCALE / M_PI);
+    const int32_t angle = scaled >= Q31_SCALE ? INT32_MAX : (int32_t)scaled;
+
+    // overwrites the csr config
+    CORDIC->CSR =
+        LL_CORDIC_FUNCTION_COSINE |
+        LL_CORDIC_PRECISION_6CYCLES |
+        LL_CORDIC_SCALE_0 |
+        LL_CORDIC_NBWRITE_2 |
+        LL_CORDIC_NBREAD_2 |
+        LL_CORDIC_INSIZE_32BITS |
+        LL_CORDIC_OUTSIZE_32BITS;
+
+    CORDIC->WDATA = (uint32_t)angle;
+    CORDIC->WDATA = (uint32_t)INT32_MAX;
+
+    const int32_t cosine = (int32_t)CORDIC->RDATA;
+    const int32_t sine   = (int32_t)CORDIC->RDATA;
+
+    *sin_out = (float64_t)sine / Q31_SCALE;
+    *cos_out = (float64_t)cosine / Q31_SCALE;
 }
 
 float64_t cordic_math_sin(float64_t radians) {

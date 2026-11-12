@@ -15,6 +15,7 @@ enum {
 	BENCH_Q31,
 	BENCH_CORDIC,
 	BENCH_CORDIC_LL,
+	BENCH_CORDIC_REG,
 	BENCH_CORDIC_RAW,
 	BENCH_COUNT
 };
@@ -109,6 +110,13 @@ void cordic_benchmark_run(void) {
 		cosine_result = cosine;
 		SINGLE_BENCHMARK_END(BENCH_CORDIC_LL);
 
+		SINGLE_BENCHMARK_START(BENCH_CORDIC_REG);
+		angle = input_angle;
+		cordic_math_sincos_ll(angle, &sine, &cosine);
+		sine_result = sine;
+		cosine_result = cosine;
+		SINGLE_BENCHMARK_END(BENCH_CORDIC_REG);
+
 		// prepare the raw test outside its timed section
 		const int32_t input = angle_to_q31(input_angle);
 		LL_CORDIC_Config(CORDIC,
@@ -143,6 +151,7 @@ void cordic_benchmark_run(void) {
 	GET_BENCHMARK_STAT(BENCH_Q31, (&results.cmsis_q31));
 	GET_BENCHMARK_STAT(BENCH_CORDIC, (&results.cordic));
 	GET_BENCHMARK_STAT(BENCH_CORDIC_LL, (&results.cordic_ll));
+	GET_BENCHMARK_STAT(BENCH_CORDIC_REG, (&results.cordic_reg));
 	GET_BENCHMARK_STAT(BENCH_CORDIC_RAW, (&results.cordic_raw));
 	cordic_benchmark_results = results;
 }
