@@ -8,6 +8,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// Motor IDs
+typedef enum {
+	HBL3850_MOTOR_1 = 0,
+	HBL3850_MOTOR_2,
+	HBL3850_MOTOR_3,
+	HBL3850_MOTOR_4,
+	HBL3850_MOTOR_COUNT
+} hbl3850_motor_id_t;
+
 // CircuitStatus error flags
 typedef enum {
 	HBL3850_CIRCUIT_ERR_NONE = 0,
@@ -35,16 +44,17 @@ typedef struct {
 
 /**
  * @brief (Decoded) health values from NodeStatus, CircuitStatus and Temperature. Also includes
- * circuit and temperature errors;
+ * circuit and temperature errors
  */
 typedef struct {
-	bool node_status_ok;
+	uint8_t node_health;
+	uint8_t node_mode;
 	uint32_t nodestatus_timestamp_ms;
 	float32_t voltage_v;
 	float32_t current_a;
 	uint8_t circuit_err_flags;
 	uint32_t circuit_timestamp_ms;
-	int8_t temperature_c;
+	float32_t temperature_c;
 	uint8_t temp_err_flags;
 	uint32_t temp_timestamp_ms;
 } hbl3850_health_t;
@@ -60,17 +70,20 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 /**
  * @brief Send position command to motor. Clips position command to +/-60 degrees and converts it to
  * a unitless ArrayCommand value (between -1 and 1).
+ * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
  * @param[in] angle_deg Position command in degrees
- * @return W_SUCCESS on success, W_FAILURE on error
+ * @return W_SUCCESS on success, W_FAILURE on error, W_INVALID_PARAM if motor is invalid or
+ * angle_deg is NaN
  */
-w_status_t hbl3850_send_position_cmd(float32_t angle_deg);
+w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_deg);
 
 /**
  * @brief Copies motor encoder values stored in queue to an hbl3850_encoder_t struct variable
- * @param[out] out Pointer to hbl3850_encoder_t struct variable
- * @return W_SUCCESS on success, W_FAILURE on error
+ * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
+ * @param[out] health_stats Pointer to hbl3850_encoder_t struct variable
+ * @return W_SUCCESS on success, W_FAILURE on error, W_INVALID_PARAM if motor is invalid
  */
-w_status_t hbl3850_get_encoder(hbl3850_encoder_t *out);
+w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor, hbl3850_encoder_t *out);
 // HAL_FDCAN_RxFifo1Callback is declared by HAL
 
 /**
@@ -82,8 +95,10 @@ health_status_t hbl3850_get_status(void);
 
 /**
  * @brief Copy the latest decoded health values (NodeStatus, CircuitStatus, Temperature) into out
+ * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
  * @param[out] out Pointer to hbl3850_health_t struct variable
- * @return W_SUCCESS on success, W_FAILURE if out is NULL or no health data received yet
+ * @return W_SUCCESS on success, W_FAILURE if out is NULL or no health data received yet,
+ * W_INVALID_PARAM if motor is invalid
  */
-w_status_t hbl3850_get_health(hbl3850_health_t *out);
+w_status_t hbl3850_get_health(hbl3850_motor_id_t motor, hbl3850_health_t *health_stats);
 #endif // HBL3850_DRIVER_H
