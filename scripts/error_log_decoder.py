@@ -1,26 +1,119 @@
 # ---- Work in progress of error log decoding script ----
 
 
-# Find where log file is and where def files are
+
+
+import re
 import argparse
 from pathlib import Path
+from collections import namedtuple
 # Constants for file paths
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEF_DIR = REPO_ROOT / "log_dictionary"
 
-def remove_comments_and_whitespace(lines):
-    cleaned_lines = []
-    for line in lines:
-        # Remove whitespace
-        line = line.strip()
-        # Ignore full-line comments and blank lines
-        if line and not line.startswith('//') and not line.startswith('/*') and not line.startswith('*') and not line.startswith('*/'):
-            cleaned_lines.append(line)
-        # TODO: Ignore comments within lines, allow for code lines to start with *,
-        # ignore multi-line comments that don't start with *,
-        # allow for code lines that start with /* comment */ and then have code written after
-        # Better idea: Just take string from EVENT to ")
-    return cleaned_lines
+
+# .def file regex formats
+COMMENTS = r'^(?:\s*/\*.*?\*/)*\s*'   # To account for /* ... */ comments before an entry
+EVENT_PATTERN = re.compile(COMMENTS + r'EVENT\(\s*(\w+)\s*,\s*(0x[0-9a-fA-F]+|\d+)\s*,\s*(\d+)\s*,\s*"(.*)"\s*\)')
+FILE_PATTERN = re.compile(COMMENTS + r'FILE_ID\(\s*(\w+)\s*,\s*(0x[0-9a-fA-F]+|\d+)\s*,\s*"(.*)"\s*\)')
+
+
+# nametuple for event dictionary
+Event = namedtuple("Event", ["num_args", "message"])
+
+
+# .bin delimiters
+VALUE_DELIM = "|"
+ARG_DELIM = ","
+
+
+# Read event def file, create + return dictionary of all error log strings
+def get_event_dict(args):
+    # Create dictionary that will store event info
+    event_info = {}
+
+
+    # Loop through event def file and store relevant lines
+    with open(args.events_def, 'r', encoding='utf-8') as file:
+        for line in file:
+            # If line doesn't match event pattern, discard
+            m = EVENT_PATTERN.match(line)
+            if m is None:
+                continue
+            enum_name, event_id, num_args, message = m.groups()
+            event_info[int(event_id, 0)] = Event(int(num_args), message)
+
+
+    # TEMP: Check if dict is defined properly
+        #for event_id, event in list(event_info.items())[:5]:
+            #print(event_id, event)
+
+
+    return event_info
+
+
+# Read file def file, create + return dictionary of all error log strings
+def get_file_dict(args):
+    # Create dictionary that will store event info
+    file_info = {}
+   
+    # Loop through file def file and store relevant lines
+    with open(args.files_def, 'r', encoding='utf-8') as file:
+        for line in file:
+            m = FILE_PATTERN.match(line)
+            if m is None:
+                continue
+            enum_name, file_id, path = m.groups()
+            file_info[int(file_id, 0)] = path
+
+
+    # TEMP: Check if dict is defined properly
+        #for file_id, path in list(file_info.items())[:5]:
+            #print(file_id, path)        
+
+
+    return file_info
+
+
+
+
+def read_bin_file(args, event_dict, file_dict):
+    lines = []
+    with open(args.logs_bin) as file:
+        # lambda is mini function, repeats reading 32 bytes at a time until end of file
+        for record in iter(lambda: file.read(32), b""):
+            # Print to console if partial record encountered
+            if len(record) < 32:
+                print(f"INFO: partial record ({len(record)} bytes) encountered.")
+            # Call function that will take binary line and translate to string message
+            line = translate_log(record, event_dict, file_dict)
+            if line is not None:
+                lines.append(line)
+    # Return list of translated lines
+    return lines
+
+
+def translate_log(chunk, event_dict, file_dict):
+    # TODO:
+        # Split log by delimiter
+        # Store each section in variable
+        # Use dicts to convert each section to string
+            # Plug #args, event string, and args into insert_args
+        # Format and write error log to file
+
+
+    return True #TEMP
+
+
+def insert_args(num_args, event_string, *args):
+    # TODO:
+        # Find the format codes in the message
+        # Convert each arg to int or float to match its code
+        # Change %p to %x (Python)
+        # Handle %%
+        # Print error if arg count != num_args
+    return True #TEMP
+
 
 def main():
     # Create argument parser
@@ -46,113 +139,27 @@ def main():
     )
    
     # Read the command line and return object holding all filepath values
-    filepaths = parser.parse_args()
-
-    # filepaths.logs_bin is the filepath to the bin file
-    # etc.
+    args = parser.parse_args()
 
 
-# Read def files and create a dictionary of error codes and their descriptions
-    # Loop through event def file and store relevant lines
-    with open(filepaths.events_def, 'r') as file:
-        # Store all lines in a list
-        event_lines = file.readlines()
-        # Call function that removes comments and whitespace
-    event_lines = remove_comments_and_whitespace(event_lines)
-    # TEMP: Print first 30 cleaned lines to check that function works
-    #for line in event_lines[:30]:
-        #print(line) # TEMP: Currently fine, still need to refine cleaning function though 
-
-    # Create dictionary that will store event info
-    event_info = {}
-
-    # In case event id is invalid
-    dummy_event_id = -1
-
-    # Store all event info in dictionary (based on id number)
-    for line in event_lines:
-        # Split line based on comma delimiter into:
-            # EVENT(ENUM_NAME
-            # ID
-            # NUM ARGS
-            # "STRING")
-        # These are all stripped of whitespace and stored in the items list
-        items = [item.strip() for item in line.split(",", 3)]
-        # Maxsplit 3 since at most 3 commas (starting from the left) before string occurs
-        # (doesn't split string itself when encountering strings with commas)
-            
-        # Check if right number of items
-        if len(items) != 4:
-            print("Event def file entry does not follow expected format.")
-            # TODO: Figure out what to do if this occurs
-            # Write event info to invalid file, then remove from event_lines, then continue?
+    # Ensure all files exist
+    for label, path in (("log .bin file", args.logs_bin),
+                        ("events def file", args.events_def),
+                        ("files def file", args.files_def)):
+        if not path.is_file():
+            parser.error(f"{label} not found: {path}")
 
 
-        items.pop(0) # Get rid of EVENT(ENUM_NAME
-        # TODO: Ask if we need to keep the enum name too
-        # (in case we want to search the program files after with the enum name)
-        items[-1] = ((items[-1].removesuffix(")")).removesuffix("\"")).removeprefix("\"")
-        # TEMP: Check if split line properly
-        #print(items)
-
-        # Convert ID string to ID int
-        try: 
-            # 0 argument makes it able to handle ids of any base
-            # (just in case id was written as hexadecimal)
-            event_id = int(items[0], 0)
-            # TODO: Check if event_id already in dict.
-            # If so, write event info to invalid file, then remove from event_lines, then continue?
-        except ValueError:
-            print("Invalid input: ID ",  items[0], " was not an integer")
-            # TODO: Figure out what to make items[0] if ValueError occurs
-            # Write event info to invalid file, then remove from event_lines, then continue?
-            # Below is a temporary fix with dummy_event_id
-            event_id = dummy_event_id # Set to dummy int if case id conversion fails
-            dummy_event_id -= 1
-        items.pop(0)
-
-        # Convert # of args string to # of args int
-        try:
-            items[0] = int(items[0])
-        except ValueError:
-            print("Invalid # of args: Could not convert", items[0], " to int.")
-            # TODO: Figure out what to make items[0] if ValueError occurs
-            # Write event info to invalid file, then remove from event_lines, then continue?
-            
-        if items[0] < 0 or items[0] > 5:
-            print("Invalid # of args (", items[0], ") associated with event id ", event_id)
-            # TODO: Figure out what to do if this occurs
-            # Write event info to invalid file, then remove from event_lines, then continue?
-
-        # Store all event info at that id number
-        event_info[event_id] = items
-
-        # TEMP: Check if dict is defined properly
-        #print(event_info)
+    # Make dicts from def files info
+    event_dict = get_event_dict(args)
+    file_dict = get_file_dict(args)
+   
 
 
-# Read the files def and make a dict for that too
+    # Read the .bin file
+    read_bin_file(args, event_dict, file_dict)
 
 
-# Read the log file
-
-
-# Split into chunks of 32 bytes (loop in steps of 32)
-
-
-# Turn each set of 32 bytes into named numbers (event ID, timestamp, etc.)
-
-
-# Use the dictionary to convert named numbers into strings
-
-
-# Plug the numeric arguments into the string
-
-
-# Format and print the error log
-
-
-# Write the output to a file (if we want to do this)
 
 
 # Run script
