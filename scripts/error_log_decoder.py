@@ -22,9 +22,8 @@ FILE_PATTERN = re.compile(COMMENTS + r'FILE_ID\(\s*(\w+)\s*,\s*(0x[0-9a-fA-F]+|\
 Event = namedtuple("Event", ["num_args", "message"])
 
 
-# .bin delimiters
-VALUE_DELIM = "|"
-ARG_DELIM = ","
+# Error log size
+ERR_LOG_SIZE = 32
 
 
 # Read event def file, create + return dictionary of all error log strings
@@ -77,9 +76,9 @@ def get_file_dict(args):
 
 
 
-def read_bin_file(args, event_dict, file_dict):
+def read_err_file(args, event_dict, file_dict):
     lines = []
-    with open(args.logs_bin) as file:
+    with open(args.logs_err) as file:
         # lambda is mini function, repeats reading 32 bytes at a time until end of file
         for record in iter(lambda: file.read(32), b""):
             # Print to console if partial record encountered
@@ -95,7 +94,7 @@ def read_bin_file(args, event_dict, file_dict):
 
 def translate_log(chunk, event_dict, file_dict):
     # TODO:
-        # Split log by delimiter
+        # Split log by # of bytes
         # Store each section in variable
         # Use dicts to convert each section to string
             # Plug #args, event string, and args into insert_args
@@ -119,9 +118,9 @@ def main():
     # Create argument parser
     parser = argparse.ArgumentParser(description='Decode error log file using def files.')
    
-    # Add arguments for .bin file (mandatory) and def files (optional)
+    # Add arguments for .err file (mandatory) and def files (optional)
     parser.add_argument(
-        'logs_bin',
+        'logs_err',
         type=Path,
         help='Path to the binary log file'
     )
@@ -143,7 +142,7 @@ def main():
 
 
     # Ensure all files exist
-    for label, path in (("log .bin file", args.logs_bin),
+    for label, path in (("log .err file", args.logs_err),
                         ("events def file", args.events_def),
                         ("files def file", args.files_def)):
         if not path.is_file():
@@ -156,8 +155,8 @@ def main():
    
 
 
-    # Read the .bin file
-    read_bin_file(args, event_dict, file_dict)
+    # Read the .err file
+    read_err_file(args, event_dict, file_dict)
 
 
 
