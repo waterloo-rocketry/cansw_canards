@@ -168,8 +168,8 @@ static void system_init_task(void *arg) {
 		if (fsm_task_handle == NULL || watchdog_register_task(fsm_task_handle, pdMS_TO_TICKS(10)) != W_SUCCESS) {
 
 			// log fatal eerror message
-			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register FSM task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register FSM task");
+			// proc_handle_fatal_error("watchdog");
 		}
 
 	task_status &= xTaskCreate(health_check_task, "health", 384, NULL, health_checks_task_priority,
@@ -178,8 +178,8 @@ static void system_init_task(void *arg) {
 		if (health_checks_task_handle == NULL || watchdog_register_task(health_checks_task_handle, pdMS_TO_TICKS(2000)) != W_SUCCESS) {
 
 			// log fatal eerror message
-			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register health check task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register health check task");
+			// proc_handle_fatal_error("watchdog");
 		}
 
 	task_status &= xTaskCreate(can_handler_task_rx, "can handler rx", 256, NULL,
@@ -189,8 +189,8 @@ static void system_init_task(void *arg) {
 		if (can_handler_handle_rx == NULL || watchdog_register_task(can_handler_handle_rx, 250) != W_SUCCESS) {
 
 			// log fatal eerror message
-			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register CAN RX task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register CAN RX task");
+			// proc_handle_fatal_error("watchdog");
 		}
 
 	task_status &= xTaskCreate(can_handler_task_tx, "can handler tx", 256, NULL,
@@ -200,8 +200,8 @@ static void system_init_task(void *arg) {
 		if (can_handler_handle_tx == NULL || watchdog_register_task(can_handler_handle_tx, pdMS_TO_TICKS(10)) != W_SUCCESS) {
 
 			// log fatal eerror message
-			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register CAN TX task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register CAN TX task");
+			// proc_handle_fatal_error("watchdog");
 		}
 
 	task_status &= xTaskCreate(movella_task, "movella", 512, NULL, movella_task_priority,
@@ -211,8 +211,8 @@ static void system_init_task(void *arg) {
 		if (movella_task_handle == NULL || watchdog_register_task(movella_task_handle, pdMS_TO_TICKS(30)) != W_SUCCESS) {
 
 			// log fatal eerror message
-			log_text(0, LOG_LVL_FATAL, "watchdog", "Failed to register movella task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register movella task");
+			// proc_handle_fatal_error("watchdog");
 		}
 
 	task_status &= xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority,
@@ -222,8 +222,8 @@ static void system_init_task(void *arg) {
 		if(ms5611_task_handle == NULL || watchdog_register_task(ms5611_task_handle, pdMS_TO_TICKS(30))!= W_SUCCESS){
 
 			//log fatal error message
-			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register ms5611 task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register ms5611 task");
+			// proc_handle_fatal_error("watchdog");
 		}
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
@@ -232,8 +232,8 @@ static void system_init_task(void *arg) {
 		if(log_task_handle == NULL || watchdog_register_task(log_task_handle, pdMS_TO_TICKS(1000))!= W_SUCCESS){
 
 			//log fatal error message
-			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register log task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register log task");
+			// proc_handle_fatal_error("watchdog");
 		}
 
 	task_status &= xTaskCreate(ad_breakout_board_task, "ad board task",
@@ -244,8 +244,8 @@ static void system_init_task(void *arg) {
 		if(ad_breakout_task_handle == NULL || watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(6))!= W_SUCCESS){
 
 			//log fatal error message
-			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register ad_breakout_board task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register ad_breakout_board task");
+			// proc_handle_fatal_error("watchdog");
 		}
 
 	task_status &= xTaskCreate(telemetry_task, "telem module", 336, NULL, telem_task_priority,
@@ -255,8 +255,8 @@ static void system_init_task(void *arg) {
 		if(telem_task_handle == NULL || watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(3))!= W_SUCCESS){
 
 			//log fatal error message
-			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register telemetry task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register telemetry task");
+			// proc_handle_fatal_error("watchdog");
 		}
 
 	if (task_status != pdTRUE) {
@@ -303,8 +303,8 @@ w_status_t init_tasks(void) {
 		if(init_task_handle == NULL || watchdog_register_task(init_task_handle, pdMS_TO_TICKS(1500))!= W_SUCCESS){
 
 			//log fatal error message
-			log_text(0, LOG_LVL_FATAL, "watchdog","Failed to register SysInit task");
-			proc_handle_fatal_error("watchdog");
+			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register SysInit task");
+			// proc_handle_fatal_error("watchdog");
 		}
 	return (task_status == pdTRUE) ? W_SUCCESS : W_FAILURE;
 }
