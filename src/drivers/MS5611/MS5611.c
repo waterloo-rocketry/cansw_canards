@@ -563,6 +563,8 @@ void ms5611_task(void *argument) {
 		}
 
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
+
+		watchdog_kick();
 	}
 }
 

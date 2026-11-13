@@ -303,6 +303,7 @@ void can_handler_task_rx(void *argument) {
 				last_rx_warn_tick = now; // update last warning time
 			}
 		}
+		watchdog_kick();
 	}
 }
 
@@ -331,6 +332,7 @@ void can_handler_task_tx(void *argument) {
 				last_tx_warn_tick = now;
 			}
 		}
+		watchdog_kick();
 	}
 }
 

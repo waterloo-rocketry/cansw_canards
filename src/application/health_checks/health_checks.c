@@ -93,6 +93,15 @@ w_status_t watchdog_kick(void) {
 		if (watchdog_tasks[i].task_handle == current_task) {
 			watchdog_tasks[i].is_kicked = true;
 			watchdog_tasks[i].last_kick_timestamp_ms = current_time_ms;
+
+			// log a message every second
+			static uint32_t last_log_ms = 0;
+			if ((uint32_t)(current_time_ms - last_log_ms) == 1000) {
+				log_text(0, LOG_LVL_INFO, "watchdog", 
+					"Kick recieved %s, time=%lu", pcTaskGetName(current_task), (unsigned long)current_time_ms
+				);
+				last_log_ms = current_time_ms;
+			}
 			return W_SUCCESS;
 		}
 	}
@@ -129,6 +138,8 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
 	watchdog_tasks[num_watchdog_tasks].timeout_ticks = timeout_ticks;
 
 	num_watchdog_tasks++; // increment the watchdog task count for future ref
+
+	log_text(0, LOG_LVL_INFO, "watchdog", "YIPPIE SUCCESSFULLY Registered task %s", pcTaskGetName(task_handle));
 
 	return status;
 }
@@ -170,7 +181,7 @@ uint32_t check_watchdog_tasks(void) {
 			if (can_handler_transmit(&msg) != W_SUCCESS) {
 				log_text(0, LOG_LVL_WARN, "health", "CAN send failure for watchdog timeout msg");
 			}
-			log_text(0, LOG_LVL_WARN, "health_checks", "task timeout: %d", *task_name);
+			log_text(0, LOG_LVL_WARN, "OH NO health_checks", "task timeout: %s", task_name);
 			status_bitfield |= 1 << E_WATCHDOG_TIMEOUT_OFFSET;
 		}
 
@@ -331,6 +342,9 @@ void health_check_task(void *argument) {
 
 	for (;;) {
 		health_check_exec();
+		
+		watchdog_kick();
+
 		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TASK_DELAY_MS));
 	}
 }
