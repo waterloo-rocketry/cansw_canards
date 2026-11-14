@@ -355,7 +355,7 @@ w_status_t log_error(uint32_t timeout, uint8_t file_ID, uint8_t line_number, uin
 	return W_SUCCESS;
 }
 
-w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
+w_status_t log_text(uint32_t timeout, log_level_t level, uint8_t log_count, const char *source, const char *format,
                     ...) {
 	// Get timestamp as close to time of call as possible
 	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log

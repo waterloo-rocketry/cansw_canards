@@ -217,6 +217,12 @@ typedef union __attribute__((packed)) {
 
 } log_data_container_t;
 
+typedef struct {
+	uint16_t last_logged_version;
+	uint8_t last_logged_buffer;
+	uint8_t* last_logged_location;
+} log_site_t;
+
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
               "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
@@ -226,6 +232,11 @@ STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
  * @pre must be run after scheduler start, and after sd_card module is init
  */
 w_status_t log_init(void);
+
+/**
+ * Use LOG_EVENT macro instead.
+ */
+w_status_t log_event(log_site_t* log_site, uint32_t timeout, uint16_t event_id, ...);
 
 /**
  * @brief Log a message in text form to the text log file.
@@ -261,5 +272,24 @@ void log_task(void *argument);
  * @return CAN board status bitfield
  */
 health_status_t logger_get_status(void);
+
+/**
+ * @brief Log a message in an encoded form to the event log file
+ *
+ * @param log_site Pointer to the log_site struct information
+ * @param timeout Maximum amount of time to block waiting to log, in ms
+ * @param event_id Event id which will be converted to a stirng
+ * @param ... Optional values to print according to format in the event string
+ * @return Status indicating success or failure
+ */
+#define LOG_EVENT(timeout, log_event_id, ...) do { \
+		static log_site_t this_site = { \
+			.last_logged_version = 0, \
+			.last_logged_buffer = 0, \
+			.last_logged_location = 0, \
+		}; \
+		\
+		log_event(&this_site, timeout, log_event_id, ##__VA_ARGS__); \
+	} while (0);
 
 #endif
