@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_MOVELLA_C
+
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "semphr.h"

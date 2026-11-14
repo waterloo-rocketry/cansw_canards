@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_SENSOR_HANDLER_C
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>

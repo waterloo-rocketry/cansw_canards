@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_FSM_C
+
 #include "FreeRTOS.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"

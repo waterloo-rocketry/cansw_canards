@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_LOG_C
+
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -6,7 +8,6 @@
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
-#include "application/logger/log_definitions.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
@@ -71,22 +72,25 @@ typedef struct {
 } logger_health_t;
 
 // TODO: Ask/Find out how to make a new buffer specifically for log_error
+// log_error buffers
 static log_buffer_t log_error_buffers[NUM_ERROR_LOG_BUFFERS];
-static log_buffer_t log_text_buffers[NUM_TEXT_LOG_BUFFERS];
-static log_buffer_t log_data_buffers[NUM_DATA_LOG_BUFFERS];
-static uint32_t current_error_buf_num = 0;
-static uint32_t current_text_buf_num = 0;
-static uint32_t current_data_buf_num = 0;
-/* Mutex that protects access of current_text_buf_num */
+static uint8_t current_error_buf_num = 0;
+static uint16_t current_error_buf_version = 1;
 static SemaphoreHandle_t log_error_write_mutex = NULL;
-/* Mutex that protects access of current_text_buf_num */
-static SemaphoreHandle_t log_text_write_mutex = NULL;
-/* Mutex that protects access of current_data_buf_num */
-static SemaphoreHandle_t log_data_write_mutex = NULL;
-/* Queue of full log buffers sent to the task to be flushed */
 static QueueHandle_t error_buffers_queue = NULL;
+
+// log_text buffers
+static log_buffer_t log_text_buffers[NUM_TEXT_LOG_BUFFERS];
+static uint32_t current_text_buf_num = 0;
+static SemaphoreHandle_t log_text_write_mutex = NULL;
 static QueueHandle_t data_buffers_queue = NULL;
+
+// log_data_buffers
+static log_buffer_t log_data_buffers[NUM_DATA_LOG_BUFFERS];
+static uint32_t current_data_buf_num = 0;
+static SemaphoreHandle_t log_data_write_mutex = NULL;
 static QueueHandle_t text_buffers_queue = NULL;
+
 /* Count of data buffers initialized, for buffer header index value */
 static uint32_t total_data_log_buffers = 0;
 
@@ -333,8 +337,8 @@ w_status_t log_init(void) {
 	return status;
 }
 
-w_status_t log_error(uint32_t timeout, log_site_t log_site, log_file_id_t file_ID, uint16_t line_number, 
-					 uint8_t task_ID, log_event_id_t error_name, ...) {
+w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_ID,
+                     uint16_t line_number, log_task_id_t task_ID, log_event_id_t error_name, ...) {
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
@@ -343,20 +347,21 @@ w_status_t log_error(uint32_t timeout, log_site_t log_site, log_file_id_t file_I
 		return W_FAILURE;
 	}
 
+	if (NULL == log_error_site) {
+		return W_INVALID_PARAM;
+	}
+
 	// Initialize Byte Array for Payload Arguments
 	uint32_t byteArray[5] = {0};
 
 	if (true) {
-		
-	}
-	else {
-
+	} else {
 	}
 
 	return W_SUCCESS;
 }
 
-w_status_t log_text(uint32_t timeout, log_level_t level, uint8_t log_count, const char *source, const char *format,
+w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
                     ...) {
 	// Get timestamp as close to time of call as possible
 	// If we fail to get a timestamp, use a dummy value of 0 and continue to write the log

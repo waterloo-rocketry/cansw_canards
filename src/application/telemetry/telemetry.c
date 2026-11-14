@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_TELEMETRY_C
+
 #include "telemetry.h"
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"

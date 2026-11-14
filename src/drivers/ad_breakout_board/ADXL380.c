@@ -1,3 +1,4 @@
+#define LOG_FILE_ID LOG_FILES_ADXL380_C
 
 #include <inttypes.h>
 #include <stdbool.h>

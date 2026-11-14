@@ -8,6 +8,7 @@
 #include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
 #include "drivers/altimu-10/altimu-10.h"
+#include "log_definitions.h"
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32768
@@ -217,11 +218,12 @@ typedef union __attribute__((packed)) {
 
 } log_data_container_t;
 
+// Log error site buffer contains information about previous buffer write
 typedef struct {
 	uint16_t last_logged_version;
 	uint8_t last_logged_buffer;
-	uint8_t* last_logged_location;
-} log_site_t;
+	uint8_t *last_logged_location;
+} log_error_site_t;
 
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
@@ -236,7 +238,7 @@ w_status_t log_init(void);
 /**
  * Use LOG_EVENT macro instead.
  */
-w_status_t log_event(log_site_t* log_site, uint32_t timeout, uint16_t event_id, ...);
+w_status_t log_event(log_error_site_t *log_site, uint32_t timeout, uint16_t event_id, ...);
 
 /**
  * @brief Log a message in text form to the text log file.
@@ -282,14 +284,18 @@ health_status_t logger_get_status(void);
  * @param ... Optional values to print according to format in the event string
  * @return Status indicating success or failure
  */
-#define LOG_EVENT(timeout, log_event_id, ...) do { \
-		static log_site_t this_site = { \
-			.last_logged_version = 0, \
-			.last_logged_buffer = 0, \
-			.last_logged_location = 0, \
-		}; \
-		\
-		log_event(&this_site, timeout, log_event_id, ##__VA_ARGS__); \
-	} while (0);
+// Requires `#define LOG_FILE_ID LOG_FILES_<FILE>_C` at the top of the calling .c file.
+#define LOG_ERROR(timeout, error_name, ...)                                                        \
+	do {                                                                                           \
+		static log_error_site_t this_site = {                                                      \
+			.last_buf_version = 0,                                                                 \
+			.last_buf_num = 0,                                                                     \
+			.last_logged_location = 0,                                                             \
+		};                                                                                         \
+                                                                                                   \
+		return log_error(&this_site, timeout, LOG_FILE_ID, __LINE__,                               \
+		                 (log_task_id_t)uxTaskGetTaskNumber(xTaskGetCurrentTaskHandle()),          \
+		                 error_name, ##__VA_ARGS__);                                               \
+	} while (0)
 
 #endif

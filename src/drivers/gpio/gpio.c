@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_GPIO_C
+
 /**
  * GPIO module
  * Driver for GPIO pins

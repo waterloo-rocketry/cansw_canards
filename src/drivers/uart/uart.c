@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_UART_C
+
 /**
  * @file uart.c
  * @brief Implementation of UART driver with IDLE line detection

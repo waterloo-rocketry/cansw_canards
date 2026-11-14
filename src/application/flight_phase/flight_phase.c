@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_FLIGHT_PHASE_C
+
 #include <inttypes.h>
 #include <stdint.h>
 
