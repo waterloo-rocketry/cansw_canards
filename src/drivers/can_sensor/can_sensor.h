@@ -3,6 +3,7 @@
 
 #include "rocketlib.h"
 #include "application/can_handler/can_handler.h"
+#include "drivers/timer/timer.h"
 
 //initializes the driver
 //adds callbacks to listen for corresponding canbus message
@@ -40,18 +41,13 @@ w_status_t can_gps_altitude_isr_callback(const can_msg_t *msg);
 w_status_t can_gps_info_isr_callback(const can_msg_t *msg);
 
 //------getter functions -------
-/*question on getter functions: do we even care about the 
- timestamp of the sensor data? Shiming said that 
- we'll just use the timestamp of the board 
- so I wont include the timestamp in the getter functions for now.
-
-*/
 /// @brief gets the analog 3D 16-bit sensor data from the current buffer 
 /// @return status of the operation
 w_status_t get_sensor_analog_3d_16bit(can_dem_3d_sensor_id_t *sensor_id,
                                       uint16_t *output_data_x, 
                                       uint16_t *output_data_y, 
-                                      uint16_t *output_data_z);
+                                      uint16_t *output_data_z,
+                                      uint32_t *timestamp_ms);
 
 w_status_t get_gps_timestamp(uint8_t *utc_hours, 
                              uint8_t *utc_minutes, 
