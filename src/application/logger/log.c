@@ -6,6 +6,7 @@
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
+#include "application/logger/log_definitions.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
@@ -17,12 +18,14 @@
 // number of times to try writing a log message in case fails once
 #define DATA_WRITE_TRY_COUNT 50
 #define TEXT_WRITE_TRY_COUNT 20
+#define ERROR_WRITE_TRY_COUNT 20
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
 
+static char error_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.ERR";
 static char text_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.TXT";
 static char data_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.BIN";
 
@@ -67,15 +70,21 @@ typedef struct {
 	bool init_fs_create_write_failed; // SD file create/write failed during init
 } logger_health_t;
 
+// TODO: Ask/Find out how to make a new buffer specifically for log_error
+static log_buffer_t log_error_buffers[NUM_ERROR_LOG_BUFFERS];
 static log_buffer_t log_text_buffers[NUM_TEXT_LOG_BUFFERS];
 static log_buffer_t log_data_buffers[NUM_DATA_LOG_BUFFERS];
+static uint32_t current_error_buf_num = 0;
 static uint32_t current_text_buf_num = 0;
 static uint32_t current_data_buf_num = 0;
+/* Mutex that protects access of current_text_buf_num */
+static SemaphoreHandle_t log_error_write_mutex = NULL;
 /* Mutex that protects access of current_text_buf_num */
 static SemaphoreHandle_t log_text_write_mutex = NULL;
 /* Mutex that protects access of current_data_buf_num */
 static SemaphoreHandle_t log_data_write_mutex = NULL;
 /* Queue of full log buffers sent to the task to be flushed */
+static QueueHandle_t error_buffers_queue = NULL;
 static QueueHandle_t data_buffers_queue = NULL;
 static QueueHandle_t text_buffers_queue = NULL;
 /* Count of data buffers initialized, for buffer header index value */
@@ -205,13 +214,20 @@ w_status_t log_init(void) {
 	// returns before that. Record them in logger_health instead; logger_get_status() reports
 	// them over CAN, which is the only channel that still works when the logger is down.
 
+	error_buffers_queue = xQueueCreate(NUM_ERROR_LOG_BUFFERS, sizeof(log_buffer_t *));
 	data_buffers_queue = xQueueCreate(NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
 	text_buffers_queue = xQueueCreate(NUM_TEXT_LOG_BUFFERS, sizeof(log_buffer_t *));
-	if ((NULL == data_buffers_queue) || (NULL == text_buffers_queue)) {
+	if ((NULL == error_buffers_queue) || (NULL == data_buffers_queue) ||
+	    (NULL == text_buffers_queue)) {
 		logger_health.init_os_failed = true;
 		return W_FAILURE;
 	}
 
+	log_error_write_mutex = xSemaphoreCreateMutex();
+	if (NULL == log_error_write_mutex) {
+		logger_health.init_os_failed = true;
+		return W_FAILURE;
+	}
 	log_text_write_mutex = xSemaphoreCreateMutex();
 	if (NULL == log_text_write_mutex) {
 		logger_health.init_os_failed = true;
@@ -221,6 +237,22 @@ w_status_t log_init(void) {
 	if (NULL == log_data_write_mutex) {
 		logger_health.init_os_failed = true;
 		return W_FAILURE;
+	}
+
+	// Initialize error buffers
+	for (int i = 0; i < NUM_ERROR_LOG_BUFFERS; i++) {
+		log_buffer_t *buffer = &log_error_buffers[i];
+		buffer->is_text = false;
+		buffer->next_msg_num_mutex = xSemaphoreCreateMutex();
+		if (NULL == buffer->next_msg_num_mutex) {
+			logger_health.init_os_failed = true;
+			return W_FAILURE;
+		}
+		buffer->msgs_done_semaphore = xSemaphoreCreateCounting(ERROR_MSGS_PER_BUFFER, 0);
+		if (NULL == buffer->msgs_done_semaphore) {
+			logger_health.init_os_failed = true;
+			return W_FAILURE;
+		}
 	}
 
 	// Initialize text buffers
@@ -284,10 +316,12 @@ w_status_t log_init(void) {
 	                             false, &size);
 
 	// Form log filenames using the run count
+	snprintf_(error_log_filename, sizeof(error_log_filename), "%08" PRIx32 ".ERR", run_count);
 	snprintf_(text_log_filename, sizeof(text_log_filename), "%08" PRIx32 ".TXT", run_count);
 	snprintf_(data_log_filename, sizeof(data_log_filename), "%08" PRIx32 ".BIN", run_count);
 
 	// Create log files
+	status |= sd_card_file_create(error_log_filename);
 	status |= sd_card_file_create(text_log_filename);
 	status |= sd_card_file_create(data_log_filename);
 
@@ -297,6 +331,28 @@ w_status_t log_init(void) {
 		logger_health.init_fs_create_write_failed = true;
 	}
 	return status;
+}
+
+w_status_t log_error(uint32_t timeout, uint8_t file_ID, uint8_t line_number, uint8_t task_ID,
+                     log_event_id_t *error_name, ...) {
+	uint32_t timestamp = 0;
+	(void)timer_get_ms(&timestamp);
+
+	// Validate arguments
+	if (!logger_health.is_init) {
+		return W_FAILURE;
+	}
+
+	if ((NULL == error_name)) {
+		logger_health.null_param_count++;
+		logger_health.invalid_param = true;
+		return W_INVALID_PARAM;
+	}
+
+	// Initialize Byte Array for Payload Arguments
+	uint32_t byteArray[5] = {0};
+
+	return W_SUCCESS;
 }
 
 w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
@@ -477,6 +533,7 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	return res;
 }
 
+static sd_card_file_ctx_t error_file_ctx;
 static sd_card_file_ctx_t text_file_ctx;
 static sd_card_file_ctx_t data_file_ctx;
 
@@ -488,15 +545,18 @@ void log_task(void *argument) {
 	// Open persistent streaming files.
 	// Keep these open for the duration of logging to avoid FAT traversal overhead.
 	// write the file names
+	memcpy(error_file_ctx.filename, error_log_filename, sizeof(error_file_ctx.filename));
 	memcpy(text_file_ctx.filename, text_log_filename, sizeof(text_file_ctx.filename));
 	memcpy(data_file_ctx.filename, data_log_filename, sizeof(data_file_ctx.filename));
 
 	// Open the files and record if either failed to open
+	const bool error_open_failed = (sd_card_file_open(&error_file_ctx) != W_SUCCESS);
 	const bool text_open_failed = (sd_card_file_open(&text_file_ctx) != W_SUCCESS);
 	const bool data_open_failed = (sd_card_file_open(&data_file_ctx) != W_SUCCESS);
 
-	if (text_open_failed || data_open_failed) {
-		logger_health.file_open_errs += (uint32_t)text_open_failed + (uint32_t)data_open_failed;
+	if (error_open_failed || text_open_failed || data_open_failed) {
+		logger_health.file_open_errs +=
+			(uint32_t)error_open_failed + (uint32_t)text_open_failed + (uint32_t)data_open_failed;
 		logger_health.fs_open_flush_failed = true;
 	}
 
@@ -545,6 +605,12 @@ void log_task(void *argument) {
 			if (timer_get_ms(&cur_timestamps) == W_SUCCESS) {
 				last_text_logging_time = cur_timestamps;
 			}
+		} else if (xQueueReceive(error_buffers_queue, &buffer_to_print, 10) == pdPASS) {
+			// NEEDS LOTS OF REVIEWING
+			log_write_try_count = ERROR_WRITE_TRY_COUNT;
+			max_msgs = ERROR_MSGS_PER_BUFFER;
+			file_ctx = &error_file_ctx;
+			have_msg = true;
 		}
 
 		if (have_msg) {
