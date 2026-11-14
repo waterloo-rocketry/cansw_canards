@@ -151,11 +151,6 @@ static void system_init_task(void *arg) {
   // TODO: REMOVE BEFORE MERGING TO MAIN
   lfs_t lfs;
   lfs_file_t file;
-  lfs_dir_t dir;
-  struct lfs_info info;
-
-  char test_in = 'n';
-  char test_out;
 
   int err = mx25l25645g_mount(&lfs, 0);
 
@@ -165,20 +160,7 @@ static void system_init_task(void *arg) {
   }
 
   uint32_t boot_count = 0;
-  lfs_mkdir(&lfs, "test_dir");
-  mx25l25645g_file_open(&lfs, &file, "test_file_long", LFS_O_RDWR | LFS_O_CREAT);
-  mx25l25645g_file_write(&lfs, &file, &test_in, sizeof(test_in));
-  mx25l25645g_file_read(&lfs, &file, &test_out, sizeof(test_in), 0, LFS_SEEK_SET);
-  mx25l25645g_file_close(&lfs, &file);
-
-  lfs_dir_open(&lfs, &dir, "test_dir");
-  lfs_dir_read(&lfs, &dir, &info);
-  lfs_dir_read(&lfs, &dir, &info);
-  lfs_dir_read(&lfs, &dir, &info);
-  lfs_dir_read(&lfs, &dir, &info);
-  lfs_dir_close(&lfs, &dir);
-
-  mx25l25645g_file_open(&lfs, &file, "boot_count", LFS_O_RDWR | LFS_O_CREAT);
+  mx25l25645g_file_open(&lfs, &file, "boot_c", LFS_O_RDWR | LFS_O_CREAT);
   mx25l25645g_file_read(&lfs, &file, &boot_count, sizeof(boot_count), 0,
                         LFS_SEEK_SET);
 

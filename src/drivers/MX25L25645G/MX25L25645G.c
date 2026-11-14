@@ -8,10 +8,11 @@
 #include "drivers/timer/timer.h"
 
 #define SPI_4_ENABLED // so 1 - (1 or 4) - 4
+#define FLASH_NOTIFICATION_INDEX 1
 
 // TODO: add INIT Checks
 static const uint32_t FLASH_SINGLE_DELAY_MS =
-	100; // this repersent the maximum amount of delay for a single operation
+    100; // this repersent the maximum amount of delay for a single operation
 static const uint32_t MAX_RDStatus_ATTEMPTS = 2;
 static const uint16_t WEL_BIT_MASK = 0x2;
 static const uint16_t WIP_BIT_MASK = 0x1;
@@ -36,822 +37,848 @@ static uint8_t lfs_flash_prog_buffer[CACHE_SIZE] = {0};
 static uint8_t lfs_flash_lookahead_buffer[LOOKAHEAD_SIZE] = {0};
 
 typedef enum {
-	FLASH_SPI_NOT_INIT,
-	FLASH_SPI_READY,
-	FLASH_SPI_COMMANDING,
-	FLASH_SPI_WRITING,
-	FLASH_SPI_READING,
-	FLASH_SPI_ERROR
+  FLASH_SPI_NOT_INIT,
+  FLASH_SPI_READY,
+  FLASH_SPI_COMMANDING,
+  FLASH_SPI_WRITING,
+  FLASH_SPI_READING,
+  FLASH_SPI_ERROR
 } flash_spi_state_t;
 
 typedef struct {
-	flash_spi_state_t spi_state;
-	uint32_t lfs_first_block_offset;
-	OSPI_HandleTypeDef *spi_handle;
-	gpio_pin_t ncs_pin;
-	bool is_init;
+  flash_spi_state_t spi_state;
+  uint32_t lfs_first_block_offset;
+  OSPI_HandleTypeDef *spi_handle;
+  gpio_pin_t ncs_pin;
+  bool is_init;
 } flash_lfs_ctx;
 
-static flash_lfs_ctx g_flash_ctx = {
-	.spi_handle = &hospi1, .spi_state = FLASH_SPI_NOT_INIT, .ncs_pin = GPIO_PIN_FLASH_CS
-};
+static flash_lfs_ctx g_flash_ctx = {.spi_handle = &hospi1,
+                                    .spi_state = FLASH_SPI_NOT_INIT,
+                                    .ncs_pin = GPIO_PIN_FLASH_CS};
+
+static TaskHandle_t task_handler = NULL;
 
 void HAL_OSPI_ErrorCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	g_flash_ctx.spi_state = FLASH_SPI_ERROR;
+  if (hospi != (g_flash_ctx.spi_handle)) {
+    return;
+  }
+  g_flash_ctx.spi_state = FLASH_SPI_ERROR;
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+  if (NULL != task_handler) {
+    vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
+                                  &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  }
+
+  task_handler = NULL;
 }
 
 void HAL_OSPI_AbortCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	g_flash_ctx.spi_state = FLASH_SPI_ERROR;
+  if (hospi != (g_flash_ctx.spi_handle)) {
+    return;
+  }
+  g_flash_ctx.spi_state = FLASH_SPI_ERROR;
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+  if (NULL != task_handler) {
+    vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
+                                  &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  }
+
+  task_handler = NULL;
 }
 
 void HAL_OSPI_CmdCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	if (FLASH_SPI_COMMANDING == g_flash_ctx.spi_state) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-	} else {
-		g_flash_ctx.spi_state = FLASH_SPI_ERROR;
-	}
+  if (hospi != (g_flash_ctx.spi_handle)) {
+    return;
+  }
+  if (FLASH_SPI_COMMANDING == g_flash_ctx.spi_state) {
+    g_flash_ctx.spi_state = FLASH_SPI_READY;
+  } else {
+    g_flash_ctx.spi_state = FLASH_SPI_ERROR;
+  }
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+  if (NULL != task_handler) {
+    vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
+                                  &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  }
+
+  task_handler = NULL;
 }
 
 void HAL_OSPI_RxCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	if (FLASH_SPI_READING == g_flash_ctx.spi_state) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-	} else {
-		g_flash_ctx.spi_state = FLASH_SPI_ERROR;
-	}
+  if (hospi != (g_flash_ctx.spi_handle)) {
+    return;
+  }
+  if (FLASH_SPI_READING == g_flash_ctx.spi_state) {
+    g_flash_ctx.spi_state = FLASH_SPI_READY;
+  } else {
+    g_flash_ctx.spi_state = FLASH_SPI_ERROR;
+  }
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+  if (NULL != task_handler) {
+    vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
+                                  &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  }
+
+  task_handler = NULL;
 }
 
 void HAL_OSPI_TxCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	if (FLASH_SPI_WRITING == g_flash_ctx.spi_state) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-	} else {
-		g_flash_ctx.spi_state = FLASH_SPI_ERROR;
-	}
-}
+  if (hospi != (g_flash_ctx.spi_handle)) {
+    return;
+  }
 
-// this is a busy wait loop for flash to complete
-static w_status_t wait_flash_complete(const uint32_t timeout_ms) {
-	uint32_t start_time_ms = 0;
-	uint32_t curr_time_ms = 0;
-	timer_get_ms(&start_time_ms);
+  if (FLASH_SPI_WRITING == g_flash_ctx.spi_state) {
+    g_flash_ctx.spi_state = FLASH_SPI_READY;
+  } else {
+    g_flash_ctx.spi_state = FLASH_SPI_ERROR;
+  }
 
-	while ((g_flash_ctx.spi_state != FLASH_SPI_READY) &&
-	       (g_flash_ctx.spi_state != FLASH_SPI_ERROR)) {
-		timer_get_ms(&curr_time_ms);
-		if ((curr_time_ms - start_time_ms) > timeout_ms) {
-			g_flash_ctx.spi_state = FLASH_SPI_READY; // set back to ready after a timeout
-			// add logs
-			return W_IO_TIMEOUT;
-		}
-		vTaskDelay(pdMS_TO_TICKS(1));
-	};
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	if (FLASH_SPI_ERROR == g_flash_ctx.spi_state) {
-		// add logs
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-		return W_IO_ERROR;
-	}
+  if (NULL != task_handler) {
+    vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
+                                  &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  }
 
-	return W_SUCCESS;
+  task_handler = NULL;
 }
 
 static w_status_t send_spi_cmd(OSPI_RegularCmdTypeDef *cmd, bool select_ncs) {
-	// select chip
-	if (select_ncs) {
-		if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
-			return W_IO_ERROR;
-		}
-	}
+  // select chip
+  if (select_ncs) {
+    if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
+      return W_IO_ERROR;
+    }
+  }
 
-	// check to make sure we are SPI bus is not busy
-	if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
-		return W_FAILURE;
-	}
+  // check to make sure we are SPI bus is not busy
+  if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_FAILURE;
+  }
 
-	g_flash_ctx.spi_state = FLASH_SPI_COMMANDING;
-	HAL_StatusTypeDef hal_status = HAL_OSPI_Command_IT((g_flash_ctx.spi_handle), cmd);
+  task_handler = xTaskGetCurrentTaskHandle();
 
-	// make sure command is fully sent
-	if ((hal_status != HAL_OK) || (wait_flash_complete(FLASH_SINGLE_DELAY_MS) != W_SUCCESS)) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-		return W_IO_ERROR;
-	}
+  g_flash_ctx.spi_state = FLASH_SPI_COMMANDING;
+  HAL_StatusTypeDef hal_status =
+      HAL_OSPI_Command_IT((g_flash_ctx.spi_handle), cmd);
 
-	// unselect chip
-	if (select_ncs) {
-		if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
-			return W_IO_ERROR;
-		}
-	}
+  const uint32_t xReturned = ulTaskNotifyTakeIndexed(
+      FLASH_NOTIFICATION_INDEX, pdTRUE, pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS));
 
-	return W_SUCCESS;
+  if (xReturned != pdTRUE || hal_status != HAL_OK ||
+      g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_IO_ERROR;
+  }
+
+  // unselect chip
+  if (select_ncs) {
+    if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
+      return W_IO_ERROR;
+    }
+  }
+
+  return W_SUCCESS;
 }
 
 // complete a RDSR
-static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status, bool select_ncs) {
-	// select chip
-	if (select_ncs) {
-		if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
-			return W_IO_ERROR;
-		}
-	}
+static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status,
+                                 bool select_ncs) {
+  // select chip
+  if (select_ncs) {
+    if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
+      return W_IO_ERROR;
+    }
+  }
 
-	// check to make sure we are SPI bus is not busy
-	if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
-		return W_FAILURE;
-	}
+  // check to make sure we are SPI bus is not busy
+  if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_FAILURE;
+  }
 
-	// if needed will add a block
-	HAL_StatusTypeDef hal_status =
-		HAL_OSPI_Command((g_flash_ctx.spi_handle), cmd, FLASH_SINGLE_DELAY_MS);
+  // if needed will add a block
+  HAL_StatusTypeDef hal_status =
+      HAL_OSPI_Command((g_flash_ctx.spi_handle), cmd, FLASH_SINGLE_DELAY_MS);
 
-	if (hal_status != HAL_OK) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-		return W_IO_ERROR;
-	}
+  if (hal_status != HAL_OK) {
+    g_flash_ctx.spi_state = FLASH_SPI_READY;
+    return W_IO_ERROR;
+  }
 
-	// ready to recieve data
-	g_flash_ctx.spi_state = FLASH_SPI_READING;
-	hal_status = HAL_OSPI_Receive_DMA(&hospi1, status);
-	// make sure command is fully sent
-	if ((hal_status != HAL_OK) || (wait_flash_complete(FLASH_SINGLE_DELAY_MS) != W_SUCCESS)) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-		return W_IO_ERROR;
-	}
+  task_handler = xTaskGetCurrentTaskHandle();
 
-	// unselect chip
-	if (select_ncs) {
-		if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
-			return W_IO_ERROR;
-		}
-	}
+  // ready to recieve data
+  g_flash_ctx.spi_state = FLASH_SPI_READING;
+  hal_status = HAL_OSPI_Receive_DMA(&hospi1, status);
 
-	return W_SUCCESS;
+  uint32_t xReturned = ulTaskNotifyTakeIndexed(
+      FLASH_NOTIFICATION_INDEX, pdTRUE, pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS));
+
+  if (xReturned != pdTRUE || hal_status != HAL_OK ||
+      g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_IO_ERROR;
+  }
+
+  // unselect chip
+  if (select_ncs) {
+    if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
+      return W_IO_ERROR;
+    }
+  }
+
+  return W_SUCCESS;
 }
 
 static w_status_t get_rdsr(uint8_t *status, bool select_ncs) {
-	OSPI_RegularCmdTypeDef cmd_readstatus = {0};
-	cmd_readstatus.Instruction = 0x05; // Read Status
-	cmd_readstatus.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
-	cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
-	cmd_readstatus.NbData = 1;
+  OSPI_RegularCmdTypeDef cmd_readstatus = {0};
+  cmd_readstatus.Instruction = 0x05; // Read Status
+  cmd_readstatus.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
+  cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
+  cmd_readstatus.NbData = 1;
 
-	return get_single_reg(&cmd_readstatus, status, select_ncs);
+  return get_single_reg(&cmd_readstatus, status, select_ncs);
 }
 
 // get RDSCUR
 static w_status_t get_rdscur(uint8_t *status, bool select_ncs) {
-	OSPI_RegularCmdTypeDef cmd_readstatus = {0};
-	cmd_readstatus.Instruction = 0x2b; // Read Status
-	cmd_readstatus.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
-	cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
-	cmd_readstatus.NbData = 1;
+  OSPI_RegularCmdTypeDef cmd_readstatus = {0};
+  cmd_readstatus.Instruction = 0x2b; // Read Status
+  cmd_readstatus.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
+  cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
+  cmd_readstatus.NbData = 1;
 
-	return get_single_reg(&cmd_readstatus, status, select_ncs);
+  return get_single_reg(&cmd_readstatus, status, select_ncs);
 }
 
 // get a RDCR
 static w_status_t get_rdcr(uint8_t *status, bool select_ncs) {
-	OSPI_RegularCmdTypeDef cmd_readstatus = {0};
-	cmd_readstatus.Instruction = 0x15; // Read Status
-	cmd_readstatus.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
-	cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
-	cmd_readstatus.NbData = 1;
+  OSPI_RegularCmdTypeDef cmd_readstatus = {0};
+  cmd_readstatus.Instruction = 0x15; // Read Status
+  cmd_readstatus.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  cmd_readstatus.DataMode = HAL_OSPI_DATA_1_LINE;
+  cmd_readstatus.AddressMode = HAL_OSPI_ADDRESS_NONE;
+  cmd_readstatus.NbData = 1;
 
-	return get_single_reg(&cmd_readstatus, status, select_ncs);
+  return get_single_reg(&cmd_readstatus, status, select_ncs);
 }
 
 // grab data for WREN
 static w_status_t send_wren(bool select_ncs) {
-	// select chip
-	if (select_ncs) {
-		if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
-			return W_IO_ERROR;
-		}
-	}
+  // select chip
+  if (select_ncs) {
+    if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
+      return W_IO_ERROR;
+    }
+  }
 
-	OSPI_RegularCmdTypeDef cmd_wren = {0};
+  OSPI_RegularCmdTypeDef cmd_wren = {0};
 
-	cmd_wren.Instruction = 0x06; // WREN
-	cmd_wren.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_wren.AddressMode = HAL_OSPI_ADDRESS_NONE;
-	cmd_wren.DataMode = HAL_OSPI_DATA_NONE;
-	cmd_wren.DummyCycles = 0;
-	cmd_wren.NbData = 0;
+  cmd_wren.Instruction = 0x06; // WREN
+  cmd_wren.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  cmd_wren.AddressMode = HAL_OSPI_ADDRESS_NONE;
+  cmd_wren.DataMode = HAL_OSPI_DATA_NONE;
+  cmd_wren.DummyCycles = 0;
+  cmd_wren.NbData = 0;
 
-	return send_spi_cmd(&cmd_wren, select_ncs);
+  return send_spi_cmd(&cmd_wren, select_ncs);
 }
 
 static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
-	// write
-	OSPI_RegularCmdTypeDef cmd_read = {0};
+  // write
+  OSPI_RegularCmdTypeDef cmd_read = {0};
 #ifdef SPI_4_ENABLED
-	cmd_read.Instruction = 0xeb; //  Quard read
-	cmd_read.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_read.AddressMode = HAL_OSPI_ADDRESS_4_LINES;
-	cmd_read.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
-	cmd_read.Address = address;
-	cmd_read.DataMode = HAL_OSPI_DATA_4_LINES;
-	cmd_read.DummyCycles = flash_read_dummy_cycle;
-	cmd_read.NbData = len; // ← bytes
+  cmd_read.Instruction = 0xeb; //  Quard read
+  cmd_read.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  cmd_read.AddressMode = HAL_OSPI_ADDRESS_4_LINES;
+  cmd_read.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
+  cmd_read.Address = address;
+  cmd_read.DataMode = HAL_OSPI_DATA_4_LINES;
+  cmd_read.DummyCycles = flash_read_dummy_cycle;
+  cmd_read.NbData = len; // ← bytes
 #else
-	cmd_read.Instruction = 0x03; //  Page Program
-	cmd_read.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_read.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
-	cmd_read.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
-	cmd_read.Address = address;
-	cmd_read.DataMode = HAL_OSPI_DATA_1_LINE;
-	cmd_read.DummyCycles = 0;
-	cmd_read.NbData = len; // ← bytes
+  cmd_read.Instruction = 0x03; //  Page Program
+  cmd_read.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  cmd_read.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
+  cmd_read.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
+  cmd_read.Address = address;
+  cmd_read.DataMode = HAL_OSPI_DATA_1_LINE;
+  cmd_read.DummyCycles = 0;
+  cmd_read.NbData = len; // ← bytes
 #endif
 
-	if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
+  if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
 
-	// check to make sure we are SPI bus is not busy
-	if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
-		return W_FAILURE;
-	}
+  // check to make sure we are SPI bus is not busy
+  if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_FAILURE;
+  }
 
-	HAL_StatusTypeDef hal_status =
-		HAL_OSPI_Command((g_flash_ctx.spi_handle), &cmd_read, FLASH_SINGLE_DELAY_MS);
-	if (hal_status != HAL_OK) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-		return W_IO_ERROR;
-	}
+  HAL_StatusTypeDef hal_status = HAL_OSPI_Command(
+      (g_flash_ctx.spi_handle), &cmd_read, FLASH_SINGLE_DELAY_MS);
+  if (hal_status != HAL_OK) {
+    g_flash_ctx.spi_state = FLASH_SPI_READY;
+    return W_IO_ERROR;
+  }
 
-	g_flash_ctx.spi_state = FLASH_SPI_READING;
-	hal_status = HAL_OSPI_Receive_DMA((g_flash_ctx.spi_handle), data);
-	// MANDATORY: Wait for the hardware peripheral to physically finish
-	// If you don't do this, the next line will pull CS high while bits are still moving.
-	if ((hal_status != HAL_OK) || (wait_flash_complete(FLASH_SINGLE_DELAY_MS) != W_SUCCESS)) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-		return W_IO_ERROR;
-	}
-	if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
+  task_handler = xTaskGetCurrentTaskHandle();
 
-	return W_SUCCESS;
+  g_flash_ctx.spi_state = FLASH_SPI_READING;
+  hal_status = HAL_OSPI_Receive_DMA((g_flash_ctx.spi_handle), data);
+
+  uint32_t xReturned = ulTaskNotifyTakeIndexed(
+      FLASH_NOTIFICATION_INDEX, pdTRUE, pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS));
+
+  if (xReturned != pdTRUE || hal_status != HAL_OK ||
+      g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_IO_ERROR;
+  }
+
+  if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
+
+  return W_SUCCESS;
 }
 
-static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data) {
-	// write
-	uint8_t rdsr_response = 0x0;
-	for (uint8_t i = 0; i < MAX_RDStatus_ATTEMPTS; ++i) {
-		if ((send_wren(true) != W_SUCCESS) || (get_rdsr(&rdsr_response, true) != W_SUCCESS)) {
-			return W_FAILURE;
-		}
+static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd,
+                                     uint8_t *data) {
+  // write
+  uint8_t rdsr_response = 0x0;
+  for (uint8_t i = 0; i < MAX_RDStatus_ATTEMPTS; ++i) {
+    if ((send_wren(true) != W_SUCCESS) ||
+        (get_rdsr(&rdsr_response, true) != W_SUCCESS)) {
+      return W_FAILURE;
+    }
 
-		if ((rdsr_response & WEL_BIT_MASK) != 0x0) {
-			break;
-		}
-	}
+    if ((rdsr_response & WEL_BIT_MASK) != 0x0) {
+      break;
+    }
+  }
 
-	if ((rdsr_response & WEL_BIT_MASK) == 0x0) { // if still can't stop WIP then that's a WIP error
-		return W_FAILURE;
-	}
+  if ((rdsr_response & WEL_BIT_MASK) ==
+      0x0) { // if still can't stop WIP then that's a WIP error
+    return W_FAILURE;
+  }
 
-	if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
-	// check to make sure we are SPI bus is not busy
-	if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
-		return W_FAILURE;
-	}
+  if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
+  // check to make sure we are SPI bus is not busy
+  if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_FAILURE;
+  }
 
-	HAL_StatusTypeDef hal_status =
-		HAL_OSPI_Command((g_flash_ctx.spi_handle), cmd, FLASH_SINGLE_DELAY_MS);
-	if (hal_status != HAL_OK) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-		return W_IO_ERROR;
-	}
+  HAL_StatusTypeDef hal_status =
+      HAL_OSPI_Command((g_flash_ctx.spi_handle), cmd, FLASH_SINGLE_DELAY_MS);
+  if (hal_status != HAL_OK) {
+    g_flash_ctx.spi_state = FLASH_SPI_READY;
+    return W_IO_ERROR;
+  }
 
-	g_flash_ctx.spi_state = FLASH_SPI_WRITING;
-	hal_status = HAL_OSPI_Transmit_DMA((g_flash_ctx.spi_handle), data);
-	// MANDATORY: Wait for the hardware peripheral to physically finish
-	// If you don't do this, the next line will pull CS high while bits are still moving.
-	if ((hal_status != HAL_OK) || (wait_flash_complete(FLASH_SINGLE_DELAY_MS) != W_SUCCESS)) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-		return W_IO_ERROR;
-	}
+  task_handler = xTaskGetCurrentTaskHandle();
 
-	if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
+  g_flash_ctx.spi_state = FLASH_SPI_WRITING;
+  hal_status = HAL_OSPI_Transmit_DMA((g_flash_ctx.spi_handle), data);
 
-	// check WIP is complete
-	uint32_t start_time_ms = 0;
-	uint32_t curr_time_ms = 0;
-	timer_get_ms(&start_time_ms);
-	while ((curr_time_ms - start_time_ms) > FLASH_PROG_DELAY_MS) {
-		vTaskDelay(pdMS_TO_TICKS(5));
-		if (get_rdsr(&rdsr_response, true) != W_SUCCESS) {
-			return W_IO_ERROR;
-		}
+  uint32_t xReturned = ulTaskNotifyTakeIndexed(
+      FLASH_NOTIFICATION_INDEX, pdTRUE, pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS));
 
-		if ((rdsr_response & WIP_BIT_MASK) == 0x00) {
-			break;
-		}
-	}
+  if (xReturned != pdTRUE || hal_status != HAL_OK ||
+      g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_IO_ERROR;
+  }
 
-	if ((rdsr_response & WIP_BIT_MASK) != 0x00) {
-		return W_IO_ERROR;
-	}
+  if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
 
-	return W_SUCCESS;
+  // check WIP is complete
+  uint32_t start_time_ms = 0;
+  uint32_t curr_time_ms = 0;
+  timer_get_ms(&start_time_ms);
+  while ((curr_time_ms - start_time_ms) > FLASH_PROG_DELAY_MS) {
+    vTaskDelay(pdMS_TO_TICKS(5));
+    if (get_rdsr(&rdsr_response, true) != W_SUCCESS) {
+      return W_IO_ERROR;
+    }
+
+    if ((rdsr_response & WIP_BIT_MASK) == 0x00) {
+      break;
+    }
+  }
+
+  if ((rdsr_response & WIP_BIT_MASK) != 0x00) {
+    return W_IO_ERROR;
+  }
+
+  return W_SUCCESS;
 }
 
-static w_status_t flash_write_page(uint32_t address, uint8_t *data, uint32_t len) {
-	// will not write for more than a page
-	if (((address % PAGE_SIZE) + len) > PAGE_SIZE) {
-		return W_INVALID_PARAM;
-	}
+static w_status_t flash_write_page(uint32_t address, uint8_t *data,
+                                   uint32_t len) {
+  // will not write for more than a page
+  if (((address % PAGE_SIZE) + len) > PAGE_SIZE) {
+    return W_INVALID_PARAM;
+  }
 
-	// write
-	OSPI_RegularCmdTypeDef cmd_write = {0};
+  // write
+  OSPI_RegularCmdTypeDef cmd_write = {0};
 #ifdef SPI_4_ENABLED
-	cmd_write.Instruction = 0x38; //  Page Program
-	cmd_write.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_write.AddressMode = HAL_OSPI_ADDRESS_4_LINES;
-	cmd_write.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
-	cmd_write.Address = address;
-	cmd_write.DataMode = HAL_OSPI_DATA_4_LINES;
-	cmd_write.DummyCycles = 0;
-	cmd_write.NbData = len; // ← bytes
+  cmd_write.Instruction = 0x38; //  Page Program
+  cmd_write.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  cmd_write.AddressMode = HAL_OSPI_ADDRESS_4_LINES;
+  cmd_write.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
+  cmd_write.Address = address;
+  cmd_write.DataMode = HAL_OSPI_DATA_4_LINES;
+  cmd_write.DummyCycles = 0;
+  cmd_write.NbData = len; // ← bytes
 #else
-	cmd_write.Instruction = 0x02; //  Page Program
-	cmd_write.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_write.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
-	cmd_write.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
-	cmd_write.Address = address;
-	cmd_write.DataMode = HAL_OSPI_DATA_1_LINE;
-	cmd_write.DummyCycles = 0;
-	cmd_write.NbData = len; // ← bytes
+  cmd_write.Instruction = 0x02; //  Page Program
+  cmd_write.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  cmd_write.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
+  cmd_write.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
+  cmd_write.Address = address;
+  cmd_write.DataMode = HAL_OSPI_DATA_1_LINE;
+  cmd_write.DummyCycles = 0;
+  cmd_write.NbData = len; // ← bytes
 #endif
 
-	if (flash_spi_transmit(&cmd_write, data) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
+  if (flash_spi_transmit(&cmd_write, data) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
 
-	// check if wrote sucessfully
-	uint8_t rdscur_response = 0;
-	if (get_rdscur(&rdscur_response, true) != W_SUCCESS) {
-		return W_IO_ERROR;
-	} else if ((rdscur_response & P_FAIL_BIT_MASK) != 0x0) {
-		return W_FAILURE;
-	}
+  // check if wrote sucessfully
+  uint8_t rdscur_response = 0;
+  if (get_rdscur(&rdscur_response, true) != W_SUCCESS) {
+    return W_IO_ERROR;
+  } else if ((rdscur_response & P_FAIL_BIT_MASK) != 0x0) {
+    return W_FAILURE;
+  }
 
-	return W_SUCCESS;
+  return W_SUCCESS;
 }
 
 static w_status_t flash_erase_sector(uint32_t address) {
-	// erase
-	uint8_t rdsr_response = 0x0;
-	for (uint8_t i = 0; i < MAX_RDStatus_ATTEMPTS; ++i) {
-		if ((send_wren(true) != W_SUCCESS) || (get_rdsr(&rdsr_response, true) != W_SUCCESS)) {
-			return W_FAILURE;
-		}
+  // erase
+  uint8_t rdsr_response = 0x0;
+  for (uint8_t i = 0; i < MAX_RDStatus_ATTEMPTS; ++i) {
+    if ((send_wren(true) != W_SUCCESS) ||
+        (get_rdsr(&rdsr_response, true) != W_SUCCESS)) {
+      return W_FAILURE;
+    }
 
-		if ((rdsr_response & WEL_BIT_MASK) != 0x0) {
-			break;
-		}
-	}
+    if ((rdsr_response & WEL_BIT_MASK) != 0x0) {
+      break;
+    }
+  }
 
-	if ((rdsr_response & WEL_BIT_MASK) == 0x0) { // if still can't stop WIP then that's a WIP error
-		return W_FAILURE;
-	}
+  if ((rdsr_response & WEL_BIT_MASK) ==
+      0x0) { // if still can't stop WIP then that's a WIP error
+    return W_FAILURE;
+  }
 
-    // write
-    OSPI_RegularCmdTypeDef cmd_erase = {0};
-    cmd_erase.Instruction = 0x20;
-    cmd_erase.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
-    cmd_erase.DataMode = HAL_OSPI_DATA_NONE;
-    cmd_erase.DummyCycles = 0;
-    cmd_erase.NbData = 32;
-    cmd_erase.Address = address;
+  // write
+  OSPI_RegularCmdTypeDef cmd_erase = {0};
+  cmd_erase.Instruction = 0x20;
+  cmd_erase.AddressSize = HAL_OSPI_ADDRESS_32_BITS;
+  cmd_erase.DataMode = HAL_OSPI_DATA_NONE;
+  cmd_erase.DummyCycles = 0;
+  cmd_erase.NbData = 32;
+  cmd_erase.Address = address;
 #if (defined(SPI_4_ENABLED) && defined(QPI_ENABLED))
-	cmd_erase.InstructionMode = HAL_OSPI_INSTRUCTION_4_LINES;
-	cmd_erase.AddressMode = HAL_OSPI_ADDRESS_4_LINES;
+  cmd_erase.InstructionMode = HAL_OSPI_INSTRUCTION_4_LINES;
+  cmd_erase.AddressMode = HAL_OSPI_ADDRESS_4_LINES;
 #else
-	cmd_erase.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	cmd_erase.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
+  cmd_erase.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  cmd_erase.AddressMode = HAL_OSPI_ADDRESS_1_LINE;
 #endif
 
-	if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
-	// check to make sure we are SPI bus is not busy
-	if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
-		return W_FAILURE;
-	}
+  if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
+  // check to make sure we are SPI bus is not busy
+  if (g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_FAILURE;
+  }
 
-	g_flash_ctx.spi_state = FLASH_SPI_COMMANDING;
-	HAL_StatusTypeDef hal_status = HAL_OSPI_Command_IT((g_flash_ctx.spi_handle), &cmd_erase);
+  task_handler = xTaskGetCurrentTaskHandle();
 
-	// MANDATORY: Wait for the hardware peripheral to physically finish
-	// If you don't do this, the next line will pull CS high while bits are still moving.
-	if ((hal_status != HAL_OK) || (wait_flash_complete(FLASH_SINGLE_DELAY_MS) != W_SUCCESS)) {
-		g_flash_ctx.spi_state = FLASH_SPI_READY;
-		return W_IO_ERROR;
-	}
+  g_flash_ctx.spi_state = FLASH_SPI_COMMANDING;
+  HAL_StatusTypeDef hal_status =
+      HAL_OSPI_Command_IT((g_flash_ctx.spi_handle), &cmd_erase);
 
-	if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
+  const uint32_t xReturned = ulTaskNotifyTakeIndexed(
+      FLASH_NOTIFICATION_INDEX, pdTRUE, pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS));
 
-	// check WIP is complete
-	uint32_t start_time_ms = 0;
-	uint32_t curr_time_ms = 0;
-	timer_get_ms(&start_time_ms);
-	while ((curr_time_ms - start_time_ms) > FLASH_PROG_DELAY_MS) {
-		vTaskDelay(pdMS_TO_TICKS(5));
-		if (get_rdsr(&rdsr_response, true) != W_SUCCESS) {
-			return W_IO_ERROR;
-		}
+  if (xReturned != pdTRUE || hal_status != HAL_OK ||
+      g_flash_ctx.spi_state != FLASH_SPI_READY) {
+    return W_IO_ERROR;
+  }
 
-		if ((rdsr_response & WIP_BIT_MASK) == 0x00) {
-			break;
-		}
-	}
-	if ((rdsr_response & WIP_BIT_MASK) != 0x00) {
-		return W_IO_ERROR;
-	}
+  if (gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_HIGH, 0) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
 
-	// check if wrote sucessfully
-	uint8_t rdscur_response = 0;
-	if (get_rdscur(&rdscur_response, true) != W_SUCCESS) {
-		return W_IO_ERROR;
-	} else if ((rdscur_response & E_FAIL_BIT_MASK) != 0x0) {
-		return W_FAILURE;
-	}
+  // check WIP is complete
+  uint32_t start_time_ms = 0;
+  uint32_t curr_time_ms = 0;
+  timer_get_ms(&start_time_ms);
+  while ((curr_time_ms - start_time_ms) > FLASH_PROG_DELAY_MS) {
+    vTaskDelay(pdMS_TO_TICKS(5));
+    if (get_rdsr(&rdsr_response, true) != W_SUCCESS) {
+      return W_IO_ERROR;
+    }
 
-	return W_SUCCESS;
+    if ((rdsr_response & WIP_BIT_MASK) == 0x00) {
+      break;
+    }
+  }
+  if ((rdsr_response & WIP_BIT_MASK) != 0x00) {
+    return W_IO_ERROR;
+  }
+
+  // check if wrote sucessfully
+  uint8_t rdscur_response = 0;
+  if (get_rdscur(&rdscur_response, true) != W_SUCCESS) {
+    return W_IO_ERROR;
+  } else if ((rdscur_response & E_FAIL_BIT_MASK) != 0x0) {
+    return W_FAILURE;
+  }
+
+  return W_SUCCESS;
 }
 
 // Read a region in a block. Negative error codes are propagated
 // to the user.
-static int MX25L25645G_lfs_read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off,
-                                void *buffer, lfs_size_t size) {
-	// make sure is init
-	if (!(g_flash_ctx.is_init)) {
-		return W_FAILURE;
-	}
+static int MX25L25645G_lfs_read(const struct lfs_config *c, lfs_block_t block,
+                                lfs_off_t off, void *buffer, lfs_size_t size) {
+  // make sure is init
+  if (!(g_flash_ctx.is_init)) {
+    return W_FAILURE;
+  }
 
-	if ((size % (c->read_size)) != 0) {
-		return LFS_ERR_INVAL;
-	}
+  if ((size % (c->read_size)) != 0) {
+    return LFS_ERR_INVAL;
+  }
 
-	uint32_t start_address = (g_flash_ctx.lfs_first_block_offset) + (block * c->block_size) + off;
+  uint32_t start_address =
+      (g_flash_ctx.lfs_first_block_offset) + (block * c->block_size) + off;
 
-	// no limit to
-	if (flash_read(start_address, buffer, size) != W_SUCCESS) {
-		return LFS_ERR_IO;
-	}
-	return LFS_ERR_OK;
+  // no limit to
+  if (flash_read(start_address, buffer, size) != W_SUCCESS) {
+    return LFS_ERR_IO;
+  }
+  return LFS_ERR_OK;
 }
 
 // Program a region in a block. The block must have previously
 // been erased. Negative error codes are propagated to the user.
 // May return LFS_ERR_CORRUPT if the block should be considered bad.
-static int MX25L25645G_lfs_prg(const struct lfs_config *c, lfs_block_t block, lfs_off_t off,
-                               const void *buffer, lfs_size_t size) {
-	// make sure is init
-	if (!(g_flash_ctx.is_init)) {
-		return W_FAILURE;
-	}
+static int MX25L25645G_lfs_prg(const struct lfs_config *c, lfs_block_t block,
+                               lfs_off_t off, const void *buffer,
+                               lfs_size_t size) {
+  // make sure is init
+  if (!(g_flash_ctx.is_init)) {
+    return W_FAILURE;
+  }
 
-	uint32_t curr_address = (g_flash_ctx.lfs_first_block_offset) + (block * c->block_size) + off;
+  uint32_t curr_address =
+      (g_flash_ctx.lfs_first_block_offset) + (block * c->block_size) + off;
 
-	uint32_t overflow_amount = 0;
+  uint32_t overflow_amount = 0;
 
-	uint32_t curr_write_size = size;
-	uint8_t *curr_buffer = (uint8_t *)buffer;
+  uint32_t curr_write_size = size;
+  uint8_t *curr_buffer = (uint8_t *)buffer;
 
-	// overflows page
-	for (uint16_t i = 0; i < ((c->cache_size) / (c->prog_size)); ++i) {
-		if ((size + (curr_address % (c->prog_size))) > (c->prog_size)) {
-			curr_write_size = (c->prog_size) - (curr_address % (c->prog_size));
-		} else {
-			curr_write_size = size;
-		}
+  // overflows page
+  for (uint16_t i = 0; i < ((c->cache_size) / (c->prog_size)); ++i) {
+    if ((size + (curr_address % (c->prog_size))) > (c->prog_size)) {
+      curr_write_size = (c->prog_size) - (curr_address % (c->prog_size));
+    } else {
+      curr_write_size = size;
+    }
 
-		// write to end of page first
-		if (flash_write_page(curr_address, curr_buffer, curr_write_size) != W_SUCCESS) {
-			return LFS_ERR_IO;
-		}
+    // write to end of page first
+    if (flash_write_page(curr_address, curr_buffer, curr_write_size) !=
+        W_SUCCESS) {
+      return LFS_ERR_IO;
+    }
 
-		// increment for next write
-		curr_address += curr_write_size;
-		curr_buffer += curr_write_size;
+    // increment for next write
+    curr_address += curr_write_size;
+    curr_buffer += curr_write_size;
 
-		// calculate the
-		if (size > curr_write_size) {
-			size -= curr_write_size;
-		} else { // if we have written everything at this point
-			break;
-		}
-	}
+    // calculate the
+    if (size > curr_write_size) {
+      size -= curr_write_size;
+    } else { // if we have written everything at this point
+      break;
+    }
+  }
 
-	if (size > curr_write_size) {
-		return LFS_ERR_IO;
-	} else {
-		return LFS_ERR_OK;
-	}
+  if (size > curr_write_size) {
+    return LFS_ERR_IO;
+  } else {
+    return LFS_ERR_OK;
+  }
 }
 
 // Erase a block. A block must be erased before being programmed.
 // The state of an erased block is undefined. Negative error codes
 // are propagated to the user.
 // May return LFS_ERR_CORRUPT if the block should be considered bad.
-static int MX25L25645G_lfs_erase(const struct lfs_config *c, lfs_block_t block) {
-	// make sure is init
-	if (!(g_flash_ctx.is_init)) {
-		return W_FAILURE;
-	}
+static int MX25L25645G_lfs_erase(const struct lfs_config *c,
+                                 lfs_block_t block) {
+  // make sure is init
+  if (!(g_flash_ctx.is_init)) {
+    return W_FAILURE;
+  }
 
-	if ((c->block_size % SECTOR_SIZE) != 0) {
-		return LFS_ERR_INVAL;
-	}
+  if ((c->block_size % SECTOR_SIZE) != 0) {
+    return LFS_ERR_INVAL;
+  }
 
-	// TODO: future implement block erase if we can
-	if (flash_erase_sector((g_flash_ctx.lfs_first_block_offset) + (block * c->block_size)) !=
-	    W_SUCCESS) {
-		return LFS_ERR_IO;
-	}
+  // TODO: future implement block erase if we can
+  if (flash_erase_sector((g_flash_ctx.lfs_first_block_offset) +
+                         (block * c->block_size)) != W_SUCCESS) {
+    return LFS_ERR_IO;
+  }
 
-	return LFS_ERR_OK;
+  return LFS_ERR_OK;
 }
 
 // Sync the state of the underlying block device. Negative error codes
 // are propagated to the user.
 static int MX25L25645G_lfs_sync(const struct lfs_config *c) {
-	return LFS_ERR_OK;
+  return LFS_ERR_OK;
 }
 
-static bool mx25l25645g_is_file_open(lfs_t * p_lfs, lfs_file_t * p_file)
-{
-    for (struct lfs_mlist ** p = &(p_lfs->mlist); *p; p = &(*p)->next)
-    {
-        if (*p == (struct lfs_mlist *) p_file)
-        {
-            return true;
-        }
+static bool mx25l25645g_is_file_open(lfs_t *p_lfs, lfs_file_t *p_file) {
+  for (struct lfs_mlist **p = &(p_lfs->mlist); *p; p = &(*p)->next) {
+    if (*p == (struct lfs_mlist *)p_file) {
+      return true;
     }
+  }
 
-    return false;
+  return false;
 }
 
 // TODO: set static buffers!!!!!!!!!!!!!
 // configuration of the filesystem is provided by this struct
-const struct lfs_config cfg = {
-	// block device operations
-	.read = MX25L25645G_lfs_read,
-	.prog = MX25L25645G_lfs_prg,
-	.erase = MX25L25645G_lfs_erase,
-	.sync = MX25L25645G_lfs_sync,
+const struct lfs_config cfg = {// block device operations
+                               .read = MX25L25645G_lfs_read,
+                               .prog = MX25L25645G_lfs_prg,
+                               .erase = MX25L25645G_lfs_erase,
+                               .sync = MX25L25645G_lfs_sync,
 
-	// block device configuration
-	.read_size = 1,
-	.prog_size = PAGE_SIZE,
-	.block_size = SECTOR_SIZE,
-	.block_count = (MX25L25645G_FLASH_SIZE / SECTOR_SIZE),
-	.block_cycles = 500,
-	.cache_size = CACHE_SIZE,
-	.lookahead_size = LOOKAHEAD_SIZE,
-	.compact_thresh = -1,
+                               // block device configuration
+                               .read_size = 1,
+                               .prog_size = PAGE_SIZE,
+                               .block_size = SECTOR_SIZE,
+                               .block_count =
+                                   (MX25L25645G_FLASH_SIZE / SECTOR_SIZE),
+                               .block_cycles = 500,
+                               .cache_size = CACHE_SIZE,
+                               .lookahead_size = LOOKAHEAD_SIZE,
+                               .compact_thresh = -1,
 
-	.read_buffer = lfs_flash_read_buffer,
-	.prog_buffer = lfs_flash_prog_buffer,
-	.lookahead_buffer = lfs_flash_lookahead_buffer,
+                               .read_buffer = lfs_flash_read_buffer,
+                               .prog_buffer = lfs_flash_prog_buffer,
+                               .lookahead_buffer = lfs_flash_lookahead_buffer,
 
-	.name_max = 8,
-	.file_max = 0,
-	.attr_max = 0,
-	.metadata_max = 0,
-	.inline_max = -1
-};
+                               .name_max = 8,
+                               .file_max = 0,
+                               .attr_max = 0,
+                               .metadata_max = 0,
+                               .inline_max = -1};
 
-w_status_t mx25l25645g_init()
-{
-    if (g_flash_ctx.is_init)
-    {
-        return W_FAILURE;
-    }
+w_status_t mx25l25645g_init() {
+  if (g_flash_ctx.is_init) {
+    return W_FAILURE;
+  }
 
-	g_flash_ctx.spi_state = FLASH_SPI_READY;
+  g_flash_ctx.spi_state = FLASH_SPI_READY;
 
-	// SET UP THE CHIP
+  // SET UP THE CHIP
 
-	// enable QE and set dc 0 and dc 1 to 10 for Quard IO Fast Read
-	OSPI_RegularCmdTypeDef wrsr_cmd = {0};
+  // enable QE and set dc 0 and dc 1 to 10 for Quard IO Fast Read
+  OSPI_RegularCmdTypeDef wrsr_cmd = {0};
 
-	// Enable 4 Byte address
-	wrsr_cmd.Instruction = 0x01; // WRSR
-	wrsr_cmd.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	wrsr_cmd.AddressMode = HAL_OSPI_ADDRESS_NONE;
-	wrsr_cmd.DataMode = HAL_OSPI_DATA_1_LINE;
-	wrsr_cmd.DummyCycles = 0;
-	wrsr_cmd.NbData = 2;
+  // Enable 4 Byte address
+  wrsr_cmd.Instruction = 0x01; // WRSR
+  wrsr_cmd.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  wrsr_cmd.AddressMode = HAL_OSPI_ADDRESS_NONE;
+  wrsr_cmd.DataMode = HAL_OSPI_DATA_1_LINE;
+  wrsr_cmd.DummyCycles = 0;
+  wrsr_cmd.NbData = 2;
 
-	uint8_t update_reg[2] = {
-		0x40, // Status Reg set QE to enabled
-		0xa0 // CONFIG Reg set DC[1:0] to 10 and 4Byte on
-	};
+  uint8_t update_reg[2] = {
+      0x40, // Status Reg set QE to enabled
+      0xa0  // CONFIG Reg set DC[1:0] to 10 and 4Byte on
+  };
 
-	// write the setting
-	if (flash_spi_transmit(&wrsr_cmd, update_reg) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
+  // write the setting
+  if (flash_spi_transmit(&wrsr_cmd, update_reg) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
 
-	OSPI_RegularCmdTypeDef en4b_cmd = {0};
+  OSPI_RegularCmdTypeDef en4b_cmd = {0};
 
-	// Enable 4 Byte address
-	en4b_cmd.Instruction = 0xb7; // EN4B
-	en4b_cmd.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
-	en4b_cmd.AddressMode = HAL_OSPI_ADDRESS_NONE;
-	en4b_cmd.DataMode = HAL_OSPI_DATA_NONE;
-	en4b_cmd.DummyCycles = 0;
-	en4b_cmd.NbData = 0;
+  // Enable 4 Byte address
+  en4b_cmd.Instruction = 0xb7; // EN4B
+  en4b_cmd.InstructionMode = HAL_OSPI_INSTRUCTION_1_LINE;
+  en4b_cmd.AddressMode = HAL_OSPI_ADDRESS_NONE;
+  en4b_cmd.DataMode = HAL_OSPI_DATA_NONE;
+  en4b_cmd.DummyCycles = 0;
+  en4b_cmd.NbData = 0;
 
-	if (send_spi_cmd(&en4b_cmd, true) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
+  if (send_spi_cmd(&en4b_cmd, true) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
 
-	// check that our registers have been set correctly
-	// check rdsr
-	uint8_t rdsr_response = 0;
-	if (get_rdsr(&rdsr_response, true) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
-	if ((rdsr_response & 0xfc) != update_reg[0]) { // checks all fields except WEL adn WIP
-		return W_FAILURE;
-	}
+  // check that our registers have been set correctly
+  // check rdsr
+  uint8_t rdsr_response = 0;
+  if (get_rdsr(&rdsr_response, true) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
+  if ((rdsr_response & 0xfc) !=
+      update_reg[0]) { // checks all fields except WEL adn WIP
+    return W_FAILURE;
+  }
 
-	// check rdcr
-	uint8_t rdcr_response = 0;
-	if (get_rdcr(&rdcr_response, true) != W_SUCCESS) {
-		return W_IO_ERROR;
-	}
-	if ((rdcr_response & 0xf8) != update_reg[1]) { // checks all fields except ODS and reserved
-		return W_FAILURE;
-	}
+  // check rdcr
+  uint8_t rdcr_response = 0;
+  if (get_rdcr(&rdcr_response, true) != W_SUCCESS) {
+    return W_IO_ERROR;
+  }
+  if ((rdcr_response & 0xf8) !=
+      update_reg[1]) { // checks all fields except ODS and reserved
+    return W_FAILURE;
+  }
 
-	g_flash_ctx.is_init = true;
+  g_flash_ctx.is_init = true;
 
-	return W_SUCCESS;
+  return W_SUCCESS;
 }
 
-w_status_t mx25l25645g_mount(lfs_t * p_lfs, const uint32_t first_block_offset)
-{
-    // make sure is init
-    if (!(g_flash_ctx.is_init))
-    {
-        return W_FAILURE;
+w_status_t mx25l25645g_mount(lfs_t *p_lfs, const uint32_t first_block_offset) {
+  // make sure is init
+  if (!(g_flash_ctx.is_init)) {
+    return W_FAILURE;
+  }
+
+  if ((first_block_offset % (cfg.block_size)) != 0) {
+    return W_INVALID_PARAM; // because I am lazy
+  }
+  memset(p_lfs, 0, sizeof(lfs_t));
+
+  g_flash_ctx.lfs_first_block_offset = first_block_offset;
+
+  int res = lfs_mount(p_lfs, &cfg);
+  if (res != 0) {
+    // try to reformat
+    res = lfs_format(p_lfs, &cfg);
+    if (res != 0) {
+      return W_FAILURE;
     }
-
-    if ((first_block_offset % (cfg.block_size)) != 0)
-    {
-        return W_INVALID_PARAM; // because I am lazy
+    res = lfs_mount(p_lfs, &cfg);
+    if (res != 0) {
+      return W_FAILURE;
     }
-    memset(p_lfs, 0, sizeof(lfs_t));
+  }
 
-    g_flash_ctx.lfs_first_block_offset = first_block_offset;
-
-    int res = lfs_mount(p_lfs, &cfg);
-    if (res != 0)
-    {
-        // try to reformat
-        res = lfs_format(p_lfs, &cfg);
-        if (res != 0)
-        {
-            return W_FAILURE;
-        }
-        res = lfs_mount(p_lfs, &cfg);
-        if (res != 0)
-        {
-            return W_FAILURE;
-        }
-    }
-
-    return W_SUCCESS;
+  return W_SUCCESS;
 }
 
-int mx25l25645g_format(lfs_t * p_lfs, const struct lfs_config * cfg_i)
-{
-    if (cfg_i->block_count == 0)
-    {
-        return E_LFS_FORMAT_EMPTY;
-    }
-    return lfs_format(p_lfs, cfg_i);
+int mx25l25645g_format(lfs_t *p_lfs, const struct lfs_config *cfg_i) {
+  if (cfg_i->block_count == 0) {
+    return E_LFS_FORMAT_EMPTY;
+  }
+  return lfs_format(p_lfs, cfg_i);
 }
 
-int mx25l25645g_unmount(lfs_t * p_lfs)
-{
-    return lfs_unmount(p_lfs);
+int mx25l25645g_unmount(lfs_t *p_lfs) { return lfs_unmount(p_lfs); }
+
+int mx25l25645g_file_open(lfs_t *p_lfs, lfs_file_t *p_file, const char *p_path,
+                          const int16_t flags) {
+  if (mx25l25645g_is_file_open(p_lfs, p_file)) {
+    return E_LFS_FILE_ALREADY_OPEN;
+    // Error code for file already opened
+  }
+  return lfs_file_open(p_lfs, p_file, p_path, flags);
 }
 
+lfs_soff_t mx25l25645g_file_seek(lfs_t *p_lfs, lfs_file_t *p_file,
+                                 const lfs_soff_t off, const int whence) {
+  if (!mx25l25645g_is_file_open(p_lfs, p_file)) {
+    return E_LFS_FILE_NOT_OPEN;
+  }
 
-int mx25l25645g_file_open(lfs_t * p_lfs, lfs_file_t * p_file,
-                          const char * p_path,
-                          const int16_t flags)
-{
-    if (mx25l25645g_is_file_open(p_lfs, p_file))
-    {
-        return E_LFS_FILE_ALREADY_OPEN;
-        // Error code for file already opened
-    }
-    return lfs_file_open(p_lfs, p_file, p_path, flags);
+  return lfs_file_seek(p_lfs, p_file, off, whence);
 }
 
-lfs_soff_t mx25l25645g_file_seek(lfs_t * p_lfs, lfs_file_t * p_file,
-                                 const lfs_soff_t off, const int whence)
-{
-    if (!mx25l25645g_is_file_open(p_lfs, p_file))
-    {
-        return E_LFS_FILE_NOT_OPEN;
-    }
-
-    return lfs_file_seek(p_lfs, p_file, off, whence);
-}
-
-
-lfs_ssize_t mx25l25645g_file_read(lfs_t * p_lfs, lfs_file_t * p_file,
-                                  void * p_buffer,
-                                  const lfs_size_t size,
+lfs_ssize_t mx25l25645g_file_read(lfs_t *p_lfs, lfs_file_t *p_file,
+                                  void *p_buffer, const lfs_size_t size,
                                   const lfs_soff_t offset,
-                                  const enum lfs_whence_flags whence)
-{
-    if (!mx25l25645g_is_file_open(p_lfs, p_file))
-    {
-        return E_LFS_FILE_NOT_OPEN;
-    }
-    if ((p_file->flags & LFS_O_RDONLY) != LFS_O_RDONLY)
-    {
-        return LFS_ERR_INVAL;
-    }
-    const int err = lfs_file_seek(p_lfs, p_file, offset, whence);
-    if (err < 0)
-    {
-        return err;
-    }
-    return lfs_file_read(p_lfs, p_file, p_buffer, size);
+                                  const enum lfs_whence_flags whence) {
+  if (!mx25l25645g_is_file_open(p_lfs, p_file)) {
+    return E_LFS_FILE_NOT_OPEN;
+  }
+  if ((p_file->flags & LFS_O_RDONLY) != LFS_O_RDONLY) {
+    return LFS_ERR_INVAL;
+  }
+  const int err = lfs_file_seek(p_lfs, p_file, offset, whence);
+  if (err < 0) {
+    return err;
+  }
+  return lfs_file_read(p_lfs, p_file, p_buffer, size);
 }
 
-lfs_ssize_t mx25l25645g_file_write(lfs_t * p_lfs, lfs_file_t * p_file,
-                                   const void * p_buffer,
-                                   const lfs_size_t size)
-{
-    if (!mx25l25645g_is_file_open(p_lfs, p_file))
-    {
-        return E_LFS_FILE_NOT_OPEN;
-    }
-    if ((p_file->flags & LFS_O_WRONLY) != LFS_O_WRONLY)
-    {
-        return LFS_ERR_INVAL;
-    }
-    return lfs_file_write(p_lfs, p_file, p_buffer, size);
+lfs_ssize_t mx25l25645g_file_write(lfs_t *p_lfs, lfs_file_t *p_file,
+                                   const void *p_buffer,
+                                   const lfs_size_t size) {
+  if (!mx25l25645g_is_file_open(p_lfs, p_file)) {
+    return E_LFS_FILE_NOT_OPEN;
+  }
+  if ((p_file->flags & LFS_O_WRONLY) != LFS_O_WRONLY) {
+    return LFS_ERR_INVAL;
+  }
+  return lfs_file_write(p_lfs, p_file, p_buffer, size);
 }
 
-
-int mx25l25645g_file_close(lfs_t * p_lfs, lfs_file_t * p_file)
-{
-    if (!mx25l25645g_is_file_open(p_lfs, p_file))
-    {
-        return E_LFS_FILE_NOT_OPEN;
-        // Error code accessing a file that isn't open.
-    }
-    return lfs_file_close(p_lfs, p_file);
+int mx25l25645g_file_close(lfs_t *p_lfs, lfs_file_t *p_file) {
+  if (!mx25l25645g_is_file_open(p_lfs, p_file)) {
+    return E_LFS_FILE_NOT_OPEN;
+    // Error code accessing a file that isn't open.
+  }
+  return lfs_file_close(p_lfs, p_file);
 }
 
-int mx25l25645g_file_truncate(lfs_t * p_lfs, lfs_file_t * p_file,
-                              lfs_off_t size)
-{
-    if (!mx25l25645g_is_file_open(p_lfs, p_file))
-    {
-        return E_LFS_FILE_NOT_OPEN;
-    }
-    if ((p_file->flags & LFS_O_WRONLY) != LFS_O_WRONLY)
-    {
-        return LFS_ERR_INVAL;
-    }
-    return lfs_file_truncate(p_lfs, p_file, size);
+int mx25l25645g_file_truncate(lfs_t *p_lfs, lfs_file_t *p_file,
+                              lfs_off_t size) {
+  if (!mx25l25645g_is_file_open(p_lfs, p_file)) {
+    return E_LFS_FILE_NOT_OPEN;
+  }
+  if ((p_file->flags & LFS_O_WRONLY) != LFS_O_WRONLY) {
+    return LFS_ERR_INVAL;
+  }
+  return lfs_file_truncate(p_lfs, p_file, size);
 }

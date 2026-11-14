@@ -181,6 +181,7 @@ standard names. */
 
 /* USER CODE BEGIN Defines */
 /* Section where parameter definitions can be added (for instance, to override default ones in FreeRTOS.h) */
+#define configTASK_NOTIFICATION_ARRAY_ENTRIES 2 // Added to support different notifications for SD card and flash chip ops
 /* USER CODE END Defines */
 
 #endif /* FREERTOS_CONFIG_H */
