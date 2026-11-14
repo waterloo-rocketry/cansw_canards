@@ -160,9 +160,9 @@ static void system_init_task(void *arg) {
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
 
-	task_status &= xTaskCreate(fsm_task, "fsm",
-	                           6144, // TODO: set the correct size
-	                           NULL, fsm_task_priority, &fsm_task_handle);
+	// task_status &= xTaskCreate(fsm_task, "fsm",
+	//                            6144, // TODO: set the correct size
+	//                            NULL, fsm_task_priority, &fsm_task_handle);
 
 	task_status &= xTaskCreate(health_check_task, "health", 384, NULL, health_checks_task_priority,
 	                           &health_checks_task_handle);
@@ -185,8 +185,10 @@ static void system_init_task(void *arg) {
 	                           256, // TODO: set when sure of size
 	                           NULL, ad_breakout_task_priority, &ad_breakout_task_handle);
 
-	task_status &= xTaskCreate(telemetry_task, "telem module", 336, NULL, telem_task_priority,
+	task_status &= xTaskCreate(telemetry_task, "telem module", 1024, NULL, telem_task_priority,
 	                           &telem_task_handle);
+
+  task_status &= xTaskCreate(lsm6_test_task, "lsm6 test", 512, NULL, 55, NULL);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure

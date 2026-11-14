@@ -316,6 +316,7 @@ void fsm_task(void *args) {
 		// - etc (probably more later)
 		sensor_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
 
+
 #ifdef HIL
 		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
 		/******************************** HIL START ********************************/

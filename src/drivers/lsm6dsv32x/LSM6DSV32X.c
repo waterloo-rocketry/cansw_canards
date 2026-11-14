@@ -5,6 +5,7 @@
 #include "task.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #include "application/logger/log.h"
 #include "common/math/math.h"
@@ -12,6 +13,9 @@
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X_regmap.h"
 #include "drivers/timer/timer.h"
+
+volatile uint32_t dbg_isr_count = 0;
+volatile uint32_t dbg_double = 0;
 
 typedef enum {
   LSM6DSV32X_READ_BUFFER = 0,
@@ -31,7 +35,7 @@ typedef enum {
 typedef struct {
   I2C_HandleTypeDef *hi2c;
   uint8_t dev_addr;
-  uint8_t dual_buffer[2][LSM6DSV32X_FIFO_THRESHOLD][7];
+  uint8_t dual_buffer[2][LSM6DSV32X_FIFO_READ_THRESHOLD][7];
   uint32_t timestamp_ms[2];
   volatile lsm6dsv32x_bus_state bus_status;
   bool switched_callback;
@@ -77,9 +81,10 @@ static const uint8_t ACC_TAG = 0x02;
 
 static const size_t LSM6DSV32X_EXPECTED_WHO_AM_I = 0x70;
 
+
 static lsm6dsv32x_ctx_t lsm6dsv32x_ctx = {.switched_callback = false};
 
-static const uint8_t CTX_BUFFER_SIZE =
+static const uint16_t CTX_BUFFER_SIZE =
     sizeof(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER]);
 
 static lsm6dsv32x_health_t lsm6dsv32x_health = {0};
@@ -178,11 +183,13 @@ w_status_t lsm6dsv32x_init() {
   status |= write_1_byte(LSM6DSV32X_ADDR, CTRL2_G, 0x0C);
 
   // set FIFO to FIFO mode (fill until LSM6DSV32X_FIFO_THRESHOLD)
-  status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL1, 0x01);
+  status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL1, LSM6DSV32X_FIFO_THRESHOLD);
   status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL2, 0x00);
   // set accel and gyro ODR to 7.6Khz
-  status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL3, 0xCC);
-  status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x01);
+  status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL3, 0xBB);
+  // set FIFO to continuous mode
+  status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x00);
+  status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x06);
 
   // set gyro range to +-4000dps
   // set LPF bandwith to 241 (ODR/4)
@@ -208,7 +215,7 @@ w_status_t lsm6dsv32x_init() {
   status |= lsm6dsv32x_check_sanity();
 
   // Trigger INT1 when the FIFO is filled to LSM6DSV32X_FIFO_THRESHOLD
-  status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x20);
+  status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x08);
 
   // load all settings and end use of all i2c driver before switch to dma
   vTaskDelay(1);
@@ -284,8 +291,10 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
     lsm6dsv32x_ctx.bus_status =
         LSM6DSV32X_BUS_FREE; // so that we can attempt send again
     lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
-    lsm6dsv32x_health.dma_data_transfer_failed_mem_read++;
+		lsm6dsv32x_health.dma_data_transfer_failed_mem_read++;
   }
+  dbg_isr_count ++;
+  dbg_double += 2;
   return lsm6dsv32x_ctx.latest_status;
 }
 
@@ -303,7 +312,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data,
                                         lsm6dsv32x_raw_imu_data_t *raw_gyro) {
   w_status_t status = W_SUCCESS;
   uint8_t
-      raw_bytes[LSM6DSV32X_FIFO_THRESHOLD]
+      raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD]
                [7]; // copy the bytes so they are safe while doing calculations
 
   if (lsm6dsv32x_ctx.switched_callback) 
@@ -400,13 +409,13 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data,
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_get_full_gyro_acc_data(
-    vector3d_t acc_data[LSM6DSV32X_FIFO_THRESHOLD],
-    vector3d_t gyro_data[LSM6DSV32X_FIFO_THRESHOLD],
-    lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_THRESHOLD],
-    lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_THRESHOLD],
+    vector3d_t acc_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
+    vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
+    lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
+    lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD],
     size_t *gyro_sample_count, size_t *acc_sample_count) {
   w_status_t status = W_SUCCESS;
-  uint8_t raw_bytes[LSM6DSV32X_FIFO_THRESHOLD]
+  uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD]
                    [7]; // copy the bytes so they are safe while doing
                         // calculations
 
@@ -423,7 +432,7 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
     taskEXIT_CRITICAL();
 
     size_t accel_index = 0, gyro_index = 0;
-    for (size_t i = 0; i < LSM6DSV32X_FIFO_THRESHOLD; i++) {
+    for (size_t i = 0; i < LSM6DSV32X_FIFO_READ_THRESHOLD; i++) {
       uint8_t tag = raw_bytes[i][0] >> 3;
       uint16_t x = (uint16_t)(raw_bytes[i][2] << 8) | raw_bytes[i][1];
       uint16_t y = (uint16_t)(raw_bytes[i][4] << 8) | raw_bytes[i][3];
@@ -527,4 +536,34 @@ health_status_t lsm6dsv32x_get_status(void) {
            lsm6dsv32x_health.same_sensor_samples);
 
   return status;
+}
+
+
+void lsm6_test_task(void *args){
+
+  (void)args;
+
+  TickType_t last_wake = xTaskGetTickCount();
+
+  for(;;){
+    vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(4));
+
+    static vector3d_t acc_data[LSM6DSV32X_FIFO_READ_THRESHOLD];
+    static vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD];
+    static lsm6dsv32x_raw_imu_data_t acc_raw[LSM6DSV32X_FIFO_READ_THRESHOLD];
+    static lsm6dsv32x_raw_imu_data_t gyro_raw[LSM6DSV32X_FIFO_READ_THRESHOLD];
+    static size_t gyro_sample_count;
+    static size_t acc_sample_count;
+
+    lsm6dsv32x_get_full_gyro_acc_data(acc_data, gyro_data, acc_raw, gyro_raw, &gyro_sample_count, &acc_sample_count);
+      log_text(40, LOG_LVL_INFO, "LSM6DSV32X", "gyro_count=%d", gyro_sample_count);
+    for (size_t i = 0; i < gyro_sample_count; i++){
+      log_text(40, LOG_LVL_INFO, "LSM6DSV32X", "gyro_x=%f, gyro_y=%f, gyro_z=%f", gyro_data[i].x, gyro_data[i].y,gyro_data[i].z); 
+    }
+      log_text(40, LOG_LVL_INFO, "LSM6DSV32X", "acc_count=%d", acc_sample_count);
+    for (size_t i = 0; i < acc_sample_count; i++){
+      log_text(40, LOG_LVL_INFO, "LSM6DSV32X", "acc_x=%f, acc_y=%f, acc_z=%f", acc_data[i].x, acc_data[i].y,acc_data[i].z); 
+    }
+  }
+
 }

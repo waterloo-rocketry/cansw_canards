@@ -2,6 +2,7 @@
 #define LSM6DSV32X_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #include "rocketlib.h"
 
@@ -9,6 +10,7 @@
 #include "common/math/math.h"
 
 #define LSM6DSV32X_FIFO_THRESHOLD 30
+#define LSM6DSV32X_FIFO_READ_THRESHOLD 36
 
 /**
  * raw data from imu/mag registers
@@ -56,10 +58,10 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  * @return Status of the operation
  */
 w_status_t
-lsm6dsv32x_get_full_gyro_acc_data(vector3d_t acc_data[LSM6DSV32X_FIFO_THRESHOLD],
-                                  vector3d_t gyro_data[LSM6DSV32X_FIFO_THRESHOLD],
-                                  lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_THRESHOLD],
-                                  lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_THRESHOLD],
+lsm6dsv32x_get_full_gyro_acc_data(vector3d_t acc_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
+                                  vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
+                                  lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
+                                  lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD],
                                   size_t *gyro_sample_count, size_t *acc_sample_count);
 
 /**
@@ -71,5 +73,7 @@ lsm6dsv32x_get_full_gyro_acc_data(vector3d_t acc_data[LSM6DSV32X_FIFO_THRESHOLD]
  * @return CAN board status bitfield
  */
 health_status_t lsm6dsv32x_get_status(void);
+
+void lsm6_test_task(void *args);
 
 #endif
