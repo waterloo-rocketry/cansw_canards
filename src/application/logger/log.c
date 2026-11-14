@@ -338,7 +338,7 @@ w_status_t log_init(void) {
 }
 
 w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_ID,
-                     uint16_t line_number, log_task_id_t task_ID, log_event_id_t error_name, ...) {
+                     uint16_t line_number, log_task_id_t task_ID, log_error_id_t error_name, ...) {
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 

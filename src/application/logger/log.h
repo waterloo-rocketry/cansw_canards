@@ -236,10 +236,10 @@ STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
 w_status_t log_init(void);
 
 /**
- * Use LOG_EVENT macro instead.
+ * Use LOG_ERROR macro instead.
  */
-w_status_t log_event(log_error_site_t *log_site, uint32_t timeout, uint16_t event_id, ...);
-
+w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_ID,
+                     uint16_t line_number, log_task_id_t task_ID, log_error_id_t error_name, ...);
 /**
  * @brief Log a message in text form to the text log file.
  *
@@ -276,26 +276,21 @@ void log_task(void *argument);
 health_status_t logger_get_status(void);
 
 /**
- * @brief Log a message in an encoded form to the event log file
+ * @brief Log a message in an encoded form to the error log file.
+ * 		  Requires #DEFINE LOG_FILE_ID at the top of the file
+ * 		  Can output up to 20 bytes of data
  *
- * @param log_site Pointer to the log_site struct information
  * @param timeout Maximum amount of time to block waiting to log, in ms
- * @param event_id Event id which will be converted to a stirng
- * @param ... Optional values to print according to format in the event string
+ * @param error_id Error id which will be converted to a stirng
+ * @param ... Optional values to print according to format in the error string
  * @return Status indicating success or failure
  */
-// Requires `#define LOG_FILE_ID LOG_FILES_<FILE>_C` at the top of the calling .c file.
-#define LOG_ERROR(timeout, error_name, ...)                                                        \
-	do {                                                                                           \
-		static log_error_site_t this_site = {                                                      \
-			.last_buf_version = 0,                                                                 \
-			.last_buf_num = 0,                                                                     \
-			.last_logged_location = 0,                                                             \
-		};                                                                                         \
-                                                                                                   \
-		return log_error(&this_site, timeout, LOG_FILE_ID, __LINE__,                               \
-		                 (log_task_id_t)uxTaskGetTaskNumber(xTaskGetCurrentTaskHandle()),          \
-		                 error_name, ##__VA_ARGS__);                                               \
-	} while (0)
+#define LOG_ERROR(timeout, error_id, ...)                                                          \
+	({                                                                                             \
+		static log_error_site_t this_site = {0};                                                   \
+		log_error(&this_site, timeout, LOG_FILE_ID, __LINE__,                                      \
+		          (log_task_id_t)uxTaskGetTaskNumber(xTaskGetCurrentTaskHandle()),                 \
+		          error_id, ##__VA_ARGS__);                                                        \
+	})
 
 #endif
