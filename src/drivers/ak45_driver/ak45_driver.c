@@ -410,7 +410,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 
 	// return error if no response from motor
 	if (!received_can_msg) {
-		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Unable to connect to AK45 CAN");
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Unable to connect to AK45 CAN ENUM EXISTENCE");
 		ak45_health.init_fdcan_timeout++;
 		ak45_stop_can();
 		return W_FAILURE;
