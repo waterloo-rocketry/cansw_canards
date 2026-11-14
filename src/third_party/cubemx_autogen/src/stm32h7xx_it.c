@@ -22,7 +22,6 @@
 #include "stm32h7xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "application/health_checks/health_checks.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,6 +65,8 @@ extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c2;
 extern I2C_HandleTypeDef hi2c4;
 extern I2C_HandleTypeDef hi2c5;
+extern MDMA_HandleTypeDef hmdma_octospi1_fifo_th;
+extern OSPI_HandleTypeDef hospi1;
 extern SD_HandleTypeDef hsd2;
 extern TIM_HandleTypeDef htim5;
 extern DMA_HandleTypeDef hdma_uart4_rx;
@@ -107,9 +108,6 @@ void HardFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_HardFault_IRQn 0 */
-    #ifndef HARD_FAULT_TEST
-      proc_handle_fatal_error("HARD");
-    #endif
     /* USER CODE END W1_HardFault_IRQn 0 */
   }
 }
@@ -125,9 +123,6 @@ void MemManage_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
-    #ifndef HARD_FAULT_TEST
-      proc_handle_fatal_error("MEM");
-    #endif
     /* USER CODE END W1_MemoryManagement_IRQn 0 */
   }
 }
@@ -143,9 +138,6 @@ void BusFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_BusFault_IRQn 0 */
-    #ifndef HARD_FAULT_TEST
-      proc_handle_fatal_error("BUS");
-    #endif
     /* USER CODE END W1_BusFault_IRQn 0 */
   }
 }
@@ -161,9 +153,6 @@ void UsageFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_UsageFault_IRQn 0 */
-    #ifndef HARD_FAULT_TEST
-      proc_handle_fatal_error("USAGE");
-    #endif
     /* USER CODE END W1_UsageFault_IRQn 0 */
   }
 }
@@ -428,6 +417,20 @@ void OTG_HS_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles OCTOSPI1 global interrupt.
+  */
+void OCTOSPI1_IRQHandler(void)
+{
+  /* USER CODE BEGIN OCTOSPI1_IRQn 0 */
+
+  /* USER CODE END OCTOSPI1_IRQn 0 */
+  HAL_OSPI_IRQHandler(&hospi1);
+  /* USER CODE BEGIN OCTOSPI1_IRQn 1 */
+
+  /* USER CODE END OCTOSPI1_IRQn 1 */
+}
+
+/**
   * @brief This function handles I2C4 event interrupt.
   */
 void I2C4_EV_IRQHandler(void)
@@ -453,6 +456,20 @@ void I2C4_ER_IRQHandler(void)
   /* USER CODE BEGIN I2C4_ER_IRQn 1 */
 
   /* USER CODE END I2C4_ER_IRQn 1 */
+}
+
+/**
+  * @brief This function handles MDMA global interrupt.
+  */
+void MDMA_IRQHandler(void)
+{
+  /* USER CODE BEGIN MDMA_IRQn 0 */
+
+  /* USER CODE END MDMA_IRQn 0 */
+  HAL_MDMA_IRQHandler(&hmdma_octospi1_fifo_th);
+  /* USER CODE BEGIN MDMA_IRQn 1 */
+
+  /* USER CODE END MDMA_IRQn 1 */
 }
 
 /**
