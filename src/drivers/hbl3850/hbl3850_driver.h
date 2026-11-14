@@ -1,12 +1,15 @@
 #ifndef HBL3850_DRIVER_H
 #define HBL3850_DRIVER_H
 
-#include "FreeRTOS.h"
-#include "application/health_checks/health_checks.h"
-#include "rocketlib.h"
-#include "stm32h7xx_hal.h"
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "rocketlib.h"
+#include "stm32h7xx_hal.h"
+
+#include "application/health_checks/health_checks.h"
 
 // Motor IDs
 typedef enum {
@@ -60,12 +63,38 @@ typedef struct {
 } hbl3850_health_t;
 
 /**
+ * @brief Reassembly buffer for a multi-frame Actuator.Status transfer. Only the RX callback uses it.
+ */
+typedef struct {
+	uint8_t payload[8]; // the 8 Status payload bytes, filled in across both frames
+	uint8_t len; // bytes received so far (0 means no transfer in progress)
+	uint16_t crc; // transfer CRC from bytes 0-1 of frame 1
+	uint8_t transfer_id; // from the tail byte, must match in frame 2
+	bool expect_toggle; // toggle bit expected in the next frame
+} hbl3850_rx_transfer_t;
+
+/**
+ * @brief Struct to represent individual motors. Instances would be created for each motor used.
+ */
+typedef struct {
+	uint8_t node_id;
+	uint8_t actuator_id;
+	QueueHandle_t encoder_queue;
+	hbl3850_health_t health;
+	hbl3850_rx_transfer_t status_rx;
+	volatile bool heard;
+} hbl3850_motor_t;
+
+/**
  * @brief Initialize hbl3850 driver. Start FDCAN peripheral
+ * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
  * @param[in] hfdcan Pointer to FDCAN handle struct for FDCAN peripheral
  * @param[in] can_init_timeout_ms Amount of time to wait to receive NodeStatus
- * @return W_SUCCESS on success and W_FAILURE on error. If FDCAN handle is null W_INVALID_PARAM.
+ * @return W_SUCCESS on success, W_FAILURE on error, W_INVALID_PARAM if motor is invalid or the
+ * FDCAN handle is NULL
  */
-w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms);
+w_status_t hbl3850_driver_init(hbl3850_motor_id_t motor, FDCAN_HandleTypeDef *hfdcan,
+                               const uint32_t can_init_timeout_ms);
 
 /**
  * @brief Send position command to motor. Clips position command to +/-60 degrees and converts it to
@@ -80,10 +109,11 @@ w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_d
 /**
  * @brief Copies motor encoder values stored in queue to an hbl3850_encoder_t struct variable
  * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
- * @param[out] health_stats Pointer to hbl3850_encoder_t struct variable
+ * @param[out] encoder Pointer to hbl3850_encoder_t struct variable
  * @return W_SUCCESS on success, W_FAILURE on error, W_INVALID_PARAM if motor is invalid
  */
-w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor, hbl3850_encoder_t *out);
+w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor, hbl3850_encoder_t *encoder);
+
 // HAL_FDCAN_RxFifo1Callback is declared by HAL
 
 /**
@@ -94,11 +124,13 @@ w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor, hbl3850_encoder_t *out)
 health_status_t hbl3850_get_status(void);
 
 /**
- * @brief Copy the latest decoded health values (NodeStatus, CircuitStatus, Temperature) into out
+ * @brief Copy the latest decoded health values (NodeStatus, CircuitStatus, Temperature) into
+ * health_stats
  * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
- * @param[out] out Pointer to hbl3850_health_t struct variable
- * @return W_SUCCESS on success, W_FAILURE if out is NULL or no health data received yet,
+ * @param[out] health_stats Pointer to hbl3850_health_t struct variable
+ * @return W_SUCCESS on success, W_FAILURE if health_stats is NULL or no health data received yet,
  * W_INVALID_PARAM if motor is invalid
  */
 w_status_t hbl3850_get_health(hbl3850_motor_id_t motor, hbl3850_health_t *health_stats);
+
 #endif // HBL3850_DRIVER_H
