@@ -333,8 +333,8 @@ w_status_t log_init(void) {
 	return status;
 }
 
-w_status_t log_error(uint32_t timeout, uint8_t file_ID, uint8_t line_number, uint8_t task_ID,
-                     log_event_id_t *error_name, ...) {
+w_status_t log_error(uint32_t timeout, log_site_t log_site, log_file_id_t file_ID, uint16_t line_number, 
+					 uint8_t task_ID, log_event_id_t error_name, ...) {
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
@@ -343,14 +343,15 @@ w_status_t log_error(uint32_t timeout, uint8_t file_ID, uint8_t line_number, uin
 		return W_FAILURE;
 	}
 
-	if ((NULL == error_name)) {
-		logger_health.null_param_count++;
-		logger_health.invalid_param = true;
-		return W_INVALID_PARAM;
-	}
-
 	// Initialize Byte Array for Payload Arguments
 	uint32_t byteArray[5] = {0};
+
+	if (true) {
+		
+	}
+	else {
+
+	}
 
 	return W_SUCCESS;
 }
