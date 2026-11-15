@@ -16,7 +16,6 @@ typedef struct {
 	uint8_t writing_buffer[LOG_BUFFER_SIZE];
 	uint64_t chunk;
 	uint16_t file_identifier;
-	uint16_t crc_footer;
 } logging_formatter_buffer_t;
 
 static logging_formatter_health_t logging_formatter_health = {0};
@@ -32,22 +31,27 @@ static const uint32_t header_footer_size = 10;
 
 static uint64_t chunk_num = 0;
 
-w_status_t logging_formatter_create_file(formatter_file_ctx_t *file, logging_formatter_data_type_t type) {
+static uint16_t crc16_table[256];
 
+w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
+                                         logging_formatter_data_type_t type) {
 	if (!logging_formatter_health.is_init) {
+		logging_formatter_health.write_error++;
 		return W_FAILURE;
 	}
 
 	if (NULL == file || 0 == (uint32_t)type) {
+		logging_formatter_health.invalid_param = true;
 		return W_FAILURE;
 	}
 
+	// check if file of this kind has already been created
 	if (logging_formatter_health.types_created & type) {
 		return W_FAILURE;
 	}
 
 	logging_formatter_health.types_created |= type;
-	
+
 	file->chunk_count = 0;
 	file->file_identifier = formatter_buffer.file_identifier;
 	file->data_type = type;
@@ -55,11 +59,7 @@ w_status_t logging_formatter_create_file(formatter_file_ctx_t *file, logging_for
 	return W_SUCCESS;
 }
 
-// 16 bit calculations via cpu atm, but can use crc peripheral later on.
-// TODO: finish this
-static uint16_t crc16_table[256];
-
-/*static w_status_t crc_table_init(void) {
+static w_status_t crc_table_init(void) {
 	for (uint16_t i = 0; i < 256; i++) {
 		uint16_t crc = i;
 		for (int j = 0; j < 8; j++) {
@@ -69,17 +69,9 @@ static uint16_t crc16_table[256];
 	}
 
 	return W_SUCCESS;
-}*/
+}
 
 uint16_t logging_formatter_calc_crc(const uint8_t *buffer, size_t length) {
-	if (NULL == buffer) {
-		return 0;
-	}
-	uint16_t CRC_footer = 0xffff;
-	for (size_t i = 0; i < length; i++) {
-		uint8_t index = (CRC_footer ^ buffer[i]) & 0xff;
-		CRC_footer = (CRC_footer >> 8) ^ crc16_table[index];
-	}
 	return CRC_footer;
 }
 
@@ -88,7 +80,6 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		return W_SUCCESS;
 	}
 	if (NULL == p_sd_handle) {
-		// log_text(0, LOG_LVL_WARN, "RAW", "Given task handler does not exist.");
 		return W_FAILURE;
 	}
 
@@ -114,7 +105,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		return W_FAILURE;
 	}
 
-	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
+	while (HAL_SD_GetCardState(logging_formatter_handle) != HAL_SD_CARD_TRANSFER) {
 		vTaskDelay(1);
 	}
 
@@ -142,11 +133,11 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		while (lo <= hi) {
 			chunk_num = lo + (hi - lo) / 2;
 			if (raw_logger_SD_read(init_buffer, chunk_num * LOG_BUFFER_SIZE, BLOCKSIZE, 200) !=
-				W_SUCCESS) {
+			    W_SUCCESS) {
 				return W_FAILURE;
 			}
 
-			while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
+			while (HAL_SD_GetCardState(logging_formatter_handle) != HAL_SD_CARD_TRANSFER) {
 				vTaskDelay(1);
 			}
 
@@ -161,7 +152,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * LOG_BUFFER_SIZE, BLOCKSIZE, 200) !=
-		    W_SUCCESS) {
+	    W_SUCCESS) {
 		return W_FAILURE;
 	}
 
@@ -173,10 +164,12 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		return W_FAILURE;
 	}
 
+	crc_table_init();
+
 	memset(formatter_buffer.writing_buffer, 0, LOG_BUFFER_SIZE);
 	memcpy(formatter_buffer.writing_buffer, header, 4);
 
-	//header_init
+	// header_init
 	if (1 != formatter_buffer.chunk) {
 		uint16_t identifier = init_buffer[4];
 		identifier = (identifier << 5) + (init_buffer[5] >> 3) + 1;
@@ -185,16 +178,12 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		formatter_buffer.writing_buffer[5] = identifier << 3;
 	}
 
-	/*if (W_SUCCESS != crc_table_init()) {
-		return W_FAILURE;
-	}*/
-
 	logging_formatter_health.is_init = true;
 	return W_SUCCESS;
 }
 
-// TODO: must remember to include CRC footer
-w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length, formatter_file_ctx_t *ctx) {
+w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
+                                    formatter_file_ctx_t *ctx) {
 	if (!logging_formatter_health.is_init) {
 		return W_FAILURE;
 	}
@@ -204,12 +193,12 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 	}
 
 	if ((NULL == buffer) || (0 == buffer_length)) {
+		logging_formatter_health.invalid_param = true;
 		return W_FAILURE;
 	}
 
-	uint8_t identifier_buffer[4] = {0};
-
-	formatter_buffer.writing_buffer[5] = (formatter_buffer.writing_buffer[5] & 11111000) + (uint8_t)(ctx->data_type & 0b0111);
+	formatter_buffer.writing_buffer[5] =
+		(formatter_buffer.writing_buffer[5] & 11111000) + (uint8_t)(ctx->data_type & 0b0111);
 	uint32_t counter = ctx->chunk_count;
 	for (int i = 9; i >= 6; i--) {
 		formatter_buffer.writing_buffer[i] = counter & 0b11111111;
@@ -219,10 +208,18 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 
 	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
 
-	formatter_buffer.crc_footer = logging_formatter_calc_crc(buffer, LOG_BUFFER_SIZE);
- 
-	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer, formatter_buffer.chunk * LOG_BUFFER_SIZE,
-	                                     LOG_BUFFER_SIZE, 200)) {
+	uint16_t CRC_footer = 0xffff;
+	for (size_t i = 0; i < buffer_length; i++) {
+		uint8_t index = (CRC_footer ^ buffer[i]) & 0xff;
+		CRC_footer = (CRC_footer >> 8) ^ crc16_table[index];
+	}
+
+	formatter_buffer.writing_buffer[32766] = CRC_footer >> 8;
+	formatter_buffer.writing_buffer[32767] = CRC_footer & 0xff;
+
+	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer,
+	                                     formatter_buffer.chunk * LOG_BUFFER_SIZE, LOG_BUFFER_SIZE,
+	                                     200)) {
 		logging_formatter_health.write_error++;
 		return W_FAILURE;
 	}

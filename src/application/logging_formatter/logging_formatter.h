@@ -36,8 +36,10 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle);
  * @implements FIRM-LLR-LFO-001, FIRM-LLR-LFO-003, FIRM-LLR-LFO-004, FIRM-LLR-LFO-006,
  * FIRM-LLR-LFO-007
  */
-w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length, formatter_file_ctx_t *ctx);
+w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
+                                    formatter_file_ctx_t *ctx);
 
-w_status_t logging_formatter_create_file(formatter_file_ctx_t *file, logging_formatter_data_type_t type);
+w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
+                                         logging_formatter_data_type_t type);
 
 #endif // logging_formatter_H
