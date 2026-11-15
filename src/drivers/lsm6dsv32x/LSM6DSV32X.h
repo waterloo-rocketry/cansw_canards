@@ -1,8 +1,8 @@
 #ifndef LSM6DSV32X_H
 #define LSM6DSV32X_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "rocketlib.h"
 
@@ -58,12 +58,12 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  * @param[out] acc_sample_count  The number of acc samples in the FIFO
  * @return Status of the operation
  */
-w_status_t
-lsm6dsv32x_get_full_gyro_acc_data(vector3d_t acc_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
-                                  vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
-                                  lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
-                                  lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD],
-                                  size_t *gyro_sample_count, size_t *acc_sample_count);
+w_status_t lsm6dsv32x_get_full_gyro_acc_data(
+	vector3d_t acc_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
+	vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
+	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
+	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], size_t *gyro_sample_count,
+	size_t *acc_sample_count);
 
 /**
  * @brief Get and report the lsm6dsv32x status for the health check system
