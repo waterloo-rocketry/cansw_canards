@@ -63,7 +63,8 @@ typedef struct {
 } hbl3850_health_t;
 
 /**
- * @brief Reassembly buffer for a multi-frame Actuator.Status transfer. Only the RX callback uses it.
+ * @brief Reassembly buffer for a multi-frame Actuator.Status transfer. Only the RX callback uses
+ * it.
  */
 typedef struct {
 	uint8_t payload[8]; // the 8 Status payload bytes, filled in across both frames
@@ -88,13 +89,15 @@ typedef struct {
 /**
  * @brief Initialize hbl3850 driver. Start FDCAN peripheral
  * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
+ * @param[in] node_id Motor's DroneCAN node ID (1..127), set on the motor with the GUI Tool
+ * @param[in] actuator_id Motor's actuator ID, used in ArrayCommand
  * @param[in] hfdcan Pointer to FDCAN handle struct for FDCAN peripheral
  * @param[in] can_init_timeout_ms Amount of time to wait to receive NodeStatus
- * @return W_SUCCESS on success, W_FAILURE on error, W_INVALID_PARAM if motor is invalid or the
- * FDCAN handle is NULL
+ * @return W_SUCCESS on success, W_FAILURE on error, W_INVALID_PARAM if motor is invalid, node_id
+ * is outside 1..127, node_id is already used by another motor, or the FDCAN handle is NULL
  */
-w_status_t hbl3850_driver_init(hbl3850_motor_id_t motor, FDCAN_HandleTypeDef *hfdcan,
-                               const uint32_t can_init_timeout_ms);
+w_status_t hbl3850_driver_init(hbl3850_motor_id_t motor, uint8_t node_id, uint8_t actuator_id,
+                               FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms);
 
 /**
  * @brief Send position command to motor. Clips position command to +/-60 degrees and converts it to
