@@ -7,6 +7,7 @@ typedef struct {
 	bool is_init;
 	bool invalid_param;
 	bool timed_out;
+	uint8_t types_created;
 	uint32_t write_count;
 	uint32_t write_error;
 } logging_formatter_health_t;
@@ -14,9 +15,7 @@ typedef struct {
 typedef struct {
 	uint8_t writing_buffer[LOG_BUFFER_SIZE];
 	uint64_t chunk;
-	uint16_t file_counter;
-	logging_formatter_data_type_t data_type;
-	uint32_t segment_counter;
+	uint16_t file_identifier;
 	uint16_t crc_footer;
 } logging_formatter_buffer_t;
 
@@ -33,22 +32,25 @@ static const uint32_t header_footer_size = 10;
 
 static uint64_t chunk_num = 0;
 
-w_status_t logging_formatter_identifier(uint8_t *buffer, uint32_t length, uint32_t start,
-                                        int32_t end) {
-	if ((NULL == buffer) || (0 == length)) {
+w_status_t logging_formatter_create_file(formatter_file_ctx_t *file, logging_formatter_data_type_t type) {
+
+	if (!logging_formatter_health.is_init) {
 		return W_FAILURE;
 	}
 
-	uint32_t offset = 1;
-
-	uint32_t counter = 0;
-
-	for (uint32_t i = end; i > start; i--) {
-		if (1 == buffer[i]) {
-			counter += offset;
-		}
-		offset *= 2;
+	if (NULL == file || 0 == (uint32_t)type) {
+		return W_FAILURE;
 	}
+
+	if (logging_formatter_health.types_created & type) {
+		return W_FAILURE;
+	}
+
+	logging_formatter_health.types_created |= type;
+	
+	file->chunk_count = 0;
+	file->file_identifier = formatter_buffer.file_identifier;
+	file->data_type = type;
 
 	return W_SUCCESS;
 }
@@ -57,7 +59,7 @@ w_status_t logging_formatter_identifier(uint8_t *buffer, uint32_t length, uint32
 // TODO: finish this
 static uint16_t crc16_table[256];
 
-static w_status_t crc_table_init(void) {
+/*static w_status_t crc_table_init(void) {
 	for (uint16_t i = 0; i < 256; i++) {
 		uint16_t crc = i;
 		for (int j = 0; j < 8; j++) {
@@ -67,7 +69,7 @@ static w_status_t crc_table_init(void) {
 	}
 
 	return W_SUCCESS;
-}
+}*/
 
 uint16_t logging_formatter_calc_crc(const uint8_t *buffer, size_t length) {
 	if (NULL == buffer) {
@@ -79,32 +81,6 @@ uint16_t logging_formatter_calc_crc(const uint8_t *buffer, size_t length) {
 		CRC_footer = (CRC_footer >> 8) ^ crc16_table[index];
 	}
 	return CRC_footer;
-}
-
-static w_status_t logging_formatter_header_init(uint8_t *buffer) {
-	uint16_t identifier = buffer[4];
-	identifier = (identifier << 5) + (buffer[5] >> 3) + 1;
-	formatter_buffer.writing_buffer[4] = identifier >> 5;
-
-	uint8_t identifier_data = ((identifier & 0b11111) << 3) + (uint8_t)formatter_buffer.data_type;
-	formatter_buffer.writing_buffer[5] = identifier_data;
-
-	return W_SUCCESS;
-}
-
-static w_status_t logging_formatter_segment_increment() {
-	uint32_t counter = formatter_buffer.segment_counter;
-	formatter_buffer.segment_counter++;
-
-	for (int i = 9; i >= 6; i--) {
-		formatter_buffer.writing_buffer[i] = counter & 0b11111111;
-		counter = counter >> 8;
-	}
-	if (counter == 20) {
-		counter = 0;
-	}
-
-	return W_SUCCESS;
 }
 
 w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
@@ -122,11 +98,13 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 
 	logging_formatter_handle = p_sd_handle;
 
-	formatter_buffer.file_counter = 0;
-	formatter_buffer.segment_counter = 0;
+	formatter_buffer.chunk = 0;
+	formatter_buffer.file_identifier = 0;
+	logging_formatter_health.types_created = 0;
 
 	uint8_t init_buffer[BLOCKSIZE] = {0};
 
+	// first 64 blocks are reserved
 	chunk_num = 1;
 
 	uint8_t zero_buffer[BLOCKSIZE];
@@ -136,10 +114,14 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		return W_FAILURE;
 	}
 
+	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
+		vTaskDelay(1);
+	}
+
 	bool found_address = false;
 
 	if (0 == memcmp(&init_buffer, &zero_buffer, 200)) {
-		formatter_buffer.chunk = chunk_num * LOG_BUFFER_SIZE;
+		formatter_buffer.chunk = chunk_num;
 		found_address = true;
 	}
 
@@ -157,11 +139,15 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	uint32_t hi = chunk_num;
 
 	if (!found_address) {
-		while (lo < hi) {
+		while (lo <= hi) {
 			chunk_num = lo + (hi - lo) / 2;
 			if (raw_logger_SD_read(init_buffer, chunk_num * LOG_BUFFER_SIZE, BLOCKSIZE, 200) !=
 				W_SUCCESS) {
 				return W_FAILURE;
+			}
+
+			while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
+				vTaskDelay(1);
 			}
 
 			if (0 == memcmp(&init_buffer, &zero_buffer, 32)) {
@@ -171,33 +157,16 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 			}
 		}
 		found_address = true;
+		formatter_buffer.chunk = chunk_num;
 	}
-
-	formatter_buffer.chunk = chunk_num;
-
-	// first 64 blocks are reserved
-
-	// binary search!
-	/*while (!found_address && (offset >= 1)) {
-	    if (raw_logger_SD_read(lo_buffer, curr_address * BLOCKSIZE, BLOCKSIZE, 200) != W_SUCCESS ||
-	        raw_logger_SD_read(hi_buffer, (curr_address * BLOCKSIZE - LOG_BUFFER_SIZE), BLOCKSIZE,
-	200) != W_SUCCESS) { return W_FAILURE;
-	    }
-
-	    if (0 == memcmp(&hi_buffer, &zero_buffer, 32)) {
-	        curr_address -= offset;
-	    } else if (0 != memcmp(&lo_buffer, &zero_buffer, 32)) {
-	        curr_address += offset;
-	    } else {
-	        formatter_buffer.byte_address = curr_address;
-	        found_address = true;
-	    }
-	    offset /= 2;
-	}*/
 
 	if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * LOG_BUFFER_SIZE, BLOCKSIZE, 200) !=
 		    W_SUCCESS) {
 		return W_FAILURE;
+	}
+
+	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
+		vTaskDelay(1);
 	}
 
 	if (!found_address) {
@@ -207,21 +176,25 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	memset(formatter_buffer.writing_buffer, 0, LOG_BUFFER_SIZE);
 	memcpy(formatter_buffer.writing_buffer, header, 4);
 
-	if (W_SUCCESS != logging_formatter_header_init(init_buffer)) {
-		return W_FAILURE;
+	//header_init
+	if (1 != formatter_buffer.chunk) {
+		uint16_t identifier = init_buffer[4];
+		identifier = (identifier << 5) + (init_buffer[5] >> 3) + 1;
+		formatter_buffer.file_identifier = identifier;
+		formatter_buffer.writing_buffer[4] = identifier >> 5;
+		formatter_buffer.writing_buffer[5] = identifier << 3;
 	}
 
-	if (W_SUCCESS != crc_table_init()) {
+	/*if (W_SUCCESS != crc_table_init()) {
 		return W_FAILURE;
-	}
+	}*/
 
 	logging_formatter_health.is_init = true;
 	return W_SUCCESS;
 }
 
 // TODO: must remember to include CRC footer
-w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
-                                    logging_formatter_data_type_t data_type) {
+w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length, formatter_file_ctx_t *ctx) {
 	if (!logging_formatter_health.is_init) {
 		return W_FAILURE;
 	}
@@ -234,21 +207,27 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 		return W_FAILURE;
 	}
 
-	formatter_buffer.data_type = data_type;
+	uint8_t identifier_buffer[4] = {0};
 
-	logging_formatter_segment_increment();
+	formatter_buffer.writing_buffer[5] = (formatter_buffer.writing_buffer[5] & 11111000) + (uint8_t)(ctx->data_type & 0b0111);
+	uint32_t counter = ctx->chunk_count;
+	for (int i = 9; i >= 6; i--) {
+		formatter_buffer.writing_buffer[i] = counter & 0b11111111;
+		counter = counter >> 8;
+	}
+	ctx->chunk_count += 1;
 
 	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
 
 	formatter_buffer.crc_footer = logging_formatter_calc_crc(buffer, LOG_BUFFER_SIZE);
-
-	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer, formatter_buffer.chunk,
+ 
+	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer, formatter_buffer.chunk * LOG_BUFFER_SIZE,
 	                                     LOG_BUFFER_SIZE, 200)) {
 		logging_formatter_health.write_error++;
 		return W_FAILURE;
 	}
 
-	formatter_buffer.chunk += LOG_BUFFER_SIZE;
+	formatter_buffer.chunk += 1;
 	logging_formatter_health.write_count++;
 
 	return W_SUCCESS;

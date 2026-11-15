@@ -4,10 +4,16 @@
 #include "drivers/raw_logger/raw_logger.h"
 
 typedef enum {
-	LOGGING_FORMATTING_DATA = 1,
-	LOGGING_FORMATTING_ERROR = 2,
-	LOGGING_FORMATTING_TEXT = 4
+	LOGGING_FORMATTING_DATA = 0b001,
+	LOGGING_FORMATTING_ERROR = 0b010,
+	LOGGING_FORMATTING_TEXT = 0b100
 } logging_formatter_data_type_t;
+
+typedef struct {
+	uint32_t chunk_count;
+	uint32_t file_identifier;
+	logging_formatter_data_type_t data_type;
+} formatter_file_ctx_t;
 
 /**
  * @brief Searches for the last unwritten, uncorrupted chunk to write to.
@@ -30,7 +36,8 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle);
  * @implements FIRM-LLR-LFO-001, FIRM-LLR-LFO-003, FIRM-LLR-LFO-004, FIRM-LLR-LFO-006,
  * FIRM-LLR-LFO-007
  */
-w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
-                                    logging_formatter_data_type_t data_type);
+w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length, formatter_file_ctx_t *ctx);
+
+w_status_t logging_formatter_create_file(formatter_file_ctx_t *file, logging_formatter_data_type_t type);
 
 #endif // logging_formatter_H
