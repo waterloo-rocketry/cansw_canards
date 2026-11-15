@@ -9,8 +9,9 @@
 #include "application/health_checks/health_checks.h"
 #include "common/math/math.h"
 
-#define LSM6DSV32X_FIFO_THRESHOLD 30
-#define LSM6DSV32X_FIFO_READ_THRESHOLD 36
+// set this to higher than we theoretically will process (1 gyro word and 8 acc words)
+#define LSM6DSV32X_FIFO_THRESHOLD 12
+#define LSM6DSV32X_FIFO_READ_THRESHOLD 12
 
 /**
  * raw data from imu/mag registers
