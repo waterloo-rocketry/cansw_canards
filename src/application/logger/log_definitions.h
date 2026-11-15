@@ -2,9 +2,9 @@
 #define LOG__DEFINITIONS_H
 
 /* BEGIN GENERATED ERROR ENUM
-The error value is split in two:
-First two digits represent the file name
-Next two digits count up from 0x00
+    A standard error value is split in two parts:
+    First two digits represent the file name
+    Next two digits count up from 0x00
 */
 typedef enum __attribute__((packed)) {
 	LOG_ERRORS_ERROR = 0x00,
@@ -239,7 +239,7 @@ _Static_assert(sizeof(log_file_id_t) == 1, "log_file_id_t must be 1 byte");
 /* END GENERATED FILE ENUM */
 
 /* BEGIN GENERATED TASK ENUM
-
+    Tasks increment by one starting from 0
 */
 typedef enum __attribute__((packed)) {
 	LOG_TASK_ERROR = 0x00,
