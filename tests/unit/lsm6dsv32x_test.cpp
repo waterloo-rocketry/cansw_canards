@@ -272,6 +272,60 @@ TEST_F(Lsm6dsv32xTest, OnlySomeCorrectWordTypes) {
     EXPECT_EQ(raw_acc[0].z, (uint16_t) 0xFF << 8 | 0xEE);
 }
 
+TEST_F(Lsm6dsv32xTest, BothDataGetFunctionsMatch) {
+    // Arrange
+    // set up init
+    i2c_write_reg_fake.return_val = W_SUCCESS;
+    i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake_whoami;
+    timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
+
+    lsm6dsv32x_init();
+
+
+    HAL_I2C_Mem_Read_DMA_fake.custom_fake = dma_read_only_three_correct_words;
+    // got dma callback
+    lsm6dsv32x_int1_isr_handler();
+    lsm6dsv32x_dma_complete_handle(&hi2c1);
+
+    // Act
+    vector3d_t acc_data[LSM6DSV32X_FIFO_READ_THRESHOLD];
+    vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD];
+    lsm6dsv32x_raw_imu_data_t raw_acc[LSM6DSV32X_FIFO_READ_THRESHOLD];
+    lsm6dsv32x_raw_imu_data_t raw_gyro[LSM6DSV32X_FIFO_READ_THRESHOLD];
+    size_t gyro_sample_count;
+    size_t acc_sample_count;
+
+    vector3d_t single_acc;
+    vector3d_t single_gyro;
+    lsm6dsv32x_raw_imu_data_t single_raw_acc;
+    lsm6dsv32x_raw_imu_data_t single_raw_gyro;
+
+    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(acc_data, gyro_data, raw_acc, raw_gyro, &gyro_sample_count, &acc_sample_count);
+    w_status_t single_status = lsm6dsv32x_get_gyro_acc_data(&single_acc, &single_gyro, &single_raw_acc, &single_raw_gyro);
+
+    // data from the fake
+    // gyro 1: 0xCC, 0x10, 0xCC, 0xCC, 0xCC,  0x10,
+    // gyro 2: 0xBB, 0xAA, 0xCC, 0x10, 0x00,  0x10,
+    // acc 1: 0xAA, 0xBB, 0xCC, 0xDD, 0xEE,  0xFF,
+    // Assert
+    EXPECT_EQ(status, W_FAILURE);
+    EXPECT_EQ(single_status, W_SUCCESS);
+    EXPECT_EQ(gyro_sample_count, 2);
+    EXPECT_EQ(acc_sample_count, 1);
+
+    EXPECT_EQ(raw_gyro[0].x, (uint16_t) 0x10 << 8 | 0xCC);
+    EXPECT_EQ(raw_gyro[0].y, (uint16_t) 0xCC << 8 | 0xCC);
+    EXPECT_EQ(raw_gyro[0].z, (uint16_t) 0x10 << 8 | 0xCC);
+
+    EXPECT_EQ(raw_gyro[1].x, single_raw_gyro.x);
+    EXPECT_EQ(raw_gyro[1].y, single_raw_gyro.y);
+    EXPECT_EQ(raw_gyro[1].z, single_raw_gyro.z);
+
+    EXPECT_EQ(raw_acc[0].x, single_raw_acc.x);
+    EXPECT_EQ(raw_acc[0].y, single_raw_acc.y);
+    EXPECT_EQ(raw_acc[0].z, single_raw_acc.z);
+}
+
 TEST_F(Lsm6dsv32xTest, InteruptSuccessOnNotInit) {
     EXPECT_EQ(lsm6dsv32x_int1_isr_handler(), W_SUCCESS);
 }

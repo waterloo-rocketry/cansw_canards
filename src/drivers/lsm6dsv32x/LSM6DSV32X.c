@@ -170,7 +170,7 @@ w_status_t lsm6dsv32x_init() {
 
 	// Accel ODR: 7.68 KHz
 	// Accel mode: high performance
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL1_XL, 0x0C);
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL1_XL, 0x0c);
 
 	// Gyro ODR: 960Hz
 	// Gyro mode: high performance
@@ -180,7 +180,7 @@ w_status_t lsm6dsv32x_init() {
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL1, LSM6DSV32X_FIFO_THRESHOLD);
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL2, 0x80);
 	// set accel BDR to 7.68Khz and gyro BDR to 960Hz
-	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL3, 0x9C);
+	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL3, 0x9c);
 	// set FIFO to continuous mode
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x00);
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x06);
