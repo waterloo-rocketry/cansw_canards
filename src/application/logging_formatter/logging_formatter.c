@@ -38,17 +38,17 @@ w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
 		return W_FAILURE;
 	}
 
-	if (NULL == file || 0 == (uint32_t)type) {
+	if ((NULL == file) || (0 == (uint32_t)type)) {
 		logging_formatter_health.invalid_param = true;
 		return W_FAILURE;
 	}
 
 	// check if file of this kind has already been created
-	if (logging_formatter_health.types_created & (0b01 << type)) {
+	if (logging_formatter_health.types_created & (1 << type)) {
 		return W_FAILURE;
 	}
 
-	logging_formatter_health.types_created |= (0b01 << type);
+	logging_formatter_health.types_created |= (1 << type);
 
 	file->chunk_count = 0;
 	file->file_identifier = formatter_buffer.file_instance_count;
@@ -101,7 +101,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	while (HAL_SD_GetCardState(logging_formatter_handle) != HAL_SD_CARD_TRANSFER) {
-		vTaskDelay(1);
+		vTaskDelay(pdMS_TO_TICKS(1));
 	}
 
 	bool found_address = false;
@@ -133,7 +133,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 			}
 
 			while (HAL_SD_GetCardState(logging_formatter_handle) != HAL_SD_CARD_TRANSFER) {
-				vTaskDelay(1);
+				vTaskDelay(pdMS_TO_TICKS(1));
 			}
 
 			if (0 == memcmp(&init_buffer, &zero_buffer, 32)) {
@@ -152,7 +152,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
-		vTaskDelay(1);
+		vTaskDelay(pdMS_TO_TICKS(1));
 	}
 
 	if (!found_address) {

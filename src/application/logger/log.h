@@ -34,7 +34,7 @@
 /* Number of text log buffers */
 #define NUM_TEXT_LOG_BUFFERS 2
 /* Number of data log buffers */
-#define NUM_DATA_LOG_BUFFERS 4
+#define NUM_DATA_LOG_BUFFERS 2
 
 /* Size of filename string */
 #define FILENAME_STRING_SIZE (8 + 1 + 3 + 1)
