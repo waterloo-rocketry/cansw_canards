@@ -117,7 +117,6 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	if (raw_logger_get_SD_specs(&chunk_num, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
 		return W_FAILURE;
 	}
-	////31283200 blocks * 512 bytes = 16,016,998,400 bytes
 
 	chunk_num = (chunk_num / 64);
 
