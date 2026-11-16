@@ -208,7 +208,7 @@ w_status_t lsm6dsv32x_init() {
 
 	status |= lsm6dsv32x_check_sanity();
 
-	// Trigger INT1 when the FIFO is filled to LSM6DSV32X_FIFO_THRESHOLD
+	// Trigger INT1 on gyro DRDY
 	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x02);
 
 	// load all settings and end use of all i2c driver before switch to dma
@@ -317,10 +317,19 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		size_t i = LSM6DSV32X_FIFO_THRESHOLD - 1;
 		do {
 			uint8_t tag = raw_bytes[i][0] >> 3;
-			if ((GYRO_TAG == tag) && (NULL == latest_gyro_bytes)) {
-				latest_gyro_bytes = &raw_bytes[i][1];
-			} else if ((ACC_TAG == tag) && (NULL == latest_acc_bytes)) {
-				latest_acc_bytes = &raw_bytes[i][1];
+			if (GYRO_TAG == tag) {
+				if (NULL == latest_gyro_bytes) {
+					latest_gyro_bytes = &raw_bytes[i][1];
+				}
+			} else if (ACC_TAG == tag) {
+				if (NULL == latest_acc_bytes) {
+					latest_acc_bytes = &raw_bytes[i][1];
+				}
+			} else {
+				// if the tag isn't the empty tag
+				if (0x00 != tag) {
+					lsm6dsv32x_health.wrong_fifo_tag++;
+				}
 			}
 			i--;
 		} while ((0 < i) && ((NULL == latest_gyro_bytes) || (NULL == latest_acc_bytes)));
