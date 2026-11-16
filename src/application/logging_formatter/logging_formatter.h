@@ -1,12 +1,16 @@
 #ifndef LOGGING_FORMATTER_H
 #define LOGGING_FORMATTER_H
 
+#define CHUNK_SIZE 32768
+#define TIMEOUT_MS 200
+#define HEADER_FOOTER_SIZE 10
+
 #include "drivers/raw_logger/raw_logger.h"
 
 typedef enum {
-	LOGGING_FORMATTING_DATA = 0b001,
-	LOGGING_FORMATTING_ERROR = 0b010,
-	LOGGING_FORMATTING_TEXT = 0b100
+	LOGGING_FORMATTING_DATA = 0x00,
+	LOGGING_FORMATTING_ERROR = 0x01,
+	LOGGING_FORMATTING_TEXT = 0x02
 } logging_formatter_data_type_t;
 
 typedef struct {

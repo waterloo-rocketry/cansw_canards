@@ -7,15 +7,15 @@ typedef struct {
 	bool is_init;
 	bool invalid_param;
 	bool timed_out;
-	uint8_t types_created;
+	uint16_t types_created;
 	uint32_t write_count;
 	uint32_t write_error;
 } logging_formatter_health_t;
 
 typedef struct {
-	uint8_t writing_buffer[LOG_BUFFER_SIZE];
+	uint8_t writing_buffer[CHUNK_SIZE];
 	uint64_t chunk;
-	uint16_t file_identifier;
+	uint16_t file_instance_count;
 } logging_formatter_buffer_t;
 
 static logging_formatter_health_t logging_formatter_health = {0};
@@ -23,11 +23,9 @@ static logging_formatter_buffer_t formatter_buffer;
 
 static SD_HandleTypeDef *logging_formatter_handle = NULL;
 
-static const uint8_t header[4] = {67, 107, 207, 255};
+static const uint8_t HEADER[4] = {67, 107, 207, 255};
 
 static uint16_t CRC_footer = 0;
-
-static const uint32_t header_footer_size = 10;
 
 static uint64_t chunk_num = 0;
 
@@ -46,14 +44,14 @@ w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
 	}
 
 	// check if file of this kind has already been created
-	if (logging_formatter_health.types_created & type) {
+	if (logging_formatter_health.types_created & (0b01 << type)) {
 		return W_FAILURE;
 	}
 
-	logging_formatter_health.types_created |= type;
+	logging_formatter_health.types_created |= (0b01 << type);
 
 	file->chunk_count = 0;
-	file->file_identifier = formatter_buffer.file_identifier;
+	file->file_identifier = formatter_buffer.file_instance_count;
 	file->data_type = type;
 
 	return W_SUCCESS;
@@ -63,16 +61,12 @@ static w_status_t crc_table_init(void) {
 	for (uint16_t i = 0; i < 256; i++) {
 		uint16_t crc = i;
 		for (int j = 0; j < 8; j++) {
-			crc = (crc & 1) ? (crc >> 1) ^ 0xa001 : (crc >> 1);
+			crc = (crc & 1) ? (crc >> 1) ^ 0xA001 : (crc >> 1);
 		}
 		crc16_table[i] = crc;
 	}
 
 	return W_SUCCESS;
-}
-
-uint16_t logging_formatter_calc_crc(const uint8_t *buffer, size_t length) {
-	return CRC_footer;
 }
 
 w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
@@ -90,7 +84,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	logging_formatter_handle = p_sd_handle;
 
 	formatter_buffer.chunk = 0;
-	formatter_buffer.file_identifier = 0;
+	formatter_buffer.file_instance_count = 0;
 	logging_formatter_health.types_created = 0;
 
 	uint8_t init_buffer[BLOCKSIZE] = {0};
@@ -101,7 +95,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	uint8_t zero_buffer[BLOCKSIZE];
 	memset(&zero_buffer, 0, BLOCKSIZE);
 
-	if (raw_logger_SD_read(init_buffer, chunk_num * LOG_BUFFER_SIZE, 512, 200) != W_SUCCESS) {
+	if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) != W_SUCCESS) {
 		return W_FAILURE;
 	}
 
@@ -111,7 +105,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 
 	bool found_address = false;
 
-	if (0 == memcmp(&init_buffer, &zero_buffer, 200)) {
+	if (0 == memcmp(&init_buffer, &zero_buffer, TIMEOUT_MS)) {
 		formatter_buffer.chunk = chunk_num;
 		found_address = true;
 	}
@@ -119,7 +113,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	uint32_t erase_size_blocks = 0;
 
 	// to get the size of the SD card in the case that we're not solely writing with a 16GB card
-	if (raw_logger_get_SD_specs(&chunk_num, &erase_size_blocks, 200) != W_SUCCESS) {
+	if (raw_logger_get_SD_specs(&chunk_num, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
 		return W_FAILURE;
 	}
 	////31283200 blocks * 512 bytes = 16,016,998,400 bytes
@@ -132,7 +126,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	if (!found_address) {
 		while (lo <= hi) {
 			chunk_num = lo + (hi - lo) / 2;
-			if (raw_logger_SD_read(init_buffer, chunk_num * LOG_BUFFER_SIZE, BLOCKSIZE, 200) !=
+			if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
 			    W_SUCCESS) {
 				return W_FAILURE;
 			}
@@ -151,7 +145,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		formatter_buffer.chunk = chunk_num;
 	}
 
-	if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * LOG_BUFFER_SIZE, BLOCKSIZE, 200) !=
+	if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
 	    W_SUCCESS) {
 		return W_FAILURE;
 	}
@@ -166,14 +160,18 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 
 	crc_table_init();
 
-	memset(formatter_buffer.writing_buffer, 0, LOG_BUFFER_SIZE);
-	memcpy(formatter_buffer.writing_buffer, header, 4);
+	memset(formatter_buffer.writing_buffer, 0, CHUNK_SIZE);
+	memcpy(formatter_buffer.writing_buffer, HEADER, 4);
 
 	// header_init
+	//identifier is a 13 bit number, take the fifth byte from init_buffer and shift it left by 5 and then take
+	//the sixth byte from init_buffer and shift it right by 3 to get the last 5 digits
 	if (1 != formatter_buffer.chunk) {
 		uint16_t identifier = init_buffer[4];
 		identifier = (identifier << 5) + (init_buffer[5] >> 3) + 1;
-		formatter_buffer.file_identifier = identifier;
+		formatter_buffer.file_instance_count = identifier;
+		//reversing what we did earlier, shifting right by 5 gives 8 bits (1 byte) which goes into the fifth index
+		//and shifting left by three ensures we dont overwrite the data type that also exists in the sixth index
 		formatter_buffer.writing_buffer[4] = identifier >> 5;
 		formatter_buffer.writing_buffer[5] = identifier << 3;
 	}
@@ -188,7 +186,7 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 		return W_FAILURE;
 	}
 
-	if ((buffer_length + header_footer_size) != LOG_BUFFER_SIZE) {
+	if ((buffer_length + HEADER_FOOTER_SIZE) != CHUNK_SIZE) {
 		return W_FAILURE;
 	}
 
@@ -198,28 +196,29 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 	}
 
 	formatter_buffer.writing_buffer[5] =
-		(formatter_buffer.writing_buffer[5] & 11111000) + (uint8_t)(ctx->data_type & 0b0111);
+		(formatter_buffer.writing_buffer[5] & 0xF8) + (uint8_t)(ctx->data_type & 0x03);
 	uint32_t counter = ctx->chunk_count;
 	for (int i = 9; i >= 6; i--) {
-		formatter_buffer.writing_buffer[i] = counter & 0b11111111;
+		formatter_buffer.writing_buffer[i] = (uint8_t)counter;
 		counter = counter >> 8;
 	}
 	ctx->chunk_count += 1;
 
 	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
 
-	uint16_t CRC_footer = 0xffff;
-	for (size_t i = 0; i < buffer_length; i++) {
-		uint8_t index = (CRC_footer ^ buffer[i]) & 0xff;
+	uint16_t CRC_footer = 0xFFFF;
+	for (uint16_t i = 0; i < buffer_length; i++) {
+		uint8_t index = (CRC_footer ^ buffer[i]) & 0xFF;
 		CRC_footer = (CRC_footer >> 8) ^ crc16_table[index];
 	}
 
-	formatter_buffer.writing_buffer[32766] = CRC_footer >> 8;
-	formatter_buffer.writing_buffer[32767] = CRC_footer & 0xff;
+	//Taking the left 8 bits and then taking the right 8 bits of a 16 bit number
+	//0xFF = 0b11111111
+	formatter_buffer.writing_buffer[CHUNK_SIZE - 2] = CRC_footer >> 8;
+	formatter_buffer.writing_buffer[CHUNK_SIZE - 1] = CRC_footer & 0xFF;
 
 	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer,
-	                                     formatter_buffer.chunk * LOG_BUFFER_SIZE, LOG_BUFFER_SIZE,
-	                                     200)) {
+	                                     formatter_buffer.chunk * CHUNK_SIZE, CHUNK_SIZE, TIMEOUT_MS)) {
 		logging_formatter_health.write_error++;
 		return W_FAILURE;
 	}
