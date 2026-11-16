@@ -145,37 +145,9 @@ static void system_init_task(void *arg) {
   non_crit_status |= iis2mdc_init();
   non_crit_status |= adxl380_init();
   non_crit_status |= adxrs649_init();
+
+  // Must be init after gpio
   non_crit_status |= mx25l25645g_init();
-
-  // The following is testing code for the flash chip
-  // TODO: REMOVE BEFORE MERGING TO MAIN
-  lfs_t lfs;
-  lfs_file_t file;
-
-  int err = mx25l25645g_mount(&lfs, 0);
-
-  if (err != 0) {
-    mx25l25645g_format(&lfs, lfs.cfg);
-    mx25l25645g_mount(&lfs, 0);
-  }
-
-  uint32_t boot_count = 0;
-  mx25l25645g_file_open(&lfs, &file, "boot_c", LFS_O_RDWR | LFS_O_CREAT);
-  mx25l25645g_file_read(&lfs, &file, &boot_count, sizeof(boot_count), 0,
-                        LFS_SEEK_SET);
-
-  // update boot count
-  boot_count += 1;
-  lfs_file_rewind(&lfs, &file);
-  mx25l25645g_file_write(&lfs, &file, &boot_count, sizeof(boot_count));
-  lfs_soff_t res = lfs_file_size(
-      &lfs,
-      &file); // can I see res=4 when i step in, but not when i dont step in...
-  // remember the storage is not updated until the file is closed successfully
-  mx25l25645g_file_close(&lfs, &file);
-  // release any resources we were using
-  mx25l25645g_unmount(&lfs);
-  // End of flash chip testing code
 
   if (non_crit_status != W_SUCCESS) {
     // Log non-critical initialization failure
