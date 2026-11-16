@@ -30,7 +30,7 @@ static char data_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.BIN";
 
 extern SD_HandleTypeDef hsd2;
 
-static uint8_t format_buffer[LOG_BUFFER_SIZE - 10];
+static uint8_t format_buffer[CHUNK_SIZE - 10];
 static uint8_t read_buffer[512];
 static formatter_file_ctx_t data_ctx;
 
@@ -519,24 +519,24 @@ void log_task(void *argument) {
 	memset(&zero_buffer, 0, BLOCKSIZE);
 
 	// writes to chunk (blockstartadd/64) + 1
-	uint32_t chunk = 1;
-	HAL_StatusTypeDef erased = HAL_SD_Erase(&hsd2, chunk * 64, 23554432);
+	uint32_t chunk = 2;
+	HAL_StatusTypeDef erased = HAL_SD_Erase(&hsd2, chunk * CHUNK_SIZE, 23554432);
 
 	if (W_SUCCESS != logging_formatting_init(&hsd2)) {}
 
-	// raw_logger_SD_write(zero_buffer, LOG_BUFFER_SIZE, 512, 200);
-	raw_logger_SD_read(read_buffer, LOG_BUFFER_SIZE, 512, 200);
+	raw_logger_SD_write(zero_buffer, CHUNK_SIZE, 512, 200);
+	raw_logger_SD_read(read_buffer, CHUNK_SIZE, 512, 200);
 
 	logging_formatter_create_file(&data_ctx, LOGGING_FORMATTING_DATA);
 
 	memset(format_buffer, 0, sizeof(format_buffer));
 	memset(read_buffer, 1, sizeof(read_buffer));
-	format_buffer[0] = 9;
-	format_buffer[1] = 10;
+	format_buffer[0] = 10;
+	format_buffer[1] = 11;
 
 	for (;;) {
 		logging_formatting_write(format_buffer, sizeof(format_buffer), &data_ctx);
-		raw_logger_SD_read(read_buffer, LOG_BUFFER_SIZE * (chunk + 1) - 512, 512, 200);
+		raw_logger_SD_read(read_buffer, CHUNK_SIZE * (chunk), 512, 200);
 		chunk++;
 	}
 }
