@@ -1,8 +1,8 @@
 // Add these includes for hardware handles
 #include "FreeRTOS.h"
-#include "adc.h" // For hadc1
+#include "adc.h"   // For hadc1
 #include "fdcan.h" // For hfdcan1 and hfdcan3
-#include "i2c.h" // For hi2c2, hi2c4
+#include "i2c.h"   // For hi2c2, hi2c4
 #include "stm32h7xx_hal.h"
 #include "task.h"
 #include "usart.h"
@@ -61,7 +61,8 @@ const uint32_t fsm_task_priority = configMAX_PRIORITIES - 1;
 // prioritize not missing injectorvalveopen msg
 // TODO: could dynamically reduce this priority after flight starts?
 const uint32_t can_handler_rx_priority = 45;
-// in general, prioritize consumers (estimator) over producers (imus) to avoid congestion
+// in general, prioritize consumers (estimator) over producers (imus) to avoid
+// congestion
 const uint32_t can_handler_tx_priority = 40;
 // TODO: update when sure (based on old imu handler priority)
 const uint32_t movella_task_priority = 20;
@@ -75,236 +76,268 @@ bool done_sys_init = false;
 const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
 
 // Motor calibration callback.
-// Run this in init to avoid blocking other tasks for too long, so blinky will survive.
+// Run this in init to avoid blocking other tasks for too long, so blinky will
+// survive.
 static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
-	can_actuator_id_t msg_id;
-	can_actuator_state_t msg_state;
+  can_actuator_id_t msg_id;
+  can_actuator_state_t msg_state;
 
-	if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
-	    (get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
-		log_text(1, LOG_LVL_WARN, "ak45", "invalid actuator data");
-		return W_FAILURE;
-	}
-	// make sure it is the correct message
-	if ((ACTUATOR_CANARD_MOTOR_CALIBRATION == msg_id) && (ACT_STATE_ON == msg_state)) {
-		xTaskNotifyGive(init_task_handle);
-	}
-	// default return
-	return W_SUCCESS;
+  if ((get_actuator_id(msg, &msg_id) != W_SUCCESS) ||
+      (get_cmd_actuator_state(msg, &msg_state) != W_SUCCESS)) {
+    log_text(1, LOG_LVL_WARN, "ak45", "invalid actuator data");
+    return W_FAILURE;
+  }
+  // make sure it is the correct message
+  if ((ACTUATOR_CANARD_MOTOR_CALIBRATION == msg_id) &&
+      (ACT_STATE_ON == msg_state)) {
+    xTaskNotifyGive(init_task_handle);
+  }
+  // default return
+  return W_SUCCESS;
 }
 
 static void system_init_task(void *arg) {
-	// hotfix: allow time for .... stuff ?? ... before init.
-	// without this, the uart DMA change made proc freeze upon power cycle.
-	// probably because movella triggers before its ready
-	vTaskDelay(500);
+  // hotfix: allow time for .... stuff ?? ... before init.
+  // without this, the uart DMA change made proc freeze upon power cycle.
+  // probably because movella triggers before its ready
+  vTaskDelay(500);
 
-	// initialize timer first to make sure other modules can use it
-	if (W_SUCCESS != timer_init()) {
-		proc_handle_fatal_error("timerinit");
-	}
+  // initialize timer first to make sure other modules can use it
+  if (W_SUCCESS != timer_init()) {
+    proc_handle_fatal_error("timerinit");
+  }
 
-	w_status_t non_crit_status = W_SUCCESS;
-	w_status_t crit_status = W_SUCCESS;
+  w_status_t non_crit_status = W_SUCCESS;
+  w_status_t crit_status = W_SUCCESS;
 
-	// init logging and telem
-	non_crit_status |= sd_card_init();
-	non_crit_status |= log_init();
-	crit_status |= telemetry_init();
+  // init logging and telem
+  non_crit_status |= sd_card_init();
+  non_crit_status |= log_init();
+  crit_status |= telemetry_init();
 
-	// motor init
-	non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
+  // motor init
+  non_crit_status |= ak45_driver_init(&hfdcan1, MOTOR_INIT_TIMEOUT_MS);
 
-	// init hardware drivers
-	crit_status |= gpio_init();
-	non_crit_status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
-	non_crit_status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
-	non_crit_status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
-	non_crit_status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
-	non_crit_status |= uart_init(UART_MOVELLA, &huart3, 100);
-	non_crit_status |= adc_init(&hadc1, &hadc2, &hadc3);
+  // init hardware drivers
+  crit_status |= gpio_init();
+  non_crit_status |= i2c_init(I2C_BUS_1, &hi2c1, 0); // ST IMU
+  non_crit_status |= i2c_init(I2C_BUS_4, &hi2c4, 0); // ST MAG
+  non_crit_status |= i2c_init(I2C_BUS_5, &hi2c5, 0); // MS BARO
+  non_crit_status |= i2c_init(I2C_BUS_2, &hi2c2, 0); // AD BREAKOUT
+  non_crit_status |= uart_init(UART_MOVELLA, &huart3, 100);
+  non_crit_status |= adc_init(&hadc1, &hadc2, &hadc3);
 
-	// init application modules
-	crit_status |= navigator_init();
-	crit_status |= health_check_init();
-	non_crit_status |= movella_init();
-	crit_status |= flight_phase_init();
-	crit_status |= sensor_handler_init();
-	crit_status |= can_handler_init(&hfdcan3);
-	non_crit_status |= controller_init();
-	crit_status |= fsm_init();
+  // init application modules
+  crit_status |= navigator_init();
+  crit_status |= health_check_init();
+  non_crit_status |= movella_init();
+  crit_status |= flight_phase_init();
+  crit_status |= sensor_handler_init();
+  crit_status |= can_handler_init(&hfdcan3);
+  non_crit_status |= controller_init();
+  crit_status |= fsm_init();
 
-	// init non-critical sensors and power handler
-	non_crit_status |= lsm6dsv32x_init();
-	non_crit_status |= ms5611_init();
-	non_crit_status |= power_handler_init();
-	non_crit_status |= iis2mdc_init();
-	non_crit_status |= adxl380_init();
-	non_crit_status |= adxrs649_init();
+  // init non-critical sensors and power handler
+  non_crit_status |= lsm6dsv32x_init();
+  non_crit_status |= ms5611_init();
+  non_crit_status |= power_handler_init();
+  non_crit_status |= iis2mdc_init();
+  non_crit_status |= adxl380_init();
+  non_crit_status |= adxrs649_init();
 
-	if (non_crit_status != W_SUCCESS) {
-		// Log non-critical initialization failure
-		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx (log)", non_crit_status);
-	}
+  if (non_crit_status != W_SUCCESS) {
+    // Log non-critical initialization failure
+    log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx (log)",
+             non_crit_status);
+  }
 
-	// cannot continue if any of the critical inits fail
-	if (crit_status != W_SUCCESS) {
-		// Log critical initialization failure - specific modules should have logged details
-		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).", crit_status);
-		// critical err
-		proc_handle_fatal_error("sysinit");
-	}
+  // cannot continue if any of the critical inits fail
+  if (crit_status != W_SUCCESS) {
+    // Log critical initialization failure - specific modules should have logged
+    // details
+    log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).",
+             crit_status);
+    // critical err
+    proc_handle_fatal_error("sysinit");
+  }
 
-	done_sys_init = true;
+  done_sys_init = true;
 
-	// Create FreeRTOS tasks
-	BaseType_t task_status = pdTRUE;
+  // Create FreeRTOS tasks
+  BaseType_t task_status = pdTRUE;
 
-	task_status &= xTaskCreate(fsm_task, "fsm",
-	                           6144, // TODO: set the correct size
-	                           NULL, fsm_task_priority, &fsm_task_handle);
-							   
-							   // if can_handler doesnt exists and registration is not successfull
-		if (fsm_task_handle == NULL || watchdog_register_task(fsm_task_handle, pdMS_TO_TICKS(10)) != W_SUCCESS) {
+  task_status &= xTaskCreate(fsm_task, "fsm",
+                             6144, // TODO: set the correct size
+                             NULL, fsm_task_priority, &fsm_task_handle);
 
-			// log fatal eerror message
-			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register FSM task");
-			// proc_handle_fatal_error("watchdog");
-		}
+  // if can_handler doesnt exists and registration is not successfull
+  if (fsm_task_handle == NULL ||
+      watchdog_register_task(fsm_task_handle, pdMS_TO_TICKS(10)) != W_SUCCESS) {
 
-	task_status &= xTaskCreate(health_check_task, "health", 384, NULL, health_checks_task_priority,
-	                           &health_checks_task_handle);
+    // log fatal eerror message
+    log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register FSM task");
+    // proc_handle_fatal_error("watchdog");
+  }
 
-		if (health_checks_task_handle == NULL || watchdog_register_task(health_checks_task_handle, pdMS_TO_TICKS(2000)) != W_SUCCESS) {
+  task_status &=
+      xTaskCreate(health_check_task, "health", 384, NULL,
+                  health_checks_task_priority, &health_checks_task_handle);
 
-			// log fatal eerror message
-			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register health check task");
-			// proc_handle_fatal_error("watchdog");
-		}
+  if (health_checks_task_handle == NULL ||
+      watchdog_register_task(health_checks_task_handle, pdMS_TO_TICKS(2000)) !=
+          W_SUCCESS) {
 
-	task_status &= xTaskCreate(can_handler_task_rx, "can handler rx", 256, NULL,
-	                           can_handler_rx_priority, &can_handler_handle_rx);
+    // log fatal eerror message
+    log_text(0, LOG_LVL_WARN, "watchdog",
+             "Failed to register health check task");
+    // proc_handle_fatal_error("watchdog");
+  }
 
-		// if can_handler doesnt exists and registration is not successfull
-		if (can_handler_handle_rx == NULL || watchdog_register_task(can_handler_handle_rx, 250) != W_SUCCESS) {
+  task_status &= xTaskCreate(can_handler_task_rx, "can handler rx", 256, NULL,
+                             can_handler_rx_priority, &can_handler_handle_rx);
 
-			// log fatal eerror message
-			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register CAN RX task");
-			// proc_handle_fatal_error("watchdog");
-		}
+  // if can_handler doesnt exists and registration is not successfull
+  if (can_handler_handle_rx == NULL ||
+      watchdog_register_task(can_handler_handle_rx, 250) != W_SUCCESS) {
 
-	task_status &= xTaskCreate(can_handler_task_tx, "can handler tx", 256, NULL,
-	                           can_handler_tx_priority, &can_handler_handle_tx);
+    // log fatal eerror message
+    log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register CAN RX task");
+    // proc_handle_fatal_error("watchdog");
+  }
 
-		// if can_handler doesnt exists and registration is not successfull
-		if (can_handler_handle_tx == NULL || watchdog_register_task(can_handler_handle_tx, pdMS_TO_TICKS(10)) != W_SUCCESS) {
+  task_status &= xTaskCreate(can_handler_task_tx, "can handler tx", 256, NULL,
+                             can_handler_tx_priority, &can_handler_handle_tx);
 
-			// log fatal eerror message
-			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register CAN TX task");
-			// proc_handle_fatal_error("watchdog");
-		}
+  // if can_handler doesnt exists and registration is not successfull
+  if (can_handler_handle_tx == NULL ||
+      watchdog_register_task(can_handler_handle_tx, pdMS_TO_TICKS(10)) !=
+          W_SUCCESS) {
 
-	task_status &= xTaskCreate(movella_task, "movella", 512, NULL, movella_task_priority,
-	                           &movella_task_handle);
+    // log fatal eerror message
+    log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register CAN TX task");
+    // proc_handle_fatal_error("watchdog");
+  }
 
-		// if can_handler doesnt exists and registration is not successfull
-		if (movella_task_handle == NULL || watchdog_register_task(movella_task_handle, pdMS_TO_TICKS(30)) != W_SUCCESS) {
+  task_status &= xTaskCreate(movella_task, "movella", 512, NULL,
+                             movella_task_priority, &movella_task_handle);
 
-			// log fatal eerror message
-			log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register movella task");
-			// proc_handle_fatal_error("watchdog");
-		}
+  // if can_handler doesnt exists and registration is not successfull
+  if (movella_task_handle == NULL ||
+      watchdog_register_task(movella_task_handle, pdMS_TO_TICKS(30)) !=
+          W_SUCCESS) {
 
-	task_status &= xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority,
-	                          &ms5611_task_handle); // TODO: set the correct size、
+    // log fatal eerror message
+    log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register movella task");
+    // proc_handle_fatal_error("watchdog");
+  }
 
-		//if ms5611_task doesnt exits or registration is not successful
-		if(ms5611_task_handle == NULL || watchdog_register_task(ms5611_task_handle, pdMS_TO_TICKS(30))!= W_SUCCESS){
+  task_status &=
+      xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority,
+                  &ms5611_task_handle); // TODO: set the correct size、
 
-			//log fatal error message
-			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register ms5611 task");
-			// proc_handle_fatal_error("watchdog");
-		}
+  // if ms5611_task doesnt exits or registration is not successful
+  if (ms5611_task_handle == NULL ||
+      watchdog_register_task(ms5611_task_handle, pdMS_TO_TICKS(30)) !=
+          W_SUCCESS) {
 
-	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
+    // log fatal error message
+    log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register ms5611 task");
+    // proc_handle_fatal_error("watchdog");
+  }
 
-	//if log_task doesnt exits or registration is not successful
-		if(log_task_handle == NULL || watchdog_register_task(log_task_handle, pdMS_TO_TICKS(1000))!= W_SUCCESS){
+  task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority,
+                             &log_task_handle);
 
-			//log fatal error message
-			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register log task");
-			// proc_handle_fatal_error("watchdog");
-		}
+  // if log_task doesnt exits or registration is not successful
+  if (log_task_handle == NULL ||
+      watchdog_register_task(log_task_handle, pdMS_TO_TICKS(1000)) !=
+          W_SUCCESS) {
 
-	task_status &= xTaskCreate(ad_breakout_board_task, "ad board task",
-	                           256, // TODO: set when sure of size
-	                           NULL, ad_breakout_task_priority, &ad_breakout_task_handle);
+    // log fatal error message
+    log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register log task");
+    // proc_handle_fatal_error("watchdog");
+  }
 
-	//if ad_breakout_board_task doesnt exits or registration is not successful
-		if(ad_breakout_task_handle == NULL || watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(6))!= W_SUCCESS){
+  task_status &=
+      xTaskCreate(ad_breakout_board_task, "ad board task",
+                  256, // TODO: set when sure of size
+                  NULL, ad_breakout_task_priority, &ad_breakout_task_handle);
 
-			//log fatal error message
-			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register ad_breakout_board task");
-			// proc_handle_fatal_error("watchdog");
-		}
+  // if ad_breakout_board_task doesnt exits or registration is not successful
+  if (ad_breakout_task_handle == NULL ||
+      watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(6)) !=
+          W_SUCCESS) {
 
-	task_status &= xTaskCreate(telemetry_task, "telem module", 336, NULL, telem_task_priority,
-	                           &telem_task_handle);
+    // log fatal error message
+    log_text(0, LOG_LVL_WARN, "watchdog",
+             "Failed to register ad_breakout_board task");
+    // proc_handle_fatal_error("watchdog");
+  }
 
-	//if telemetry_task doesnt exits or registration is not successful
-		if(telem_task_handle == NULL || watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(3))!= W_SUCCESS){
+  task_status &= xTaskCreate(telemetry_task, "telem module", 336, NULL,
+                             telem_task_priority, &telem_task_handle);
 
-			//log fatal error message
-			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register telemetry task");
-			// proc_handle_fatal_error("watchdog");
-		}
+  // if telemetry_task doesnt exits or registration is not successful
+  if (telem_task_handle == NULL ||
+      watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(3)) !=
+          W_SUCCESS) {
 
-	if (task_status != pdTRUE) {
-		// Log critical task creation failure
-		log_text(10, LOG_LVL_FATAL, "SystemInit",
-		         "CRITICAL: Failed to create one or more FreeRTOS tasks.");
-		proc_handle_fatal_error("tasks");
-	}
-	log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
-	gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
-	gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
-	gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
+    // log fatal error message
+    log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register telemetry task");
+    // proc_handle_fatal_error("watchdog");
+  }
 
-	// grab the task handle
-	init_task_handle = xTaskGetCurrentTaskHandle();
+  if (task_status != pdTRUE) {
+    // Log critical task creation failure
+    log_text(10, LOG_LVL_FATAL, "SystemInit",
+             "CRITICAL: Failed to create one or more FreeRTOS tasks.");
+    proc_handle_fatal_error("tasks");
+  }
+  log_text(10, LOG_LVL_INFO, "SystemInit", "All tasks created successfully.");
+  gpio_write(GPIO_PIN_BLUE_LED, GPIO_LEVEL_HIGH, 0);  // indicate init done
+  gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_HIGH, 0);   // indicate init done
+  gpio_write(GPIO_PIN_GREEN_LED, GPIO_LEVEL_HIGH, 0); // indicate init done
 
-	// register motor calibration
-	if (can_handler_act_cmd_register_callback(ACTUATOR_CANARD_MOTOR_CALIBRATION,
-	                                          &ak45_motor_calibration) != W_SUCCESS) {
-		log_text(0, LOG_LVL_FATAL, "SystemInit", "failed to add calibration callback");
-		ak45_send_disable_cmd();
-	}
-	// its blinky now
-	while (1) {
-		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
-		vTaskDelay(500);
+  // grab the task handle
+  init_task_handle = xTaskGetCurrentTaskHandle();
 
-		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
-			// TODO: TEST ONLY
-			if (ak45_hard_stop_calibrate(&ak45_calibration_config) != W_SUCCESS) {
-				log_text(0, LOG_LVL_FATAL, "SystemInit", "failed motor calibration");
-			}
-		}
-		watchdog_kick();
-	}
+  // register motor calibration
+  if (can_handler_act_cmd_register_callback(ACTUATOR_CANARD_MOTOR_CALIBRATION,
+                                            &ak45_motor_calibration) !=
+      W_SUCCESS) {
+    log_text(0, LOG_LVL_FATAL, "SystemInit",
+             "failed to add calibration callback");
+    ak45_send_disable_cmd();
+  }
+  // its blinky now
+  while (1) {
+    gpio_toggle(GPIO_PIN_GREEN_LED, 1);
+    vTaskDelay(500);
+
+    if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
+      // TODO: TEST ONLY
+      if (ak45_hard_stop_calibrate(&ak45_calibration_config) != W_SUCCESS) {
+        log_text(0, LOG_LVL_FATAL, "SystemInit", "failed motor calibration");
+      }
+    }
+    watchdog_kick();
+  }
 }
 
 w_status_t init_tasks(void) {
-	// create first task that will run system_init_task
-	BaseType_t task_status =
-		xTaskCreate(system_init_task, "SysInit", 1024, NULL, configMAX_PRIORITIES - 1, &init_task_handle);
+  // create first task that will run system_init_task
+  BaseType_t task_status =
+      xTaskCreate(system_init_task, "SysInit", 1024, NULL,
+                  configMAX_PRIORITIES - 1, &init_task_handle);
 
-	//if Sysinit_task doesnt exits or registration is not successful
-		if(init_task_handle == NULL || watchdog_register_task(init_task_handle, pdMS_TO_TICKS(1500))!= W_SUCCESS){
+  // if Sysinit_task doesnt exits or registration is not successful
+  if (init_task_handle == NULL ||
+      watchdog_register_task(init_task_handle, pdMS_TO_TICKS(1500)) !=
+          W_SUCCESS) {
 
-			//log fatal error message
-			log_text(0, LOG_LVL_WARN, "watchdog","Failed to register SysInit task");
-			// proc_handle_fatal_error("watchdog");
-		}
-	return (task_status == pdTRUE) ? W_SUCCESS : W_FAILURE;
+    // log fatal error message
+    log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register SysInit task");
+    // proc_handle_fatal_error("watchdog");
+  }
+  return (task_status == pdTRUE) ? W_SUCCESS : W_FAILURE;
 }

@@ -34,10 +34,10 @@
 
 // struct for watchdog
 typedef struct {
-	TaskHandle_t task_handle;
-	bool is_kicked;
-	uint32_t last_kick_timestamp_ms; // ms
-	uint32_t timeout_ticks;
+  TaskHandle_t task_handle;
+  bool is_kicked;
+  uint32_t last_kick_timestamp_ms; // ms
+  uint32_t timeout_ticks;
 } watchdog_task_t;
 
 // map for module IDs
@@ -47,211 +47,226 @@ typedef health_status_t (*get_module_status_t)(void);
 static watchdog_task_t watchdog_tasks[MAX_WATCHDOG_TASKS] = {0};
 static uint32_t num_watchdog_tasks = 0;
 
-static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MAX] = {
-	[CANARDS_MODULE_ID_ADC] = adc_get_status,
-	[CANARDS_MODULE_ID_ADXL380] = adxl380_get_status,
-	[CANARDS_MODULE_ID_ADXRS649] = adxrs649_get_status,
-	[CANARDS_MODULE_ID_AK45] = ak45_get_status,
-	[CANARDS_MODULE_ID_CAN_HANDLER] = can_handler_get_status,
-	[CANARDS_MODULE_ID_CONTROLLER] = controller_get_status,
-	[CANARDS_MODULE_ID_FLIGHT_PHASE] = flight_phase_get_status,
-	[CANARDS_MODULE_ID_FSM] = fsm_get_status,
-	[CANARDS_MODULE_ID_GPIO] = gpio_get_status,
-	[CANARDS_MODULE_ID_I2C] = i2c_get_status,
-	[CANARDS_MODULE_ID_IIS2MDC] = iis2mdc_get_status,
-	[CANARDS_MODULE_ID_LOGGER] = logger_get_status,
-	[CANARDS_MODULE_ID_LSM6DSV32X] = lsm6dsv32x_get_status,
-	[CANARDS_MODULE_ID_MOVELLA] = movella_get_status,
-	[CANARDS_MODULE_ID_MS5611] = ms5611_get_status,
-	[CANARDS_MODULE_ID_NAVIGATOR] = navigator_get_status,
-	[CANARDS_MODULE_ID_POWER_HANDLER] = power_handler_get_status,
-	[CANARDS_MODULE_ID_SD_CARD] = sd_card_get_status,
-	[CANARDS_MODULE_ID_SENSOR_HANDLER] = sensor_handler_get_status,
-	[CANARDS_MODULE_ID_TELEMETRY] = telemetry_get_status,
-	[CANARDS_MODULE_ID_TIMER] = timer_get_status,
-	[CANARDS_MODULE_ID_UART] = uart_get_status,
+static const get_module_status_t
+    module_get_status_fns[CANARDS_MODULE_ID_ENUM_MAX] = {
+        [CANARDS_MODULE_ID_ADC] = adc_get_status,
+        [CANARDS_MODULE_ID_ADXL380] = adxl380_get_status,
+        [CANARDS_MODULE_ID_ADXRS649] = adxrs649_get_status,
+        [CANARDS_MODULE_ID_AK45] = ak45_get_status,
+        [CANARDS_MODULE_ID_CAN_HANDLER] = can_handler_get_status,
+        [CANARDS_MODULE_ID_CONTROLLER] = controller_get_status,
+        [CANARDS_MODULE_ID_FLIGHT_PHASE] = flight_phase_get_status,
+        [CANARDS_MODULE_ID_FSM] = fsm_get_status,
+        [CANARDS_MODULE_ID_GPIO] = gpio_get_status,
+        [CANARDS_MODULE_ID_I2C] = i2c_get_status,
+        [CANARDS_MODULE_ID_IIS2MDC] = iis2mdc_get_status,
+        [CANARDS_MODULE_ID_LOGGER] = logger_get_status,
+        [CANARDS_MODULE_ID_LSM6DSV32X] = lsm6dsv32x_get_status,
+        [CANARDS_MODULE_ID_MOVELLA] = movella_get_status,
+        [CANARDS_MODULE_ID_MS5611] = ms5611_get_status,
+        [CANARDS_MODULE_ID_NAVIGATOR] = navigator_get_status,
+        [CANARDS_MODULE_ID_POWER_HANDLER] = power_handler_get_status,
+        [CANARDS_MODULE_ID_SD_CARD] = sd_card_get_status,
+        [CANARDS_MODULE_ID_SENSOR_HANDLER] = sensor_handler_get_status,
+        [CANARDS_MODULE_ID_TELEMETRY] = telemetry_get_status,
+        [CANARDS_MODULE_ID_TIMER] = timer_get_status,
+        [CANARDS_MODULE_ID_UART] = uart_get_status,
 };
 
 w_status_t health_check_init(void) {
-	num_watchdog_tasks = 0;
-	return W_SUCCESS;
+  num_watchdog_tasks = 0;
+  return W_SUCCESS;
 }
 
 w_status_t watchdog_kick(void) {
-	TaskHandle_t current_task = xTaskGetCurrentTaskHandle();
-	uint32_t current_time_ms = 0;
-	w_status_t status = W_SUCCESS;
+  TaskHandle_t current_task = xTaskGetCurrentTaskHandle();
+  uint32_t current_time_ms = 0;
+  w_status_t status = W_SUCCESS;
 
-	status |= timer_get_ms(&current_time_ms);
-	if (status != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
-		return status;
-	}
+  status |= timer_get_ms(&current_time_ms);
+  if (status != W_SUCCESS) {
+    log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
+    return status;
+  }
 
-	// Check if the current task is registered
-	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
-		if (watchdog_tasks[i].task_handle == current_task) {
-			watchdog_tasks[i].is_kicked = true;
-			watchdog_tasks[i].last_kick_timestamp_ms = current_time_ms;
+  // Check if the current task is registered
+  for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
+    if (watchdog_tasks[i].task_handle == current_task) {
+      watchdog_tasks[i].is_kicked = true;
+      watchdog_tasks[i].last_kick_timestamp_ms = current_time_ms;
 
-			// log a message every second
-			static uint32_t last_log_ms = 0;
-			if ((uint32_t)(current_time_ms - last_log_ms) == 1000) {
-				log_text(0, LOG_LVL_INFO, "watchdog", 
-					"Kick recieved %s, time=%lu", pcTaskGetName(current_task), (unsigned long)current_time_ms
-				);
-				last_log_ms = current_time_ms;
-			}
-			return W_SUCCESS;
-		}
-	}
-	return W_FAILURE;
+      // log a message every second
+      static uint32_t last_log_ms = 0;
+      if ((uint32_t)(current_time_ms - last_log_ms) == 1000) {
+        log_text(0, LOG_LVL_INFO, "watchdog", "Kick recieved %s, time=%lu",
+                 pcTaskGetName(current_task), (unsigned long)current_time_ms);
+        last_log_ms = current_time_ms;
+      }
+      return W_SUCCESS;
+    }
+  }
+  return W_FAILURE;
 }
 
-w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_ticks) {
-	if ((NULL == task_handle) || (0 == timeout_ticks)) {
-		log_text(0, LOG_LVL_WARN, "health_checks", "invalid arguments into watchdog register");
-		return W_INVALID_PARAM;
-	}
+w_status_t watchdog_register_task(TaskHandle_t task_handle,
+                                  uint32_t timeout_ticks) {
+  if ((NULL == task_handle) || (0 == timeout_ticks)) {
+    log_text(0, LOG_LVL_WARN, "health_checks",
+             "invalid arguments into watchdog register");
+    return W_INVALID_PARAM;
+  }
 
-	if (num_watchdog_tasks >= MAX_WATCHDOG_TASKS) {
-		log_text(0, LOG_LVL_WARN, "health_checks", "max watchdog tasks reached");
-		return W_FAILURE;
-	}
+  if (num_watchdog_tasks >= MAX_WATCHDOG_TASKS) {
+    log_text(0, LOG_LVL_WARN, "health_checks", "max watchdog tasks reached");
+    return W_FAILURE;
+  }
 
-	// Check if the task is already registered
-	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
-		if (watchdog_tasks[i].task_handle == task_handle) {
-			log_text(0, LOG_LVL_WARN, "health_checks", "duplicate task registration:%p",
-			         (void *)task_handle);
-			return W_FAILURE;
-		}
-	}
+  // Check if the task is already registered
+  for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
+    if (watchdog_tasks[i].task_handle == task_handle) {
+      log_text(0, LOG_LVL_WARN, "health_checks",
+               "duplicate task registration:%p", (void *)task_handle);
+      return W_FAILURE;
+    }
+  }
 
-	uint32_t current_time = 0;
-	w_status_t status = W_SUCCESS;
-	status |= timer_get_ms(&current_time);
+  uint32_t current_time = 0;
+  w_status_t status = W_SUCCESS;
+  status |= timer_get_ms(&current_time);
 
-	watchdog_tasks[num_watchdog_tasks].task_handle = task_handle;
-	watchdog_tasks[num_watchdog_tasks].is_kicked = true;
-	watchdog_tasks[num_watchdog_tasks].last_kick_timestamp_ms = current_time;
-	watchdog_tasks[num_watchdog_tasks].timeout_ticks = timeout_ticks;
+  watchdog_tasks[num_watchdog_tasks].task_handle = task_handle;
+  watchdog_tasks[num_watchdog_tasks].is_kicked = true;
+  watchdog_tasks[num_watchdog_tasks].last_kick_timestamp_ms = current_time;
+  watchdog_tasks[num_watchdog_tasks].timeout_ticks = timeout_ticks;
 
-	num_watchdog_tasks++; // increment the watchdog task count for future ref
+  num_watchdog_tasks++; // increment the watchdog task count for future ref
 
-	log_text(0, LOG_LVL_INFO, "watchdog", "YIPPIE SUCCESSFULLY Registered task %s", pcTaskGetName(task_handle));
+  log_text(0, LOG_LVL_INFO, "watchdog",
+           "YIPPIE SUCCESSFULLY Registered task %s",
+           pcTaskGetName(task_handle));
 
-	return status;
+  return status;
 }
 
 /**
  * @brief Checks all registered tasks for watchdog timeouts
  *
  * Compares the current time with the last kick timestamp of each task.
- * If a task exceeds its timeout, sends a CAN status message indicating a timeout.
- * Should be called periodically (typically through health_check_exec).
+ * If a task exceeds its timeout, sends a CAN status message indicating a
+ * timeout. Should be called periodically (typically through health_check_exec).
  *
  * @return CAN board specific err bitfield
  */
 uint32_t check_watchdog_tasks(void) {
-	uint32_t status_bitfield = 0;
-	uint32_t current_time_ms = 0;
+  uint32_t status_bitfield = 0;
+  uint32_t current_time_ms = 0;
 
-	// cannot run health check without timer
-	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
-		status_bitfield |= 1 << E_IO_ERROR_OFFSET;
-		return status_bitfield;
-	}
+  // cannot run health check without timer
+  if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
+    log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
+    status_bitfield |= 1 << E_IO_ERROR_OFFSET;
+    return status_bitfield;
+  }
 
-	for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
-		uint32_t time_elapsed = current_time_ms - watchdog_tasks[i].last_kick_timestamp_ms;
-		uint32_t ticks_elapsed = pdMS_TO_TICKS((uint32_t)time_elapsed); // time to ticks
+  for (uint32_t i = 0; i < num_watchdog_tasks; i++) {
+    uint32_t time_elapsed =
+        current_time_ms - watchdog_tasks[i].last_kick_timestamp_ms;
+    uint32_t ticks_elapsed =
+        pdMS_TO_TICKS((uint32_t)time_elapsed); // time to ticks
 
-		if (watchdog_tasks[i].is_kicked || (ticks_elapsed <= watchdog_tasks[i].timeout_ticks)) {
-			// do nothing if any one is true
-		} else {
-			// report watchdog timeout
-			can_msg_t msg = {0};
-			char *task_name = pcTaskGetName(watchdog_tasks[i].task_handle);
-			uint8_t data[6] = {0};
-			strncpy((char *)data, task_name, sizeof(data));
-			data[sizeof(data) - 1] = '\0'; // ensure null termination
-			build_debug_raw_msg(PRIO_HIGH, (uint16_t)current_time_ms, data, &msg);
-			if (can_handler_transmit(&msg) != W_SUCCESS) {
-				log_text(0, LOG_LVL_WARN, "health", "CAN send failure for watchdog timeout msg");
-			}
-			log_text(0, LOG_LVL_WARN, "OH NO health_checks", "task timeout: %s", task_name);
-			status_bitfield |= 1 << E_WATCHDOG_TIMEOUT_OFFSET;
-		}
+    if (watchdog_tasks[i].is_kicked ||
+        (ticks_elapsed <= watchdog_tasks[i].timeout_ticks)) {
+      // do nothing if any one is true
+    } else {
+      // report watchdog timeout
+      can_msg_t msg = {0};
+      char *task_name = pcTaskGetName(watchdog_tasks[i].task_handle);
+      uint8_t data[6] = {0};
+      strncpy((char *)data, task_name, sizeof(data));
+      data[sizeof(data) - 1] = '\0'; // ensure null termination
+      build_debug_raw_msg(PRIO_HIGH, (uint16_t)current_time_ms, data, &msg);
+      if (can_handler_transmit(&msg) != W_SUCCESS) {
+        log_text(0, LOG_LVL_WARN, "health",
+                 "CAN send failure for watchdog timeout msg");
+      }
+      log_text(0, LOG_LVL_WARN, "OH NO health_checks", "task timeout: %s",
+               task_name);
+      status_bitfield |= 1 << E_WATCHDOG_TIMEOUT_OFFSET;
+    }
 
-		// resetting for next check
-		watchdog_tasks[i].is_kicked = false;
-	}
-	return status_bitfield;
+    // resetting for next check
+    watchdog_tasks[i].is_kicked = false;
+  }
+  return status_bitfield;
 }
 
 /**
- * @brief Processes the status a module. If severity is not CANARDS_HEALTH_SEVERITY_HEALTH_OK,l send
- * CAN canards firmware error msg. If severity is HEALTH_FATAL, call fatal error handler
+ * @brief Processes the status a module. If severity is not
+ * CANARDS_HEALTH_SEVERITY_HEALTH_OK,l send CAN canards firmware error msg. If
+ * severity is HEALTH_FATAL, call fatal error handler
  *
- * @return W_SUCCESS if severity is CANARDS_HEALTH_SEVERITY_HEALTH_OK. W_FAILURE if not
+ * @return W_SUCCESS if severity is CANARDS_HEALTH_SEVERITY_HEALTH_OK. W_FAILURE
+ * if not
  */
 static w_status_t process_module_status(health_status_t status) {
-	if (status.severity != CANARDS_HEALTH_SEVERITY_HEALTH_OK) {
-		log_text(0, LOG_LVL_WARN, "health", "module=%d: sev=%d, err=%d", status.module_id,
-		         status.severity, status.error_bitfield);
+  if (status.severity != CANARDS_HEALTH_SEVERITY_HEALTH_OK) {
+    log_text(0, LOG_LVL_WARN, "health", "module=%d: sev=%d, err=%d",
+             status.module_id, status.severity, status.error_bitfield);
 
-		can_msg_t msg = {0};
-		uint32_t current_time_ms;
+    can_msg_t msg = {0};
+    uint32_t current_time_ms;
 
-		if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-			log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
-			return W_FAILURE; // unable to send CAN msg without timestamp
-		}
+    if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
+      log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
+      return W_FAILURE; // unable to send CAN msg without timestamp
+    }
 
-		build_canard_firmware_error_msg(PRIO_MEDIUM, (uint16_t)current_time_ms, status.module_id,
-		                                status.error_bitfield, status.severity, &msg);
-		if (can_handler_transmit(&msg) != W_SUCCESS) {
-			log_text(0, LOG_LVL_WARN, "health", "CAN send failure for module status msg");
-		}
+    build_canard_firmware_error_msg(PRIO_MEDIUM, (uint16_t)current_time_ms,
+                                    status.module_id, status.error_bitfield,
+                                    status.severity, &msg);
+    if (can_handler_transmit(&msg) != W_SUCCESS) {
+      log_text(0, LOG_LVL_WARN, "health",
+               "CAN send failure for module status msg");
+    }
 
-		if (CANARDS_HEALTH_SEVERITY_HEALTH_FATAL == status.severity) {
-			char data[32];
-			// build error msg in the form "module id:error bitfield:severity"
-			snprintf_(data, sizeof(data), "%d:%lu", status.module_id, status.error_bitfield);
-			proc_handle_fatal_error(data);
-		}
-		return W_FAILURE;
-	}
-	return W_SUCCESS;
+    if (CANARDS_HEALTH_SEVERITY_HEALTH_FATAL == status.severity) {
+      char data[32];
+      // build error msg in the form "module id:error bitfield:severity"
+      snprintf_(data, sizeof(data), "%d:%lu", status.module_id,
+                status.error_bitfield);
+      proc_handle_fatal_error(data);
+    }
+    return W_FAILURE;
+  }
+  return W_SUCCESS;
 }
 
 /**
- * @brief Checks the status of all known modules by directly calling their get_status functions
+ * @brief Checks the status of all known modules by directly calling their
+ * get_status functions
  *
  * @return bitfield of all canard application modules' w_status_t
  * Calls each module's status function to trigger status reporting
  */
 
 static uint32_t check_modules_status(void) {
-	uint32_t status_bitfield = 0;
-	w_status_t status = W_SUCCESS;
+  uint32_t status_bitfield = 0;
+  w_status_t status = W_SUCCESS;
 
-	for (int i = 0; i < CANARDS_MODULE_ID_ENUM_MAX; i++) {
-		if (NULL != module_get_status_fns[i]) {
-			status |= process_module_status(module_get_status_fns[i]());
-		} else {
-			log_text(1, LOG_LVL_WARN, "Health Checks",
-			         "Null element in module_get_status_fns array at index %d", i);
-		}
-	}
+  for (int i = 0; i < CANARDS_MODULE_ID_ENUM_MAX; i++) {
+    if (NULL != module_get_status_fns[i]) {
+      status |= process_module_status(module_get_status_fns[i]());
+    } else {
+      log_text(1, LOG_LVL_WARN, "Health Checks",
+               "Null element in module_get_status_fns array at index %d", i);
+    }
+  }
 
-	if (status != W_SUCCESS) {
-		status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
-	}
+  if (status != W_SUCCESS) {
+    status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
+  }
 
-	return status_bitfield;
+  return status_bitfield;
 }
 
 // --- Fatal Error Handler Implementation ---
@@ -260,91 +275,96 @@ static uint32_t check_modules_status(void) {
 //       are used directly from canlib/message_types.h
 
 void proc_handle_fatal_error(const char *errorMsg) {
-	static bool can_initialized = false;
-	// safe state - loop here forever and send CAN err msg repeatedly
-	while (1) {
-		can_initialized = can_initialized || stm32h7_can_init(&hfdcan3, can_handle_rx_message);
-		__disable_irq();
+  static bool can_initialized = false;
+  // safe state - loop here forever and send CAN err msg repeatedly
+  while (1) {
+    can_initialized =
+        can_initialized || stm32h7_can_init(&hfdcan3, can_handle_rx_message);
+    __disable_irq();
 
-		// let CAN still work
-		HAL_NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
+    // let CAN still work
+    HAL_NVIC_EnableIRQ(FDCAN3_IT0_IRQn);
 
-		can_msg_t msg;
-		uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
+    can_msg_t msg;
+    uint8_t data[6] = {0}; // Data for the debug message (max 6 bytes)
 
-		// Copy error message to the data buffer
-		if (errorMsg != NULL) {
-			strncpy((char *)data, errorMsg, sizeof(data));
-			// Ensure null termination
-			data[sizeof(data) - 1] = '\0';
-		}
+    // Copy error message to the data buffer
+    if (errorMsg != NULL) {
+      strncpy((char *)data, errorMsg, sizeof(data));
+      // Ensure null termination
+      data[sizeof(data) - 1] = '\0';
+    }
 
-		// Use canlib's helper function to build the debug message
-		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
-		// state)
-		build_debug_raw_msg(PRIO_HIGH, 0, data, &msg);
-		if (can_initialized) {
-			stm32h7_can_send(&msg);
-		}
+    // Use canlib's helper function to build the debug message
+    // Set priority to high and timestamp to 0 (since we can't reliably get
+    // timestamp in error state)
+    build_debug_raw_msg(PRIO_HIGH, 0, data, &msg);
+    if (can_initialized) {
+      stm32h7_can_send(&msg);
+    }
 
-		// scream a few times then attempt to reset.
-		// delay for ~1sec without using systick-based delays (no hal_delay)
-		volatile int dummy;
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 50000000; j++) {
-				dummy++;
-			}
-		}
+    // scream a few times then attempt to reset.
+    // delay for ~1sec without using systick-based delays (no hal_delay)
+    volatile int dummy;
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 50000000; j++) {
+        dummy++;
+      }
+    }
 
-		dummy++;
+    dummy++;
 
-		// resetting is always a safe state even in midflight, as flightphase starts IDLE
-		NVIC_SystemReset();
-	}
+    // resetting is always a safe state even in midflight, as flightphase starts
+    // IDLE
+    NVIC_SystemReset();
+  }
 }
 
 // --- End Fatal Error Handler ---
 
 w_status_t health_check_exec() {
-	uint32_t status_bitfield = 0;
+  uint32_t status_bitfield = 0;
 
-	status_bitfield |= check_watchdog_tasks();
-	status_bitfield |= check_modules_status();
-	status_bitfield |= power_handler_get_board_status();
+  status_bitfield |= check_watchdog_tasks();
+  status_bitfield |= check_modules_status();
+  status_bitfield |= power_handler_get_board_status();
 
-	// send status CAN msg
-	can_msg_t msg = {0};
-	uint32_t current_time_ms = 0;
+  // send status CAN msg
+  can_msg_t msg = {0};
+  uint32_t current_time_ms = 0;
 
-	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
-		return W_FAILURE; // unable to send CAN msg without timestamp
-	}
+  if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
+    log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
+    return W_FAILURE; // unable to send CAN msg without timestamp
+  }
 
-	if (0 == status_bitfield) {
-		build_general_board_status_msg(PRIO_LOW, (uint16_t)current_time_ms, 0, &msg);
-	} else {
-		build_general_board_status_msg(PRIO_HIGH, (uint16_t)current_time_ms, status_bitfield, &msg);
-	}
+  if (0 == status_bitfield) {
+    build_general_board_status_msg(PRIO_LOW, (uint16_t)current_time_ms, 0,
+                                   &msg);
+  } else {
+    build_general_board_status_msg(PRIO_HIGH, (uint16_t)current_time_ms,
+                                   status_bitfield, &msg);
+  }
 
-	if (can_handler_transmit(&msg) != W_SUCCESS) {
-		log_text(0, LOG_LVL_WARN, "health_checks", "CAN send failure for status msg");
-		return W_FAILURE;
-	}
+  if (can_handler_transmit(&msg) != W_SUCCESS) {
+    log_text(0, LOG_LVL_WARN, "health_checks",
+             "CAN send failure for status msg");
+    return W_FAILURE;
+  }
 
-	return W_SUCCESS;
+  return W_SUCCESS;
 }
 
 void health_check_task(void *argument) {
-	(void)argument;
+  (void)argument;
 
-	TickType_t lastWakeTime = xTaskGetTickCount();
+  TickType_t lastWakeTime = xTaskGetTickCount();
 
-	for (;;) {
-		health_check_exec();
-		
-		watchdog_kick();
+  for (;;) {
+    health_check_exec();
 
-		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TASK_DELAY_MS));
-	}
+    watchdog_kick();
+
+    vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TASK_DELAY_MS));
+  }
 }
