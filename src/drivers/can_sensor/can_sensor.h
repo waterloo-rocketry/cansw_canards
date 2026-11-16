@@ -62,6 +62,18 @@ w_status_t can_gps_info_isr_callback(const can_msg_t *msg);
 /// @return status of the operation
 w_status_t can_CANARD_MTI630_BARO_isr_callback(const can_msg_t *msg);
 
+/// @brief callback for the CANARD_IIS2MDC_MAG message and write the message to corresponding buffer
+/// @param msg [in] pointer to the incoming CAN message
+////@note this uses analog_sensor_id packet format
+/// @return status of the operation
+w_status_t can_CANARD_IIS2MDC_MAG_isr_callback(const can_msg_t *msg);
+
+/// @brief callback for the CANARD_MTI630_MAG message and write the message to corresponding buffer
+/// @param msg [in] pointer to the incoming CAN message
+////@note this uses analog_sensor_id packet format
+/// @return status of the operation
+w_status_t can_CANARD_MTI630_MAG_isr_callback(const can_msg_t *msg);
+
 //------getter functions -------
 
 /// @brief getter function for the CANARD_IIS2MDC_MAG message, returns the magnetometer readings and timestamp
