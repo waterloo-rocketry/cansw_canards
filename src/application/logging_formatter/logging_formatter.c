@@ -61,7 +61,7 @@ static w_status_t crc_table_init(void) {
 	for (uint16_t i = 0; i < 256; i++) {
 		uint16_t crc = i;
 		for (int j = 0; j < 8; j++) {
-			crc = (crc & 1) ? (crc >> 1) ^ 0xA001 : (crc >> 1);
+			crc = (crc & 1) ? (crc >> 1) ^ 0xa001 : (crc >> 1);
 		}
 		crc16_table[i] = crc;
 	}
@@ -95,7 +95,8 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	uint8_t zero_buffer[BLOCKSIZE];
 	memset(&zero_buffer, 0, BLOCKSIZE);
 
-	if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) != W_SUCCESS) {
+	if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
+	    W_SUCCESS) {
 		return W_FAILURE;
 	}
 
@@ -164,14 +165,16 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	memcpy(formatter_buffer.writing_buffer, HEADER, 4);
 
 	// header_init
-	//identifier is a 13 bit number, take the fifth byte from init_buffer and shift it left by 5 and then take
-	//the sixth byte from init_buffer and shift it right by 3 to get the last 5 digits
+	// identifier is a 13 bit number, take the fifth byte from init_buffer and shift it left by 5
+	// and then take the sixth byte from init_buffer and shift it right by 3 to get the last 5
+	// digits
 	if (1 != formatter_buffer.chunk) {
 		uint16_t identifier = init_buffer[4];
 		identifier = (identifier << 5) + (init_buffer[5] >> 3) + 1;
 		formatter_buffer.file_instance_count = identifier;
-		//reversing what we did earlier, shifting right by 5 gives 8 bits (1 byte) which goes into the fifth index
-		//and shifting left by three ensures we dont overwrite the data type that also exists in the sixth index
+		// reversing what we did earlier, shifting right by 5 gives 8 bits (1 byte) which goes into
+		// the fifth index and shifting left by three ensures we dont overwrite the data type that
+		// also exists in the sixth index
 		formatter_buffer.writing_buffer[4] = identifier >> 5;
 		formatter_buffer.writing_buffer[5] = identifier << 3;
 	}
@@ -196,7 +199,7 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 	}
 
 	formatter_buffer.writing_buffer[5] =
-		(formatter_buffer.writing_buffer[5] & 0xF8) + (uint8_t)(ctx->data_type & 0x03);
+		(formatter_buffer.writing_buffer[5] & 0xf8) + (uint8_t)(ctx->data_type & 0x03);
 	uint32_t counter = ctx->chunk_count;
 	for (int i = 9; i >= 6; i--) {
 		formatter_buffer.writing_buffer[i] = (uint8_t)counter;
@@ -206,19 +209,20 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 
 	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
 
-	uint16_t CRC_footer = 0xFFFF;
+	uint16_t CRC_footer = 0xffff;
 	for (uint16_t i = 0; i < buffer_length; i++) {
-		uint8_t index = (CRC_footer ^ buffer[i]) & 0xFF;
+		uint8_t index = (CRC_footer ^ buffer[i]) & 0xff;
 		CRC_footer = (CRC_footer >> 8) ^ crc16_table[index];
 	}
 
-	//Taking the left 8 bits and then taking the right 8 bits of a 16 bit number
-	//0xFF = 0b11111111
+	// Taking the left 8 bits and then taking the right 8 bits of a 16 bit number
+	// 0xFF = 0b11111111
 	formatter_buffer.writing_buffer[CHUNK_SIZE - 2] = CRC_footer >> 8;
-	formatter_buffer.writing_buffer[CHUNK_SIZE - 1] = CRC_footer & 0xFF;
+	formatter_buffer.writing_buffer[CHUNK_SIZE - 1] = CRC_footer & 0xff;
 
 	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer,
-	                                     formatter_buffer.chunk * CHUNK_SIZE, CHUNK_SIZE, TIMEOUT_MS)) {
+	                                     formatter_buffer.chunk * CHUNK_SIZE, CHUNK_SIZE,
+	                                     TIMEOUT_MS)) {
 		logging_formatter_health.write_error++;
 		return W_FAILURE;
 	}
