@@ -8,6 +8,7 @@
 #include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
 #include "drivers/altimu-10/altimu-10.h"
+#include "stm32h7xx_hal.h"
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32758
@@ -219,7 +220,7 @@ STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
  * @brief Create log buffers and mutexes necessary for logger operation.
  * @pre must be run after scheduler start, and after sd_card module is init
  */
-w_status_t log_init(void);
+w_status_t log_init(SD_HandleTypeDef *p_sd_handle);
 
 /**
  * @brief Log a message in text form to the text log file.
