@@ -407,7 +407,6 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	uint32_t curr_time_ms = 0;
 	timer_get_ms(&start_time_ms);
 	while (FLASH_PROG_DELAY_MS < (curr_time_ms - start_time_ms)) {
-		vTaskDelay(pdMS_TO_TICKS(5));
 		if (W_SUCCESS != get_rdsr(&rdsr_response, true)) {
 			return W_IO_ERROR;
 		}
@@ -415,6 +414,8 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 		if ((WIP_BIT_MASK & rdsr_response) == 0x00) {
 			break;
 		}
+
+		vTaskDelay(pdMS_TO_TICKS(5));
 	}
 
 	if ((WIP_BIT_MASK & rdsr_response) != 0x00) {
@@ -526,11 +527,10 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	// check WIP is complete
 	uint32_t start_time_ms = 0;
 	uint32_t curr_time_ms = 0;
-	if (W_SUCCESS != timer_get_ms(&start_time_ms) != W_SUCCESS) {
+	if (W_SUCCESS != timer_get_ms(&start_time_ms)) {
 		return W_FAILURE;
 	}
 	while (FLASH_PROG_DELAY_MS < (curr_time_ms - start_time_ms)) {
-		vTaskDelay(pdMS_TO_TICKS(5));
 		if (W_SUCCESS != get_rdsr(&rdsr_response, true)) {
 			return W_IO_ERROR;
 		}
@@ -538,6 +538,8 @@ static w_status_t flash_erase_sector(uint32_t address) {
 		if ((WIP_BIT_MASK & rdsr_response) == 0x00) {
 			break;
 		}
+
+		vTaskDelay(pdMS_TO_TICKS(5));
 	}
 	if ((WIP_BIT_MASK & rdsr_response) != 0x00) {
 		return W_IO_ERROR;
@@ -690,7 +692,6 @@ w_status_t mx25l25645g_init() {
 	(g_flash_ctx.spi_state) = FLASH_SPI_READY;
 
 	// SET UP THE CHIP
-
 	// enable QE and set dc 0 and dc 1 to 10 for Quard IO Fast Read
 	OSPI_RegularCmdTypeDef wrsr_cmd = {0};
 
@@ -757,7 +758,7 @@ w_status_t mx25l25645g_mount(lfs_t *p_lfs, const uint32_t first_block_offset) {
 	}
 
 	if ((first_block_offset % (cfg.block_size)) != 0) {
-		return W_INVALID_PARAM; // because I am lazy
+		return W_INVALID_PARAM; // block offset should be a multiple of block size
 	}
 	memset(p_lfs, 0, sizeof(lfs_t));
 
