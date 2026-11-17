@@ -4,7 +4,9 @@
 #include "rocketlib.h"
 #include "application/can_handler/can_handler.h"
 #include "drivers/timer/timer.h"
+#include <stdint.h>
 
+/// @brief datatype to hold mag data
 typedef struct __attribute__((packed)) {
 	uint16_t x;
 	uint16_t y;
@@ -27,7 +29,7 @@ w_status_t can_sensor_init();
 
 /// @brief callback for the analog 3D 16-bit sensor data message and write the message to corresponding buffer
 /// @param msg [in] pointer to the incoming CAN message
-/// @note barometer and magnetometer both use this messge type 
+/// @note magnetometer both use this messge type 
 /// @return status of the operation
 w_status_t can_analog_3d_16bit_isr_callback(const can_msg_t *msg);
 
@@ -61,18 +63,6 @@ w_status_t can_gps_info_isr_callback(const can_msg_t *msg);
 ////@note there is two different barometer messages, Baro reading 0 with 0x37 code and baro reading 1 with 0x38, I'm passing both to this callback (not sure if this is fine)
 /// @return status of the operation
 w_status_t can_CANARD_MTI630_BARO_isr_callback(const can_msg_t *msg);
-
-/// @brief callback for the CANARD_IIS2MDC_MAG message and write the message to corresponding buffer
-/// @param msg [in] pointer to the incoming CAN message
-////@note this uses analog_sensor_id packet format
-/// @return status of the operation
-w_status_t can_CANARD_IIS2MDC_MAG_isr_callback(const can_msg_t *msg);
-
-/// @brief callback for the CANARD_MTI630_MAG message and write the message to corresponding buffer
-/// @param msg [in] pointer to the incoming CAN message
-////@note this uses analog_sensor_id packet format
-/// @return status of the operation
-w_status_t can_CANARD_MTI630_MAG_isr_callback(const can_msg_t *msg);
 
 //------getter functions -------
 
