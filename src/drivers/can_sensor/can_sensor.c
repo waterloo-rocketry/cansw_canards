@@ -19,6 +19,37 @@ gps_info
 mti630 baro (theres baro0 and baro1)
 */
 
+/// @brief callback for the analog 3D 16-bit sensor data message and write the message to corresponding buffer
+/// @param msg [in] pointer to the incoming CAN message
+/// @note magnetometer both use this messge type 
+/// @return status of the operation
+static w_status_t can_analog_3d_16bit_isr_callback(const can_msg_t *msg);
+
+/// @brief callback for the gps timestamp message and write the message to corresponding buffer
+/// @param msg [in] pointer to the incoming CAN message
+/// @return status of the operation
+static w_status_t can_gps_timestamp_isr_callback(const can_msg_t *msg);
+
+/// @brief callback for the gps latitude message and write the message to corresponding buffer
+/// @param msg  [in] pointer to the incoming CAN message
+/// @return status of the operation
+static w_status_t can_gps_latitude_isr_callback(const can_msg_t *msg);
+
+/// @brief callback for the gps longitude message and write the message to corresponding buffer
+/// @param msg [in] pointer to the incoming CAN message
+/// @return status of the operation
+static w_status_t can_gps_longitude_isr_callback(const can_msg_t *msg);
+
+/// @brief callback for the gps altitude message and write the message to corresponding buffer
+/// @param msg [in] pointer to the incoming CAN message
+/// @return status of the operation
+static w_status_t can_gps_altitude_isr_callback(const can_msg_t *msg);
+
+/// @brief callback for the gps info message and write the message to corresponding buffer
+/// @param msg [in] pointer to the incoming CAN message
+/// @return status of the operation
+static w_status_t can_gps_info_isr_callback(const can_msg_t *msg);
+
 
 
 
@@ -29,8 +60,7 @@ w_status_t can_sensor_init() {
         can_handler_register_callback(MSG_GPS_LATITUDE, can_gps_latitude_isr_callback) == W_SUCCESS &&
         can_handler_register_callback(MSG_GPS_LONGITUDE, can_gps_longitude_isr_callback) == W_SUCCESS &&
         can_handler_register_callback(MSG_GPS_ALTITUDE, can_gps_altitude_isr_callback) == W_SUCCESS &&
-        can_handler_register_callback(MSG_GPS_INFO, can_gps_info_isr_callback) == W_SUCCESS &&
-        can_handler_register_callback(MSG_SENSOR_ANALOG16, can_CANARD_MTI630_BARO_isr_callback) == W_SUCCESS)) {
+        can_handler_register_callback(MSG_GPS_INFO, can_gps_info_isr_callback) == W_SUCCESS)) {
         log_text(1, LOG_LVL_WARN, "CAN_SENSOR",
 		         "Failed to register sensor callback to CANBUS handler");
 		return W_FAILURE;
