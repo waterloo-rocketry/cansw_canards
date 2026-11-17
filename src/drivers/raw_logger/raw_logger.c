@@ -276,7 +276,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
-		vTaskDelay(1);
+		vTaskDelay(pdMS_TO_TICKS(1));
 		uint32_t cur_time_ms = 0;
 		if (timer_get_ms(&cur_time_ms) != W_SUCCESS) {
 			xSemaphoreGive(sd_mutex);
