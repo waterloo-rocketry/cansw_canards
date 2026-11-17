@@ -345,7 +345,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[3] << 8) | latest_gyro_bytes[2]);
 		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[5] << 8) | latest_gyro_bytes[4]);
 
-		raw_gyro->timestamp_ms = raw_acc->timestamp_ms; // grab time from accel since it's the smae
+		raw_gyro->timestamp_ms = raw_acc->timestamp_ms; // grab time from accel since it's the same
 		                                                // timestamp
 
 		// Parse accelerometer raw data (next 6 bytes)
