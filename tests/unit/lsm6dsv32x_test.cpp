@@ -214,8 +214,8 @@ TEST_F(Lsm6dsv32xTest, WrongWordTypes) {
     vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD];
     lsm6dsv32x_raw_imu_data_t raw_acc[LSM6DSV32X_FIFO_READ_THRESHOLD];
     lsm6dsv32x_raw_imu_data_t raw_gyro[LSM6DSV32X_FIFO_READ_THRESHOLD];
-    size_t gyro_sample_count;
-    size_t acc_sample_count;
+    uint8_t gyro_sample_count;
+    uint8_t acc_sample_count;
 
     w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(acc_data, gyro_data, raw_acc, raw_gyro, &gyro_sample_count, &acc_sample_count);
 
@@ -245,8 +245,8 @@ TEST_F(Lsm6dsv32xTest, OnlySomeCorrectWordTypes) {
     vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD];
     lsm6dsv32x_raw_imu_data_t raw_acc[LSM6DSV32X_FIFO_READ_THRESHOLD];
     lsm6dsv32x_raw_imu_data_t raw_gyro[LSM6DSV32X_FIFO_READ_THRESHOLD];
-    size_t gyro_sample_count;
-    size_t acc_sample_count;
+    uint8_t gyro_sample_count;
+    uint8_t acc_sample_count;
 
     w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(acc_data, gyro_data, raw_acc, raw_gyro, &gyro_sample_count, &acc_sample_count);
 
@@ -292,8 +292,8 @@ TEST_F(Lsm6dsv32xTest, BothDataGetFunctionsMatch) {
     vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD];
     lsm6dsv32x_raw_imu_data_t raw_acc[LSM6DSV32X_FIFO_READ_THRESHOLD];
     lsm6dsv32x_raw_imu_data_t raw_gyro[LSM6DSV32X_FIFO_READ_THRESHOLD];
-    size_t gyro_sample_count;
-    size_t acc_sample_count;
+    uint8_t gyro_sample_count;
+    uint8_t acc_sample_count;
 
     vector3d_t single_acc;
     vector3d_t single_gyro;

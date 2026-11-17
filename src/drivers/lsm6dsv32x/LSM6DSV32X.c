@@ -4,7 +4,6 @@
 #include "stm32h7xx_hal.h"
 #include "task.h"
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 
 #include "application/logger/log.h"
@@ -76,7 +75,7 @@ static const float64_t GYRO_FS = 0.140; // dps / LSB
 static const uint8_t GYRO_TAG = 0x01;
 static const uint8_t ACC_TAG = 0x02;
 
-static const size_t LSM6DSV32X_EXPECTED_WHO_AM_I = 0x70;
+static const uint8_t LSM6DSV32X_EXPECTED_WHO_AM_I = 0x70;
 
 static lsm6dsv32x_ctx_t lsm6dsv32x_ctx = {.switched_callback = false};
 
@@ -314,7 +313,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		// find the latest samples
 		uint8_t *latest_gyro_bytes = NULL;
 		uint8_t *latest_acc_bytes = NULL;
-		size_t i = LSM6DSV32X_FIFO_THRESHOLD - 1;
+		uint8_t i = LSM6DSV32X_FIFO_THRESHOLD - 1;
 		do {
 			uint8_t tag = raw_bytes[i][0] >> 3;
 			if (GYRO_TAG == tag) {
@@ -391,8 +390,8 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 	vector3d_t acc_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
 	vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
-	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], size_t *gyro_sample_count,
-	size_t *acc_sample_count) {
+	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *gyro_sample_count,
+	uint8_t *acc_sample_count) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD][7]; // copy the bytes so they are safe while
 	                                                      // doing calculations
@@ -408,8 +407,8 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 
 		taskEXIT_CRITICAL();
 
-		size_t accel_index = 0, gyro_index = 0;
-		for (size_t i = 0; i < LSM6DSV32X_FIFO_READ_THRESHOLD; i++) {
+		uint8_t accel_index = 0, gyro_index = 0;
+		for (uint8_t i = 0; i < LSM6DSV32X_FIFO_READ_THRESHOLD; i++) {
 			uint8_t tag = raw_bytes[i][0] >> 3;
 			uint16_t x = (uint16_t)(raw_bytes[i][2] << 8) | raw_bytes[i][1];
 			uint16_t y = (uint16_t)(raw_bytes[i][4] << 8) | raw_bytes[i][3];
