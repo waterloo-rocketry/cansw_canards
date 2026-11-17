@@ -24,7 +24,6 @@
 #include "cmsis_os2.h"
 #include "cordic.h"
 #include "dma.h"
-#include "fatfs.h"
 #include "fdcan.h"
 #include "fmac.h"
 #include "gpio.h"
@@ -66,13 +65,26 @@ void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
 void MX_FREERTOS_Init(void);
-
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void DWT_Init(void) {
+	// Enable the trace/debug blocks.
+	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+
+	// Unlock DWT registers on Cortex-M7.
+	DWT->LAR = 0xc5acce55UL;
+
+	// Reset and enable the CPU cycle counter.
+	DWT->CYCCNT = 0;
+	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+	__DSB();
+	__ISB();
+}
 
 /* USER CODE END 0 */
 
@@ -131,9 +143,9 @@ int main(void) {
 	MX_TIM1_Init();
 	MX_UART7_Init();
 	MX_TIM2_Init();
-	MX_FATFS_Init();
 	MX_TIM5_Init();
 	/* USER CODE BEGIN 2 */
+	DWT_Init();
 
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
 	// our actual code
@@ -225,7 +237,7 @@ void PeriphCommonClock_Config(void) {
 	/** Initializes the peripherals clock
 	 */
 	PeriphClkInitStruct.PeriphClockSelection =
-		RCC_PERIPHCLK_OSPI | RCC_PERIPHCLK_ADC | RCC_PERIPHCLK_FDCAN;
+		RCC_PERIPHCLK_OSPI | RCC_PERIPHCLK_ADC | RCC_PERIPHCLK_SDMMC | RCC_PERIPHCLK_FDCAN;
 	PeriphClkInitStruct.PLL2.PLL2M = 1;
 	PeriphClkInitStruct.PLL2.PLL2N = 48;
 	PeriphClkInitStruct.PLL2.PLL2P = 2;
@@ -235,6 +247,7 @@ void PeriphCommonClock_Config(void) {
 	PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
 	PeriphClkInitStruct.PLL2.PLL2FRACN = 0;
 	PeriphClkInitStruct.OspiClockSelection = RCC_OSPICLKSOURCE_PLL2;
+	PeriphClkInitStruct.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL2;
 	PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL2;
 	PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_PLL2;
 	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
@@ -274,11 +287,7 @@ void MPU_Config(void) {
 	 */
 	MPU_InitStruct.Number = MPU_REGION_NUMBER1;
 	MPU_InitStruct.BaseAddress = 0x08000000;
-#if defined(STM32H723xx)
-	MPU_InitStruct.Size = MPU_REGION_SIZE_512KB;
-#else
 	MPU_InitStruct.Size = MPU_REGION_SIZE_1MB;
-#endif
 	MPU_InitStruct.SubRegionDisable = 0x0;
 	MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
 	MPU_InitStruct.AccessPermission = MPU_REGION_PRIV_RO;

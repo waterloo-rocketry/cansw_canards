@@ -10,7 +10,7 @@
 #include "drivers/altimu-10/altimu-10.h"
 
 /* Size of a single buffer (bytes) */
-#define LOG_BUFFER_SIZE 32768
+#define LOG_BUFFER_SIZE 32758
 // #define LOG_BUFFER_SIZE 16384
 /* Size of each message region in text buffers (bytes) */
 #define MAX_TEXT_MSG_LENGTH 128
@@ -25,10 +25,10 @@
 #define DATA_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_DATA_MSG_LENGTH)
 
 #if LOG_BUFFER_SIZE % MAX_TEXT_MSG_LENGTH != 0
-#warning "Text log message region size does not pack evenly into buffer size"
+// #warning "Text log message region size does not pack evenly into buffer size"
 #endif
 #if LOG_BUFFER_SIZE % MAX_DATA_MSG_LENGTH != 0
-#warning "Data log message region size does not pack evenly into buffer size"
+// #warning "Data log message region size does not pack evenly into buffer size"
 #endif
 
 /* Number of text log buffers */
