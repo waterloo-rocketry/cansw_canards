@@ -27,6 +27,8 @@ protected:
         memset(&timer_reg, 0, sizeof(TIM_TypeDef));
         htim2.Instance = &timer_reg;
         htim2.State = HAL_TIM_STATE_BUSY;
+        htim23.Instance = &timer_reg;
+        htim23.State = HAL_TIM_STATE_BUSY;
 
         // set default return values for the mocks
         __HAL_TIM_GET_COUNTER_fake.return_val = 1000; // Will give 100ms by default

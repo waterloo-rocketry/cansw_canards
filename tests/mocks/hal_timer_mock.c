@@ -3,6 +3,7 @@
 
 // handle to be used in testing
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim23;
 
 // define mocks for timer functions
 DEFINE_FAKE_VALUE_FUNC(HAL_TIM_StateTypeDef, HAL_TIM_Base_GetState, TIM_HandleTypeDef *);
