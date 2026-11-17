@@ -145,8 +145,8 @@ static void system_init_task(void *arg) {
 	non_crit_status |= adxl380_init();
 	non_crit_status |= adxrs649_init();
 
-  // Must be init after gpio
-  non_crit_status |= mx25l25645g_init();
+	// Must be init after gpio
+	non_crit_status |= mx25l25645g_init();
 
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
