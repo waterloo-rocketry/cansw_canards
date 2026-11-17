@@ -19,6 +19,7 @@
 #define TEXT_WRITE_TRY_COUNT 20
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
+static const uint32_t SD_RETRY_DELAY_MS = 2; // let SD card recover between write/sync retries
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
@@ -560,30 +561,52 @@ void log_task(void *argument) {
 
 			// try several times to buffer to SD card
 			uint32_t size = 0;
+			uint32_t open_start_ms = 0;
+			uint32_t open_end_ms = 0;
+			bool written = false;
+			bool synced = false;
+			FSIZE_t expected_size = 0;
+
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
-				uint32_t open_start_ms = 0;
-				timer_get_ms(&open_start_ms);
-				if (sd_card_file_write_open(file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
-				                            &size) == W_SUCCESS) {
-					uint32_t open_end_ms = 0;
-					timer_get_ms(&open_end_ms);
+				if (!written) {
+					timer_get_ms(&open_start_ms);
+					if (sd_card_file_write_open(file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
+					                            &size) == W_SUCCESS) {
+						// Write successful
+						timer_get_ms(&open_end_ms);
+						written = true;
+						expected_size = f_size(&file_ctx->file);
+					}
+				}
+
+				if (written) {
 					/*
 					 * Sync after every buffer for maximum data retention.
 					 * Consider reducing this to periodic syncs once reliability
 					 * is confirmed.
 					 */
+
 					uint32_t sync_start_ms = 0;
 					timer_get_ms(&sync_start_ms);
 					if (sd_card_file_sync(file_ctx) == W_SUCCESS) {
-						uint32_t sync_end_ms = 0;
-						timer_get_ms(&sync_end_ms);
+						if (f_size(&file_ctx->file) == expected_size) {
+							// Sync successful
+							uint32_t sync_end_ms = 0;
+							timer_get_ms(&sync_end_ms);
 
-						// REMOVE BEFORE FLIGHT
-						log_text(10, LOG_LVL_INFO, "logger_write",
-						         "open_time=%d, sync_time=%d, try=%d", open_end_ms - open_start_ms,
-						         sync_end_ms - sync_start_ms, i + 1);
-						gpio_toggle(GPIO_PIN_BLUE_LED, 0);
-						break;
+							// REMOVE BEFORE FLIGHT
+							log_text(10, LOG_LVL_INFO, "logger_write",
+							         "open_time=%d, sync_time=%d, try=%d",
+							         open_end_ms - open_start_ms, sync_end_ms - sync_start_ms,
+							         i + 1);
+							gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+
+							synced = true;
+							break;
+						}
+						log_text(10, LOG_LVL_WARN, "logger",
+						         "buffer lost on file reopen, rewriting (try %d)", i + 1);
+						written = false;
 					} else {
 						log_text(10, LOG_LVL_WARN, "logger", "sd_card_file_sync failed on try %d",
 						         i + 1);
@@ -592,14 +615,15 @@ void log_task(void *argument) {
 
 				gpio_toggle(GPIO_PIN_RED_LED, 0);
 
-				if ((log_write_try_count - 1) == i) {
-					logger_health.buffer_flush_fails++;
-					logger_health.fs_open_flush_failed = true;
-					break; // Failed to write after all attempts
-				} else {
-					// Allow SD card time to recover.
-					vTaskDelay(pdMS_TO_TICKS(2));
+				// Allow SD card time to recover before the next attempt
+				if (i + 1 < log_write_try_count) {
+					vTaskDelay(pdMS_TO_TICKS(SD_RETRY_DELAY_MS));
 				}
+			}
+
+			if (!synced) {
+				logger_health.buffer_flush_fails++;
+				logger_health.fs_open_flush_failed = true;
 			}
 
 			// Reinitialize buffer for reuse
