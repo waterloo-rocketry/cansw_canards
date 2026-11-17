@@ -99,7 +99,8 @@ void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd) {
 	task_handler = NULL;
 
 	if (NULL != task) {
-		vTaskNotifyGiveIndexedFromISR(task, RAW_LOGGER_NOTIFICATION_INDEX, &xHigherPriorityTaskWoken);
+		vTaskNotifyGiveIndexedFromISR(task, RAW_LOGGER_NOTIFICATION_INDEX,
+		                              &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
 
@@ -129,7 +130,8 @@ void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd) {
 	task_handler = NULL;
 
 	if (NULL != task) {
-		vTaskNotifyGiveIndexedFromISR(task, RAW_LOGGER_NOTIFICATION_INDEX, &xHigherPriorityTaskWoken);
+		vTaskNotifyGiveIndexedFromISR(task, RAW_LOGGER_NOTIFICATION_INDEX,
+		                              &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
 }
@@ -157,7 +159,8 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 	task_handler = NULL;
 
 	if (NULL != task) {
-		vTaskNotifyGiveIndexedFromISR(task, RAW_LOGGER_NOTIFICATION_INDEX, &xHigherPriorityTaskWoken);
+		vTaskNotifyGiveIndexedFromISR(task, RAW_LOGGER_NOTIFICATION_INDEX,
+		                              &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
 }
