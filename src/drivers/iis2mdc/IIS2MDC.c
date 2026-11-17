@@ -434,9 +434,6 @@ w_status_t iis2mdc_init(void) {
 		return W_FAILURE;
 	}
 
-	// .sram4 placement means static initializer isn't copied at startup; clear explicitly
-	memset(&iis2mdc_cache, 0, sizeof(iis2mdc_cache));
-
 	// wait for stable output after power-up before any access to registers
 	vTaskDelay(pdMS_TO_TICKS(IIS2MDC_POWERUP_MS));
 
