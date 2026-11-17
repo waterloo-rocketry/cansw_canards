@@ -8,6 +8,7 @@
 #include "task.h"
 
 #include "application/logger/log.h"
+#include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
@@ -346,15 +347,21 @@ static w_status_t iis2mdc_sanity_check(void) {
 	return status;
 }
 
-w_status_t iis2mdc_handle_drdy_irq(void) {
+/**
+ * @brief Runs in interrupt context on the IIS2MDC DRDY pin.
+ * @note starts a non-blocking DMA read of the six output registers, the DMA-completion callback
+ *       converts and publishes the result. Disabled while the module isn't in ready state
+ *  	 (uninitialized or under a sanity check).
+ */
+static void iis2mdc_handle_drdy_irq(void) {
 	// stand down unless ASYNC_DMA_ACTIVE
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		iis2mdc_health.dma_before_callback_switch++;
-		return W_FAILURE;
+		return;
 	}
 	// stand down if last DMA is still in progress
 	if (iis2mdc_dma_busy) {
-		return W_FAILURE;
+		return;
 	}
 	iis2mdc_dma_busy = true;
 
@@ -365,7 +372,6 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
 		iis2mdc_health.communication_failure = true;
 		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
 	}
-	return W_SUCCESS;
 }
 
 /**
@@ -463,9 +469,20 @@ w_status_t iis2mdc_init(void) {
 		return W_FAILURE;
 	}
 
+	// register the gpio drdy interrupt
+	if (gpio_register_interrupt_callback(iis2mdc_handle_drdy_irq, INT_MAG_Pin) != W_SUCCESS) {
+		log_text(10, LOG_LVL_WARN, "IIS2MDC", "Failed to register callback");
+		return W_FAILURE;
+	}
+
 	iis2mdc_state = IIS2MDC_STATE_ASYNC_DMA_ACTIVE;
 
-	if (W_SUCCESS != iis2mdc_handle_drdy_irq()) {
+	iis2mdc_handle_drdy_irq();
+
+	// check to make sure correctly read from I2C
+	vTaskDelay(pdMS_TO_TICKS(2)); // wait for I2C comms to complete
+	if (iis2mdc_dma_busy || (iis2mdc_health.internal_error)) {
+		log_text(10, LOG_LVL_WARN, "IIS2MDC", "Failed to clear drdy");
 		return W_FAILURE;
 	}
 

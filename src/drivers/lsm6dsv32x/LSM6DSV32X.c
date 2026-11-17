@@ -8,6 +8,7 @@
 
 #include "application/logger/log.h"
 #include "common/math/math.h"
+#include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X_regmap.h"
@@ -145,6 +146,45 @@ static void lsm6dsv32x_dma_error_handle(I2C_HandleTypeDef *hi2c) {
 }
 
 /**
+ * @brief ISR for the interrupt pin that begins DMA data transfer
+ */
+void lsm6dsv32x_int1_isr_handler() {
+	if (!lsm6dsv32x_health.is_init) {
+		return;
+	}
+
+	if (!lsm6dsv32x_ctx.switched_callback) {
+		lsm6dsv32x_health.dma_data_transfer_unswitched_callback++;
+		return;
+	}
+
+	// store the timestamp when the data is received
+	if (timer_get_ms(&lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER]) != W_SUCCESS) {
+		lsm6dsv32x_health.dma_data_transfer_failed_timer++;
+		return;
+	}
+
+	lsm6dsv32x_ctx.latest_status = W_SUCCESS;
+
+	// set the bus to occupied meanining that data is
+	// actively being streamed via DMA into the Buffer from the IMU
+	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_BUSY;
+
+	// begin dma read to the main buffer
+	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
+	HAL_StatusTypeDef hal_status =
+		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c, shifted_address, OUTX_L_G, I2C_MEMADD_SIZE_8BIT,
+		                     lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
+	if (hal_status != HAL_OK) {
+		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
+		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
+		lsm6dsv32x_health.dma_data_transfer_failed_mem_read++;
+	}
+
+	return;
+}
+
+/**
  * @brief Initializes the bit registers for
  * @note Must be called after bit registers are configured, called before flight!!!
  * @return Status of the operation
@@ -198,6 +238,12 @@ w_status_t lsm6dsv32x_init() {
 
 	status |= lsm6dsv32x_check_sanity();
 
+	// register the GPIO interrupt
+	if (gpio_register_interrupt_callback(lsm6dsv32x_int1_isr_handler, IMU_INT1_Pin) != W_SUCCESS) {
+		log_text(10, LOG_LVL_WARN, "LSM6DSV32X", "Failed to register callback");
+		return W_FAILURE;
+	}
+
 	// Trigger INT1 when we get either data ready
 	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x01);
 
@@ -233,46 +279,6 @@ w_status_t lsm6dsv32x_init() {
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
 
 	return status;
-}
-
-/**
- * @brief ISR for the interrupt pin that begins DMA data transfer
- * @return Status of the operation
- */
-w_status_t lsm6dsv32x_int1_isr_handler() {
-	if (!lsm6dsv32x_health.is_init) {
-		return W_SUCCESS;
-	}
-
-	if (!lsm6dsv32x_ctx.switched_callback) {
-		lsm6dsv32x_health.dma_data_transfer_unswitched_callback++;
-		return W_FAILURE;
-	}
-
-	// store the timestamp when the data is received
-	if (timer_get_ms(&lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER]) != W_SUCCESS) {
-		lsm6dsv32x_health.dma_data_transfer_failed_timer++;
-		return W_FAILURE;
-	}
-
-	lsm6dsv32x_ctx.latest_status = W_SUCCESS;
-
-	// set the bus to occupied meanining that data is
-	// actively being streamed via DMA into the Buffer from the IMU
-	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_BUSY;
-
-	// begin dma read to the main buffer
-	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
-	HAL_StatusTypeDef hal_status =
-		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c, shifted_address, OUTX_L_G, I2C_MEMADD_SIZE_8BIT,
-		                     lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
-	if (hal_status != HAL_OK) {
-		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
-		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
-		lsm6dsv32x_health.dma_data_transfer_failed_mem_read++;
-	}
-
-	return lsm6dsv32x_ctx.latest_status;
 }
 
 /**

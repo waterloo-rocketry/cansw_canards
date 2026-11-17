@@ -26,12 +26,6 @@ typedef struct __attribute__((packed)) {
 w_status_t lsm6dsv32x_init();
 
 /**
- * @brief ISR for the interrupt pin that begins DMA data transfer
- * @return Status of the operation
- */
-w_status_t lsm6dsv32x_int1_isr_handler();
-
-/**
  * @brief Retrieves all 12 bytes of imu data
  * @param[out] acc_data    Processed accelerometer data (gravities)
  * @param[out] gyro_data   Processed gyroscope data (deg/s)

@@ -66,6 +66,17 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
 	},
 };
 
+/**
+ * Struct representing GPIO pin interrupt set
+ */
+typedef struct {
+	const gpio_isr_callback_t callback;
+	const uint16_t gpio_pin;
+} gpio_isr_callback_data_t;
+
+static gpio_isr_callback_data_t g_isr_map[MAX_GPIO_INTERRUPTS] = {0};
+static uint8_t g_isr_max_index = 0;
+
 // Public ---------------------------------------------------------------------
 
 /**
@@ -189,12 +200,37 @@ health_status_t gpio_get_status(void) {
 }
 
 /**
+ * @brief Register a gpio pin with an interrupt callback function
+ * @param[in] p_callback_fcn is the pointer to callback function
+ * @param[in] gpio_pin is the pin number for the associated GPIO pin
+ * @return the status of the registration
+ */
+w_status_t gpio_register_interrupt_callback(const gpio_isr_callback_t p_callback_fcn,
+                                            const uint16_t gpio_pin) {
+	if (NULL == p_callback_fcn) {
+		log_text(10, LOG_LVL_WARN, "gpio", "Failed to register gpio callback on pin %d", gpio_pin);
+		return W_INVALID_PARAM;
+	}
+
+	// create callback
+	gpio_isr_callback_data_t new_callback = {.callback = p_callback_fcn, .gpio_pin = gpio_pin};
+	memcpy(&g_isr_map[g_isr_max_index], &new_callback, sizeof(g_isr_map[g_isr_max_index]));
+
+	// increment counter
+	g_isr_max_index++;
+
+	return W_SUCCESS;
+}
+
+/**
  * @brief HAL interrupt callback for GPIO pins.
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (IMU_INT1_Pin == GPIO_Pin) {
-		lsm6dsv32x_int1_isr_handler();
-	} else if (INT_MAG_Pin == GPIO_Pin) {
-		iis2mdc_handle_drdy_irq();
+	// search through and call the respected callback
+	for (uint8_t isr_index = 0; isr_index < g_isr_max_index; isr_index++) {
+		if (g_isr_map[g_isr_max_index].gpio_pin == GPIO_Pin) {
+			g_isr_map[g_isr_max_index].callback();
+			return;
+		}
 	}
 }
