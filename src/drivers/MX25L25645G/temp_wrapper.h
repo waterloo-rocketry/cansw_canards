@@ -2,6 +2,12 @@
 #define CANSW_CANARDS_WRAPPER_H
 #include "littlefs/lfs.h"
 
+enum mx25l25645g_extra_lfs_error_t {
+  E_LFS_FILE_ALREADY_OPEN = -10,
+  E_LFS_FILE_NOT_OPEN = -11,
+  E_LFS_FORMAT_EMPTY = -13
+};
+
 int mx25l25645g_format(lfs_t *p_lfs, const struct lfs_config *cfg_i);
 
 int mx25l25645g_unmount(lfs_t *p_lfs);
