@@ -38,6 +38,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "application/init/init.h"
+
+#ifdef ENABLE_BENCHMARK
+#include "common/benchmark/benchmark.h"
+#endif
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -133,7 +137,12 @@ int main(void) {
 	MX_TIM2_Init();
 	MX_FATFS_Init();
 	MX_TIM5_Init();
+	MX_TIM23_Init();
 	/* USER CODE BEGIN 2 */
+
+#ifdef ENABLE_BENCHMARK
+	DWT_init();
+#endif
 
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
 	// our actual code

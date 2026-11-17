@@ -1,4 +1,5 @@
 #include "FreeRTOS.h"
+#include "common/benchmark/benchmark.h"
 #include "i2c.h"
 #include "main.h"
 #include "stm32h7xx_hal.h"
@@ -12,6 +13,10 @@
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X_regmap.h"
 #include "drivers/timer/timer.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(4);
+#endif
 
 typedef enum {
 	LSM6DSV32X_READ_BUFFER = 0,
@@ -119,10 +124,25 @@ static w_status_t lsm6dsv32x_check_sanity() {
  * @brief handler for after the DMA is completed
  */
 void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	if (hi2c != lsm6dsv32x_ctx.hi2c) {
 		lsm6dsv32x_health.dma_handle_wrong_i2c++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
+
 		return;
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(3);
+#endif
 
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
 
@@ -130,18 +150,40 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 	       lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER] =
 		lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER];
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 }
 
 /**
  * @brief i2c dma error handler
  */
 static void lsm6dsv32x_dma_error_handle(I2C_HandleTypeDef *hi2c) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(2);
+	}
+#endif
+
 	if (hi2c != lsm6dsv32x_ctx.hi2c) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
+
 		return;
 	}
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(3);
+#endif
+
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
 	lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(2);
+#endif
 }
 
 /**
@@ -240,18 +282,35 @@ w_status_t lsm6dsv32x_init() {
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_int1_isr_handler() {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
 	if (!lsm6dsv32x_health.is_init) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_SUCCESS;
 	}
 
 	if (!lsm6dsv32x_ctx.switched_callback) {
 		lsm6dsv32x_health.dma_data_transfer_unswitched_callback++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_FAILURE;
 	}
 
 	// store the timestamp when the data is received
 	if (timer_get_ms(&lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER]) != W_SUCCESS) {
 		lsm6dsv32x_health.dma_data_transfer_failed_timer++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_FAILURE;
 	}
 
@@ -263,15 +322,33 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 
 	// begin dma read to the main buffer
 	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
+
+#ifdef ENABLE_BENCHMARK
+	bool benchmark_transfer = done_sys_init && (BENCHMARK_TIME_START[3] == 0);
+
+	if (benchmark_transfer) {
+		SINGLE_BENCHMARK_START(3);
+	}
+#endif
+
 	HAL_StatusTypeDef hal_status =
 		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c, shifted_address, OUTX_L_G, I2C_MEMADD_SIZE_8BIT,
 		                     lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	if (hal_status != HAL_OK) {
+#ifdef ENABLE_BENCHMARK
+		if (benchmark_transfer) {
+			BENCHMARK_TIME_START[3] = 0;
+		}
+#endif
+
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
 		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
 		lsm6dsv32x_health.dma_data_transfer_failed_mem_read++;
 	}
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(0);
+#endif
 	return lsm6dsv32x_ctx.latest_status;
 }
 
@@ -376,3 +453,9 @@ health_status_t lsm6dsv32x_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_imu_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif

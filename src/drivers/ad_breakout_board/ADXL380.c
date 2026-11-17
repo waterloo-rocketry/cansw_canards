@@ -1,4 +1,5 @@
 
+#include "common/benchmark/benchmark.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -13,6 +14,10 @@
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "rocketlib.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(3);
+#endif
 
 static const uint8_t ADXL_ADDRS = 0x1d;
 static const uint8_t ADXL_FILTER_MASK = 0x18; // 0001100
@@ -137,9 +142,19 @@ w_status_t adxl380_init() {
  * @return the status of the function call
  */
 w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	// make sure have initialized
 	if (!is_initialized) {
 		adxl380_health.not_initialized_calls++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
 
@@ -149,6 +164,10 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
 	    adxl38x_read_device_data(&g_adx380_handle, ADXL38X_XDATA_H, 6, (uint8_t *)raw_data_array)) {
 		adxl380_health.comm_failure = true;
 		adxl380_health.data_read_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
 
@@ -156,6 +175,9 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
 	p_raw_data->y = (uint16_t)((((uint16_t)raw_data_array[2]) << 8) | raw_data_array[3]);
 	p_raw_data->z = (uint16_t)((((uint16_t)raw_data_array[4]) << 8) | raw_data_array[5]);
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 	return W_SUCCESS;
 }
 
@@ -165,13 +187,27 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
  * @return the status of getting data from gyro
  */
 w_status_t adxl380_is_data_ready(bool *p_drdy) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
 	if (!is_initialized) {
 		adxl380_health.not_initialized_calls++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_FAILURE;
 	}
 	if (NULL == p_drdy) {
 		adxl380_health.invalid_param = true;
 		adxl380_health.null_params++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_INVALID_PARAM;
 	}
 
@@ -188,12 +224,19 @@ w_status_t adxl380_is_data_ready(bool *p_drdy) {
 		    W_SUCCESS) {
 			adxl380_health.comm_failure = true;
 			adxl380_health.data_ready_check_fails++;
+
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(0);
+#endif
 			return W_IO_ERROR;
 		}
 
 		*p_drdy = (1 == reg_drdy) ? true : false; // to make this clear
 	}
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(0);
+#endif
 	return W_SUCCESS;
 }
 
@@ -204,19 +247,37 @@ w_status_t adxl380_is_data_ready(bool *p_drdy) {
  * @return the status of the function call
  */
 w_status_t adxl380_get_accel_data(vector3d_t *p_data, adxl380_raw_accel_data_t *p_raw_data) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(2);
+	}
+#endif
+
 	// make sure have initialized
 	if (!is_initialized) {
 		adxl380_health.not_initialized_calls++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_FAILURE;
 	}
 	if ((NULL == p_data) || (NULL == p_raw_data)) {
 		adxl380_health.invalid_param = true;
 		adxl380_health.null_params++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_INVALID_PARAM;
 	}
 
 	if (W_SUCCESS != adxl380_get_raw_accel(p_raw_data)) {
 		adxl380_health.get_raw_accel_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_FAILURE;
 	}
 
@@ -227,6 +288,9 @@ w_status_t adxl380_get_accel_data(vector3d_t *p_data, adxl380_raw_accel_data_t *
 	p_data->z =
 		((float64_t)((int16_t)p_raw_data->z)) * ADXL_16G_SCALE_FACTOR_MICRO_G_LSB / ADXL_MICRO_G_G;
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(2);
+#endif
 	return W_SUCCESS;
 }
 
@@ -276,3 +340,9 @@ health_status_t adxl380_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_adxl_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif

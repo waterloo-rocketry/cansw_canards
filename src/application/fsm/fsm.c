@@ -26,6 +26,15 @@
 /****************************************************************/
 #include "rocketlib.h"
 
+#include "common/benchmark/benchmark.h"
+
+// 0 being a cycle of time
+// 1 from unblock interrupt to exec complete
+// 2 from recieve notif to exec complete
+// 3 from sensor handler
+// 4 from fsm exec
+BENCHMARK_FILE_INIT(5);
+
 extern TaskHandle_t fsm_task_handle;
 
 #ifdef HIL
@@ -60,6 +69,7 @@ static void unblock_fsm_loop(TIM_HandleTypeDef *htim) {
 
 	// check if FSM task has started yet
 	if ((&htim5 == htim) && (fsm_task_handle != NULL)) {
+		SINGLE_BENCHMARK_START(1);
 		vTaskNotifyGiveFromISR(fsm_task_handle, &xHigherPriorityTaskWoken);
 	}
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -110,7 +120,7 @@ w_status_t fsm_init() {
 	g_ctx.p_imu_context = &g_imu_context;
 
 	// initialize fsm state
-	g_ctx.curr_state = STATE_IDLE;
+	g_ctx.curr_state = STATE_PAD_NAV;
 #ifndef HIL
 	HAL_TIM_RegisterCallback(&htim5, HAL_TIM_PERIOD_ELAPSED_CB_ID, &unblock_fsm_loop);
 
@@ -199,6 +209,7 @@ void fsm_exec(const fsm_input_t *p_fsm_input, const uint32_t timestamp_tenth_ms,
 			controller_input.canard_angle_rad = p_fsm_input->p_sensor_data->motor_encoder_meas.meas;
 
 			// run controller at 100 hz
+			p_fsm_input->p_sensor_data->motor_encoder_meas.is_new = true;
 			if (p_fsm_input->p_sensor_data->motor_encoder_meas.is_new &&
 			    ctrl_call_time_elapsed_tenth_ms >= CONTROLLER_PERIOD_TENTH_MS) {
 				controller_step(&controller_input, timestamp_tenth_ms, p_ctx->p_controller_context,
@@ -299,6 +310,9 @@ void fsm_task(void *args) {
 			fsm_health.loop_timeouts++;
 			fsm_health.loop_timer_failed = true;
 		}
+		SINGLE_BENCHMARK_END(0);
+		SINGLE_BENCHMARK_START(0);
+		SINGLE_BENCHMARK_START(2);
 
 		uint32_t timestamp_tenth_ms = 0;
 
@@ -314,7 +328,9 @@ void fsm_task(void *args) {
 		// get inputs needed for state machine:
 		// - imu data
 		// - etc (probably more later)
+		SINGLE_BENCHMARK_START(3);
 		sensor_handler_get_fresh_meas(g_ctx.p_imu_context, &sensor_data);
+		SINGLE_BENCHMARK_END(3);
 
 #ifdef HIL
 		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
@@ -338,8 +354,13 @@ void fsm_task(void *args) {
 		g_ctx.curr_state = new_state;
 
 		// run actions based on new curr state
+		SINGLE_BENCHMARK_START(4);
 		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
 		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
+		SINGLE_BENCHMARK_END(4);
+
+		SINGLE_BENCHMARK_END(1);
+		SINGLE_BENCHMARK_END(2);
 	}
 }
 
@@ -468,4 +489,10 @@ void log_gnc_internal_state() {
 	         ctx->P[116], ctx->P[117], ctx->P[118], ctx->P[119]);
 
 	log_text(1, LOG_LVL_WARN, "Nav", "P120 %.3g", ctx->P[120]);
+}
+
+void get_fsm_benchmark_data(benchmark_data_t p_datas[5]) {
+	for (uint8_t i = 0; i < 5; i++) {
+		GET_BENCHMARK_STAT(i, (&(p_datas[i])));
+	}
 }

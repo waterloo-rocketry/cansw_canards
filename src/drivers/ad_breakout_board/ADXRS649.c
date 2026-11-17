@@ -1,4 +1,5 @@
 
+#include "common/benchmark/benchmark.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -13,6 +14,10 @@
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(2);
+#endif
 
 // define addresses
 static const uint16_t ADS1219_ADDR = 0x40;
@@ -191,13 +196,27 @@ w_status_t adxrs649_init() {
  * @return the status of getting data from gyro
  */
 w_status_t adxrs649_is_data_ready(bool *p_drdy) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
 	if (!is_initialized) {
 		adxrs649_health.not_initialized_calls++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_FAILURE;
 	}
 	if ((NULL == p_drdy)) {
 		adxrs649_health.invalid_param = true;
 		adxrs649_health.null_params++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_INVALID_PARAM;
 	}
 
@@ -212,10 +231,17 @@ w_status_t adxrs649_is_data_ready(bool *p_drdy) {
 		if (ads1219_conversion_ready(&g_ads_handle, p_drdy) != W_SUCCESS) {
 			adxrs649_health.comm_failure = true;
 			adxrs649_health.data_ready_check_fails++;
+
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(0);
+#endif
 			return W_IO_ERROR;
 		}
 	}
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(0);
+#endif
 	return W_SUCCESS;
 }
 
@@ -227,20 +253,38 @@ w_status_t adxrs649_is_data_ready(bool *p_drdy) {
  * W_IO_ERROR - occours when fialed to read I2C or GPIO messages
  */
 w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	if (!is_initialized) {
 		adxrs649_health.not_initialized_calls++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
 
 	if ((NULL == p_data) || (NULL == p_raw_data)) {
 		adxrs649_health.invalid_param = true;
 		adxrs649_health.null_params++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_INVALID_PARAM;
 	}
 
 	if (ads1219_read_value(&g_ads_handle, p_raw_data) != W_SUCCESS) {
 		adxrs649_health.comm_failure = true;
 		adxrs649_health.data_read_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_IO_ERROR;
 	}
 
@@ -248,11 +292,18 @@ w_status_t adxrs649_get_gyro_data(float64_t *p_data, uint32_t *p_raw_data) {
 	if (ads1219_millivolts(&g_ads_handle, (int32_t)*p_raw_data, &data_mv) != W_SUCCESS) {
 		adxrs649_health.comm_failure = true;
 		adxrs649_health.millivolt_conversion_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_FAILURE;
 	}
 
 	*p_data = data_mv;
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 	return W_SUCCESS;
 }
 
@@ -298,3 +349,9 @@ health_status_t adxrs649_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_adxrs_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif

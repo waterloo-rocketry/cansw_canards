@@ -2,6 +2,7 @@
  * GPIO module
  * Driver for GPIO pins
  */
+#include "common/benchmark/benchmark.h"
 #include <stdbool.h>
 
 #include "main.h"
@@ -14,6 +15,10 @@
 #include "drivers/gpio/gpio.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(4);
+#endif
 
 // Private --------------------------------------------------------------------
 
@@ -102,8 +107,18 @@ w_status_t gpio_init() {
  * Block for up to `timeout` ms.
  */
 w_status_t gpio_read(gpio_pin_t pin, gpio_level_t *level, uint32_t timeout) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
 	if (pin >= GPIO_PIN_COUNT || level == NULL) {
 		gpio_status.access_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_INVALID_PARAM;
 	}
 
@@ -114,9 +129,16 @@ w_status_t gpio_read(gpio_pin_t pin, gpio_level_t *level, uint32_t timeout) {
 		gpio_status.accesses++;
 		xSemaphoreGive(gpio_map[pin].access_mutex);
 
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_SUCCESS;
 	} else {
 		gpio_status.access_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(0);
+#endif
 		return W_IO_TIMEOUT;
 	}
 }
@@ -125,8 +147,18 @@ w_status_t gpio_read(gpio_pin_t pin, gpio_level_t *level, uint32_t timeout) {
  * Set `pin` to `level`. Block for up to `timeout` ms.
  */
 w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	if (pin >= GPIO_PIN_COUNT) {
 		gpio_status.access_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_INVALID_PARAM;
 	}
 
@@ -137,9 +169,16 @@ w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout) {
 
 		xSemaphoreGive(gpio_map[pin].access_mutex);
 
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_SUCCESS;
 	} else {
 		gpio_status.access_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(1);
+#endif
 		return W_IO_TIMEOUT;
 	}
 }
@@ -149,8 +188,18 @@ w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout) {
  * Block for up to `timeout` ms.
  */
 w_status_t gpio_toggle(gpio_pin_t pin, uint32_t timeout) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(2);
+	}
+#endif
+
 	if (pin >= GPIO_PIN_COUNT) {
 		gpio_status.access_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_INVALID_PARAM;
 	}
 
@@ -160,9 +209,16 @@ w_status_t gpio_toggle(gpio_pin_t pin, uint32_t timeout) {
 
 		xSemaphoreGive(gpio_map[pin].access_mutex);
 
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_SUCCESS;
 	} else {
 		gpio_status.access_fails++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_IO_TIMEOUT;
 	}
 }
@@ -192,9 +248,25 @@ health_status_t gpio_get_status(void) {
  * @brief HAL interrupt callback for GPIO pins.
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(3);
+	}
+#endif
+
 	if (IMU_INT1_Pin == GPIO_Pin) {
 		lsm6dsv32x_int1_isr_handler();
 	} else if (INT_MAG_Pin == GPIO_Pin) {
 		iis2mdc_handle_drdy_irq();
 	}
+
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(3);
+#endif
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_gpio_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif

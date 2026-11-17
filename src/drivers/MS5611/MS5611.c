@@ -1,4 +1,5 @@
 #include "FreeRTOS.h"
+#include "common/benchmark/benchmark.h"
 #include "task.h"
 #include <inttypes.h>
 #include <stdbool.h>
@@ -11,6 +12,10 @@
 #include "drivers/timer/timer.h"
 
 #include "semphr.h"
+#ifdef ENABLE_BENCHMARK
+extern bool done_sys_init;
+BENCHMARK_FILE_INIT(5);
+#endif
 
 /* Period between successive pressure samples taken by ms5611_task at 100 hz */
 #define MS5611_TASK_PERIOD_MS 10
@@ -192,6 +197,12 @@ static void delay_us(uint32_t us) {
  * @param cmd The command to read from the sensor.
  */
 static w_status_t baro_read(uint8_t reg, uint8_t *data, uint8_t len) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(0);
+	}
+#endif
+
 	w_status_t status = i2c_read_reg(handle.bus, (uint8_t)handle.addr, reg, data, len);
 
 	if (W_SUCCESS != status) {
@@ -199,6 +210,9 @@ static w_status_t baro_read(uint8_t reg, uint8_t *data, uint8_t len) {
 		ms5611_health.i2c_read_fail_count++;
 	}
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(0);
+#endif
 	return status;
 }
 
@@ -207,7 +221,16 @@ static w_status_t baro_read(uint8_t reg, uint8_t *data, uint8_t len) {
  * @param cmd The command to write.
  */
 static w_status_t baro_write_cmd(uint8_t cmd) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(1);
+	}
+#endif
+
 	w_status_t status = i2c_write_data(handle.bus, (uint8_t)handle.addr, &cmd, 1);
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(1);
+#endif
 
 	if (W_SUCCESS != status) {
 		ms5611_health.i2c_communication_fail = true;
@@ -222,14 +245,26 @@ static w_status_t baro_write_cmd(uint8_t cmd) {
  * @param out Pointer to store the read ADC value.
  */
 static w_status_t baro_read_adc(uint32_t *out) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(2);
+	}
+#endif
+
 	uint8_t prom_buf[3];
 
 	if (baro_read(MS5611_CMD_ADC_READ, prom_buf, 3) != W_SUCCESS) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(2);
+#endif
 		return W_FAILURE;
 	}
 
 	*out = (((uint32_t)prom_buf[0] << 16) | ((uint32_t)prom_buf[1] << 8) | prom_buf[2]);
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(2);
+#endif
 	return W_SUCCESS;
 }
 
@@ -381,6 +416,12 @@ void ms5611_deinit(void) {
  * ms5611_task; external callers use the non-blocking ms5611_get_raw_pressure instead.
  */
 static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t *timestamp_ms) {
+#ifdef ENABLE_BENCHMARK
+	if (done_sys_init) {
+		SINGLE_BENCHMARK_START(3);
+	}
+#endif
+
 	/* d1 is raw pressure reading, d2 is raw temperature reading */
 	uint32_t d1;
 	uint32_t d2;
@@ -399,18 +440,29 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	if (NULL == result || NULL == timestamp_ms) {
 		ms5611_health.invalid_parameter = true;
 		ms5611_health.null_param_count++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(3);
+#endif
 		return W_INVALID_PARAM;
 	}
 
 	if (!(handle.initialized)) {
 		ms5611_health.invalid_operation = true;
 		ms5611_health.read_before_init++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(3);
+#endif
 		return W_FAILURE;
 	}
 
 	if (MS5611_CONV_TEMP_PRESSURE == handle.conv_state) {
 		/* D2: temperature conversion */
 		if (W_FAILURE == baro_write_cmd(D2_CMD[handle.osr_temperature])) {
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(3);
+#endif
 			return W_IO_ERROR;
 		}
 
@@ -419,6 +471,9 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		                // does not match the datasheet specifications
 
 		if (W_FAILURE == baro_read_adc(&(handle.cached_temp_d2))) {
+#ifdef ENABLE_BENCHMARK
+			SINGLE_BENCHMARK_END(3);
+#endif
 			return W_IO_ERROR;
 		}
 	}
@@ -426,17 +481,27 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	if (W_SUCCESS != timer_get_ms(timestamp_ms)) {
 		ms5611_health.invalid_operation = true;
 		ms5611_health.timer_read_fail++;
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(3);
+#endif
 		return W_FAILURE;
 	}
 
 	/* D1: pressure conversion */
 	if (W_FAILURE == baro_write_cmd(D1_CMD[handle.osr_pressure])) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(3);
+#endif
 		return W_IO_ERROR;
 	}
 
 	delay_us(MAX_CONV_TIME_US[handle.osr_pressure] + 1000); // 3 ms
 
 	if (W_FAILURE == baro_read_adc(&d1)) {
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(3);
+#endif
 		return W_IO_ERROR;
 	}
 
@@ -485,6 +550,9 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	                  2); // getting the midpoint of the conversion time for the timestamp to be
 	                      // more accurate (tristan suggestion)
 
+#ifdef ENABLE_BENCHMARK
+	SINGLE_BENCHMARK_END(3);
+#endif
 	return W_SUCCESS;
 }
 
@@ -538,6 +606,12 @@ void ms5611_task(void *argument) {
 			continue;
 		}
 
+#ifdef ENABLE_BENCHMARK
+		if (done_sys_init) {
+			SINGLE_BENCHMARK_START(4);
+		}
+#endif
+
 		w_status_t status = ms5611_read_raw_pressure(&result, &timestamp_ms);
 
 		if (pdTRUE == xSemaphoreTake(s_data_mutex, pdMS_TO_TICKS(3))) {
@@ -561,6 +635,10 @@ void ms5611_task(void *argument) {
 		} else {
 			handle.conv_state = MS5611_CONV_PRESSURE_ONLY;
 		}
+
+#ifdef ENABLE_BENCHMARK
+		SINGLE_BENCHMARK_END(4);
+#endif
 
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
 	}
@@ -630,3 +708,9 @@ health_status_t ms5611_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_baro_benchmark_data(uint8_t index, benchmark_data_t *data) {
+	GET_BENCHMARK_STAT(index, data);
+}
+#endif
