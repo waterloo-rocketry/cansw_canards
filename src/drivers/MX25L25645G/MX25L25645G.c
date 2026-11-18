@@ -36,7 +36,7 @@ static const uint32_t PROG_US_PER_BYTE = 15;
 static const uint32_t MS_PER_US = 1000;
 static const uint32_t FLASH_PROG_DELAY_MS = 100;
 
-static const uint32_t flash_read_dummy_cycle = 8;
+static const uint32_t FLASH_READ_DUMMY_CYCLE = 8;
 
 static uint8_t lfs_flash_read_buffer[CACHE_SIZE] = {0};
 static uint8_t lfs_flash_prog_buffer[CACHE_SIZE] = {0};
@@ -308,7 +308,7 @@ static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 	(cmd_read.AddressSize) = HAL_OSPI_ADDRESS_32_BITS;
 	(cmd_read.Address) = address;
 	(cmd_read.DataMode) = HAL_OSPI_DATA_4_LINES;
-	(cmd_read.DummyCycles) = flash_read_dummy_cycle;
+	(cmd_read.DummyCycles) = FLASH_READ_DUMMY_CYCLE;
 	(cmd_read.NbData) = len; // ← bytes
 #else
 	(cmd_read.Instruction) = 0x03; //  Page Program
@@ -407,7 +407,8 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	uint32_t curr_time_ms = 0;
 	timer_get_ms(&start_time_ms);
 	while (FLASH_PROG_DELAY_MS < (curr_time_ms - start_time_ms)) {
-		vTaskDelay(pdMS_TO_TICKS(5));
+		vTaskDelay(pdMS_TO_TICKS(1)); // needs to wait at least 30 ns between write to read commands
+		                              // (+ extra for writing which should be faster)
 		if (W_SUCCESS != get_rdsr(&rdsr_response, true)) {
 			return W_IO_ERROR;
 		}
@@ -526,11 +527,12 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	// check WIP is complete
 	uint32_t start_time_ms = 0;
 	uint32_t curr_time_ms = 0;
-	if (W_SUCCESS != timer_get_ms(&start_time_ms) != W_SUCCESS) {
+	if (W_SUCCESS != timer_get_ms(&start_time_ms)) {
 		return W_FAILURE;
 	}
 	while (FLASH_PROG_DELAY_MS < (curr_time_ms - start_time_ms)) {
-		vTaskDelay(pdMS_TO_TICKS(5));
+		vTaskDelay(pdMS_TO_TICKS(1)); // needs to wait at least 30 ns between write to read commands
+		                              // (+ extra for writing which should be faster)
 		if (W_SUCCESS != get_rdsr(&rdsr_response, true)) {
 			return W_IO_ERROR;
 		}
@@ -690,7 +692,6 @@ w_status_t mx25l25645g_init() {
 	(g_flash_ctx.spi_state) = FLASH_SPI_READY;
 
 	// SET UP THE CHIP
-
 	// enable QE and set dc 0 and dc 1 to 10 for Quard IO Fast Read
 	OSPI_RegularCmdTypeDef wrsr_cmd = {0};
 
@@ -757,7 +758,7 @@ w_status_t mx25l25645g_mount(lfs_t *p_lfs, const uint32_t first_block_offset) {
 	}
 
 	if ((first_block_offset % (cfg.block_size)) != 0) {
-		return W_INVALID_PARAM; // because I am lazy
+		return W_INVALID_PARAM; // block offset should be a multiple of block size
 	}
 	memset(p_lfs, 0, sizeof(lfs_t));
 
