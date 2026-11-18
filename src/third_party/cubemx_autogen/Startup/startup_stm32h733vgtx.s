@@ -45,6 +45,41 @@ defined in linker script */
 .word  _ebss
 /* stack used for SystemInit_ExtMemCtl; always internal RAM used */
 
+
+/* start address for the initialization values of the .sram4 section.
+defined in linker script */
+.word  _sisram4
+/* start address for the .sram4 section. defined in linker script */
+.word  _ssram4
+/* end address for the .sram4 section. defined in linker script */
+.word  _esram4
+
+.section .text
+/**
+  * @brief Subprocedure for copying over the flash data to RAM section
+  * @detail will not protect any registers
+  * @param r0 start point stored in RAM
+  * @param r1 end point in RAM
+  * @param r2 start point for in flash
+  * retval : None
+*/
+  .type Ram_Flash_Copy, %function
+Ram_Flash_Copy:
+  movs r3, #0
+  b LoopCopyDataInit
+
+  CopyDataInit:
+    ldr r4, [r2, r3]
+    str r4, [r0, r3]
+    adds r3, r3, #4
+
+  LoopCopyDataInit:
+    adds r4, r0, r3
+    cmp r4, r1
+    bcc CopyDataInit
+    bx lr
+
+
 /**
  * @brief  This is the code that gets called when the processor first
  *          starts execution following a reset event. Only the absolutely
@@ -69,18 +104,16 @@ Reset_Handler:
   ldr r0, =_sdata
   ldr r1, =_edata
   ldr r2, =_sidata
-  movs r3, #0
-  b LoopCopyDataInit
+  
+  bl Ram_Flash_Copy
 
-CopyDataInit:
-  ldr r4, [r2, r3]
-  str r4, [r0, r3]
-  adds r3, r3, #4
+/* Copy the sram4 segment initializers from flash to SRAM4 */
+  ldr r0, =_ssram4
+  ldr r1, =_esram4
+  ldr r2, =_sisram4
+  
+  bl Ram_Flash_Copy
 
-LoopCopyDataInit:
-  adds r4, r0, r3
-  cmp r4, r1
-  bcc CopyDataInit
 /* Zero fill the bss segment. */
   ldr r2, =_sbss
   ldr r4, =_ebss
