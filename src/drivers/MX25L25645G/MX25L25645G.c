@@ -36,7 +36,7 @@ static const uint32_t PROG_US_PER_BYTE = 15;
 static const uint32_t MS_PER_US = 1000;
 static const uint32_t FLASH_PROG_DELAY_MS = 100;
 
-static const uint32_t flash_read_dummy_cycle = 8;
+static const uint32_t FLASH_READ_DUMMY_CYCLE = 8;
 
 static uint8_t lfs_flash_read_buffer[CACHE_SIZE] = {0};
 static uint8_t lfs_flash_prog_buffer[CACHE_SIZE] = {0};
@@ -308,7 +308,7 @@ static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 	(cmd_read.AddressSize) = HAL_OSPI_ADDRESS_32_BITS;
 	(cmd_read.Address) = address;
 	(cmd_read.DataMode) = HAL_OSPI_DATA_4_LINES;
-	(cmd_read.DummyCycles) = flash_read_dummy_cycle;
+	(cmd_read.DummyCycles) = FLASH_READ_DUMMY_CYCLE;
 	(cmd_read.NbData) = len; // ← bytes
 #else
 	(cmd_read.Instruction) = 0x03; //  Page Program
