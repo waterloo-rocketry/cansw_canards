@@ -27,15 +27,6 @@ typedef struct {
 
 static lfs_t lfs;
 
-static bool flash_is_file_open(flash_file_t *p_file) {
-	for (struct lfs_mlist **p = (&(lfs.mlist)); *p; p = (&((*p)->next))) {
-		if (*p == (struct lfs_mlist *)(&(p_file->file))) {
-			return true;
-		}
-	}
-	return false;
-}
-
 w_status_t flash_init(const uint32_t first_block_offset) {
 	return mx25l25645g_mount(&lfs, first_block_offset); // off is usually 0
 }
@@ -52,7 +43,7 @@ int mx25l25645g_unmount(lfs_t *p_lfs) {
 }
 
 int mx25l25645g_file_open(flash_file_t *p_file, const char *p_path, const int16_t flags) {
-	if (flash_is_file_open(p_file)) {
+	if (FILE_OPEN != (p_file->status)) {
 		return E_LFS_FILE_ALREADY_OPEN;
 		// Error code for file already opened
 	}
@@ -60,7 +51,7 @@ int mx25l25645g_file_open(flash_file_t *p_file, const char *p_path, const int16_
 }
 
 lfs_soff_t mx25l25645g_file_seek(flash_file_t *p_file, const lfs_soff_t off, const int whence) {
-	if (!(flash_is_file_open(p_file))) {
+	if (FILE_OPEN == (p_file->status)) {
 		return E_LFS_FILE_NOT_OPEN;
 	}
 
@@ -69,7 +60,7 @@ lfs_soff_t mx25l25645g_file_seek(flash_file_t *p_file, const lfs_soff_t off, con
 
 lfs_ssize_t mx25l25645g_file_read(flash_file_t *p_file, void *p_buffer, const lfs_size_t size,
                                   const lfs_soff_t offset, const enum lfs_whence_flags whence) {
-	if (!(flash_is_file_open(p_file))) {
+	if (FILE_OPEN == (p_file->status)) {
 		return E_LFS_FILE_NOT_OPEN;
 	}
 	if (LFS_O_RDONLY != (LFS_O_RDONLY & ((p_file->file).flags))) {
@@ -84,7 +75,7 @@ lfs_ssize_t mx25l25645g_file_read(flash_file_t *p_file, void *p_buffer, const lf
 
 lfs_ssize_t mx25l25645g_file_write(flash_file_t *p_file, const void *p_buffer,
                                    const lfs_size_t size) {
-	if (!(flash_is_file_open(p_file))) {
+	if (FILE_OPEN == (p_file->status)) {
 		return E_LFS_FILE_NOT_OPEN;
 	}
 	if (LFS_O_WRONLY != (LFS_O_WRONLY & ((p_file->file).flags))) {
@@ -94,7 +85,7 @@ lfs_ssize_t mx25l25645g_file_write(flash_file_t *p_file, const void *p_buffer,
 }
 
 int mx25l25645g_file_close(flash_file_t *p_file) {
-	if (!(flash_is_file_open(p_file))) {
+	if (FILE_OPEN == (p_file->status)) {
 		return E_LFS_FILE_NOT_OPEN;
 		// Error code accessing a file that isn't open.
 	}
@@ -121,7 +112,7 @@ w_status_t flash_clear_logs() {
 		return W_FAILURE;
 	}
 	while ((err = lfs_dir_read(&lfs, &dir, &info)) > 0) {
-		if ((info.type == LFS_TYPE_REG) && (is_log_file(info.name))) {
+		if ((info.type = LFS_TYPE_REG) && (is_log_file(info.name))) {
 			err = lfs_remove(&lfs, info.name);
 			if (err < 0) {
 				lfs_dir_close(&lfs, &dir);
