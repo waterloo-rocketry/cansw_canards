@@ -228,11 +228,21 @@ TEST_F(GpioTest, RegisterISRFailNullPtr) {
 
 TEST_F(GpioTest, RegisterISRFailTooManyRegisters) {
     // Act
+    // TODO: change depending on number of GPIO pin to register
+    // make sure the errors occur at the right times
+    w_status_t status = gpio_register_interrupt_callback(test_isr_0, 0);
+    EXPECT_EQ(status, W_SUCCESS);
+    status = gpio_register_interrupt_callback(test_isr_1, 1);
+    EXPECT_EQ(status, W_SUCCESS);
+    status = gpio_register_interrupt_callback(test_isr_2, 4);
+    EXPECT_EQ(status, W_FAILURE);
+}
+
+TEST_F(GpioTest, RegisterISRFailSameRegister) {
+    // Act
     // make sure the errors occur at the right times
     w_status_t status = gpio_register_interrupt_callback(test_isr_0, 0);
     EXPECT_EQ(status, W_SUCCESS);
     status = gpio_register_interrupt_callback(test_isr_1, 0);
-    EXPECT_EQ(status, W_SUCCESS);
-    status = gpio_register_interrupt_callback(test_isr_2, 0);
-    EXPECT_EQ(status, W_FAILURE);
+    EXPECT_EQ(status, W_INVALID_PARAM);
 }

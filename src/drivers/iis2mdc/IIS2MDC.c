@@ -478,8 +478,9 @@ w_status_t iis2mdc_init(void) {
 
 	// check to make sure correctly read from I2C
 	vTaskDelay(pdMS_TO_TICKS(2)); // wait for I2C comms to complete
-	if (iis2mdc_dma_busy || (iis2mdc_health.internal_error) ||
-	    (iis2mdc_health.communication_failure)) {
+	if ((iis2mdc_health.internal_error) ||
+	    (iis2mdc_health.communication_failure)) { // will not check if still in I2C transfer due to
+	                                              // possibility of false positive
 		log_text(10, LOG_LVL_WARN, "IIS2MDC", "Failed to clear drdy");
 		return W_FAILURE;
 	}
