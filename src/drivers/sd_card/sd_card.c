@@ -3,6 +3,7 @@
 #include "application/logger/log.h"
 #include "fatfs.h"
 #include "rocketlib.h"
+#include "sdmmc.h"
 #include "semphr.h"
 #include <inttypes.h>
 
@@ -39,6 +40,21 @@ w_status_t sd_card_init(void) {
 	if (sd_card_health.is_init) {
 		return W_SUCCESS;
 	}
+
+	/*
+	 * Set up the SDMMC2 handle here instead of in main(). MX_SDMMC2_SD_Init() is not called
+	 * ("Do Not Generate Function Call" in both .ioc files) because it calls Error_Handler() when
+	 * no card answers, which halts the board before the scheduler starts, even though the SD
+	 * card is non-critical. f_mount() -> BSP_SD_Init() runs HAL_SD_Init() on this handle itself.
+	 * Keep these values in sync with MX_SDMMC2_SD_Init() in cubemx_autogen/src/sdmmc.c.
+	 */
+	hsd2.Instance = SDMMC2;
+	hsd2.Init.ClockEdge = SDMMC_CLOCK_EDGE_RISING;
+	hsd2.Init.ClockPowerSave = SDMMC_CLOCK_POWER_SAVE_DISABLE;
+	hsd2.Init.BusWide = SDMMC_BUS_WIDE_4B;
+	hsd2.Init.HardwareFlowControl = SDMMC_HARDWARE_FLOW_CONTROL_DISABLE;
+	hsd2.Init.ClockDiv = 4;
+
 	/*
 	 * Mount the filesystem.
 	 * The f_mount() function links the FATFS file system object (SDFatFS) with the logical drive.
