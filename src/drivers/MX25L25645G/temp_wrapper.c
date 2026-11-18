@@ -85,3 +85,38 @@ int mx25l25645g_file_truncate(lfs_t *p_lfs, lfs_file_t *p_file, lfs_off_t size) 
 	}
 	return lfs_file_truncate(p_lfs, p_file, size);
 }
+static bool is_log_file(const char* filename){
+    if (strlen(filename) != 12) {
+        return false;
+    }
+    for (int i = 0; i < 8; i++) {
+        if (!isxdigit((unsigned char)filename[i])) {
+            return false;
+        }
+    }
+    return (strcmp(filename + 8, ".txt") == 0 ||
+           strcmp(filename + 8, ".bin") == 0);
+}
+
+w_status_t flash_clear_logs(lfs_t *p_lfs){
+	lfs_dir_t dir;
+	struct lfs_info info;
+	int err= lfs_dir_open(p_lfs, &dir, "/"); // need to iterate over log files
+	if (err<0){
+		return W_FAILURE;
+	}
+	while ((err=lfs_dir_read(p_lfs, &dir, &info))>0){
+		if ((info.type= LFS_TYPE_REG)&&(is_log_file(info.name))){
+			err= lfs_remove(p_lfs, info.name);
+			if (err<0){
+				lfs_dir_close(p_lfs, &dir);
+				return W_FAILURE;
+			}
+		}
+	}
+	int err1= lfs_dir_close(p_lfs, &dir);
+	if (err<0 || err1<0){
+		return W_FAILURE;
+	}
+	return W_SUCCESS;
+}
