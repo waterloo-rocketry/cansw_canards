@@ -12,6 +12,11 @@ extern "C" {
 
 DEFINE_FFF_GLOBALS;
 
+// update this list as the amount of interrupts that are 
+void test_isr_0(void) {}
+void test_isr_1(void) {}
+void test_isr_2(void) {}
+
 // Test fixture for GPIO tests
 class GpioTest : public ::testing::Test {
 protected:
@@ -203,4 +208,31 @@ TEST_F(GpioTest, ToggleInvalidPinReturnsError) {
     // Assert
     EXPECT_EQ(status, W_INVALID_PARAM); // Ensure invalid pin returns error
     EXPECT_EQ(HAL_GPIO_TogglePin_fake.call_count, 0); // Ensure HAL toggle not called
+}
+
+TEST_F(GpioTest, RegisterISRSuccess) {
+    // Act
+    w_status_t status = gpio_register_interrupt_callback(test_isr_0, 0);
+
+    // Assert
+    EXPECT_EQ(status, W_SUCCESS);
+}
+
+TEST_F(GpioTest, RegisterISRFailNullPtr) {
+    // Act
+    w_status_t status = gpio_register_interrupt_callback(NULL, 0);
+
+    // Assert
+    EXPECT_EQ(status, W_INVALID_PARAM);
+}
+
+TEST_F(GpioTest, RegisterISRFailTooManyRegisters) {
+    // Act
+    // make sure the errors occur at the right times
+    w_status_t status = gpio_register_interrupt_callback(test_isr_0, 0);
+    EXPECT_EQ(status, W_SUCCESS);
+    status = gpio_register_interrupt_callback(test_isr_1, 0);
+    EXPECT_EQ(status, W_SUCCESS);
+    status = gpio_register_interrupt_callback(test_isr_2, 0);
+    EXPECT_EQ(status, W_FAILURE);
 }

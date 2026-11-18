@@ -81,6 +81,7 @@ health_status_t gpio_get_status(void);
  * @param[in] gpio_pin is the pin number for the associated GPIO pin
  * @return the status of the registration
  */
-w_status_t gpio_register_interrupt_callback(gpio_isr_callback_t p_callback_fcn, uint16_t gpio_pin);
+w_status_t gpio_register_interrupt_callback(const gpio_isr_callback_t p_callback_fcn,
+                                            const uint16_t gpio_pin);
 
 #endif // GPIO_H

@@ -353,7 +353,7 @@ static w_status_t iis2mdc_sanity_check(void) {
  *       converts and publishes the result. Disabled while the module isn't in ready state
  *  	 (uninitialized or under a sanity check).
  */
-static void iis2mdc_handle_drdy_irq(void) {
+void iis2mdc_handle_drdy_irq(void) {
 	// stand down unless ASYNC_DMA_ACTIVE
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		iis2mdc_health.dma_before_callback_switch++;
@@ -478,7 +478,8 @@ w_status_t iis2mdc_init(void) {
 
 	// check to make sure correctly read from I2C
 	vTaskDelay(pdMS_TO_TICKS(2)); // wait for I2C comms to complete
-	if (iis2mdc_dma_busy || (iis2mdc_health.internal_error)) {
+	if (iis2mdc_dma_busy || (iis2mdc_health.internal_error) ||
+	    (iis2mdc_health.communication_failure)) {
 		log_text(10, LOG_LVL_WARN, "IIS2MDC", "Failed to clear drdy");
 		return W_FAILURE;
 	}

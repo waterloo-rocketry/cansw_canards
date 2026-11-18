@@ -212,6 +212,11 @@ w_status_t gpio_register_interrupt_callback(const gpio_isr_callback_t p_callback
 		return W_INVALID_PARAM;
 	}
 
+	if (g_isr_max_index >= MAX_GPIO_INTERRUPTS) {
+		log_text(10, LOG_LVL_WARN, "gpio", "Maxed out gpio isr interrupts with pin %d", gpio_pin);
+		return W_FAILURE;
+	}
+
 	// create callback
 	gpio_isr_callback_data_t new_callback = {.callback = p_callback_fcn, .gpio_pin = gpio_pin};
 	memcpy(&g_isr_map[g_isr_max_index], &new_callback, sizeof(g_isr_map[g_isr_max_index]));
@@ -228,8 +233,8 @@ w_status_t gpio_register_interrupt_callback(const gpio_isr_callback_t p_callback
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	// search through and call the respected callback
 	for (uint8_t isr_index = 0; isr_index < g_isr_max_index; isr_index++) {
-		if (g_isr_map[g_isr_max_index].gpio_pin == GPIO_Pin) {
-			g_isr_map[g_isr_max_index].callback();
+		if (g_isr_map[isr_index].gpio_pin == GPIO_Pin) {
+			g_isr_map[isr_index].callback();
 			return;
 		}
 	}
