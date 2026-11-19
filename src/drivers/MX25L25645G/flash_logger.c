@@ -10,48 +10,58 @@ typedef enum {
 	E_LFS_FORMAT_EMPTY = -13
 } FLASH_EXTRA_LFS_ERRORS_T;
 
-typedef enum {
-	FILE_NOT_INIT, // only present while file is being opened
-	FILE_OPEN, // no operations in progress
-	FILE_WRITING,
-	FILE_READING,
-	FILE_WAITING_FOR_SYNC, // set after finished writing to file
-	FILE_SYNCING,
-	FILE_CLOSED // if closed, file should not accept any new operations
-} flash_file_status_t;
-
-typedef struct {
-	lfs_file_t file;
-	flash_file_status_t status;
-} flash_file_t;
-
 static lfs_t lfs;
 
 w_status_t flash_init(const uint32_t first_block_offset) {
+	if (W_SUCCESS != mx25l25645g_init()) {
+		return W_FAILURE;
+	}
 	return mx25l25645g_mount(&lfs, first_block_offset); // off is usually 0
 }
 
-int mx25l25645g_format(const struct lfs_config *cfg_i) {
-	if ((cfg_i->block_count) == 0) {
-		return E_LFS_FORMAT_EMPTY;
+w_status_t flash_file_open(flash_file_t *p_file, const char *p_path, const int16_t flags) {
+	if (FLASH_FILE_CLOSED == (p_file->status)) {
+		if (0 != lfs_file_open(&lfs, &(p_file->file), p_path, flags)) {
+			return W_FAILURE;
+		}
+		(p_file->status) = FLASH_FILE_OPEN;
+		return W_SUCCESS;
 	}
-	return lfs_format(&lfs, cfg_i);
+
+	(p_file->status) = FLASH_FILE_NOT_INIT;
+
+	if (0 != lfs_file_open(&lfs, &(p_file->file), p_path, flags)) {
+		return W_FAILURE;
+	}
+
+	(p_file->status) = FLASH_FILE_OPEN;
+	return W_SUCCESS;
 }
 
-int mx25l25645g_unmount(lfs_t *p_lfs) {
-	return lfs_unmount(p_lfs);
-}
-
-int mx25l25645g_file_open(flash_file_t *p_file, const char *p_path, const int16_t flags) {
-	if (FILE_OPEN != (p_file->status)) {
-		return E_LFS_FILE_ALREADY_OPEN;
-		// Error code for file already opened
+w_status_t flash_file_close(flash_file_t *p_file) {
+	// If file needs syncing, sync before closing. This is done
+	// automatically by lfs_file_close(), so this is more of a precaution.
+	if (FLASH_FILE_WAITING_FOR_SYNC == (p_file->status)) {
+		if (0 != lfs_file_sync(&lfs, &(p_file->file))) {
+			return W_FAILURE;
+		}
+		p_file->status = FLASH_FILE_OPEN;
 	}
-	return lfs_file_open(&lfs, &(p_file->file), p_path, flags);
+
+	// Only close files that aren't currently in use.
+	if (FLASH_FILE_OPEN != (p_file->status)) {
+		return W_FAILURE;
+	}
+
+	if (0 != lfs_file_close(&lfs, &(p_file->file))) {
+		return W_FAILURE;
+	}
+
+	return W_SUCCESS;
 }
 
 lfs_soff_t mx25l25645g_file_seek(flash_file_t *p_file, const lfs_soff_t off, const int whence) {
-	if (FILE_OPEN == (p_file->status)) {
+	if (FLASH_FILE_OPEN == (p_file->status)) {
 		return E_LFS_FILE_NOT_OPEN;
 	}
 
@@ -60,7 +70,7 @@ lfs_soff_t mx25l25645g_file_seek(flash_file_t *p_file, const lfs_soff_t off, con
 
 lfs_ssize_t mx25l25645g_file_read(flash_file_t *p_file, void *p_buffer, const lfs_size_t size,
                                   const lfs_soff_t offset, const enum lfs_whence_flags whence) {
-	if (FILE_OPEN == (p_file->status)) {
+	if (FLASH_FILE_OPEN == (p_file->status)) {
 		return E_LFS_FILE_NOT_OPEN;
 	}
 	if (LFS_O_RDONLY != (LFS_O_RDONLY & ((p_file->file).flags))) {
@@ -75,21 +85,13 @@ lfs_ssize_t mx25l25645g_file_read(flash_file_t *p_file, void *p_buffer, const lf
 
 lfs_ssize_t mx25l25645g_file_write(flash_file_t *p_file, const void *p_buffer,
                                    const lfs_size_t size) {
-	if (FILE_OPEN == (p_file->status)) {
+	if (FLASH_FILE_OPEN == (p_file->status)) {
 		return E_LFS_FILE_NOT_OPEN;
 	}
 	if (LFS_O_WRONLY != (LFS_O_WRONLY & ((p_file->file).flags))) {
 		return LFS_ERR_INVAL;
 	}
 	return lfs_file_write(&lfs, &(p_file->file), p_buffer, size);
-}
-
-int mx25l25645g_file_close(flash_file_t *p_file) {
-	if (FILE_OPEN == (p_file->status)) {
-		return E_LFS_FILE_NOT_OPEN;
-		// Error code accessing a file that isn't open.
-	}
-	return lfs_file_close(&lfs, &(p_file->file));
 }
 
 static bool is_log_file(const char *filename) {
