@@ -82,7 +82,7 @@ static uint8_t g_isr_max_index = 0;
 /**
  * Initialize gpio module. Can be run before scheduler start
  */
-w_status_t gpio_init() {
+w_status_t gpio_init(void) {
 	w_status_t status = W_SUCCESS;
 
 	gpio_status.is_init = false;
@@ -100,9 +100,8 @@ w_status_t gpio_init() {
 		}
 	}
 
-	if (status == W_SUCCESS) {
+	if (W_SUCCESS == status) {
 		gpio_status.is_init = true;
-	} else {
 	}
 
 	return status;

@@ -172,9 +172,9 @@ void lsm6dsv32x_int1_isr_handler() {
 
 	// begin dma read to the main buffer
 	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
-	HAL_StatusTypeDef hal_status =
-		HAL_I2C_Mem_Read_DMA(lsm6dsv32x_ctx.hi2c, shifted_address, OUTX_L_G, I2C_MEMADD_SIZE_8BIT,
-		                     lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
+	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Read_DMA(
+		lsm6dsv32x_ctx.hi2c, (uint16_t)shifted_address, OUTX_L_G, I2C_MEMADD_SIZE_8BIT,
+		lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], (uint16_t)CTX_BUFFER_SIZE);
 	if (hal_status != HAL_OK) {
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
 		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
