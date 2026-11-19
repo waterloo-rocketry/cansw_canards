@@ -22,16 +22,16 @@ static const uint16_t P_FAIL_BIT_MASK = 0x20;
 static const uint16_t E_FAIL_BIT_MASK = 0x40;
 
 // make sure cache size is always less than 2^16 times of Page size
-#define CACHE_SIZE 2048
-#define PAGE_SIZE 256
+#define CACHE_SIZE 2048 // Bytes
+#define PAGE_SIZE 256 // Bytes
 // Each byte of lookahead can track 8 blocks on filesystem (rounding up)
-#define LOOKAHEAD_SIZE (((LOG_BUFFER_SIZE - 1) / 8) + 1)
+#define LOOKAHEAD_SIZE (((LOG_BUFFER_SIZE - 1) / 8) + 1) // Bytes
 
 static_assert(CACHE_SIZE < (0x10000 * PAGE_SIZE),
               "Flash Chip: Cache size must always be less than 2^16 times of page size");
 
-static const uint16_t SECTOR_SIZE = 4096;
-static const uint32_t MX25L25645G_FLASH_SIZE = 0x2000000;
+static const uint16_t SECTOR_SIZE = 4096; // Size of one sector on chip in bytes
+static const uint32_t MX25L25645G_FLASH_SIZE = 0x2000000; // Total capacity of chip in bytes
 
 static const uint32_t FLASH_PROG_DELAY_MS = 100;
 
@@ -59,9 +59,9 @@ typedef struct {
 	OSPI_HandleTypeDef *spi_handle;
 	gpio_pin_t ncs_pin;
 	bool is_init;
-} flash_lfs_ctx;
+} flash_lfs_ctx_t;
 
-static flash_lfs_ctx g_flash_ctx = {
+static flash_lfs_ctx_t g_flash_ctx = {
 	.spi_handle = &hospi1, .spi_state = FLASH_SPI_NOT_INIT, .ncs_pin = GPIO_PIN_FLASH_CS
 };
 
