@@ -6,15 +6,6 @@
 #include "drivers/timer/timer.h"
 #include <stdint.h>
 
-/**
- * @brief Structure to hold magnetometer readings and timestamp
- */
-typedef struct __attribute__((packed)) {
-	uint16_t x;
-	uint16_t y;
-	uint16_t z;
-    uint32_t timestamp_ms;
-} mag_data_t;
 
 /**
  * @brief Structure to hold GPS position data
@@ -43,16 +34,6 @@ typedef struct __attribute__((packed)) {
     uint8_t *utc_seconds;
 } gps_timestamp_data_t;
 
-/**
- * @brief Structure to hold barometer readings and timestamp
- * @note both pressure and temperature are 24bit values, so they are stored in uint32_t to avoid overflow
- */
-typedef struct __attribute__((packed)) {
-    uint32_t *pressure;
-    uint32_t *temperature;
-    uint32_t *timestamp_ms;
-} MS5611_baro_data_t;
-
 
 /** 
  * @brief Initializes the CAN sensor driver and sets up the necessary callbacks for handling incoming CAN messages related to sensors.
@@ -66,14 +47,14 @@ w_status_t can_sensor_init();
  * @param mag_data [out] pointer to store the magnetometer readings and timestamp
  * @return status of the operation
  */
-w_status_t get_canard_IIS2MDC_MAG(mag_data_t *mag_data);
+w_status_t get_canard_IIS2MDC_MAG(vector3d_t *mag_data, uint32_t *timestamp_ms);
 
 /**
  * @brief getter function for the gps timestamp message
  * @param timestamp_data [out] pointer to store the GPS timestamp data
  * @return status of the operation
  */
-w_status_t get_gps_timestamp(gps_timestamp_data_t *timestamp_data);
+w_status_t get_gps_timestamp(gps_timestamp_data_t *timestamp_data, uint32_t *timestamp_ms);
 
 /**
  * @brief getter function for the gps message, returns the gps position data
@@ -81,22 +62,21 @@ w_status_t get_gps_timestamp(gps_timestamp_data_t *timestamp_data);
  * @note gps latitude, longitude and altitude are sent from different messages, so this function will return the latest data received from each message
  * @return status of the operation
  */
-w_status_t get_gps_position(gps_position_data_t * position_data);
+w_status_t get_gps_position(gps_position_data_t * position_data, uint32_t *timestamp_ms);
 
 /**
  * @brief getter function for the gps info message, returns the number of satellites and quality of the GPS fix
- *  @param num_sat [out] pointer to store the number of satellites
+ * @param num_sat [out] pointer to store the number of satellites
  * @param quality [out] pointer to store the quality of the GPS fix
  * @return status of the operation
  */ 
-w_status_t get_gps_info(uint8_t *num_sat, 
-                        uint8_t *quality);
+w_status_t get_gps_info(uint8_t *num_sat, uint8_t *quality, uint32_t *timestamp_ms);
 
 /**
  * @brief getter function for the CANARD_MTI630_BARO message, returns the barometer readings and timestamp
  * @param baro_data [out] pointer to store the barometer readings and timestamp
  * @return status of the operation
  */
-w_status_t get_ms5611_baro(MS5611_baro_data_t *baro_data);
+w_status_t get_ms5611_baro(float32_t *baro_pres_pa, float32_t *baro_temp_deg, uint32_t *timestamp_ms);
 #endif
 
