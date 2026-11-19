@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_I2C_C
+
 /**
  * @file i2c.c
  * @brief Implementation of the I2C bus driver

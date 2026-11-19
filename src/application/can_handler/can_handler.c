@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_CAN_HANDLER_C
+
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>

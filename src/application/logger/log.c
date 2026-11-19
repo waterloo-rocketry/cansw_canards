@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_LOG_C
+
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -17,23 +19,48 @@
 // number of times to try writing a log message in case fails once
 #define DATA_WRITE_TRY_COUNT 50
 #define TEXT_WRITE_TRY_COUNT 20
+#define ERROR_WRITE_TRY_COUNT 20
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
 
+static char error_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.ERR";
 static char text_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.TXT";
 static char data_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.BIN";
+
+typedef enum __attribute__((packed)) {
+	LOG_ERROR_BUFFER,
+	LOG_TEXT_BUFFER,
+	LOG_DATA_BUFFER
+} log_buffer_type_t;
 
 typedef struct {
 	char data[LOG_BUFFER_SIZE];
 	uint32_t next_msg_num;
 	SemaphoreHandle_t next_msg_num_mutex;
 	SemaphoreHandle_t msgs_done_semaphore;
-	bool is_text;
+	log_buffer_type_t log_buffer_type;
 	bool is_full;
 } log_buffer_t;
+
+typedef struct {
+	uint32_t timestamp;
+	log_error_id_t log_error_id;
+	log_task_id_t log_task_id;
+	log_file_id_t log_file_id;
+	uint16_t line_number;
+	uint16_t counter;
+	char args[LOG_ERROR_VARIADIC_ARGUMENTS_LENGTH];
+} log_error_msg_t;
+
+typedef union {
+	log_error_msg_t log_error_msg;
+	char bytes[sizeof(log_error_msg_t)];
+} log_error_msg_union_t;
+
+_Static_assert(sizeof(log_error_msg_t) == MAX_ERROR_MSG_LENGTH, "Struct size must be 32 bytes");
 
 /**
  * A collection of status variables describing the current health of the logger module.
@@ -67,17 +94,26 @@ typedef struct {
 	bool init_fs_create_write_failed; // SD file create/write failed during init
 } logger_health_t;
 
+// TODO: Ask/Find out how to make a new buffer specifically for log_error
+// log_error buffers
+static log_buffer_t log_error_buffers[NUM_ERROR_LOG_BUFFERS];
+static uint8_t current_error_buf_num = 0;
+static uint16_t current_error_buf_version = 1;
+static SemaphoreHandle_t log_error_write_mutex = NULL;
+static QueueHandle_t error_buffers_queue = NULL;
+
+// log_text buffers
 static log_buffer_t log_text_buffers[NUM_TEXT_LOG_BUFFERS];
-static log_buffer_t log_data_buffers[NUM_DATA_LOG_BUFFERS];
 static uint32_t current_text_buf_num = 0;
-static uint32_t current_data_buf_num = 0;
-/* Mutex that protects access of current_text_buf_num */
 static SemaphoreHandle_t log_text_write_mutex = NULL;
-/* Mutex that protects access of current_data_buf_num */
-static SemaphoreHandle_t log_data_write_mutex = NULL;
-/* Queue of full log buffers sent to the task to be flushed */
 static QueueHandle_t data_buffers_queue = NULL;
+
+// log_data_buffers
+static log_buffer_t log_data_buffers[NUM_DATA_LOG_BUFFERS];
+static uint32_t current_data_buf_num = 0;
+static SemaphoreHandle_t log_data_write_mutex = NULL;
 static QueueHandle_t text_buffers_queue = NULL;
+
 /* Count of data buffers initialized, for buffer header index value */
 static uint32_t total_data_log_buffers = 0;
 
@@ -176,21 +212,33 @@ static void log_reset_buffer(log_buffer_t *buffer) {
 	memset(buffer->data, 0, LOG_BUFFER_SIZE);
 
 	// Write the buffer header message if it's a data buffer
-	if (!buffer->is_text) {
-		log_data_container_t data = {0};
-		data.header.version = LOG_DATA_FORMAT_VERSION;
-		data.header.index = total_data_log_buffers;
-		// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
-		uint32_t timestamp = 0;
-		(void)timer_get_ms(&timestamp);
-		log_data_write_to_region(buffer, 0, LOG_TYPE_HEADER, timestamp, &data);
-		total_data_log_buffers++;
+	switch (buffer->log_buffer_type) {
+		case LOG_ERROR_BUFFER:
+			buffer->next_msg_num = 0;
+			break;
+		case LOG_TEXT_BUFFER:
+			buffer->next_msg_num = 0;
+			break;
+		case LOG_DATA_BUFFER:
+			log_data_container_t data = {0};
+			data.header.version = LOG_DATA_FORMAT_VERSION;
+			data.header.index = total_data_log_buffers;
+			// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
+			uint32_t timestamp = 0;
+			(void)timer_get_ms(&timestamp);
+			log_data_write_to_region(buffer, 0, LOG_TYPE_HEADER, timestamp, &data);
+			total_data_log_buffers++;
 
-		// Reset these last to avoid another task using this buffer before we're done resetting it
-		buffer->next_msg_num = 1;
-	} else {
-		buffer->next_msg_num = 0;
+			// Reset these last to avoid another task using this buffer before we're done resetting
+			// it
+			buffer->next_msg_num = 1;
+			break;
+		default:
+			// Error, invalid type
+			buffer->is_full = true;
+			break;
 	}
+
 	buffer->is_full = false;
 }
 
@@ -205,13 +253,20 @@ w_status_t log_init(void) {
 	// returns before that. Record them in logger_health instead; logger_get_status() reports
 	// them over CAN, which is the only channel that still works when the logger is down.
 
+	error_buffers_queue = xQueueCreate(NUM_ERROR_LOG_BUFFERS, sizeof(log_buffer_t *));
 	data_buffers_queue = xQueueCreate(NUM_DATA_LOG_BUFFERS, sizeof(log_buffer_t *));
 	text_buffers_queue = xQueueCreate(NUM_TEXT_LOG_BUFFERS, sizeof(log_buffer_t *));
-	if ((NULL == data_buffers_queue) || (NULL == text_buffers_queue)) {
+	if ((NULL == error_buffers_queue) || (NULL == data_buffers_queue) ||
+	    (NULL == text_buffers_queue)) {
 		logger_health.init_os_failed = true;
 		return W_FAILURE;
 	}
 
+	log_error_write_mutex = xSemaphoreCreateMutex();
+	if (NULL == log_error_write_mutex) {
+		logger_health.init_os_failed = true;
+		return W_FAILURE;
+	}
 	log_text_write_mutex = xSemaphoreCreateMutex();
 	if (NULL == log_text_write_mutex) {
 		logger_health.init_os_failed = true;
@@ -223,10 +278,27 @@ w_status_t log_init(void) {
 		return W_FAILURE;
 	}
 
+	// Initialize error buffers
+	for (int i = 0; i < NUM_ERROR_LOG_BUFFERS; i++) {
+		log_buffer_t *buffer = &log_error_buffers[i];
+		buffer->log_buffer_type = LOG_ERROR_BUFFER;
+		buffer->next_msg_num_mutex = xSemaphoreCreateMutex();
+		if (NULL == buffer->next_msg_num_mutex) {
+			logger_health.init_os_failed = true;
+			return W_FAILURE;
+		}
+		buffer->msgs_done_semaphore = xSemaphoreCreateCounting(ERROR_MSGS_PER_BUFFER, 0);
+		if (NULL == buffer->msgs_done_semaphore) {
+			logger_health.init_os_failed = true;
+			return W_FAILURE;
+		}
+		log_reset_buffer(buffer);
+	}
+
 	// Initialize text buffers
 	for (int i = 0; i < NUM_TEXT_LOG_BUFFERS; i++) {
 		log_buffer_t *buffer = &log_text_buffers[i];
-		buffer->is_text = true;
+		buffer->log_buffer_type = LOG_TEXT_BUFFER;
 		buffer->next_msg_num_mutex = xSemaphoreCreateMutex();
 		if (NULL == buffer->next_msg_num_mutex) {
 			logger_health.init_os_failed = true;
@@ -243,7 +315,7 @@ w_status_t log_init(void) {
 	// Initialize data buffers
 	for (int i = 0; i < NUM_DATA_LOG_BUFFERS; i++) {
 		log_buffer_t *buffer = &log_data_buffers[i];
-		buffer->is_text = false;
+		buffer->log_buffer_type = LOG_DATA_BUFFER;
 		buffer->next_msg_num_mutex = xSemaphoreCreateMutex();
 		if (NULL == buffer->next_msg_num_mutex) {
 			logger_health.init_os_failed = true;
@@ -284,10 +356,12 @@ w_status_t log_init(void) {
 	                             false, &size);
 
 	// Form log filenames using the run count
+	snprintf_(error_log_filename, sizeof(error_log_filename), "%08" PRIx32 ".ERR", run_count);
 	snprintf_(text_log_filename, sizeof(text_log_filename), "%08" PRIx32 ".TXT", run_count);
 	snprintf_(data_log_filename, sizeof(data_log_filename), "%08" PRIx32 ".BIN", run_count);
 
 	// Create log files
+	status |= sd_card_file_create(error_log_filename);
 	status |= sd_card_file_create(text_log_filename);
 	status |= sd_card_file_create(data_log_filename);
 
@@ -297,6 +371,130 @@ w_status_t log_init(void) {
 		logger_health.init_fs_create_write_failed = true;
 	}
 	return status;
+}
+
+w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_ID,
+                     uint16_t line_number, log_task_id_t task_ID, log_error_id_t error_code,
+                     const uint32_t args[LOG_ERROR_MAX_ARGS]) {
+	uint32_t timestamp = 0;
+	(void)timer_get_ms(&timestamp);
+
+	// Validate arguments
+	if (!logger_health.is_init) {
+		return W_FAILURE;
+	}
+
+	if (NULL == log_error_site) {
+		logger_health.null_param_count++;
+		logger_health.invalid_param = true;
+		return W_INVALID_PARAM;
+	}
+
+	if (xSemaphoreTake(log_error_write_mutex, pdMS_TO_TICKS(timeout)) != pdPASS) {
+		logger_health.log_write_timeouts++;
+		logger_health.timeout_occurred = true;
+		return W_FAILURE;
+	}
+
+	// Read previous characters into struct
+	log_error_msg_union_t prev_log_error_msg_union = {0};
+
+	// Must have been logged before and be the same buffer and version to aggregate
+	bool aggregate = NULL != log_error_site && NULL != log_error_site->last_logged_location &&
+	                 current_error_buf_num == log_error_site->last_logged_buffer &&
+	                 current_error_buf_version == log_error_site->last_logged_version;
+
+	// If the last log can be aggregated, verify consistent log site data
+	if (aggregate) {
+		memcpy(&prev_log_error_msg_union, log_error_site->last_logged_location,
+		       sizeof(prev_log_error_msg_union));
+		log_error_msg_t msg = prev_log_error_msg_union.log_error_msg;
+
+		// Must be same task, file, and line; within past second; and have the same arguments
+		aggregate = task_ID == msg.log_task_id && file_ID == msg.log_file_id &&
+		            line_number == msg.line_number && timestamp <= msg.timestamp + 1000 &&
+		            memcmp(args, msg.args, LOG_ERROR_VARIADIC_ARGUMENTS_LENGTH) == 0;
+	}
+
+	// Add one to counter if aggregate
+	if (aggregate) {
+		log_error_msg_t *const prev = &prev_log_error_msg_union.log_error_msg;
+
+		// Increase counter by one
+		if (prev->counter < UINT16_MAX) {
+			prev->counter++;
+		}
+
+		// Write just the counter field back into the buffer
+		memcpy(log_error_site->last_logged_location + offsetof(log_error_msg_t, counter),
+		       &prev->counter, sizeof(prev->counter));
+	}
+	// Otherwise add new log message
+	else {
+		log_buffer_t *const buffer = &log_error_buffers[current_error_buf_num];
+
+		if (buffer->is_full) {
+			xSemaphoreGive(log_error_write_mutex);
+			logger_health.full_buffer_moments++;
+			logger_health.buffer_is_full = true;
+			return W_FAILURE;
+		}
+
+		// Get index of message region to write to
+		const uint32_t error_msg_num = buffer->next_msg_num;
+		buffer->next_msg_num++;
+
+		if (buffer->next_msg_num >= ERROR_MSGS_PER_BUFFER) {
+			// TODO: When to increment buffer version?
+			buffer->is_full = true;
+			current_error_buf_num = (current_error_buf_num + 1) % NUM_ERROR_LOG_BUFFERS;
+		}
+
+		xSemaphoreGive(log_error_write_mutex);
+
+		if (error_msg_num >= ERROR_MSGS_PER_BUFFER) {
+			logger_health.invalid_region_moments++;
+			logger_health.region_overflow = true;
+			return W_FAILURE;
+		}
+
+		// Get pointer to message region to write to
+		char *const error_msg_dest = buffer->data + (error_msg_num * MAX_ERROR_MSG_LENGTH);
+
+		// Create a new error message
+		log_error_msg_t new_error_msg = {
+			.timestamp = timestamp,
+			.log_error_id = error_code,
+			.log_task_id = task_ID,
+			.log_file_id = file_ID,
+			.line_number = line_number,
+			.counter = 0,
+		};
+		memcpy(new_error_msg.args, args, sizeof new_error_msg.args);
+
+		log_error_msg_union_t new_error_msg_union = {
+			.log_error_msg = new_error_msg,
+		};
+		// Create a byte array of the new error message to write to buffer
+		memcpy(new_error_msg_union.bytes, &new_error_msg, sizeof(log_error_msg_t));
+
+		// Write new error message byte array to error log buffer
+		memcpy(error_msg_dest, new_error_msg_union.bytes, sizeof(log_error_msg_t));
+
+		// Increment the number of completed log messages in this buffer
+		xSemaphoreGive(buffer->msgs_done_semaphore);
+		// If last message in buffer, send buffer to queue
+		if (error_msg_num == ERROR_MSGS_PER_BUFFER - 1) {
+			if (xQueueSendToBack(error_buffers_queue, &buffer, 0) != pdPASS) {
+				// This should never be reached as the queue should have space for all buffers
+				logger_health.queue_send_fails++;
+				logger_health.os_error_occurred = true;
+				return W_FAILURE;
+			}
+		}
+	}
+
+	return W_SUCCESS;
 }
 
 w_status_t log_text(uint32_t timeout, log_level_t level, const char *source, const char *format,
@@ -477,6 +675,7 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	return res;
 }
 
+static sd_card_file_ctx_t error_file_ctx;
 static sd_card_file_ctx_t text_file_ctx;
 static sd_card_file_ctx_t data_file_ctx;
 
@@ -488,15 +687,18 @@ void log_task(void *argument) {
 	// Open persistent streaming files.
 	// Keep these open for the duration of logging to avoid FAT traversal overhead.
 	// write the file names
+	memcpy(error_file_ctx.filename, error_log_filename, sizeof(error_file_ctx.filename));
 	memcpy(text_file_ctx.filename, text_log_filename, sizeof(text_file_ctx.filename));
 	memcpy(data_file_ctx.filename, data_log_filename, sizeof(data_file_ctx.filename));
 
 	// Open the files and record if either failed to open
+	const bool error_open_failed = (sd_card_file_open(&error_file_ctx) != W_SUCCESS);
 	const bool text_open_failed = (sd_card_file_open(&text_file_ctx) != W_SUCCESS);
 	const bool data_open_failed = (sd_card_file_open(&data_file_ctx) != W_SUCCESS);
 
-	if (text_open_failed || data_open_failed) {
-		logger_health.file_open_errs += (uint32_t)text_open_failed + (uint32_t)data_open_failed;
+	if (error_open_failed || text_open_failed || data_open_failed) {
+		logger_health.file_open_errs +=
+			(uint32_t)error_open_failed + (uint32_t)text_open_failed + (uint32_t)data_open_failed;
 		logger_health.fs_open_flush_failed = true;
 	}
 
@@ -545,6 +747,12 @@ void log_task(void *argument) {
 			if (timer_get_ms(&cur_timestamps) == W_SUCCESS) {
 				last_text_logging_time = cur_timestamps;
 			}
+		} else if (xQueueReceive(error_buffers_queue, &buffer_to_print, 10) == pdPASS) {
+			// NEEDS LOTS OF REVIEWING
+			log_write_try_count = ERROR_WRITE_TRY_COUNT;
+			max_msgs = ERROR_MSGS_PER_BUFFER;
+			file_ctx = &error_file_ctx;
+			have_msg = true;
 		}
 
 		if (have_msg) {

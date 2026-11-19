@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_LSM6DSV32X_C
+
 #include "FreeRTOS.h"
 #include "i2c.h"
 #include "main.h"

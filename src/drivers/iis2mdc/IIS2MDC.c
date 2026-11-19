@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_IIS2MDC_C
+
 #include <inttypes.h>
 #include <math.h>
 #include <string.h>

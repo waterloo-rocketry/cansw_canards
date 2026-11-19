@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_HEALTH_CHECKS_C
+
 #include "FreeRTOS.h"
 #include "fdcan.h"
 #include "printf.h"
