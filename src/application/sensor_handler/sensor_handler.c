@@ -25,6 +25,7 @@
 // conversion factors
 static const float64_t M_S2_PER_G = 9.81;
 static const float64_t PA_PER_CENTIMBAR = 1;
+static const float32_t DEG_PER_CENTIDEG = 0.01;
 
 static const int32_t MOTOR_ENCODER_FRESHNESS_TIMEOUT_MS = 10;
 
@@ -109,6 +110,7 @@ typedef struct {
 	vector3d_t board_imu_gyro; // rad/s
 	// MS5611 (board barometer)
 	int32_t board_baro_pressure_centimbar;
+	int32_t board_baro_temp_centideg;
 	// TODO: add board barometer thermometer reading (board_baro_temp) once wired
 	// LSM303AGR (board mag)
 	vector3d_t board_mag;
@@ -470,7 +472,8 @@ static w_status_t sensor_low_rate_sd_log(void) {
 	container.board_mag_baro.magnetometer.z = (float32_t)data.board_mag.z;
 	container.board_mag_baro.barometer =
 		(float32_t)(data.board_baro_pressure_centimbar * PA_PER_CENTIMBAR);
-	container.board_mag_baro.thermometer = 0.0F;
+	container.board_mag_baro.thermometer =
+		((float32_t)data.board_baro_temp_centideg) * DEG_PER_CENTIDEG;
 
 	w_status_t log_data_result = W_SUCCESS;
 
@@ -1018,6 +1021,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 		.board_imu_accel = imu_output->board_meas.board_imu.accel,
 		.board_imu_gyro = imu_output->board_meas.board_imu.gyro,
 		.board_baro_pressure_centimbar = raw_board_meas.raw_board_baro.pressure_centimbar,
+		.board_baro_temp_centideg = raw_board_meas.raw_board_baro.temperature_centideg,
 		// TODO: populate board barometer thermometer reading once wired
 		.board_mag = imu_output->board_meas.board_mag.meas,
 
