@@ -11,7 +11,7 @@
 #include "stm32h7xx_hal.h"
 
 /* Size of a single buffer (bytes) */
-#define LOG_BUFFER_SIZE 32758
+#define LOG_BUFFER_SIZE 32756
 // #define LOG_BUFFER_SIZE 16384
 /* Size of each message region in text buffers (bytes) */
 #define MAX_TEXT_MSG_LENGTH 128
@@ -35,7 +35,7 @@
 /* Number of text log buffers */
 #define NUM_TEXT_LOG_BUFFERS 2
 /* Number of data log buffers */
-#define NUM_DATA_LOG_BUFFERS 4
+#define NUM_DATA_LOG_BUFFERS 3
 
 /* Size of filename string */
 #define FILENAME_STRING_SIZE (8 + 1 + 3 + 1)

@@ -25,6 +25,7 @@ static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
 static formatter_file_ctx_t text_ctx;
 static formatter_file_ctx_t data_ctx;
 static formatter_file_ctx_t error_ctx;
+static uint32_t write_counter = 0;
 
 typedef struct {
 	uint8_t data[LOG_BUFFER_SIZE];
@@ -527,6 +528,10 @@ void log_task(void *argument) {
 					log_text(10, LOG_LVL_INFO, "logger_write", "open_time=%d, try=%d",
 					         open_end_ms - open_start_ms, i + 1);
 					gpio_toggle(GPIO_PIN_BLUE_LED, 0);
+					write_counter++;
+					if (write_counter > 1000) {
+
+					}
 					break;
 				} else {
 					log_text(10, LOG_LVL_WARN, "logger", "sd_card_file_write failed on try %d",

@@ -1,9 +1,10 @@
 #ifndef LOGGING_FORMATTER_H
 #define LOGGING_FORMATTER_H
 
-#define CHUNK_SIZE 32768
-#define TIMEOUT_MS 200
-#define HEADER_FOOTER_SIZE 10
+#define CHUNK_SIZE 32768U
+#define TIMEOUT_MS 1000U
+#define FORMATTER_HEADER_SIZE 10U
+#define FORMATTER_CRC_SIZE 2U
 
 #include "drivers/raw_logger/raw_logger.h"
 

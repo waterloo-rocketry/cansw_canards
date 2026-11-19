@@ -214,6 +214,8 @@ static void system_init_task(void *arg) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
 
+		log_text(10, LOG_LVL_WARN, "HI", "HIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII");
+
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
 			// TODO: TEST ONLY
 			if (ak45_hard_stop_calibrate(&ak45_calibration_config) != W_SUCCESS) {
