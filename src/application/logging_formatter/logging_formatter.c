@@ -107,9 +107,6 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		found_address = true;
 	}
 
-	formatter_buffer.chunk = 1;
-	found_address = true;
-
 	uint32_t erase_size_blocks = 0;
 
 	// to get the size of the SD card in the case that we're not solely writing with a 16GB card
