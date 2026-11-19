@@ -166,11 +166,16 @@ SECTIONS
     . = ALIGN(8);
   } >RAM_D1
 
+  /* used by the startup to initialize data */
+  _sisram4 = LOADADDR(.sram4);
+
   .sram4 :
   {
     . = ALIGN(4);
+    _ssram4 = .;        /* create a global symbol at sram4 start */
     *(.sram4)
     . = ALIGN(4);
+    _esram4 = .;        /* define a global symbol at sram4 end */
   } >RAM_D3 AT>FLASH
 
   /* Remove information from the standard libraries */
