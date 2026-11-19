@@ -14,7 +14,7 @@
 
 // TODO: add INIT Checks
 static const uint32_t FLASH_SINGLE_DELAY_MS =
-	100; // this repersent the maximum amount of delay for a single operation
+	100; // this represents the maximum amount of delay for a single operation
 static const uint32_t MAX_RDSTATUS_ATTEMPTS = 2;
 static const uint16_t WEL_BIT_MASK = 0x2;
 static const uint16_t WIP_BIT_MASK = 0x1;
@@ -506,9 +506,9 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	if (W_SUCCESS != timer_get_ms(&start_time_ms) || W_SUCCESS != timer_get_ms(&curr_time_ms)) {
 		return W_FAILURE;
 	}
-	while (FLASH_PROG_DELAY_MS > (curr_time_ms - start_time_ms)) {
+	do {
 		vTaskDelay(pdMS_TO_TICKS(1)); // needs to wait at least 30 ns between write to read commands
-		                              // (+ extra for writing which should be faster)
+		// (+ extra for writing which should be faster)
 		if (W_SUCCESS != get_rdsr(&rdsr_response, true)) {
 			return W_IO_ERROR;
 		}
@@ -517,7 +517,7 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 			break;
 		}
 		timer_get_ms(&curr_time_ms);
-	}
+	} while (FLASH_PROG_DELAY_MS > (curr_time_ms - start_time_ms));
 
 	if ((WIP_BIT_MASK & rdsr_response) != 0x00) {
 		return W_IO_ERROR;
@@ -653,7 +653,7 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	if (W_SUCCESS != timer_get_ms(&start_time_ms) || W_SUCCESS != timer_get_ms(&curr_time_ms)) {
 		return W_FAILURE;
 	}
-	while (FLASH_PROG_DELAY_MS > (curr_time_ms - start_time_ms)) {
+	do {
 		vTaskDelay(pdMS_TO_TICKS(1)); // needs to wait at least 30 ns between write to read commands
 		                              // (+ extra for writing which should be faster)
 		if (W_SUCCESS != get_rdsr(&rdsr_response, true)) {
@@ -664,12 +664,12 @@ static w_status_t flash_erase_sector(uint32_t address) {
 			break;
 		}
 		timer_get_ms(&curr_time_ms);
-	}
+	} while (FLASH_PROG_DELAY_MS > (curr_time_ms - start_time_ms));
 	if ((WIP_BIT_MASK & rdsr_response) != 0x00) {
 		return W_IO_ERROR;
 	}
 
-	// check if wrote sucessfully
+	// check if wrote successfully
 	uint8_t rdscur_response = 0;
 	if (W_SUCCESS != get_rdscur(&rdscur_response, true)) {
 		return W_IO_ERROR;
