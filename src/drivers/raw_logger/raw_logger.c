@@ -47,7 +47,7 @@ static SD_HandleTypeDef *raw_logger_handle = NULL;
 
 static TaskHandle_t task_handler = NULL;
 
-static SemaphoreHandle_t sd_mutex = NULL; 
+static SemaphoreHandle_t sd_mutex = NULL;
 
 // TODO: consider having a previous state
 static raw_logger_action_status_t action_state = RAW_UNINIT;
@@ -159,7 +159,8 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 	task_handler = NULL;
 
 	if (NULL != task) {
-		vTaskNotifyGiveIndexedFromISR(task, RAW_LOGGER_NOTIFICATION_INDEX, &xHigherPriorityTaskWoken);
+		vTaskNotifyGiveIndexedFromISR(task, RAW_LOGGER_NOTIFICATION_INDEX,
+		                              &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
 }
@@ -325,7 +326,8 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	uint32_t cur_time_ms = 0;
 	if ((W_SUCCESS != timer_get_ms(&cur_time_ms)) ||
 	    ((cur_time_ms - start_time_ms) >= timeout_ms) ||
-	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE, pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
+	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE,
+	                                   pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
 		action_state = RAW_RECOVERING;
 		task_handler = NULL;
 		raw_sd_card_health.read_error++;
@@ -438,7 +440,8 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	uint32_t cur_time_ms = 0;
 	if ((W_SUCCESS != timer_get_ms(&cur_time_ms)) ||
 	    ((cur_time_ms - start_time_ms) >= timeout_ms) ||
-	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE, pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
+	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE,
+	                                   pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
 		action_state = RAW_RECOVERING;
 		task_handler = NULL;
 		raw_sd_card_health.write_error++;

@@ -115,7 +115,6 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	if (!found_address) {
-
 		chunk_num = (chunk_num / 64);
 
 		uint32_t lo = 2;
@@ -205,14 +204,14 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 
 	memcpy(&formatter_buffer.writing_buffer[FORMATTER_HEADER_SIZE], buffer, buffer_length);
 
-	crc = 0xFFFF;
+	crc = 0xffff;
 	for (uint32_t i = 0; i < (CHUNK_SIZE - FORMATTER_CRC_SIZE); i++) {
-		uint8_t index = (uint8_t)((crc ^ formatter_buffer.writing_buffer[i]) & 0xFF);
+		uint8_t index = (uint8_t)((crc ^ formatter_buffer.writing_buffer[i]) & 0xff);
 		crc = (crc >> 8) ^ crc16_table[index];
 	}
 
 	formatter_buffer.writing_buffer[CHUNK_SIZE - 2] = (uint8_t)(crc >> 8);
-	formatter_buffer.writing_buffer[CHUNK_SIZE - 1] = (uint8_t)(crc & 0xFF);
+	formatter_buffer.writing_buffer[CHUNK_SIZE - 1] = (uint8_t)(crc & 0xff);
 
 	// Taking the left 8 bits and then taking the right 8 bits of a 16 bit number
 	// 0xFF = 0b11111111

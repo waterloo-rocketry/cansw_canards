@@ -528,10 +528,6 @@ void log_task(void *argument) {
 					log_text(10, LOG_LVL_INFO, "logger_write", "open_time=%d, try=%d",
 					         open_end_ms - open_start_ms, i + 1);
 					gpio_toggle(GPIO_PIN_BLUE_LED, 0);
-					write_counter++;
-					if (write_counter > 1000) {
-
-					}
 					break;
 				} else {
 					log_text(10, LOG_LVL_WARN, "logger", "sd_card_file_write failed on try %d",
