@@ -374,7 +374,7 @@ w_status_t log_init(void) {
 }
 
 w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_ID,
-                     uint16_t line_number, log_task_id_t task_ID, log_error_id_t error_name,
+                     uint16_t line_number, log_task_id_t task_ID, log_error_id_t error_code,
                      const uint32_t args[LOG_ERROR_MAX_ARGS]) {
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
@@ -439,9 +439,61 @@ w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_fil
 			logger_health.buffer_is_full = true;
 			return W_FAILURE;
 		}
+
+		// Get index of message region to write to
+		const uint32_t error_msg_num = buffer->next_msg_num;
+		buffer->next_msg_num++;
+
+		if (buffer->next_msg_num >= ERROR_MSGS_PER_BUFFER) {
+			// TODO: When to increment buffer version?
+			buffer->is_full = true;
+			current_error_buf_num = (current_error_buf_num + 1) % NUM_ERROR_LOG_BUFFERS;
+		}
+
+		xSemaphoreGive(log_error_write_mutex);
+
+		if (error_msg_num >= ERROR_MSGS_PER_BUFFER) {
+			logger_health.invalid_region_moments++;
+			logger_health.region_overflow = true;
+			return W_FAILURE;
+		}
+
+		// Get pointer to message region to write to
+		char *const error_msg_dest = buffer->data + (error_msg_num * MAX_ERROR_MSG_LENGTH);
+
+		// Create a new error message
+		log_error_msg_t new_error_msg = {
+			.timestamp = timestamp,
+			.log_error_id = error_code,
+			.log_task_id = task_ID,
+			.log_file_id = file_ID,
+			.line_number = line_number,
+			.counter = 0,
+		};
+		memcpy(new_error_msg.args, args, sizeof new_error_msg.args);
+
+		log_error_msg_union_t new_error_msg_union = {
+			.log_error_msg = new_error_msg,
+		};
+		// Create a byte array of the new error message to write to buffer
+		memcpy(new_error_msg_union.bytes, &new_error_msg, sizeof(log_error_msg_t));
+
+		// Write new error message byte array to error log buffer
+		memcpy(error_msg_dest, new_error_msg_union.bytes, sizeof(log_error_msg_t));
+
+		// Increment the number of completed log messages in this buffer
+		xSemaphoreGive(buffer->msgs_done_semaphore);
+		// If last message in buffer, send buffer to queue
+		if (error_msg_num == ERROR_MSGS_PER_BUFFER - 1) {
+			if (xQueueSendToBack(error_buffers_queue, &buffer, 0) != pdPASS) {
+				// This should never be reached as the queue should have space for all buffers
+				logger_health.queue_send_fails++;
+				logger_health.os_error_occurred = true;
+				return W_FAILURE;
+			}
+		}
 	}
 
-	xSemaphoreGive(log_error_write_mutex);
 	return W_SUCCESS;
 }
 
