@@ -55,7 +55,6 @@ typedef struct {
 		buffer_flush_fails; // number of times a log buffer flush failed after retrying max times
 	uint32_t unsafe_buffer_flushes; // xSemaphoreTake failed when attempting to flush a log buffer
 	uint32_t null_param_count; // number of times a NULL parameter was passed
-	uint32_t file_open_errs; // sd_card_file_open() failed
 	bool buffer_is_full; // flag for full buffer since last health check
 	bool timeout_occurred; // flag for timeout since last health check
 	bool os_error_occurred; // flag for queue send fail
@@ -622,8 +621,8 @@ health_status_t logger_get_status(void) {
 	log_text(10, LOG_LVL_INFO, "logger",
 	         "q_fail=%lu, no_buf=%lu, flush_fail=%lu, f_open_err=%lu, unsafe_fl=%lu, nparam=%lu",
 	         logger_health.queue_send_fails, logger_health.no_full_buf_moments,
-	         logger_health.buffer_flush_fails, logger_health.file_open_errs,
-	         logger_health.unsafe_buffer_flushes, logger_health.null_param_count);
+	         logger_health.buffer_flush_fails, logger_health.unsafe_buffer_flushes,
+	         logger_health.null_param_count);
 
 	return status;
 }
