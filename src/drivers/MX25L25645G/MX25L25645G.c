@@ -585,7 +585,7 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	(cmd_erase.AddressSize) = HAL_OSPI_ADDRESS_32_BITS;
 	(cmd_erase.DataMode) = HAL_OSPI_DATA_NONE;
 	(cmd_erase.DummyCycles) = 0;
-	(cmd_erase.NbData) = 32;
+	(cmd_erase.NbData) = 0;
 	(cmd_erase.Address) = address;
 #if (defined(SPI_4_ENABLED) && defined(QPI_ENABLED))
 	(cmd_erase.InstructionMode) = HAL_OSPI_INSTRUCTION_4_LINES;
@@ -810,7 +810,7 @@ const struct lfs_config cfg = {
 	.inline_max = -1
 };
 
-w_status_t mx25l25645g_init() {
+w_status_t mx25l25645g_init(void) {
 	if (g_flash_ctx.is_init) {
 		return W_FAILURE;
 	}
