@@ -68,102 +68,111 @@ static flash_lfs_ctx_t g_flash_ctx = {
 // Used for getting the task to block while waiting for transmissions to complete
 static TaskHandle_t task_handler = NULL;
 
+/**
+ * @brief Called from callbacks when OSPI errors or aborts
+ *
+ * Unblocks the task to continue execution in case of error.
+ *
+ * @param[in] hospi Handle to OSPI
+ */
+static void handle_HAL_OSPI_error(OSPI_HandleTypeDef *hospi) {
+	if (hospi != (g_flash_ctx.spi_handle)) {
+		return;
+	}
+	(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
+
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	if (NULL != task_handler) {
+		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
+		                              &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
+
+	task_handler = NULL;
+}
+
+/**
+ * @brief Called from callbacks when OSPI succeeds
+ *
+ * Unblocks the task after the end of OSPI transmission.
+ *
+ * @param[in] hospi Handle to OSPI
+ */
+static void handle_HAL_OSPI_success(OSPI_HandleTypeDef *hospi, flash_spi_state_t check) {
+	if (hospi != (g_flash_ctx.spi_handle)) {
+		return;
+	}
+	if (check == (g_flash_ctx.spi_state)) {
+		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
+	} else {
+		(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
+	}
+
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	if (NULL != task_handler) {
+		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
+		                              &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
+
+	task_handler = NULL;
+}
+
+/**
+ * @brief Callback in case OSPI errors
+ *
+ * Calls handle_HAL_OSPI_error().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_ErrorCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_error(hospi);
 }
 
+/**
+ * @brief Callback in case OSPI aborts for some reason
+ *
+ * Calls handle_HAL_OSPI_error().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_AbortCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_error(hospi);
 }
 
+/**
+ * @brief Callback for when OSPI completes a command successfully
+ *
+ * Calls handle_HAL_OSPI_success().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_CmdCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	if (FLASH_SPI_COMMANDING == (g_flash_ctx.spi_state)) {
-		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
-	} else {
-		(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-	}
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_success(hospi, FLASH_SPI_COMMANDING);
 }
 
+/**
+ * @brief Callback for when OSPI finishes a read successfully
+ *
+ * Calls handle_HAL_OSPI_success().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_RxCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	if (FLASH_SPI_READING == (g_flash_ctx.spi_state)) {
-		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
-	} else {
-		(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-	}
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_success(hospi, FLASH_SPI_READING);
 }
 
+/**
+ * @brief Callback for when OSPI finishes transmitting data successfully
+ *
+ * Calls handle_HAL_OSPI_success().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_TxCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-
-	if (FLASH_SPI_WRITING == (g_flash_ctx.spi_state)) {
-		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
-	} else {
-		(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-	}
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_success(hospi, FLASH_SPI_WRITING);
 }
 
 /**
