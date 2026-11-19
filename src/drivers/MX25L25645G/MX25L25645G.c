@@ -205,6 +205,12 @@ static w_status_t send_spi_cmd(OSPI_RegularCmdTypeDef *cmd, bool select_ncs) {
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (select_ncs) {
+			if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+				return W_IO_ERROR;
+			}
+		}
 		return W_IO_ERROR;
 	}
 
@@ -259,6 +265,12 @@ static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status, b
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (select_ncs) {
+			if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+				return W_IO_ERROR;
+			}
+		}
 		return W_IO_ERROR;
 	}
 
@@ -345,13 +357,6 @@ static w_status_t get_rdcr(uint8_t *status, bool select_ncs) {
  * communication problem.
  */
 static w_status_t send_wren(bool select_ncs) {
-	// select chip
-	if (select_ncs) {
-		if (W_SUCCESS != gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0)) {
-			return W_IO_ERROR;
-		}
-	}
-
 	OSPI_RegularCmdTypeDef cmd_wren = {0};
 
 	(cmd_wren.Instruction) = 0x06; // WREN
@@ -421,6 +426,10 @@ static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+			return W_IO_ERROR;
+		}
 		return W_IO_ERROR;
 	}
 
@@ -480,6 +489,10 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+			return W_IO_ERROR;
+		}
 		return W_IO_ERROR;
 	}
 
@@ -620,6 +633,10 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+			return W_IO_ERROR;
+		}
 		return W_IO_ERROR;
 	}
 
