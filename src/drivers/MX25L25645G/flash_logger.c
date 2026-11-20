@@ -110,7 +110,7 @@ w_status_t flash_clear_logs() {
 	lfs_dir_t dir;
 	struct lfs_info info;
 	int err = lfs_dir_open(&lfs, &dir, "/"); // need to iterate over log files
-	//assumed everything is in the root directory
+	// assumed everything is in the root directory
 	if (err < 0) {
 		return W_FAILURE;
 	}
@@ -129,28 +129,30 @@ w_status_t flash_clear_logs() {
 	}
 	return W_SUCCESS;
 }
-w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size_t size, lfs_soff_t offset, enum lfs_whence_flags whence){
-	int err= lfs_file_seek(&lfs,&(p_file->file), offset, whence);//sets the cursor
-	if (err<0){
+
+w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size_t size,
+                            lfs_soff_t offset, enum lfs_whence_flags whence) {
+	int err = lfs_file_seek(&lfs, &(p_file->file), offset, whence); // sets the cursor
+	if (err < 0) {
 		return W_FAILURE;
 	}
-	err= lfs_file_write(&lfs, &(p_file->file), p_buffer, size);
-	if (LFS_O_WRONLY != (LFS_O_WRONLY & ((p_file->file).flags))){
+	err = lfs_file_write(&lfs, &(p_file->file), p_buffer, size);
+	if (LFS_O_WRONLY != (LFS_O_WRONLY & ((p_file->file).flags))) {
 		return W_INVALID_PARAM;
-	}
-	else if (err<0){
+	} else if (err < 0) {
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
 }
 
-w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size,  lfs_soff_t offset, enum lfs_whence_flags whence){
-	int err= lfs_file_seek(&lfs,&(p_file->file), offset, whence);//sets the cursor
-	if (err<0){
+w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size, lfs_soff_t offset,
+                           enum lfs_whence_flags whence) {
+	int err = lfs_file_seek(&lfs, &(p_file->file), offset, whence); // sets the cursor
+	if (err < 0) {
 		return W_FAILURE;
 	}
-	err= lfs_file_read(&lfs, &(p_file->file), p_buffer, size);
-	if (err<0){
+	err = lfs_file_read(&lfs, &(p_file->file), p_buffer, size);
+	if (err < 0) {
 		return W_FAILURE;
 	}
 	return W_SUCCESS;

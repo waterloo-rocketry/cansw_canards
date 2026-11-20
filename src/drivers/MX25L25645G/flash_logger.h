@@ -52,6 +52,7 @@ w_status_t flash_file_open(flash_file_t *p_file, const char *p_path, int16_t fla
  * @return w_status_t - W_SUCCESS if closed . W_FAILURE in all other cases.
  */
 w_status_t flash_file_close(flash_file_t *p_file);
+
 /**
  * @brief use lfs_file_seek() and lfs_file_read()
  * does not close file
@@ -65,14 +66,16 @@ w_status_t flash_file_close(flash_file_t *p_file);
  * W_FAILURE for any error during seek or read
  * W_INVALID_PARAM
  */
-w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size,  lfs_soff_t offset, enum lfs_whence_flags whence);
+w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size, lfs_soff_t offset,
+                           enum lfs_whence_flags whence);
 /**
  * @brief removes all files in the format (8 hexadecimal digit).(txt/bin)
- * opens and closes the directory 
+ * opens and closes the directory
  * @return W_SUCCESS if all files are removed and the directory is closed
  * W_FAILURE otherwise
  */
 w_status_t flash_clear_logs();
+
 /**
  * @brief use lfs_file_seek() to set the cursor and use lfs_file_write() to write
  * It will not close the file. (need to call a separate func for that)
@@ -86,5 +89,6 @@ w_status_t flash_clear_logs();
  * W_INVALID_PARAM if file is not LFS_O_WRONLY or LFS_O_RDWR.
  * W_SUCCESS if successful
  */
-w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size_t size, lfs_soff_t offset, enum lfs_whence_flags whence);
+w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size_t size,
+                            lfs_soff_t offset, enum lfs_whence_flags whence);
 #endif // CANSW_CANARDS_WRAPPER_H
