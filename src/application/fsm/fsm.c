@@ -43,9 +43,11 @@ static fsm_ctx_t g_ctx = {0};
 // create all of the global instances
 static navigator_ctx_t g_navigator_context = {0};
 
-// make sure controller_output_t is initalized to 0 and valid to read to match original design
+// make sure controller_output_t is initalized to 0 and valid to read to match
+// original design
 static controller_ctx_t g_controller_context = {0};
-// setting the launch and act_allowed time to MAX to make sure of no inadvertent actuation
+// setting the launch and act_allowed time to MAX to make sure of no inadvertent
+// actuation
 static flight_phase_ctx_t g_flight_phase_context = {
 	.launch_timestamp_ms = UINT32_MAX, .act_allowed_timestamp_ms = UINT32_MAX
 };
@@ -318,7 +320,8 @@ void fsm_task(void *args) {
 
 #ifdef HIL
 		gpio_write(GPIO_PIN_RED_LED, GPIO_LEVEL_LOW, 0);
-		/******************************** HIL START ********************************/
+		/******************************** HIL START
+		 * ********************************/
 		// override sensor data with simulink sensors in HIL mode.
 		// expect first run of this loop to fail, until hil statrs.
 		if (hil_wait_for_simulink_data(&sensor_data) != W_SUCCESS) {
@@ -340,10 +343,9 @@ void fsm_task(void *args) {
 		// run actions based on new curr state
 		fsm_input_t fsm_input = {.p_sensor_data = &sensor_data};
 		fsm_exec(&fsm_input, timestamp_tenth_ms, &g_ctx);
-		
+
 		watchdog_kick();
 	}
-	
 }
 
 health_status_t fsm_get_status(void) {
@@ -377,7 +379,8 @@ health_status_t fsm_get_status(void) {
 	}
 
 	log_text(10, LOG_LVL_INFO, "fsm",
-	         "init=%d, loop_timeout=%d, get_ms_err=%d, unk_state_err=%d, Ext_5V_err=%d",
+	         "init=%d, loop_timeout=%d, get_ms_err=%d, unk_state_err=%d, "
+	         "Ext_5V_err=%d",
 	         fsm_health.is_init, fsm_health.loop_timeouts, fsm_health.get_timer_failures,
 	         fsm_health.unknown_state_errors, fsm_health.power_handler_errors);
 

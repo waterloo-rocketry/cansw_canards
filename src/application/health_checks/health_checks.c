@@ -97,9 +97,8 @@ w_status_t watchdog_kick(void) {
 			// log a message every second
 			static uint32_t last_log_ms = 0;
 			if ((uint32_t)(current_time_ms - last_log_ms) == 1000) {
-				log_text(0, LOG_LVL_INFO, "watchdog", 
-					"Kick recieved %s, time=%lu", pcTaskGetName(current_task), (unsigned long)current_time_ms
-				);
+				log_text(0, LOG_LVL_INFO, "watchdog", "Kick recieved %s, time=%lu",
+				         pcTaskGetName(current_task), (unsigned long)current_time_ms);
 				last_log_ms = current_time_ms;
 			}
 			return W_SUCCESS;
@@ -139,7 +138,8 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
 
 	num_watchdog_tasks++; // increment the watchdog task count for future ref
 
-	log_text(0, LOG_LVL_INFO, "watchdog", "YIPPIE SUCCESSFULLY Registered task %s", pcTaskGetName(task_handle));
+	log_text(0, LOG_LVL_INFO, "watchdog", "YIPPIE SUCCESSFULLY Registered task %s",
+	         pcTaskGetName(task_handle));
 
 	return status;
 }
@@ -148,8 +148,8 @@ w_status_t watchdog_register_task(TaskHandle_t task_handle, uint32_t timeout_tic
  * @brief Checks all registered tasks for watchdog timeouts
  *
  * Compares the current time with the last kick timestamp of each task.
- * If a task exceeds its timeout, sends a CAN status message indicating a timeout.
- * Should be called periodically (typically through health_check_exec).
+ * If a task exceeds its timeout, sends a CAN status message indicating a
+ * timeout. Should be called periodically (typically through health_check_exec).
  *
  * @return CAN board specific err bitfield
  */
@@ -192,10 +192,12 @@ uint32_t check_watchdog_tasks(void) {
 }
 
 /**
- * @brief Processes the status a module. If severity is not CANARDS_HEALTH_SEVERITY_HEALTH_OK,l send
- * CAN canards firmware error msg. If severity is HEALTH_FATAL, call fatal error handler
+ * @brief Processes the status a module. If severity is not
+ * CANARDS_HEALTH_SEVERITY_HEALTH_OK,l send CAN canards firmware error msg. If
+ * severity is HEALTH_FATAL, call fatal error handler
  *
- * @return W_SUCCESS if severity is CANARDS_HEALTH_SEVERITY_HEALTH_OK. W_FAILURE if not
+ * @return W_SUCCESS if severity is CANARDS_HEALTH_SEVERITY_HEALTH_OK. W_FAILURE
+ * if not
  */
 static w_status_t process_module_status(health_status_t status) {
 	if (status.severity != CANARDS_HEALTH_SEVERITY_HEALTH_OK) {
@@ -228,7 +230,8 @@ static w_status_t process_module_status(health_status_t status) {
 }
 
 /**
- * @brief Checks the status of all known modules by directly calling their get_status functions
+ * @brief Checks the status of all known modules by directly calling their
+ * get_status functions
  *
  * @return bitfield of all canard application modules' w_status_t
  * Calls each module's status function to trigger status reporting
@@ -280,8 +283,8 @@ void proc_handle_fatal_error(const char *errorMsg) {
 		}
 
 		// Use canlib's helper function to build the debug message
-		// Set priority to high and timestamp to 0 (since we can't reliably get timestamp in error
-		// state)
+		// Set priority to high and timestamp to 0 (since we can't reliably get
+		// timestamp in error state)
 		build_debug_raw_msg(PRIO_HIGH, 0, data, &msg);
 		if (can_initialized) {
 			stm32h7_can_send(&msg);
@@ -298,7 +301,8 @@ void proc_handle_fatal_error(const char *errorMsg) {
 
 		dummy++;
 
-		// resetting is always a safe state even in midflight, as flightphase starts IDLE
+		// resetting is always a safe state even in midflight, as flightphase starts
+		// IDLE
 		NVIC_SystemReset();
 	}
 }
@@ -342,7 +346,7 @@ void health_check_task(void *argument) {
 
 	for (;;) {
 		health_check_exec();
-		
+
 		watchdog_kick();
 
 		vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(TASK_DELAY_MS));
