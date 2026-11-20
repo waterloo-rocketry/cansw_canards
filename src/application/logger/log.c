@@ -18,7 +18,7 @@
 #define DATA_WRITE_TRY_COUNT 50
 #define TEXT_WRITE_TRY_COUNT 20
 // number of times to retry a failed sync (writes are not redone, only the sync)
-#define SYNC_TRY_COUNT 20
+#define SYNC_TRY_COUNT 2
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
 static const uint32_t SD_RETRY_DELAY_MS = 2; // let SD card recover between write/sync retries
@@ -515,7 +515,7 @@ static log_file_t data_file = {0};
  * @return W_SUCCESS if the file was synced or no sync was needed, W_FAILURE if every try failed
  */
 static w_status_t log_sync(log_file_t *log_file, bool force) {
-	if (0 == log_file->unsynced_bytes) {
+	if (0 == (log_file->unsynced_bytes)) {
 		return W_SUCCESS;
 	}
 
@@ -545,7 +545,7 @@ static w_status_t log_sync(log_file_t *log_file, bool force) {
 		gpio_toggle(GPIO_PIN_RED_LED, 0);
 
 		// Allow SD card time to recover before the next attempt
-		if (i + 1 < SYNC_TRY_COUNT) {
+		if ((i + 1) < SYNC_TRY_COUNT) {
 			vTaskDelay(pdMS_TO_TICKS(SD_RETRY_DELAY_MS));
 		}
 	}
