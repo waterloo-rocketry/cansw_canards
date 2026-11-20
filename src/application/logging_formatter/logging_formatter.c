@@ -25,8 +25,6 @@ static SD_HandleTypeDef *logging_formatter_handle = NULL;
 
 static const uint8_t HEADER[4] = {67, 107, 207, 255};
 
-static uint16_t crc = 0;
-
 static uint64_t chunk_num = 0;
 
 static uint16_t crc16_table[256];
@@ -38,7 +36,7 @@ w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
 		return W_FAILURE;
 	}
 
-	if ((NULL == file)) {
+	if (NULL == file) {
 		logging_formatter_health.invalid_param = true;
 		return W_FAILURE;
 	}
@@ -204,7 +202,7 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 
 	memcpy(&formatter_buffer.writing_buffer[FORMATTER_HEADER_SIZE], buffer, buffer_length);
 
-	crc = 0xffff;
+	uint16_t crc = 0xffff;
 	for (uint32_t i = 0; i < (CHUNK_SIZE - FORMATTER_CRC_SIZE); i++) {
 		uint8_t index = (uint8_t)((crc ^ formatter_buffer.writing_buffer[i]) & 0xff);
 		crc = (crc >> 8) ^ crc16_table[index];

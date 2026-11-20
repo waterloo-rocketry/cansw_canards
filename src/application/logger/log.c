@@ -518,14 +518,14 @@ void log_task(void *argument) {
 			// try several times to buffer to SD card
 			uint32_t size = 0;
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
-				uint32_t open_start_ms = 0;
-				timer_get_ms(&open_start_ms);
+				uint32_t write_start_ms = 0;
+				timer_get_ms(&write_start_ms);
 				if (logging_formatting_write(buffer_to_print->data, LOG_BUFFER_SIZE, file_ctx) ==
 				    W_SUCCESS) {
-					uint32_t open_end_ms = 0;
-					timer_get_ms(&open_end_ms);
+					uint32_t write_end_ms = 0;
+					timer_get_ms(&write_end_ms);
 					log_text(10, LOG_LVL_INFO, "logger_write", "open_time=%d, try=%d",
-					         open_end_ms - open_start_ms, i + 1);
+					         write_end_ms - write_start_ms, i + 1);
 					gpio_toggle(GPIO_PIN_BLUE_LED, 0);
 					break;
 				} else {

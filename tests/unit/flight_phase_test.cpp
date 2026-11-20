@@ -16,7 +16,6 @@ extern "C" {
 
 // FAKES
 // w_status_t log_init(void)
-FAKE_VALUE_FUNC(w_status_t, log_init, SD_HandleTypeDef*);
 //  w_status_t log_text(const char *source, const char *format, ...)
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...);
 // w_status_t log_data(uint32_t id, log_level_t level, log_data_type_t type, const log_data_container_t *data)
