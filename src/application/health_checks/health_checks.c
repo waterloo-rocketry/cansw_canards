@@ -96,7 +96,7 @@ w_status_t watchdog_kick(void) {
 
 			// log a message every second
 			static uint32_t last_log_ms = 0;
-			if ((uint32_t)(current_time_ms - last_log_ms) == 1000) {
+			if ((uint32_t)(current_time_ms - last_log_ms) == TASK_DELAY_MS) {
 				log_text(0, LOG_LVL_INFO, "watchdog", "Kick recieved %s, time=%lu",
 				         pcTaskGetName(current_task), (unsigned long)current_time_ms);
 				last_log_ms = current_time_ms;
