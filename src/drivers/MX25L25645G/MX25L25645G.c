@@ -14,7 +14,7 @@
 
 // TODO: add INIT Checks
 static const uint32_t FLASH_SINGLE_DELAY_MS =
-	100; // this repersent the maximum amount of delay for a single operation
+	100; // this represents the maximum amount of delay for a single operation
 static const uint32_t MAX_RDSTATUS_ATTEMPTS = 2;
 static const uint16_t WEL_BIT_MASK = 0x2;
 static const uint16_t WIP_BIT_MASK = 0x1;
@@ -22,18 +22,17 @@ static const uint16_t P_FAIL_BIT_MASK = 0x20;
 static const uint16_t E_FAIL_BIT_MASK = 0x40;
 
 // make sure cache size is always less than 2^16 times of Page size
-#define CACHE_SIZE 2048
-#define PAGE_SIZE 256
+#define CACHE_SIZE 2048 // Bytes
+#define PAGE_SIZE 256 // Bytes
 // Each byte of lookahead can track 8 blocks on filesystem (rounding up)
-#define LOOKAHEAD_SIZE (((LOG_BUFFER_SIZE - 1) / 8) + 1)
+#define LOOKAHEAD_SIZE (((LOG_BUFFER_SIZE - 1) / 8) + 1) // Bytes
 
 static_assert(CACHE_SIZE < (0x10000 * PAGE_SIZE),
               "Flash Chip: Cache size must always be less than 2^16 times of page size");
-static const uint16_t SECTOR_SIZE = 4096;
-static const uint32_t MX25L25645G_FLASH_SIZE = 0x2000000;
 
-static const uint32_t PROG_US_PER_BYTE = 15;
-static const uint32_t MS_PER_US = 1000;
+static const uint16_t SECTOR_SIZE = 4096; // Size of one sector on chip in bytes
+static const uint32_t MX25L25645G_FLASH_SIZE = 0x2000000; // Total capacity of chip in bytes
+
 static const uint32_t FLASH_PROG_DELAY_MS = 100;
 
 static const uint32_t FLASH_READ_DUMMY_CYCLE = 8;
@@ -42,6 +41,9 @@ static uint8_t lfs_flash_read_buffer[CACHE_SIZE] = {0};
 static uint8_t lfs_flash_prog_buffer[CACHE_SIZE] = {0};
 static uint8_t lfs_flash_lookahead_buffer[LOOKAHEAD_SIZE] = {0};
 
+/**
+ * @brief State of the flash chip
+ */
 typedef enum {
 	FLASH_SPI_NOT_INIT,
 	FLASH_SPI_READY,
@@ -57,112 +59,131 @@ typedef struct {
 	OSPI_HandleTypeDef *spi_handle;
 	gpio_pin_t ncs_pin;
 	bool is_init;
-} flash_lfs_ctx;
+} flash_lfs_ctx_t;
 
-static flash_lfs_ctx g_flash_ctx = {
+static flash_lfs_ctx_t g_flash_ctx = {
 	.spi_handle = &hospi1, .spi_state = FLASH_SPI_NOT_INIT, .ncs_pin = GPIO_PIN_FLASH_CS
 };
 
+// Used for getting the task to block while waiting for transmissions to complete
 static TaskHandle_t task_handler = NULL;
 
+/**
+ * @brief Called from callbacks when OSPI errors or aborts
+ *
+ * Unblocks the task to continue execution in case of error.
+ *
+ * @param[in] hospi Handle to OSPI
+ */
+static void handle_HAL_OSPI_error(OSPI_HandleTypeDef *hospi) {
+	if (hospi != (g_flash_ctx.spi_handle)) {
+		return;
+	}
+	(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
+
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	if (NULL != task_handler) {
+		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
+		                              &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
+
+	task_handler = NULL;
+}
+
+/**
+ * @brief Called from callbacks when OSPI succeeds
+ *
+ * Unblocks the task after the end of OSPI transmission.
+ *
+ * @param[in] hospi Handle to OSPI
+ */
+static void handle_HAL_OSPI_success(OSPI_HandleTypeDef *hospi, flash_spi_state_t check) {
+	if (hospi != (g_flash_ctx.spi_handle)) {
+		return;
+	}
+	if (check == (g_flash_ctx.spi_state)) {
+		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
+	} else {
+		(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
+	}
+
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+	if (NULL != task_handler) {
+		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
+		                              &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
+
+	task_handler = NULL;
+}
+
+/**
+ * @brief Callback in case OSPI errors
+ *
+ * Calls handle_HAL_OSPI_error().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_ErrorCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_error(hospi);
 }
 
+/**
+ * @brief Callback in case OSPI aborts for some reason
+ *
+ * Calls handle_HAL_OSPI_error().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_AbortCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_error(hospi);
 }
 
+/**
+ * @brief Callback for when OSPI completes a command successfully
+ *
+ * Calls handle_HAL_OSPI_success().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_CmdCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	if (FLASH_SPI_COMMANDING == (g_flash_ctx.spi_state)) {
-		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
-	} else {
-		(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-	}
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_success(hospi, FLASH_SPI_COMMANDING);
 }
 
+/**
+ * @brief Callback for when OSPI finishes a read successfully
+ *
+ * Calls handle_HAL_OSPI_success().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_RxCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-	if (FLASH_SPI_READING == (g_flash_ctx.spi_state)) {
-		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
-	} else {
-		(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-	}
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_success(hospi, FLASH_SPI_READING);
 }
 
+/**
+ * @brief Callback for when OSPI finishes transmitting data successfully
+ *
+ * Calls handle_HAL_OSPI_success().
+ *
+ * @param[in] hospi Handle to OSPI
+ */
 void HAL_OSPI_TxCpltCallback(OSPI_HandleTypeDef *hospi) {
-	if (hospi != (g_flash_ctx.spi_handle)) {
-		return;
-	}
-
-	if (FLASH_SPI_WRITING == (g_flash_ctx.spi_state)) {
-		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
-	} else {
-		(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
-	}
-
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-	if (NULL != task_handler) {
-		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
-		                              &xHigherPriorityTaskWoken);
-		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
-
-	task_handler = NULL;
+	handle_HAL_OSPI_success(hospi, FLASH_SPI_WRITING);
 }
 
+/**
+ *@brief Send non-blocking command OSPI to flash chip
+ *
+ * @param[in] cmd OSPI command to send
+ * @param[in] select_ncs If CS should be set to low before sending command
+ *
+ * @return w_status_t - W_SUCCESS on success. W_FAILURE if chip is busy before
+ * the command is sent. W_IO_ERROR if communication problem.
+ */
 static w_status_t send_spi_cmd(OSPI_RegularCmdTypeDef *cmd, bool select_ncs) {
 	// select chip
 	if (select_ncs) {
@@ -184,6 +205,12 @@ static w_status_t send_spi_cmd(OSPI_RegularCmdTypeDef *cmd, bool select_ncs) {
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (select_ncs) {
+			if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+				return W_IO_ERROR;
+			}
+		}
 		return W_IO_ERROR;
 	}
 
@@ -197,7 +224,16 @@ static w_status_t send_spi_cmd(OSPI_RegularCmdTypeDef *cmd, bool select_ncs) {
 	return W_SUCCESS;
 }
 
-// complete a RDSR
+/**
+ * @brief Read single register from flash chip.
+ *
+ * @param[in] cmd OSPI command to send
+ * @param[in] status Buffer where register data is stored
+ * @param[in] select_ncs If CS should be set to low before sending command
+ *
+ * @return w_status_t - W_SUCCESS on success. W_FAILURE if chip is busy before
+ * the command is sent. W_IO_ERROR if communication problem.
+ */
 static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status, bool select_ncs) {
 	// select chip
 	if (select_ncs) {
@@ -229,6 +265,12 @@ static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status, b
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (select_ncs) {
+			if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+				return W_IO_ERROR;
+			}
+		}
 		return W_IO_ERROR;
 	}
 
@@ -242,6 +284,16 @@ static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status, b
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Read status register from flash chip.
+ *
+ * @param[in] status Buffer where status data is stored
+ * @param[in] select_ncs If CS should be set to low before sending command
+ *
+ * @return w_status_t - Inherited from get_single_reg(). W_SUCCESS on success.
+ * W_FAILURE if chip is busy before the command is sent. W_IO_ERROR if
+ * communication problem.
+ */
 static w_status_t get_rdsr(uint8_t *status, bool select_ncs) {
 	OSPI_RegularCmdTypeDef cmd_readstatus = {0};
 	(cmd_readstatus.Instruction) = 0x05; // Read Status
@@ -253,7 +305,16 @@ static w_status_t get_rdsr(uint8_t *status, bool select_ncs) {
 	return get_single_reg(&cmd_readstatus, status, select_ncs);
 }
 
-// get RDSCUR
+/**
+ * @brief Read security register from flash chip.
+ *
+ * @param[in] status Buffer where security register data is stored
+ * @param[in] select_ncs If CS should be set to low before sending command
+ *
+ * @return w_status_t - Inherited from get_single_reg(). W_SUCCESS on success.
+ * W_FAILURE if chip is busy before the command is sent. W_IO_ERROR if
+ * communication problem.
+ */
 static w_status_t get_rdscur(uint8_t *status, bool select_ncs) {
 	OSPI_RegularCmdTypeDef cmd_readstatus = {0};
 	(cmd_readstatus.Instruction) = 0x2b; // Read Status
@@ -265,7 +326,16 @@ static w_status_t get_rdscur(uint8_t *status, bool select_ncs) {
 	return get_single_reg(&cmd_readstatus, status, select_ncs);
 }
 
-// get a RDCR
+/**
+ * @brief Read configuration register from flash chip.
+ *
+ * @param[in] status Buffer where config data is stored
+ * @param[in] select_ncs If CS should be set to low before sending command
+ *
+ * @return w_status_t - Inherited from get_single_reg(). W_SUCCESS on success.
+ * W_FAILURE if chip is busy before the command is sent. W_IO_ERROR if
+ * communication problem.
+ */
 static w_status_t get_rdcr(uint8_t *status, bool select_ncs) {
 	OSPI_RegularCmdTypeDef cmd_readstatus = {0};
 	(cmd_readstatus.Instruction) = 0x15; // Read Status
@@ -277,15 +347,16 @@ static w_status_t get_rdcr(uint8_t *status, bool select_ncs) {
 	return get_single_reg(&cmd_readstatus, status, select_ncs);
 }
 
-// grab data for WREN
+/**
+ * @brief Send write enable command to chip.
+ *
+ * @param[in] select_ncs If CS should be set to low before sending command
+ *
+ * @return w_status_t - Inherited from get_single_reg(). W_SUCCESS on success.
+ * W_FAILURE if chip is busy before the command is sent. W_IO_ERROR if
+ * communication problem.
+ */
 static w_status_t send_wren(bool select_ncs) {
-	// select chip
-	if (select_ncs) {
-		if (W_SUCCESS != gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0)) {
-			return W_IO_ERROR;
-		}
-	}
-
 	OSPI_RegularCmdTypeDef cmd_wren = {0};
 
 	(cmd_wren.Instruction) = 0x06; // WREN
@@ -298,6 +369,16 @@ static w_status_t send_wren(bool select_ncs) {
 	return send_spi_cmd(&cmd_wren, select_ncs);
 }
 
+/**
+ *@brief Read data from chip over OSPI using DMA
+ *
+ * @param[in] address Address from which to read.
+ * @param[out] data Buffer where data is sstored.
+ * @param[in] len Size of the data being read.
+ *
+ * @return w_status_t - W_SUCCESS on success. W_FAILURE if misconfigured
+ * registers. W_IO_ERROR if communication problem or timeout on transmit.
+ */
 static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 	// write
 	OSPI_RegularCmdTypeDef cmd_read = {0};
@@ -345,6 +426,10 @@ static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+			return W_IO_ERROR;
+		}
 		return W_IO_ERROR;
 	}
 
@@ -355,6 +440,15 @@ static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 	return W_SUCCESS;
 }
 
+/**
+ *@brief Send data to flash chip over OSPI using DMA
+ *
+ * @param[in] cmd OSPI command to send. Includes address where to write.
+ * @param[in] data Data to send to flash.
+ *
+ * @return w_status_t - W_SUCCESS on success. W_FAILURE if misconfigured
+ * registers. W_IO_ERROR if communication problem or timeout on transmit.
+ */
 static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data) {
 	// write
 	uint8_t rdsr_response = 0x0;
@@ -395,6 +489,10 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+			return W_IO_ERROR;
+		}
 		return W_IO_ERROR;
 	}
 
@@ -405,10 +503,12 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	// check WIP is complete
 	uint32_t start_time_ms = 0;
 	uint32_t curr_time_ms = 0;
-	timer_get_ms(&start_time_ms);
-	while (FLASH_PROG_DELAY_MS < (curr_time_ms - start_time_ms)) {
+	if (W_SUCCESS != timer_get_ms(&start_time_ms) || W_SUCCESS != timer_get_ms(&curr_time_ms)) {
+		return W_FAILURE;
+	}
+	do {
 		vTaskDelay(pdMS_TO_TICKS(1)); // needs to wait at least 30 ns between write to read commands
-		                              // (+ extra for writing which should be faster)
+		// (+ extra for writing which should be faster)
 		if (W_SUCCESS != get_rdsr(&rdsr_response, true)) {
 			return W_IO_ERROR;
 		}
@@ -416,7 +516,8 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 		if ((WIP_BIT_MASK & rdsr_response) == 0x00) {
 			break;
 		}
-	}
+		timer_get_ms(&curr_time_ms);
+	} while (FLASH_PROG_DELAY_MS > (curr_time_ms - start_time_ms));
 
 	if ((WIP_BIT_MASK & rdsr_response) != 0x00) {
 		return W_IO_ERROR;
@@ -425,6 +526,16 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Write to single page.
+ *
+ * @param[in] address Address where to write.
+ * @param[in] data Data to write to page.
+ * @param[in] len Size of data to write. Cannot be longer than a single page.
+ *
+ * @return w_status_t - W_SUCCESS if all good. W_FAILURE if misconfigured
+ * registers. W_IO_ERROR if error transmitting to chip.
+ */
 static w_status_t flash_write_page(uint32_t address, uint8_t *data, uint32_t len) {
 	// will not write for more than a page
 	if (((address % PAGE_SIZE) + len) > PAGE_SIZE) {
@@ -468,6 +579,14 @@ static w_status_t flash_write_page(uint32_t address, uint8_t *data, uint32_t len
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Erase sector on flash.
+ *
+ * @param[in] address Address of sector to erase.
+ *
+ * @return w_status_t - W_SUCCESS if all good. W_FAILURE if misconfigured
+ * registers. W_IO_ERROR if error transmitting to chip.
+ */
 static w_status_t flash_erase_sector(uint32_t address) {
 	// erase
 	uint8_t rdsr_response = 0x0;
@@ -491,7 +610,7 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	(cmd_erase.AddressSize) = HAL_OSPI_ADDRESS_32_BITS;
 	(cmd_erase.DataMode) = HAL_OSPI_DATA_NONE;
 	(cmd_erase.DummyCycles) = 0;
-	(cmd_erase.NbData) = 32;
+	(cmd_erase.NbData) = 0;
 	(cmd_erase.Address) = address;
 #if (defined(SPI_4_ENABLED) && defined(QPI_ENABLED))
 	(cmd_erase.InstructionMode) = HAL_OSPI_INSTRUCTION_4_LINES;
@@ -517,6 +636,10 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		// unselect on error to not keep CS low
+		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+			return W_IO_ERROR;
+		}
 		return W_IO_ERROR;
 	}
 
@@ -527,10 +650,10 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	// check WIP is complete
 	uint32_t start_time_ms = 0;
 	uint32_t curr_time_ms = 0;
-	if (W_SUCCESS != timer_get_ms(&start_time_ms)) {
+	if (W_SUCCESS != timer_get_ms(&start_time_ms) || W_SUCCESS != timer_get_ms(&curr_time_ms)) {
 		return W_FAILURE;
 	}
-	while (FLASH_PROG_DELAY_MS < (curr_time_ms - start_time_ms)) {
+	do {
 		vTaskDelay(pdMS_TO_TICKS(1)); // needs to wait at least 30 ns between write to read commands
 		                              // (+ extra for writing which should be faster)
 		if (W_SUCCESS != get_rdsr(&rdsr_response, true)) {
@@ -540,12 +663,13 @@ static w_status_t flash_erase_sector(uint32_t address) {
 		if ((WIP_BIT_MASK & rdsr_response) == 0x00) {
 			break;
 		}
-	}
+		timer_get_ms(&curr_time_ms);
+	} while (FLASH_PROG_DELAY_MS > (curr_time_ms - start_time_ms));
 	if ((WIP_BIT_MASK & rdsr_response) != 0x00) {
 		return W_IO_ERROR;
 	}
 
-	// check if wrote sucessfully
+	// check if wrote successfully
 	uint8_t rdscur_response = 0;
 	if (W_SUCCESS != get_rdscur(&rdscur_response, true)) {
 		return W_IO_ERROR;
@@ -556,8 +680,20 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	return W_SUCCESS;
 }
 
-// Read a region in a block. Negative error codes are propagated
-// to the user.
+/**
+ * @brief Read a region in a block
+ *
+ * Used by littlefs. Negative error codes are propagated to the user
+ * (see littlefs for meaning of codes).
+ *
+ * @param[in] c littlefs config. Needed by littlefs.
+ * @param[in] block Address of the block to be read.
+ * @param[in] off Offset from the block address.
+ * @param[out] buffer Buffer to store read data.
+ * @param[in] size Amount of data to read from block.
+ *
+ * @return int - 1 if chip is not init. See littlefs docs for other codes.
+ */
 static int MX25L25645G_lfs_read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off,
                                 void *buffer, lfs_size_t size) {
 	// make sure is init
@@ -578,9 +714,19 @@ static int MX25L25645G_lfs_read(const struct lfs_config *c, lfs_block_t block, l
 	return LFS_ERR_OK;
 }
 
-// Program a region in a block. The block must have previously
-// been erased. Negative error codes are propagated to the user.
-// May return LFS_ERR_CORRUPT if the block should be considered bad.
+/**
+ * @brief Program a region in a block
+ *
+ * Used by littlefs. The block must have previously been erased.
+ *
+ * @param[in] c littlefs config. Needed by littlefs.
+ * @param[in] block Address of the block to be read.
+ * @param[in] off Offset from the block address.
+ * @param[out] buffer Buffer for data to write.
+ * @param[in] size Amount of data to write to block.
+ *
+ * @return int - 1 if chip is not init. See littlefs docs for other codes.
+ */
 static int MX25L25645G_lfs_prg(const struct lfs_config *c, lfs_block_t block, lfs_off_t off,
                                const void *buffer, lfs_size_t size) {
 	// make sure is init
@@ -625,10 +771,15 @@ static int MX25L25645G_lfs_prg(const struct lfs_config *c, lfs_block_t block, lf
 	}
 }
 
-// Erase a block. A block must be erased before being programmed.
-// The state of an erased block is undefined. Negative error codes
-// are propagated to the user.
-// May return LFS_ERR_CORRUPT if the block should be considered bad.
+/**
+ * @brief Erase a block.
+ *
+ * Used by littlefs. A block must be erased before being programmed.
+ * The state of an erased block is undefined. See littlefs for meaning of codes.
+ *
+ * @param[in] c Passes littlefs config. Needed by littlefs.
+ * @param[in] block Block address to erase.
+ */
 static int MX25L25645G_lfs_erase(const struct lfs_config *c, lfs_block_t block) {
 	// make sure is init
 	if (!(g_flash_ctx.is_init)) {
@@ -648,8 +799,13 @@ static int MX25L25645G_lfs_erase(const struct lfs_config *c, lfs_block_t block) 
 	return LFS_ERR_OK;
 }
 
-// Sync the state of the underlying block device. Negative error codes
-// are propagated to the user.
+/**
+ * @brief Sync files to chip if not written yet
+ *
+ * Used by littlefs. Sync the state of the underlying block device.
+ *
+ * @param[in] c Needed by littlefs
+ */
 static int MX25L25645G_lfs_sync(const struct lfs_config *c) {
 	return LFS_ERR_OK;
 }
@@ -684,7 +840,7 @@ const struct lfs_config cfg = {
 	.inline_max = -1
 };
 
-w_status_t mx25l25645g_init() {
+w_status_t mx25l25645g_init(void) {
 	if (g_flash_ctx.is_init) {
 		return W_FAILURE;
 	}
