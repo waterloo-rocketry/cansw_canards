@@ -41,6 +41,9 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
+// Time before a task timesout in ticks
+#define FSM_TIMEOUT_TICKS 10
+
 static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
 // Initialize task handles to NULL
@@ -166,7 +169,7 @@ static void system_init_task(void *arg) {
 
 	// if can_handler doesnt exists and registration is not successfull
 	if (fsm_task_handle == NULL ||
-	    watchdog_register_task(fsm_task_handle, pdMS_TO_TICKS(10)) != W_SUCCESS) {
+	    watchdog_register_task(fsm_task_handle, pdMS_TO_TICKS(FSM_TIMEOUT_TICKS)) != W_SUCCESS) {
 		// log fatal eerror message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register FSM task");
 		// proc_handle_fatal_error("watchdog");
