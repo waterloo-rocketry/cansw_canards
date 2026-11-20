@@ -19,6 +19,7 @@ extern void telemetry_init_due_dates(uint32_t curr_time);
 // Dependencies of the telemetry module (declared inline; no mock files exist).
 FAKE_VALUE_FUNC(fsm_state_t, fsm_get_state);
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
+FAKE_VALUE_FUNC(w_status_t, watchdog_kick);
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...);
 
 // Test doubles for telemetry source log_fn callbacks.
