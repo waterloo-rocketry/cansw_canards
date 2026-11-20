@@ -43,6 +43,14 @@
 
 // Time before a task timesout in ticks
 #define FSM_TIMEOUT_TICKS 10
+#define MS5611_TIMEOUT_TICKS 30
+#define LOGGER_TIMEOUT_TICKS 1000
+#define AD_BREAKOUT_TIMEOUT_TICKS 6
+#define TELEM_TIMEOUT_TICKS 3
+#define INIT_TIMEOUT_TICKS 1500
+
+
+
 
 static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
@@ -223,7 +231,7 @@ static void system_init_task(void *arg) {
 
 	// if ms5611_task doesnt exits or registration is not successful
 	if (ms5611_task_handle == NULL ||
-	    watchdog_register_task(ms5611_task_handle, pdMS_TO_TICKS(30)) != W_SUCCESS) {
+	    watchdog_register_task(ms5611_task_handle, pdMS_TO_TICKS(MS5611_TIMEOUT_TICKS)) != W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register ms5611 task");
 		// proc_handle_fatal_error("watchdog");
@@ -233,7 +241,7 @@ static void system_init_task(void *arg) {
 
 	// if log_task doesnt exits or registration is not successful
 	if (log_task_handle == NULL ||
-	    watchdog_register_task(log_task_handle, pdMS_TO_TICKS(1000)) != W_SUCCESS) {
+	    watchdog_register_task(log_task_handle, pdMS_TO_TICKS(LOGGER_TIMEOUT_TICKS)) != W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register log task");
 		// proc_handle_fatal_error("watchdog");
@@ -245,7 +253,7 @@ static void system_init_task(void *arg) {
 
 	// if ad_breakout_board_task doesnt exits or registration is not successful
 	if (ad_breakout_task_handle == NULL ||
-	    watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(6)) != W_SUCCESS) {
+	    watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(AD_BREAKOUT_TIMEOUT_TICKS)) != W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register ad_breakout_board task");
 		// proc_handle_fatal_error("watchdog");
@@ -256,7 +264,7 @@ static void system_init_task(void *arg) {
 
 	// if telemetry_task doesnt exits or registration is not successful
 	if (telem_task_handle == NULL ||
-	    watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(3)) != W_SUCCESS) {
+	    watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(TELEM_TIMEOUT_TICKS)) != W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register telemetry task");
 		// proc_handle_fatal_error("watchdog");
@@ -304,7 +312,7 @@ w_status_t init_tasks(void) {
 
 	// if Sysinit_task doesnt exits or registration is not successful
 	if (init_task_handle == NULL ||
-	    watchdog_register_task(init_task_handle, pdMS_TO_TICKS(1500)) != W_SUCCESS) {
+	    watchdog_register_task(init_task_handle, pdMS_TO_TICKS(INIT_TIMEOUT_TICKS)) != W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register SysInit task");
 		// proc_handle_fatal_error("watchdog");
