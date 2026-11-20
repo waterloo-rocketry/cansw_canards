@@ -49,9 +49,6 @@
 #define TELEM_TIMEOUT_TICKS 3
 #define INIT_TIMEOUT_TICKS 1500
 
-
-
-
 static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
 // Initialize task handles to NULL
@@ -231,7 +228,8 @@ static void system_init_task(void *arg) {
 
 	// if ms5611_task doesnt exits or registration is not successful
 	if (ms5611_task_handle == NULL ||
-	    watchdog_register_task(ms5611_task_handle, pdMS_TO_TICKS(MS5611_TIMEOUT_TICKS)) != W_SUCCESS) {
+	    watchdog_register_task(ms5611_task_handle, pdMS_TO_TICKS(MS5611_TIMEOUT_TICKS)) !=
+	        W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register ms5611 task");
 		// proc_handle_fatal_error("watchdog");
@@ -253,7 +251,8 @@ static void system_init_task(void *arg) {
 
 	// if ad_breakout_board_task doesnt exits or registration is not successful
 	if (ad_breakout_task_handle == NULL ||
-	    watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(AD_BREAKOUT_TIMEOUT_TICKS)) != W_SUCCESS) {
+	    watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(AD_BREAKOUT_TIMEOUT_TICKS)) !=
+	        W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register ad_breakout_board task");
 		// proc_handle_fatal_error("watchdog");
@@ -264,7 +263,8 @@ static void system_init_task(void *arg) {
 
 	// if telemetry_task doesnt exits or registration is not successful
 	if (telem_task_handle == NULL ||
-	    watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(TELEM_TIMEOUT_TICKS)) != W_SUCCESS) {
+	    watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(TELEM_TIMEOUT_TICKS)) !=
+	        W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register telemetry task");
 		// proc_handle_fatal_error("watchdog");
