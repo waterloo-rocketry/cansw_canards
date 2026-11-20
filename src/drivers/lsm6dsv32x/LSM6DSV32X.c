@@ -389,8 +389,6 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  * It just means some samples were wrong.
  */
 w_status_t lsm6dsv32x_get_full_gyro_acc_data(
-	vector3d_t acc_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
-	vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
 	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *gyro_sample_count,
 	uint8_t *acc_sample_count) {
@@ -423,10 +421,6 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 				raw_gyros[gyro_index].z = z;
 				raw_gyros[gyro_index].timestamp_ms = timestamp_ms;
 
-				gyro_data[gyro_index].x = ((int16_t)x) * GYRO_FS;
-				gyro_data[gyro_index].y = ((int16_t)y) * GYRO_FS;
-				gyro_data[gyro_index].z = ((int16_t)z) * GYRO_FS;
-
 				gyro_index++;
 			} else if (ACC_TAG == tag) {
 				// accel sample
@@ -434,10 +428,6 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 				raw_accs[accel_index].y = y;
 				raw_accs[accel_index].z = z;
 				raw_accs[accel_index].timestamp_ms = timestamp_ms;
-
-				acc_data[accel_index].x = ((int16_t)x) * ACC_FS;
-				acc_data[accel_index].y = ((int16_t)y) * ACC_FS;
-				acc_data[accel_index].z = ((int16_t)z) * ACC_FS;
 
 				accel_index++;
 			} else {

@@ -58,8 +58,6 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_get_full_gyro_acc_data(
-	vector3d_t acc_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
-	vector3d_t gyro_data[LSM6DSV32X_FIFO_READ_THRESHOLD],
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
 	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *gyro_sample_count,
 	uint8_t *acc_sample_count);
