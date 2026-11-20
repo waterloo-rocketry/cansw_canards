@@ -607,6 +607,7 @@ void log_task(void *argument) {
 		} else {
 			logger_health.no_full_buf_moments++;
 		}
+		watchdog_kick();
 	}
 }
 
