@@ -110,11 +110,12 @@ w_status_t flash_clear_logs() {
 	lfs_dir_t dir;
 	struct lfs_info info;
 	int err = lfs_dir_open(&lfs, &dir, "/"); // need to iterate over log files
+	//assumed everything is in the root directory
 	if (err < 0) {
 		return W_FAILURE;
 	}
 	while ((err = lfs_dir_read(&lfs, &dir, &info)) > 0) {
-		if ((info.type = LFS_TYPE_REG) && (is_log_file(info.name))) {
+		if ((info.type == LFS_TYPE_REG) && (is_log_file(info.name))) {
 			err = lfs_remove(&lfs, info.name);
 			if (err < 0) {
 				lfs_dir_close(&lfs, &dir);
@@ -124,6 +125,20 @@ w_status_t flash_clear_logs() {
 	}
 	int err1 = lfs_dir_close(&lfs, &dir);
 	if (err < 0 || err1 < 0) {
+		return W_FAILURE;
+	}
+	return W_SUCCESS;
+}
+w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size_t size, lfs_soff_t offset, enum lfs_whence_flags whence){
+	int err= lfs_file_seek(&lfs,&p_file, offset, whence);//sets the cursor
+	if (err<0){
+		return W_FAILURE;
+	}
+	err= lfs_file_write(&lfs, &p_file, &p_buffer, size);
+	if (LFS_O_WRONLY != (LFS_O_WRONLY & ((p_file->file).flags))){
+		return W_INVALID_PARAM;
+	}
+	else if (err<0){//this should not happen alr checked.
 		return W_FAILURE;
 	}
 	return W_SUCCESS;

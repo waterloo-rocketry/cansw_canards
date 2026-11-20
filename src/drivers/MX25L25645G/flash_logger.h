@@ -54,5 +54,12 @@ w_status_t flash_file_open(flash_file_t *p_file, const char *p_path, int16_t fla
 w_status_t flash_file_close(flash_file_t *p_file);
 
 w_status_t flash_clear_logs();
-
+/**
+ * @brief use lfs_file_seek() to set the cursor and use lfs_file_write() to write
+ * It will not close the file. (need to call a separate func for that)
+ * @return W_FAILURE if file was not open
+ * W_INVALID_PARAM if file is not LFS_O_WRONLY or LFS_O_RDWR.
+ * W_SUCCESS if successful
+ */
+w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size_t size, lfs_soff_t offset, enum lfs_whence_flags whence);
 #endif // CANSW_CANARDS_WRAPPER_H
