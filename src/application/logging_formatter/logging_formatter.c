@@ -25,8 +25,6 @@ static SD_HandleTypeDef *logging_formatter_handle = NULL;
 
 static const uint8_t HEADER[4] = {67, 107, 207, 255};
 
-static uint16_t CRC_footer = 0;
-
 static uint64_t chunk_num = 0;
 
 static uint16_t crc16_table[256];
@@ -38,7 +36,7 @@ w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
 		return W_FAILURE;
 	}
 
-	if ((NULL == file) || (0 == (uint32_t)type)) {
+	if (NULL == file) {
 		logging_formatter_health.invalid_param = true;
 		return W_FAILURE;
 	}
@@ -100,13 +98,9 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		return W_FAILURE;
 	}
 
-	while (HAL_SD_GetCardState(logging_formatter_handle) != HAL_SD_CARD_TRANSFER) {
-		vTaskDelay(pdMS_TO_TICKS(1));
-	}
-
 	bool found_address = false;
 
-	if (0 == memcmp(&init_buffer, &zero_buffer, TIMEOUT_MS)) {
+	if (0 == memcmp(&init_buffer, &zero_buffer, BLOCKSIZE)) {
 		formatter_buffer.chunk = chunk_num;
 		found_address = true;
 	}
@@ -114,16 +108,19 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	uint32_t erase_size_blocks = 0;
 
 	// to get the size of the SD card in the case that we're not solely writing with a 16GB card
-	if (raw_logger_get_SD_specs(&chunk_num, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
-		return W_FAILURE;
-	}
-
-	chunk_num = (chunk_num / 64);
-
-	uint32_t lo = 2;
-	uint32_t hi = chunk_num;
 
 	if (!found_address) {
+		uint64_t block_count = 0;
+
+		if (raw_logger_get_SD_specs(&block_count, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
+			return W_FAILURE;
+		}
+
+		chunk_num = (block_count / BLOCKS_PER_CHUNK);
+
+		uint32_t lo = 2;
+		uint32_t hi = chunk_num;
+
 		while (lo <= hi) {
 			chunk_num = lo + (hi - lo) / 2;
 			if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
@@ -143,11 +140,11 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		}
 		found_address = true;
 		formatter_buffer.chunk = chunk_num;
-	}
 
-	if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
-	    W_SUCCESS) {
-		return W_FAILURE;
+		if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
+		    W_SUCCESS) {
+			return W_FAILURE;
+		}
 	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
@@ -188,7 +185,7 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 		return W_FAILURE;
 	}
 
-	if ((buffer_length + HEADER_FOOTER_SIZE) != CHUNK_SIZE) {
+	if ((buffer_length + FORMATTER_HEADER_SIZE + FORMATTER_CRC_SIZE) != CHUNK_SIZE) {
 		return W_FAILURE;
 	}
 
@@ -206,18 +203,19 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 	}
 	ctx->chunk_count += 1;
 
-	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
+	memcpy(&formatter_buffer.writing_buffer[FORMATTER_HEADER_SIZE], buffer, buffer_length);
 
-	uint16_t CRC_footer = 0xffff;
-	for (uint16_t i = 0; i < buffer_length; i++) {
-		uint8_t index = (CRC_footer ^ buffer[i]) & 0xff;
-		CRC_footer = (CRC_footer >> 8) ^ crc16_table[index];
+	uint16_t crc = 0xffff;
+	for (uint32_t i = 0; i < (CHUNK_SIZE - FORMATTER_CRC_SIZE); i++) {
+		uint8_t index = (uint8_t)((crc ^ formatter_buffer.writing_buffer[i]) & 0xff);
+		crc = (crc >> 8) ^ crc16_table[index];
 	}
+
+	formatter_buffer.writing_buffer[CHUNK_SIZE - 2] = (uint8_t)(crc >> 8);
+	formatter_buffer.writing_buffer[CHUNK_SIZE - 1] = (uint8_t)(crc & 0xff);
 
 	// Taking the left 8 bits and then taking the right 8 bits of a 16 bit number
 	// 0xFF = 0b11111111
-	formatter_buffer.writing_buffer[CHUNK_SIZE - 2] = CRC_footer >> 8;
-	formatter_buffer.writing_buffer[CHUNK_SIZE - 1] = CRC_footer & 0xff;
 
 	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer,
 	                                     formatter_buffer.chunk * CHUNK_SIZE, CHUNK_SIZE,

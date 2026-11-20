@@ -20,6 +20,7 @@ typedef struct {
 	uint32_t write_error;
 	uint32_t not_writable;
 	uint32_t error_state;
+	uint32_t recovery_count;
 } raw_sd_card_health_t;
 
 raw_sd_card_health_t raw_sd_card_health = {0};
@@ -167,6 +168,7 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 
 // TODO: Implement this later once recovery is figured out
 w_status_t raw_logger_SD_recover(void) {
+	raw_sd_card_health.recovery_count = 0;
 	return W_FAILURE;
 }
 
@@ -240,7 +242,7 @@ w_status_t raw_logger_get_SD_specs(uint64_t *block_count, uint32_t *erase_size_b
 	return W_SUCCESS;
 }
 
-w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
+w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t num_bytes,
                               uint32_t timeout_ms) {
 	if (!raw_sd_card_health.is_init) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Not initialized.");
@@ -248,7 +250,12 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	}
 
 	if (RAW_RECOVERING == action_state) {
-		return W_FAILURE;
+		if (raw_sd_card_health.recovery_count > 5) {
+			raw_logger_SD_recover();
+		} else {
+			raw_sd_card_health.recovery_count++;
+		}
+		action_state = RAW_READY;
 	}
 
 	// Initial byte_address cannot be 0 as HAL SDMMC registers 0 as NULL
@@ -308,7 +315,9 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 
 	task_handler = xTaskGetCurrentTaskHandle();
 
-	ulTaskNotifyTake(pdTRUE, 0);
+	ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE, 0);
+
+	timer_get_ms(&start_time_ms);
 
 	if (HAL_OK != HAL_SD_ReadBlocks_DMA(raw_logger_handle, buffer, block_address, num_blocks)) {
 		raw_sd_card_health.error_state = raw_logger_handle->ErrorCode;
@@ -324,7 +333,8 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	uint32_t cur_time_ms = 0;
 	if ((W_SUCCESS != timer_get_ms(&cur_time_ms)) ||
 	    ((cur_time_ms - start_time_ms) >= timeout_ms) ||
-	    (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
+	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE,
+	                                   pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
 		action_state = RAW_RECOVERING;
 		task_handler = NULL;
 		raw_sd_card_health.read_error++;
@@ -350,7 +360,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
 	return W_SUCCESS;
 }
 
-w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
+w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uint32_t num_bytes,
                                uint32_t timeout_ms) {
 	if (!raw_sd_card_health.is_init) {
 		log_text(0, LOG_LVL_WARN, "RAW", "Not initialized.");
@@ -358,7 +368,12 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	}
 
 	if (RAW_RECOVERING == action_state) {
-		return W_FAILURE;
+		if (raw_sd_card_health.recovery_count > 5) {
+			raw_logger_SD_recover();
+		} else {
+			raw_sd_card_health.recovery_count++;
+		}
+		action_state = RAW_READY;
 	}
 
 	// Initial byte_address cannot be 0 as HAL SDMMC registers 0 as NULL
@@ -391,7 +406,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(raw_logger_handle)) {
-		vTaskDelay(1);
+		vTaskDelay(pdMS_TO_TICKS(1));
 		uint32_t cur_time_ms = 0;
 		if (timer_get_ms(&cur_time_ms) != W_SUCCESS) {
 			xSemaphoreGive(sd_mutex);
@@ -400,6 +415,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 		if ((cur_time_ms - start_time_ms) >= timeout_ms) {
 			action_state = RAW_RECOVERING;
 			raw_sd_card_health.timed_out = true;
+			HAL_SD_Abort(raw_logger_handle);
 			xSemaphoreGive(sd_mutex);
 			return W_IO_TIMEOUT;
 		}
@@ -420,7 +436,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 
 	task_handler = xTaskGetCurrentTaskHandle();
 
-	ulTaskNotifyTake(pdTRUE, 0);
+	ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE, 0);
 
 	if (HAL_OK != HAL_SD_WriteBlocks_DMA(raw_logger_handle, buffer, block_address, num_blocks)) {
 		raw_sd_card_health.error_state = raw_logger_handle->ErrorCode;
@@ -436,7 +452,8 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uin
 	uint32_t cur_time_ms = 0;
 	if ((W_SUCCESS != timer_get_ms(&cur_time_ms)) ||
 	    ((cur_time_ms - start_time_ms) >= timeout_ms) ||
-	    (0U == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
+	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE,
+	                                   pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
 		action_state = RAW_RECOVERING;
 		task_handler = NULL;
 		raw_sd_card_health.write_error++;

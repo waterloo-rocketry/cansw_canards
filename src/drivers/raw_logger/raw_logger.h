@@ -32,10 +32,11 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle);
 w_status_t raw_logger_SD_recover(void);
 
 /**
- * @brief Get SD card specs, values should get cached during init
+ * @brief Get SD card specs, values should get cached during init.
  *
  * @param[out] block_count          Number of 512-byte blocks.
- * @param[out] erase_size_blocks    The SD cards preferred erase size.
+ * @param[out] erase_size_blocks    The SD cards preferred erase size, max 4 GB.
+ * @param[in] timeout               Maximum milliseconds to wait for driver availability.
  *
  * @return w_status_t - W_SUCCESS on success, W_FAILURE on failure.
  *
@@ -55,7 +56,7 @@ w_status_t raw_logger_get_SD_specs(uint64_t *block_count, uint32_t *erase_size_b
  *
  * @param[in] buffer       Pointer to the data on card to read.
  * @param[in] byte_address Target byte offset on the card (512-byte aligned).
- * @param[in] num_bytes    Total bytes to read; must be a non-zero multiple of 512.
+ * @param[in] num_bytes    Total bytes to read; must be a non-zero multiple of 512, max 4 GB.
  * @param[in] timeout      Maximum milliseconds to wait for driver availability.
  *
  * @return w_status_t W_SUCCESS on completion, W_FAILURE, W_INVALID PARAM,
@@ -63,7 +64,7 @@ w_status_t raw_logger_get_SD_specs(uint64_t *block_count, uint32_t *erase_size_b
  *
  * @implements FIRM-LLR-RSD-003, FIRM-LLR-RSD-006
  */
-w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
+w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t num_bytes,
                               uint32_t timeout);
 
 /**
@@ -77,7 +78,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
  *
  * @param[in] buffer       Pointer to the payload data to write.
  * @param[in] byte_address Target byte offset on the card (512-byte aligned).
- * @param[in] num_bytes    Total bytes to write; must be a non-zero multiple of 512.
+ * @param[in] num_bytes    Total bytes to write; must be a non-zero multiple of 512, max 4 GB.
  * @param[in] timeout      Maximum milliseconds to wait for driver availability.
  *
  * @return w_status_t W_SUCCESS on completion, W_FAILURE, W_INVALID PARAM,
@@ -86,7 +87,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint32_t byte_address, uint32_t n
  * @implements FIRM-LLR-RSD-001, FIRM-LLR-RSD-002, FIRM-LLR-RSD-003, FIRM-LLR-RSD-004,
  *             FIRM-LLR-RSD-006
  */
-w_status_t raw_logger_SD_write(const uint8_t *buffer, uint32_t byte_address, uint32_t num_bytes,
+w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uint32_t num_bytes,
                                uint32_t timeout);
 
 /**
