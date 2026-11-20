@@ -315,6 +315,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		uint8_t *latest_acc_bytes = NULL;
 		uint8_t i = LSM6DSV32X_FIFO_THRESHOLD - 1;
 		do {
+			// the last two bits are not part of the tag. See datasheet section 9.84
 			uint8_t tag = raw_bytes[i][0] >> 3;
 			if (GYRO_TAG == tag) {
 				if (NULL == latest_gyro_bytes) {
@@ -345,8 +346,9 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[3] << 8) | latest_gyro_bytes[2]);
 		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[5] << 8) | latest_gyro_bytes[4]);
 
-		raw_gyro->timestamp_ms = raw_acc->timestamp_ms; // grab time from accel since it's the same
-		                                                // timestamp
+		raw_gyro->timestamp_ms =
+			raw_acc->timestamp_ms; // grab time from accel since they're both the latest
+			                       // measurements from the same time
 
 		// Parse accelerometer raw data (next 6 bytes)
 		raw_acc->x = (uint16_t)(((uint16_t)latest_acc_bytes[1] << 8) | latest_acc_bytes[0]);
