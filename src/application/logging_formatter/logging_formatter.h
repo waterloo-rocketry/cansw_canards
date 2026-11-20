@@ -5,6 +5,7 @@
 #define TIMEOUT_MS 1000U
 #define FORMATTER_HEADER_SIZE 10U
 #define FORMATTER_CRC_SIZE 2U
+#define BLOCKS_PER_CHUNK 64
 
 #include "drivers/raw_logger/raw_logger.h"
 

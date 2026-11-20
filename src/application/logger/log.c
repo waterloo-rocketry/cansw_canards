@@ -619,7 +619,7 @@ health_status_t logger_get_status(void) {
 	         logger_health.log_write_timeouts, logger_health.invalid_region_moments);
 
 	log_text(10, LOG_LVL_INFO, "logger",
-	         "q_fail=%lu, no_buf=%lu, flush_fail=%lu, f_open_err=%lu, unsafe_fl=%lu, nparam=%lu",
+	         "q_fail=%lu, no_buf=%lu, flush_fail=%lu, unsafe_fl=%lu, nparam=%lu",
 	         logger_health.queue_send_fails, logger_health.no_full_buf_moments,
 	         logger_health.buffer_flush_fails, logger_health.unsafe_buffer_flushes,
 	         logger_health.null_param_count);

@@ -108,12 +108,15 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	uint32_t erase_size_blocks = 0;
 
 	// to get the size of the SD card in the case that we're not solely writing with a 16GB card
-	if (raw_logger_get_SD_specs(&chunk_num, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
-		return W_FAILURE;
-	}
 
 	if (!found_address) {
-		chunk_num = (chunk_num / 64);
+		uint64_t block_count = 0;
+
+		if (raw_logger_get_SD_specs(&block_count, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
+			return W_FAILURE;
+		}
+
+		chunk_num = (block_count / BLOCKS_PER_CHUNK);
 
 		uint32_t lo = 2;
 		uint32_t hi = chunk_num;
@@ -137,11 +140,11 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		}
 		found_address = true;
 		formatter_buffer.chunk = chunk_num;
-	}
 
-	if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
-	    W_SUCCESS) {
-		return W_FAILURE;
+		if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
+		    W_SUCCESS) {
+			return W_FAILURE;
+		}
 	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
