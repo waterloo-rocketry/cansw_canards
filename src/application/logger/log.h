@@ -305,12 +305,8 @@ static inline uint32_t log_error_arg_f32(float f) {
 	    default: log_error_arg_u32)(x)
 
 // Pad the argument list with zeros so there are always LOG_ERROR_MAX_ARGS slots
-#define LOG_ERROR_PACK_(zero_parameter_case_slot, a, b, c, d, e, ...)                              \
+#define LOG_ERROR_PACK(zero_parameter_case_slot, a, b, c, d, e, ...)                               \
 	{LOG_ERROR_ARG(a), LOG_ERROR_ARG(b), LOG_ERROR_ARG(c), LOG_ERROR_ARG(d), LOG_ERROR_ARG(e)}
-
-// Extra 0 at the front to handle 0 parameter case
-#define LOG_ERROR_PACK(...) LOG_ERROR_PACK_(0, ##__VA_ARGS__, 0, 0, 0, 0, 0, 0)
-
 /**
  * @brief Log a message in an encoded form to the error log file.
  * 		  Requires #DEFINE LOG_FILE_ID at the top of the file
@@ -328,7 +324,8 @@ static inline uint32_t log_error_arg_f32(float f) {
 		_Static_assert(sizeof((double[]){0, ##__VA_ARGS__}) <=                                     \
 		                   (1 + LOG_ERROR_MAX_ARGS) * sizeof(double),                              \
 		               "LOG_ERROR takes at most 5 optional arguments");                            \
-		const uint32_t log_error_args_[LOG_ERROR_MAX_ARGS] = LOG_ERROR_PACK(__VA_ARGS__);          \
+		const uint32_t log_error_args_[LOG_ERROR_MAX_ARGS] =                                       \
+			LOG_ERROR_PACK(0, ##__VA_ARGS__, 0, 0, 0, 0, 0, 0);                                    \
                                                                                                    \
 		log_error(&this_site, timeout, LOG_FILE_ID, __LINE__,                                      \
 		          (log_task_id_t)uxTaskGetTaskNumber(xTaskGetCurrentTaskHandle()), error_id,       \
