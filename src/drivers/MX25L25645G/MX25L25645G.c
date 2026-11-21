@@ -12,6 +12,15 @@
 #define SPI_4_ENABLED
 #define FLASH_NOTIFICATION_INDEX 1
 
+// Cache size must always be less than 2^16 times of Page size. Both in bytes.
+#define CACHE_SIZE 2048
+#define PAGE_SIZE 256
+// Each byte of lookahead can track 8 blocks on filesystem (rounding up)
+#define LOOKAHEAD_SIZE (((LOG_BUFFER_SIZE - 1) / 8) + 1) // Bytes
+
+static_assert(CACHE_SIZE < (0x10000 * PAGE_SIZE),
+              "Flash Chip: Cache size must always be less than 2^16 times of page size");
+
 // TODO: add INIT Checks
 static const uint32_t FLASH_SINGLE_DELAY_MS =
 	100; // this represents the maximum amount of delay for a single operation
@@ -20,15 +29,7 @@ static const uint16_t WEL_BIT_MASK = 0x2;
 static const uint16_t WIP_BIT_MASK = 0x1;
 static const uint16_t P_FAIL_BIT_MASK = 0x20;
 static const uint16_t E_FAIL_BIT_MASK = 0x40;
-
-// make sure cache size is always less than 2^16 times of Page size
-#define CACHE_SIZE 2048 // Bytes
-#define PAGE_SIZE 256 // Bytes
-// Each byte of lookahead can track 8 blocks on filesystem (rounding up)
-#define LOOKAHEAD_SIZE (((LOG_BUFFER_SIZE - 1) / 8) + 1) // Bytes
-
-static_assert(CACHE_SIZE < (0x10000 * PAGE_SIZE),
-              "Flash Chip: Cache size must always be less than 2^16 times of page size");
+static const uint16_t MX25L25644G_MAX_ERASE_MS = 400;
 
 static const uint16_t SECTOR_SIZE = 4096; // Size of one sector on chip in bytes
 static const uint32_t MX25L25645G_FLASH_SIZE = 0x2000000; // Total capacity of chip in bytes
@@ -62,7 +63,10 @@ typedef struct {
 } flash_lfs_ctx_t;
 
 static flash_lfs_ctx_t g_flash_ctx = {
-	.spi_handle = &hospi1, .spi_state = FLASH_SPI_NOT_INIT, .ncs_pin = GPIO_PIN_FLASH_CS
+	.spi_state = FLASH_SPI_NOT_INIT,
+	.lfs_first_block_offset = 0,
+	.spi_handle = &hospi1,
+	.ncs_pin = GPIO_PIN_FLASH_CS
 };
 
 // Used for getting the task to block while waiting for transmissions to complete
@@ -81,15 +85,15 @@ static void handle_HAL_OSPI_error(OSPI_HandleTypeDef *hospi) {
 	}
 	(g_flash_ctx.spi_state) = FLASH_SPI_ERROR;
 
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
 	if (NULL != task_handler) {
+		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
 		vTaskNotifyGiveIndexedFromISR(task_handler, FLASH_NOTIFICATION_INDEX,
 		                              &xHigherPriorityTaskWoken);
 		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-	}
 
-	task_handler = NULL;
+		task_handler = NULL;
+	}
 }
 
 /**
@@ -185,16 +189,16 @@ void HAL_OSPI_TxCpltCallback(OSPI_HandleTypeDef *hospi) {
  * the command is sent. W_IO_ERROR if communication problem.
  */
 static w_status_t send_spi_cmd(OSPI_RegularCmdTypeDef *cmd, bool select_ncs) {
+	// check to make sure we are SPI bus is not busy
+	if (FLASH_SPI_READY != (g_flash_ctx.spi_state)) {
+		return W_FAILURE;
+	}
+
 	// select chip
 	if (select_ncs) {
 		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_LOW, 0)) {
 			return W_IO_ERROR;
 		}
-	}
-
-	// check to make sure we are SPI bus is not busy
-	if (FLASH_SPI_READY != (g_flash_ctx.spi_state)) {
-		return W_FAILURE;
 	}
 
 	task_handler = xTaskGetCurrentTaskHandle();
@@ -205,6 +209,8 @@ static w_status_t send_spi_cmd(OSPI_RegularCmdTypeDef *cmd, bool select_ncs) {
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		task_handler = NULL; // avoids sending a notification since task is already unblocked
+		HAL_OSPI_Abort_IT(g_flash_ctx.spi_handle);
 		// unselect on error to not keep CS low
 		if (select_ncs) {
 			if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
@@ -235,16 +241,16 @@ static w_status_t send_spi_cmd(OSPI_RegularCmdTypeDef *cmd, bool select_ncs) {
  * the command is sent. W_IO_ERROR if communication problem.
  */
 static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status, bool select_ncs) {
+	// check to make sure we are SPI bus is not busy
+	if (FLASH_SPI_READY != (g_flash_ctx.spi_state)) {
+		return W_FAILURE;
+	}
+
 	// select chip
 	if (select_ncs) {
 		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_LOW, 0)) {
 			return W_IO_ERROR;
 		}
-	}
-
-	// check to make sure we are SPI bus is not busy
-	if (FLASH_SPI_READY != (g_flash_ctx.spi_state)) {
-		return W_FAILURE;
 	}
 
 	// if needed will add a block
@@ -253,6 +259,11 @@ static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status, b
 
 	if (HAL_OK != hal_status) {
 		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
+		if (select_ncs) {
+			if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+				return W_IO_ERROR;
+			}
+		}
 		return W_IO_ERROR;
 	}
 
@@ -260,11 +271,13 @@ static w_status_t get_single_reg(OSPI_RegularCmdTypeDef *cmd, uint8_t *status, b
 
 	// ready to receive data
 	(g_flash_ctx.spi_state) = FLASH_SPI_READING;
-	hal_status = HAL_OSPI_Receive_DMA(&hospi1, status);
+	hal_status = HAL_OSPI_Receive_DMA((g_flash_ctx.spi_handle), status);
 
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		task_handler = NULL; // avoids sending a notification since task is already unblocked
+		HAL_OSPI_Abort_IT(g_flash_ctx.spi_handle);
 		// unselect on error to not keep CS low
 		if (select_ncs) {
 			if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
@@ -401,14 +414,13 @@ static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 	(cmd_read.DummyCycles) = 0;
 	(cmd_read.NbData) = len; // ← bytes
 #endif
-
-	if (W_SUCCESS != gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0)) {
-		return W_IO_ERROR;
-	}
-
 	// check to make sure we are SPI bus is not busy
 	if (FLASH_SPI_READY != (g_flash_ctx.spi_state)) {
 		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != gpio_write(g_flash_ctx.ncs_pin, GPIO_LEVEL_LOW, 0)) {
+		return W_IO_ERROR;
 	}
 
 	HAL_StatusTypeDef hal_status =
@@ -426,6 +438,8 @@ static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		task_handler = NULL; // avoids sending a notification since task is already unblocked
+		HAL_OSPI_Abort_IT(g_flash_ctx.spi_handle);
 		// unselect on error to not keep CS low
 		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
 			return W_IO_ERROR;
@@ -466,18 +480,22 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 		return W_FAILURE;
 	}
 
-	if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_LOW, 0)) {
-		return W_IO_ERROR;
-	}
 	// check to make sure we are SPI bus is not busy
 	if (FLASH_SPI_READY != (g_flash_ctx.spi_state)) {
 		return W_FAILURE;
+	}
+
+	if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_LOW, 0)) {
+		return W_IO_ERROR;
 	}
 
 	HAL_StatusTypeDef hal_status =
 		HAL_OSPI_Command((g_flash_ctx.spi_handle), cmd, FLASH_SINGLE_DELAY_MS);
 	if (HAL_OK != hal_status) {
 		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
+		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+			return W_IO_ERROR;
+		}
 		return W_IO_ERROR;
 	}
 
@@ -489,10 +507,10 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		task_handler = NULL; // avoids sending a notification since task is already unblocked
+		HAL_OSPI_Abort_IT(g_flash_ctx.spi_handle);
 		// unselect on error to not keep CS low
-		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
-			return W_IO_ERROR;
-		}
+		gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0);
 		return W_IO_ERROR;
 	}
 
@@ -620,12 +638,12 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	(cmd_erase.AddressMode) = HAL_OSPI_ADDRESS_1_LINE;
 #endif
 
-	if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_LOW, 0)) {
-		return W_IO_ERROR;
-	}
 	// check to make sure we are SPI bus is not busy
 	if (FLASH_SPI_READY != (g_flash_ctx.spi_state)) {
 		return W_FAILURE;
+	}
+	if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_LOW, 0)) {
+		return W_IO_ERROR;
 	}
 
 	task_handler = xTaskGetCurrentTaskHandle();
@@ -636,6 +654,8 @@ static w_status_t flash_erase_sector(uint32_t address) {
 	if ((pdTRUE != ulTaskNotifyTakeIndexed(FLASH_NOTIFICATION_INDEX, pdTRUE,
 	                                       pdMS_TO_TICKS(FLASH_SINGLE_DELAY_MS))) ||
 	    (HAL_OK != hal_status) || (FLASH_SPI_READY != (g_flash_ctx.spi_state))) {
+		task_handler = NULL; // avoids sending a notification since task is already unblocked
+		HAL_OSPI_Abort_IT(g_flash_ctx.spi_handle);
 		// unselect on error to not keep CS low
 		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
 			return W_IO_ERROR;
@@ -664,7 +684,7 @@ static w_status_t flash_erase_sector(uint32_t address) {
 			break;
 		}
 		timer_get_ms(&curr_time_ms);
-	} while (FLASH_PROG_DELAY_MS > (curr_time_ms - start_time_ms));
+	} while (MX25L25644G_MAX_ERASE_MS > (curr_time_ms - start_time_ms));
 	if ((WIP_BIT_MASK & rdsr_response) != 0x00) {
 		return W_IO_ERROR;
 	}
@@ -738,6 +758,11 @@ static int MX25L25645G_lfs_prg(const struct lfs_config *c, lfs_block_t block, lf
 
 	uint32_t curr_write_size = size;
 	uint8_t *curr_buffer = (uint8_t *)buffer;
+
+	// Check if writing outside flash addresses.
+	if (curr_address > MX25L25645G_FLASH_SIZE) {
+		return LFS_ERR_IO;
+	}
 
 	// overflows page
 	for (uint16_t i = 0; i < ((c->cache_size) / (c->prog_size)); ++i) {
@@ -907,22 +932,17 @@ w_status_t mx25l25645g_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t mx25l25645g_mount(lfs_t *p_lfs, const uint32_t first_block_offset) {
+w_status_t mx25l25645g_mount(lfs_t *p_lfs) {
 	// make sure is init
 	if (!(g_flash_ctx.is_init)) {
 		return W_FAILURE;
 	}
 
-	if ((first_block_offset % (cfg.block_size)) != 0) {
-		return W_INVALID_PARAM; // block offset should be a multiple of block size
-	}
 	memset(p_lfs, 0, sizeof(lfs_t));
-
-	(g_flash_ctx.lfs_first_block_offset) = first_block_offset;
 
 	int res = lfs_mount(p_lfs, &cfg);
 	if (0 != res) {
-		// try to reformat
+		// All errors format to always have a functioning flash chip on launch
 		res = lfs_format(p_lfs, &cfg);
 		if (0 != res) {
 			return W_FAILURE;
