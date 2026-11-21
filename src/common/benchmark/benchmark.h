@@ -14,29 +14,29 @@
 
 /* helpers */
 
-#define BENCH_CPU_HZ (540u * 1000u * 1000u)
-#define BENCH_CYCLES_PER_US (BENCH_CPU_HZ / (1000u * 1000u))
+#define BENCH_CPU_HZ (540U * 1000U * 1000U)
+#define BENCH_CYCLES_PER_US (BENCH_CPU_HZ / (1000U * 1000U))
 
 // convert between us and cycles
 #define BENCH_US_TO_CYCLES(time_us) ((uint32_t)(time_us) * BENCH_CYCLES_PER_US)
 #define BENCH_CYCLES_TO_US(num_cycles) ((uint32_t)(num_cycles) / BENCH_CYCLES_PER_US)
 
 /* benchmark config */
-#define BENCH_TARGET_US 2500u  // TODO: set target runtime in microseconds, 2.5ms example shown
+#define BENCH_TARGET_US 2500U // TODO: set target runtime in microseconds, 2.5ms example shown
 // TODO: add `BENCHMARK_FILE_INIT(n)` to the .c file before using the benchmark
 
-#define BENCH_WARMUP_N 32u
-#define BENCH_HIST_BIN_COUNT 6u
+#define BENCH_WARMUP_N 32U
+#define BENCH_HIST_BIN_COUNT 6U
 
 // histogram percentiles
-#define BENCH_HIST_PCT_0 10u
-#define BENCH_HIST_PCT_1 25u
-#define BENCH_HIST_PCT_2 50u
-#define BENCH_HIST_PCT_3 75u
-#define BENCH_HIST_PCT_4 100u
+#define BENCH_HIST_PCT_0 10U
+#define BENCH_HIST_PCT_1 25U
+#define BENCH_HIST_PCT_2 50U
+#define BENCH_HIST_PCT_3 75U
+#define BENCH_HIST_PCT_4 100U
 
-STATIC_ASSERT(540u == BENCH_CYCLES_PER_US, "BENCH_CPU_HZ / 1e6");
-STATIC_ASSERT(100u == BENCH_HIST_PCT_4, "bin 4 upper edge is the period");
+STATIC_ASSERT(540U == BENCH_CYCLES_PER_US, "BENCH_CPU_HZ / 1e6");
+STATIC_ASSERT(100U == BENCH_HIST_PCT_4, "bin 4 upper edge is the period");
 
 extern const uint32_t BENCH_HIST_EDGE_PCT[BENCH_HIST_BIN_COUNT - 1];
 
@@ -59,7 +59,7 @@ typedef struct {
 } benchmark_data_t;
 
 /**
- * @brief needed to be called to turn on DWT counter for benchmarking purposes 
+ * @brief needed to be called to turn on DWT counter for benchmarking purposes
  * @note Only to be called ONCE
  */
 void DWT_init(void);
@@ -96,9 +96,9 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
  * 	- make sure all benchmark points take less than 7 seconds to execute
  */
 #define BENCHMARK_FILE_INIT(n)                                                                     \
-	STATIC_ASSERT(BENCH_TARGET_US > 0, "define BENCH_TARGET_US (period in microseconds)");          \
+	STATIC_ASSERT(BENCH_TARGET_US > 0, "define BENCH_TARGET_US (period in microseconds)");         \
 	static const uint8_t BENCHMARK_COUNT = (n);                                                    \
-	static const uint32_t BENCHMARK_BUDGET = BENCH_US_TO_CYCLES(BENCH_TARGET_US);                   \
+	static const uint32_t BENCHMARK_BUDGET = BENCH_US_TO_CYCLES(BENCH_TARGET_US);                  \
 	static uint8_t BENCHMARK_STARTED[n];                                                           \
 	static uint32_t BENCHMARK_WARMUP_SEEN[n];                                                      \
 	static uint32_t BENCHMARK_TIME_START[n];                                                       \
@@ -134,7 +134,7 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
 	do {                                                                                           \
 		if (((i) < BENCHMARK_COUNT) && (BENCHMARK_STARTED[i] != 0)) {                              \
 			__asm volatile("" ::: "memory");                                                       \
-			uint32_t _dt = DWT->CYCCNT - BENCHMARK_TIME_START[i];                                           \
+			uint32_t _dt = DWT->CYCCNT - BENCHMARK_TIME_START[i];                                  \
 			BENCHMARK_STARTED[i] = 0;                                                              \
 			if (BENCHMARK_WARMUP_SEEN[i] < BENCH_WARMUP_N) {                                       \
 				BENCHMARK_WARMUP_SEEN[i]++;                                                        \
@@ -151,7 +151,7 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
 				if (_dt >= BENCHMARK_BUDGET) {                                                     \
 					BENCHMARK_OVER_BUDGET[i]++;                                                    \
 				}                                                                                  \
-				BENCHMARK_HIST[i][bench_hist_bin(_dt, BENCHMARK_BUDGET)]++;                         \
+				BENCHMARK_HIST[i][bench_hist_bin(_dt, BENCHMARK_BUDGET)]++;                        \
 			}                                                                                      \
 		}                                                                                          \
 	} while (0)
@@ -196,6 +196,6 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
 		}                                                                                          \
 	} while (0)
 
-#endif 
+#endif
 
 #endif
