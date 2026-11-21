@@ -27,7 +27,6 @@
 
 #define BENCH_WARMUP_N 32u
 #define BENCH_HIST_BIN_COUNT 6u
-#define BENCH_HIST_BAR_WIDTH 16u // ascii bar chart width
 
 // histogram percentiles
 #define BENCH_HIST_PCT_0 10u
@@ -72,16 +71,6 @@ void DWT_init(void);
  * @return the histogram bin index
  */
 uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
-
-/**
- * @brief graph histogram in ascii bar chart
- * @param[in] hist (const uint32_t *) the histogram to convert
- * @param[out] buf (char *) the buffer to store the ascii bar chart
- * @param[in] buf_len (uint32_t) the length of the buffer
- * @return the length of the ascii bar chart
- */
-uint32_t benchmark_hist_ascii(const uint32_t hist[BENCH_HIST_BIN_COUNT], char *buf,
-                             uint32_t buf_len);
 
 #ifndef ENABLE_BENCHMARK
 
