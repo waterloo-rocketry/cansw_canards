@@ -110,6 +110,8 @@ static w_status_t lsm6dsv32x_check_sanity() {
 	if ((W_SUCCESS == device_status) && (W_SUCCESS == i2c_status)) {
 		return W_SUCCESS;
 	} else {
+		log_text(1, LOG_LVL_WARN, "LSM6DSV32X", "Failed Sanity Check %d expect %d.", who_am_i,
+		         LSM6DSV32X_EXPECTED_WHO_AM_I);
 		lsm6dsv32x_health.is_insane++;
 		return W_FAILURE;
 	}
@@ -247,6 +249,14 @@ w_status_t lsm6dsv32x_init() {
 	// Trigger INT1 when we get either data ready
 	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x01);
 
+	if (W_SUCCESS == status) {
+		lsm6dsv32x_health.is_init = 1;
+	} else {
+		lsm6dsv32x_health.init_failed_write++;
+		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "initfail");
+		return W_FAILURE;
+	}
+
 	// load all settings and end use of all i2c driver before switch to dma
 	vTaskDelay(1);
 
@@ -266,13 +276,6 @@ w_status_t lsm6dsv32x_init() {
 		lsm6dsv32x_health.init_failed_register_callback++;
 		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "Failed to reregister I2C callbacks");
 		return W_FAILURE;
-	}
-
-	if (W_SUCCESS == status) {
-		lsm6dsv32x_health.is_init = 1;
-	} else {
-		lsm6dsv32x_health.init_failed_write++;
-		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "initfail");
 	}
 
 	// only open the i2c bus once fully ready

@@ -57,7 +57,6 @@ defined in linker script */
 .section .text
 /**
   * @brief Subprocedure for copying over the flash data to RAM section
-  * @detail will not protect any registers
   * @param r0 start point stored in RAM
   * @param r1 end point in RAM
   * @param r2 start point for in flash
@@ -65,6 +64,7 @@ defined in linker script */
 */
   .type Ram_Flash_Copy, %function
 Ram_Flash_Copy:
+  push {r4}
   movs r3, #0
   b LoopCopyDataInit
 
@@ -77,6 +77,8 @@ Ram_Flash_Copy:
     adds r4, r0, r3
     cmp r4, r1
     bcc CopyDataInit
+
+    pop {r4}
     bx lr
 
 
