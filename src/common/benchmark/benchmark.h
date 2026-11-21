@@ -9,13 +9,13 @@
 
 #include <stdint.h>
 
+#include "rocketlib.h"
 #include "stm32h7xx_hal.h"
 
 /* helpers */
 
-// CPU frequency 
-#define BENCH_CPU_HZ 540_000_000u
-#define BENCH_CYCLES_PER_US (BENCH_CPU_HZ / 1_000_000u)
+#define BENCH_CPU_HZ (540u * 1000u * 1000u)
+#define BENCH_CYCLES_PER_US (BENCH_CPU_HZ / (1000u * 1000u))
 
 // convert between us and cycles
 #define BENCH_US_TO_CYCLES(time_us) ((uint32_t)(time_us) * BENCH_CYCLES_PER_US)
@@ -36,19 +36,18 @@
 #define BENCH_HIST_PCT_3 75u
 #define BENCH_HIST_PCT_4 100u
 
-_Static_assert(540u == BENCH_CYCLES_PER_US, "BENCH_CPU_HZ / 1e6");
-_Static_assert(100u == BENCH_HIST_PCT_4, "bin 4 upper edge is the period");
+STATIC_ASSERT(540u == BENCH_CYCLES_PER_US, "BENCH_CPU_HZ / 1e6");
+STATIC_ASSERT(100u == BENCH_HIST_PCT_4, "bin 4 upper edge is the period");
 
 extern const uint32_t BENCH_HIST_EDGE_PCT[BENCH_HIST_BIN_COUNT - 1];
 
 /**
- * Snapshot of one probe slot. All times are DWT cycles @ BENCH_CPU_HZ.
- *
- * @param last, min, max     most recent / smallest / largest sample after warmup
- * @param count              samples after warmup; mean = sum / count
- * @param sum                running sum of those samples
- * @param over_budget_count  samples with last >= BENCH_TARGET_US (hist bin 5)
- * @param hist[i]            samples in bucket i (percent of budget; see BENCH_HIST_EDGE_PCT).
+ * @brief benchmark data structure
+ * @param last, min, max: most recent / smallest / largest sample after warmup
+ * @param count: samples after warmup; mean = sum / count
+ * @param sum: running sum of those samples
+ * @param over_budget_count: samples with last >= BENCH_TARGET_US (hist bin 5)
+ * @param hist[i]: samples in bucket i (percent of budget; see BENCH_HIST_EDGE_PCT).
  */
 typedef struct {
 	uint32_t last;
@@ -108,7 +107,7 @@ uint32_t benchmark_hist_ascii(const uint32_t hist[BENCH_HIST_BIN_COUNT], char *b
  * 	- make sure all benchmark points take less than 7 seconds to execute
  */
 #define BENCHMARK_FILE_INIT(n)                                                                     \
-	_Static_assert(BENCH_TARGET_US > 0, "define BENCH_TARGET_US (period in microseconds)");        \
+	STATIC_ASSERT(BENCH_TARGET_US > 0, "define BENCH_TARGET_US (period in microseconds)");          \
 	static const uint8_t BENCHMARK_COUNT = (n);                                                    \
 	static const uint32_t BENCHMARK_BUDGET = BENCH_US_TO_CYCLES(BENCH_TARGET_US);                   \
 	static uint8_t BENCHMARK_STARTED[n];                                                           \
@@ -126,7 +125,14 @@ uint32_t benchmark_hist_ascii(const uint32_t hist[BENCH_HIST_BIN_COUNT], char *b
  * @brief the starting point of the i benchmark point
  * @param[in] i (uint8_t) the index of the benchmark point that will be measured
  */
-#define SINGLE_BENCHMARK_START(i) BENCHMARK_TIME_START[i] = DWT->CYCCNT
+#define SINGLE_BENCHMARK_START(i)                                                                  \
+	do {                                                                                           \
+		if ((i) < BENCHMARK_COUNT) {                                                               \
+			BENCHMARK_STARTED[i] = 1;                                                              \
+			BENCHMARK_TIME_START[i] = DWT->CYCCNT;                                                 \
+			__asm volatile("" ::: "memory");                                                       \
+		}                                                                                          \
+	} while (0)
 
 /**
  * @brief the end point of the i benchmark point
@@ -138,8 +144,8 @@ uint32_t benchmark_hist_ascii(const uint32_t hist[BENCH_HIST_BIN_COUNT], char *b
 #define SINGLE_BENCHMARK_END(i)                                                                    \
 	do {                                                                                           \
 		if (((i) < BENCHMARK_COUNT) && (BENCHMARK_STARTED[i] != 0)) {                              \
-			uint32_t _dt = DWT->CYCCNT - BENCHMARK_TIME_START[i];                                  \
 			__asm volatile("" ::: "memory");                                                       \
+			uint32_t _dt = DWT->CYCCNT - BENCHMARK_TIME_START[i];                                           \
 			BENCHMARK_STARTED[i] = 0;                                                              \
 			if (BENCHMARK_WARMUP_SEEN[i] < BENCH_WARMUP_N) {                                       \
 				BENCHMARK_WARMUP_SEEN[i]++;                                                        \
@@ -201,6 +207,6 @@ uint32_t benchmark_hist_ascii(const uint32_t hist[BENCH_HIST_BIN_COUNT], char *b
 		}                                                                                          \
 	} while (0)
 
-#endif /* ENABLE_BENCHMARK */
+#endif 
 
 #endif
