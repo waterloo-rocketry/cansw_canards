@@ -23,6 +23,7 @@ protected:
         RESET_FAKE(__HAL_TIM_GET_COUNTER);
         RESET_FAKE(HAL_TIM_Base_Start);
         FFF_RESET_HISTORY();
+        timer_reset_for_test();
 
         // initialize the timer handle
         memset(&timer_reg, 0, sizeof(TIM_TypeDef));
@@ -39,7 +40,6 @@ protected:
     TIM_TypeDef timer_reg;
 };
 
-// TODO: for future have a way to reset init variable
 // TEST NO INIT FIRST to make the static global boolean is not being overridden 
 // TEST_F(TimerTest, GetMsNoInitFails) {
 //     // Arrange
@@ -90,7 +90,6 @@ TEST_F(TimerTest, InitFailureWithHALFailure) {
 }
 
 TEST_F(TimerTest, GetRunTimeCounterValueReadsTim23) {
-    set_successful_init();
 
     // Arrange
     __HAL_TIM_GET_COUNTER_fake.return_val = 42;

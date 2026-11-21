@@ -24,6 +24,13 @@ static timer_health_t timer_health = {0};
 // make sure to report error if not initialized
 static bool g_timer_initialized = false;
 
+#ifdef GTEST
+void timer_reset_for_test(void) {
+	g_timer_initialized = false;
+	timer_health = (timer_health_t){0};
+}
+#endif
+
 // update the FreeRTOS Counter to use a 1Mhz internal clock
 unsigned long getRunTimeCounterValue(void) {
 	return __HAL_TIM_GET_COUNTER(&htim23);
