@@ -27,7 +27,7 @@
  * If changing this value, make sure to update it in scripts/logparse.py too!
  */
 #define MAX_DATA_MSG_LENGTH 32
-/* Number of message regions in a single text buffer */
+/* Number of message regions in a single error buffer */
 #define ERROR_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_ERROR_MSG_LENGTH)
 /* Number of message regions in a single text buffer */
 #define TEXT_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_TEXT_MSG_LENGTH)
@@ -44,7 +44,7 @@
 #warning "Data log message region size does not pack evenly into buffer size"
 #endif
 
-/* Number of error log buffers <-- PLACEHOLDR VALUE, NEEDS REVIEWING */
+/* Number of error log buffers <-- PLACEHOLDER VALUE, NEEDS REVIEWING */
 #define NUM_ERROR_LOG_BUFFERS 1
 /* Number of text log buffers */
 #define NUM_TEXT_LOG_BUFFERS 2
@@ -230,7 +230,7 @@ typedef union __attribute__((packed)) {
 typedef struct {
 	uint16_t last_logged_version;
 	uint8_t last_logged_buffer;
-	char *last_logged_location;
+	uint16_t last_logged_msg_num;
 } log_error_site_t;
 
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
@@ -247,7 +247,7 @@ w_status_t log_init(void);
  * Use LOG_ERROR macro instead.
  */
 w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_ID,
-                     uint16_t line_number, log_task_id_t task_ID, log_error_id_t error_name,
+                     uint16_t line_number, log_error_id_t error_code,
                      const uint32_t args[LOG_ERROR_MAX_ARGS]);
 /**
  * @brief Log a message in text form to the text log file.
@@ -326,10 +326,7 @@ static inline uint32_t log_error_arg_f32(float f) {
 		               "LOG_ERROR takes at most 5 optional arguments");                            \
 		const uint32_t log_error_args_[LOG_ERROR_MAX_ARGS] =                                       \
 			LOG_ERROR_PACK(0, ##__VA_ARGS__, 0, 0, 0, 0, 0, 0);                                    \
-                                                                                                   \
-		log_error(&this_site, timeout, LOG_FILE_ID, __LINE__,                                      \
-		          (log_task_id_t)uxTaskGetTaskNumber(xTaskGetCurrentTaskHandle()), error_id,       \
-		          log_error_args_);                                                                \
+		log_error(&this_site, timeout, LOG_FILE_ID, __LINE__, error_id, log_error_args_);          \
 	})
 
 #endif
