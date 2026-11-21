@@ -249,9 +249,7 @@ w_status_t lsm6dsv32x_init() {
 	// Trigger INT1 when we get either data ready
 	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x01);
 
-	if (W_SUCCESS == status) {
-		lsm6dsv32x_health.is_init = 1;
-	} else {
+	if (status != W_SUCCESS) {
 		lsm6dsv32x_health.init_failed_write++;
 		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "initfail");
 		return W_FAILURE;
@@ -280,6 +278,10 @@ w_status_t lsm6dsv32x_init() {
 
 	// only open the i2c bus once fully ready
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
+
+	if (W_SUCCESS == status) {
+		lsm6dsv32x_health.is_init = 1;
+	}
 
 	return status;
 }
