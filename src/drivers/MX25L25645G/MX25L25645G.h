@@ -18,15 +18,14 @@ w_status_t mx25l25645g_init();
 /**
  * @brief Mount flash chip using littlefs file system.
  *
- * On a failed mount, will try to reformat the flash chip.
+ * Mounts the entire flash as a littlefs file system. On a failed mount, will
+ * try to reformat the flash chip.
  *
  * @param[out] p_lfs Pointer to file system.
- * @param[in] first_block_offset Offset from block 0 on flash from which
- * the file system starts (in bytes). Must be a multiple of littlefs block size.
  *
  * @return w_status_t - W_SUCCESS on success. W_FAILURE if already init or
  * mount&format fails. W_INVALID_PARAM if block offset is invalid.
  */
-w_status_t mx25l25645g_mount(lfs_t *p_lfs, uint32_t first_block_offset);
+w_status_t mx25l25645g_mount(lfs_t *p_lfs);
 
 #endif
