@@ -3,13 +3,6 @@
 #include "MX25L25645G.h"
 #include <ctype.h>
 
-// TODO: To be removed. Only here temporarily for everything to compile
-typedef enum {
-	E_LFS_FILE_ALREADY_OPEN = -10,
-	E_LFS_FILE_NOT_OPEN = -11,
-	E_LFS_FORMAT_EMPTY = -13
-} FLASH_EXTRA_LFS_ERRORS_T;
-
 static lfs_t lfs;
 
 w_status_t flash_init(const uint32_t first_block_offset) {
@@ -58,40 +51,6 @@ w_status_t flash_file_close(flash_file_t *p_file) {
 	}
 
 	return W_SUCCESS;
-}
-
-lfs_soff_t mx25l25645g_file_seek(flash_file_t *p_file, const lfs_soff_t off, const int whence) {
-	if (FLASH_FILE_OPEN == (p_file->status)) {
-		return E_LFS_FILE_NOT_OPEN;
-	}
-
-	return lfs_file_seek(&lfs, &(p_file->file), off, whence);
-}
-
-lfs_ssize_t mx25l25645g_file_read(flash_file_t *p_file, void *p_buffer, const lfs_size_t size,
-                                  const lfs_soff_t offset, const enum lfs_whence_flags whence) {
-	if (FLASH_FILE_OPEN == (p_file->status)) {
-		return E_LFS_FILE_NOT_OPEN;
-	}
-	if (LFS_O_RDONLY != (LFS_O_RDONLY & ((p_file->file).flags))) {
-		return LFS_ERR_INVAL;
-	}
-	const int err = lfs_file_seek(&lfs, &(p_file->file), offset, whence);
-	if (0 > err) {
-		return err;
-	}
-	return lfs_file_read(&lfs, &(p_file->file), p_buffer, size);
-}
-
-lfs_ssize_t mx25l25645g_file_write(flash_file_t *p_file, const void *p_buffer,
-                                   const lfs_size_t size) {
-	if (FLASH_FILE_OPEN == (p_file->status)) {
-		return E_LFS_FILE_NOT_OPEN;
-	}
-	if (LFS_O_WRONLY != (LFS_O_WRONLY & ((p_file->file).flags))) {
-		return LFS_ERR_INVAL;
-	}
-	return lfs_file_write(&lfs, &(p_file->file), p_buffer, size);
 }
 
 static bool is_log_file(const char *filename) {
