@@ -8,6 +8,7 @@ extern "C" {
 #include "rocketlib.h"
 #include "stm32h7xx_hal.h"
 #include "utils/mock_log.hpp"
+unsigned long getRunTimeCounterValue(void);
 }
 
 static void set_successful_init() {
@@ -86,6 +87,21 @@ TEST_F(TimerTest, InitFailureWithHALFailure) {
     w_status_t status = timer_init();
 
     EXPECT_EQ(status, W_FAILURE);
+}
+
+TEST_F(TimerTest, GetRunTimeCounterValueReadsTim23) {
+    set_successful_init();
+
+    // Arrange
+    __HAL_TIM_GET_COUNTER_fake.return_val = 42;
+
+    // Act
+    unsigned long value = getRunTimeCounterValue();
+
+    // Assert
+    EXPECT_EQ(value, 42ul);
+    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
+    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.arg0_val, &htim23);
 }
 
 
