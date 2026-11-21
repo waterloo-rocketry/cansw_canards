@@ -29,11 +29,9 @@ typedef struct {
  *
  * Initializes the flash chip and mount it using littlefs.
  *
- * @param[in] first_block_offset Offset from where the fil system starts on the
- * chip in bytes. Usually 0.
  * @return w_status_t - W_SUCCESS if initialized and mounted. W_FAILURE if not.
  */
-w_status_t flash_init(uint32_t first_block_offset);
+w_status_t flash_init();
 
 /**
  * @brief Open a file
@@ -52,6 +50,15 @@ w_status_t flash_file_open(flash_file_t *p_file, const char *p_path, int16_t fla
  * @return w_status_t - W_SUCCESS if closed . W_FAILURE in all other cases.
  */
 w_status_t flash_file_close(flash_file_t *p_file);
+
+/**
+ * @brief Close a file
+ *
+ * @param[in, out] p_file Pointer to file handle
+ * @return w_status_t - W_SUCCESS if synced. W_FAILURE if errored or sync
+ * is not needed.
+ */
+w_status_t flash_file_sync(flash_file_t *p_file);
 
 /**
  * @brief use lfs_file_seek() and lfs_file_read()

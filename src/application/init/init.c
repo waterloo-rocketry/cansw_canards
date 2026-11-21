@@ -21,6 +21,7 @@
 #include "application/telemetry/telemetry.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/MX25L25645G/MX25L25645G.h"
+#include "drivers/MX25L25645G/flash_logger.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -144,6 +145,21 @@ static void system_init_task(void *arg) {
 	non_crit_status |= iis2mdc_init();
 	non_crit_status |= adxl380_init();
 	non_crit_status |= adxrs649_init();
+
+	non_crit_status = flash_init();
+
+	const char hello[] = "Hello world!";
+	char test[20];
+	flash_file_t data;
+	w_status_t err1 = flash_file_open(&data, "t.data", LFS_O_RDWR | LFS_O_CREAT);
+	w_status_t err2 = flash_file_write(&data, &hello, sizeof(hello), 0, LFS_SEEK_SET);
+	w_status_t err3 = flash_file_sync(&data);
+	w_status_t err4 = flash_file_read(&data, &test, sizeof(hello), 0, LFS_SEEK_SET);
+	w_status_t err5 = flash_file_close(&data);
+
+	if (err1 || err2 || err3 || err4 || err5) {
+		non_crit_status = flash_init();
+	}
 
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
