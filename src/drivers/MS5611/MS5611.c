@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/gpio/gpio.h"
@@ -563,6 +564,10 @@ void ms5611_task(void *argument) {
 		}
 
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(MS5611_TASK_PERIOD_MS));
+
+		if (W_SUCCESS != watchdog_kick()) {
+			log_text(0, LOG_LVL_WARN, "ms5611", "watchdog kick failed");
+		}
 	}
 }
 

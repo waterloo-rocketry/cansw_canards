@@ -27,6 +27,7 @@ FAKE_VALUE_FUNC(w_status_t, get_actuator_id, const can_msg_t *, can_actuator_id_
 
 // w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout);
 FAKE_VALUE_FUNC(w_status_t, gpio_write, gpio_pin_t, gpio_level_t, uint32_t)
+FAKE_VALUE_FUNC(w_status_t, watchdog_kick)
 
 FAKE_VOID_FUNC(NVIC_SystemReset);
 }
