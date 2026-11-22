@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
@@ -44,6 +45,26 @@
 #define TAIL_TOGGLE 0x20U
 #define HBL3850_RAD_TO_DEG (180.0F / 3.14159265F)
 
+#define FP32_MANT_BITS 23U
+#define FP16_MANT_BITS 10U
+#define BIAS_DELTA (127U - 15U)
+#define MANT_DELTA (FP32_MANT_BITS - FP16_MANT_BITS)
+
+#define FP16_SIGN_MASK 0x8000U
+#define FP16_EXPONENT_MASK 0x7c00U
+#define FP16_MANT_MASK 0x03ffU
+
+#define FP32_SIGN_MASK 0x80000000U
+#define FP32_EXPONENT_MASK 0x7f800000U
+#define FP32_MANT_MASK 0x007fffffU
+
+// Staleness thresholds for get_status. NodeStatus uses DroneCAN's standard OFFLINE_TIMEOUT_MS
+// (3x its 1 s max publish period). CircuitStatus (10 Hz) and Temperature (1 Hz) reuse it, based on
+// MKS default publish rates. TODO: confirm the rates on the bench
+#define HBL3850_NODE_TIMEOUT_MS 3000U
+#define HBL3850_CIRCUIT_TIMEOUT_MS 3000U
+#define HBL3850_TEMP_TIMEOUT_MS 3000U
+
 /**
  * @brief Reassembly buffer for a multi-frame Actuator.Status transfer. Only the RX callback uses
  * it.
@@ -66,8 +87,30 @@ typedef struct {
 	hbl3850_health_t health;
 	bool configured;
 	hbl3850_rx_transfer_t status_rx;
-	volatile bool heard;
+	volatile bool heard; // NodeStatus received at least once
+	bool circuit_received; // CircuitStatus received at least once
+	bool temperature_received; // Temperature received at least once
 } hbl3850_motor_t;
+
+/**
+ * @brief Status variables describing the health of the HBL3850 driver module
+ */
+typedef struct {
+	bool is_init;
+	uint32_t invalid_args; // NULL or out-of-range arguments
+	uint32_t out_of_memory; // queue creation failures
+	uint32_t reinit_attempts; // driver_init called after a successful init
+	uint32_t init_fdcan_filter_cfg_fails;
+	uint32_t init_fdcan_start_fails;
+	uint32_t init_fdcan_notification_fails;
+	uint32_t init_fdcan_timeout; // a configured motor wasn't heard during init
+	uint32_t timer_get_ms_fails;
+	uint32_t tx_errors; // HAL_FDCAN_AddMessageToTxFifoQ failures
+	uint32_t rx_errors; // HAL_FDCAN_GetRxMessage failures or malformed frames
+	uint32_t status_crc_fails; // Actuator.Status transfer CRC mismatches
+	uint32_t status_seq_drops; // out-of-sequence Status frames
+	uint32_t fdcan_stop_fails;
+} hbl3850_driver_health_t;
 
 static const uint16_t LOG_WAIT_MS = 0;
 static FDCAN_HandleTypeDef *g_hfdcan = NULL;
@@ -76,21 +119,30 @@ static uint8_t g_cmd_transfer_id = 0;
 static const uint32_t can_id =
 	((uint32_t)CMD_PRIORITY << 24) | ((uint32_t)ARRAY_COMMAND_TYPE << 8) | OUR_NODE_ID;
 static hbl3850_motor_t s_motors[HBL3850_MOTOR_COUNT];
+static hbl3850_driver_health_t s_driver_health = {0};
+
+static uint32_t last_tx_errors = 0;
+static uint32_t last_rx_errors = 0;
+static uint32_t last_crc_fails = 0;
 
 w_status_t hbl3850_motor_init(hbl3850_motor_id_t motor, uint8_t node_id, uint8_t actuator_id) {
 	if (motor >= HBL3850_MOTOR_COUNT) {
+		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 	if (node_id == OUR_NODE_ID) {
+		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 	for (hbl3850_motor_id_t m = 0; m < HBL3850_MOTOR_COUNT; ++m) {
 		if (s_motors[m].configured && (m != motor && ((s_motors[m].node_id == node_id) ||
 		                                              (s_motors[m].actuator_id == actuator_id)))) {
+			++s_driver_health.invalid_args;
 			return W_INVALID_PARAM;
 		}
 	}
 	if (node_id == 0 || node_id > 127) {
+		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 	s_motors[motor].node_id = node_id;
@@ -105,8 +157,61 @@ w_status_t hbl3850_motor_init(hbl3850_motor_id_t motor, uint8_t node_id, uint8_t
  * @return float16 bit pattern
  */
 static uint16_t float_to_half(float32_t value) {
-	(void)value;
-	return 0; // TODO: implement IEEE 754 half precision
+	uint32_t fp32 = 0U;
+	memcpy(&fp32, &value, sizeof(fp32));
+
+	uint16_t sign = (uint16_t)((fp32 & FP32_SIGN_MASK) >> 16);
+	uint32_t raw_exponent = (fp32 & FP32_EXPONENT_MASK) >> FP32_MANT_BITS;
+	uint32_t mant = fp32 & FP32_MANT_MASK;
+
+	// FP32 is Infinity or NaN (all 8 exponent bits are 1)
+	if (raw_exponent == 0xffU) {
+		if (mant != 0U) {
+			// Preserve NaN (set quiet NaN bit 0x0200U + top mantissa bits)
+			return (uint16_t)(sign | (0x1fU << FP16_MANT_BITS) | 0x0200U | (mant >> MANT_DELTA));
+		}
+		// Infinity
+		return (uint16_t)(sign | (0x1fU << FP16_MANT_BITS));
+	}
+
+	// Re-bias exponent from FP32 (bias 127) to FP16 (bias 15) using signed int to detect underflow
+	int32_t exponent = (int32_t)raw_exponent - (int32_t)BIAS_DELTA;
+
+	// Overflow (larger than max normal FP16 exponent 30) -> clamp to Infinity
+	if (exponent > 30) {
+		return (uint16_t)(sign | (0x1fU << FP16_MANT_BITS));
+	}
+
+	// Underflow to signed zero or subnormal FP16
+	if (exponent <= 0) {
+		if (exponent < -10) {
+			// Too small even for a 10-bit FP16 subnormal -> signed zero (+/- 0.0)
+			return sign;
+		}
+
+		// Restore implicit leading 1 bit of FP32 mantissa and shift right into subnormal position
+		mant |= 0x00800000U;
+		uint32_t shift = (uint32_t)(14 - exponent);
+		uint16_t sub_mant = (uint16_t)(mant >> shift);
+
+		// Round to nearest using the highest discarded bit
+		if (((mant >> (shift - 1U)) & 1U) != 0U) {
+			sub_mant++;
+		}
+		return (uint16_t)(sign | sub_mant);
+	}
+
+	// Normal number (1 <= exponent <= 30)
+	uint16_t fp16_exp = (uint16_t)((uint32_t)exponent << FP16_MANT_BITS);
+	uint16_t fp16_mant = (uint16_t)(mant >> MANT_DELTA);
+
+	// Round to nearest using bit 12 (the highest discarded mantissa bit)
+	if ((mant & 0x00001000U) != 0U) {
+		fp16_mant++;
+	}
+
+	// Add (not OR) so a rounding carry out of the mantissa bumps the exponent
+	return (uint16_t)(sign | (uint16_t)(fp16_exp + fp16_mant));
 }
 
 /**
@@ -115,8 +220,38 @@ static uint16_t float_to_half(float32_t value) {
  * @return Converted value
  */
 static float32_t half_to_float(uint16_t value) {
-	(void)value;
-	return 0.0F; // TODO: implement IEEE 754 half precision
+	uint32_t sign = ((uint32_t)(value & FP16_SIGN_MASK)) << 16;
+	uint32_t exponent = ((uint32_t)(value & FP16_EXPONENT_MASK)) >> FP16_MANT_BITS;
+	uint32_t mant = (uint32_t)(value & FP16_MANT_MASK);
+
+	uint32_t fp32 = 0U;
+
+	if (exponent == 0U) {
+		if (mant == 0U) {
+			// Signed zero (+/- 0.0)
+			fp32 = sign;
+		} else {
+			// Subnormal FP16: shift mantissa left until implicit leading 1 reaches bit 10
+			exponent = BIAS_DELTA + 1U;
+			while ((mant & 0x0400U) == 0U) {
+				mant <<= 1;
+				exponent--;
+			}
+			mant &= FP16_MANT_MASK;
+			fp32 = sign | (exponent << FP32_MANT_BITS) | (mant << MANT_DELTA);
+		}
+	} else if (exponent == 31U) {
+		// Infinity (mant == 0) or NaN (mant != 0)
+		fp32 = sign | (0xffU << FP32_MANT_BITS) | (mant << MANT_DELTA);
+	} else {
+		// Normal number: re-bias exponent to FP32 and pad mantissa with 13 trailing zeros
+		fp32 = sign | ((exponent + BIAS_DELTA) << FP32_MANT_BITS) | (mant << MANT_DELTA);
+	}
+
+	// Reinterpret raw IEEE 754 bits as float32_t without numeric conversion
+	float32_t result = 0.0F;
+	memcpy(&result, &fp32, sizeof(result));
+	return result;
 }
 
 /**
@@ -160,7 +295,9 @@ static uint16_t dronecan_transfer_crc(uint64_t signature, const uint8_t *payload
  * @brief Stop the FDCAN peripheral
  */
 static void stop_can(void) {
-	HAL_FDCAN_Stop(g_hfdcan);
+	if (HAL_FDCAN_Stop(g_hfdcan) != HAL_OK) {
+		++s_driver_health.fdcan_stop_fails;
+	}
 }
 
 /**
@@ -191,8 +328,14 @@ static int find_motor_by_node_id(uint8_t node_id) {
 }
 
 w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms) {
+	if (s_driver_health.is_init) {
+		++s_driver_health.reinit_attempts;
+		return W_FAILURE;
+	}
+
 	if (NULL == hfdcan) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Invalid pointers");
+		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 
@@ -205,6 +348,7 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 	}
 	if (!configured_motors) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "No motors are configured");
+		++s_driver_health.invalid_args;
 		return W_FAILURE;
 	}
 
@@ -217,9 +361,12 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 			if (s_motors[motor].encoder_queue == NULL) {
 				log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
 				         "Lack of memory to create encoder queue");
+				++s_driver_health.out_of_memory;
 				return W_FAILURE;
 			}
 			s_motors[motor].heard = false;
+			s_motors[motor].circuit_received = false;
+			s_motors[motor].temperature_received = false;
 			s_motors[motor].status_rx.len = 0;
 		}
 	}
@@ -234,17 +381,20 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 	filter.FilterID2 = 0;
 
 	if (HAL_FDCAN_ConfigFilter(g_hfdcan, &filter) != HAL_OK) {
+		++s_driver_health.init_fdcan_filter_cfg_fails;
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "FDCAN filter config failed");
 		return W_FAILURE;
 	}
 
 	if (HAL_FDCAN_Start(g_hfdcan) != HAL_OK) {
+		++s_driver_health.init_fdcan_start_fails;
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "FDCAN start failed");
 		stop_can();
 		return W_FAILURE;
 	}
 
 	if (HAL_FDCAN_ActivateNotification(g_hfdcan, FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) != HAL_OK) {
+		++s_driver_health.init_fdcan_notification_fails;
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "FDCAN activate notification failed");
 		stop_can();
 		return W_FAILURE;
@@ -252,6 +402,7 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 	// Wait for NodeStatus from every configured motor
 	uint32_t start_ms = 0;
 	if (timer_get_ms(&start_ms) != W_SUCCESS) {
+		++s_driver_health.timer_get_ms_fails;
 		stop_can();
 		return W_FAILURE;
 	}
@@ -259,6 +410,7 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 	while (!(all_motors_heard()) && (now_ms - start_ms <= can_init_timeout_ms)) {
 		vTaskDelay(pdMS_TO_TICKS(500));
 		if (timer_get_ms(&now_ms) != W_SUCCESS) {
+			++s_driver_health.timer_get_ms_fails;
 			stop_can();
 			return W_FAILURE;
 		}
@@ -270,9 +422,11 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 				         s_motors[motor].node_id);
 			}
 		}
+		++s_driver_health.init_fdcan_timeout;
 		stop_can();
 		return W_FAILURE;
 	}
+	s_driver_health.is_init = true;
 	log_text(LOG_WAIT_MS, LOG_LVL_INFO, "hbl3850", "Init successful");
 	return W_SUCCESS;
 }
@@ -287,6 +441,7 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
  */
 static w_status_t hbl3850_can_transmit_ext(uint32_t ext_id, const uint8_t *data, uint8_t len) {
 	if ((NULL == g_hfdcan) || (NULL == data) || (len > 8)) {
+		++s_driver_health.invalid_args;
 		return W_FAILURE;
 	}
 
@@ -309,6 +464,7 @@ static w_status_t hbl3850_can_transmit_ext(uint32_t ext_id, const uint8_t *data,
 	tx_header.DataLength = len;
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(g_hfdcan, &tx_header, data) != HAL_OK) {
+		++s_driver_health.tx_errors;
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
@@ -316,9 +472,11 @@ static w_status_t hbl3850_can_transmit_ext(uint32_t ext_id, const uint8_t *data,
 
 w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_deg) {
 	if (motor >= HBL3850_MOTOR_COUNT || isnan(angle_deg)) {
+		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 	if (!s_motors[motor].configured) {
+		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 	// ArrayCommand payload: actuator ID, command type, float16 value (low byte first), tail
@@ -346,9 +504,11 @@ w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_d
 
 w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor, hbl3850_encoder_t *encoder) {
 	if (motor >= HBL3850_MOTOR_COUNT) {
+		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 	if (NULL == encoder) {
+		++s_driver_health.invalid_args;
 		return W_FAILURE;
 	}
 
@@ -383,6 +543,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	uint8_t rx_data[8];
 
 	if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) != HAL_OK) {
+		++s_driver_health.rx_errors;
 		return;
 	}
 
@@ -406,6 +567,8 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	uint32_t now_ms = 0;
 
 	if (timer_get_ms(&now_ms) != W_SUCCESS) {
+		++s_driver_health.timer_get_ms_fails;
+		++s_driver_health.rx_errors;
 		return;
 	}
 
@@ -440,10 +603,12 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 			bool crc_ok = (calc == rx->crc);
 			rx->len = 0;
 			if (!crc_ok) {
+				++s_driver_health.status_crc_fails;
 				return;
 			} // corrupted or mismatched, drop it
 			// Payload: actuator ID (0), position (1-2), force (3-4), speed (5-6), power (7)
 			if (rx->payload[0] != s_motors[motor_index].actuator_id) {
+				++s_driver_health.rx_errors;
 				return;
 			}
 			float32_t pos = half_to_float(rx->payload[2] << 8 | rx->payload[1]);
@@ -459,10 +624,12 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 		} else {
 			// Out-of-sequence or malformed frame: drop any partial transfer
 			rx->len = 0;
+			++s_driver_health.status_seq_drops;
 			return;
 		}
 	} else if (typeID == NODE_STATUS_TYPE) {
 		if (rx_header.DataLength < 8) {
+			++s_driver_health.rx_errors;
 			return;
 		}
 		uint8_t health = (rx_data[4] >> 6) & 0x03;
@@ -476,6 +643,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 		s_motors[motor_index].heard = true;
 	} else if (typeID == CIRCUIT_STATUS_TYPE) {
 		if (rx_header.DataLength < 8) {
+			++s_driver_health.rx_errors;
 			return;
 		}
 		float32_t voltage = half_to_float(rx_data[2] | rx_data[3] << 8);
@@ -486,9 +654,11 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 		s_motors[motor_index].health.current_a = current;
 		s_motors[motor_index].health.circuit_err_flags = error;
 		s_motors[motor_index].health.circuit_timestamp_ms = now_ms;
+		s_motors[motor_index].circuit_received = true;
 		taskEXIT_CRITICAL_FROM_ISR(saved);
 	} else if (typeID == TEMPERATURE_STATUS_TYPE) {
 		if (rx_header.DataLength < 6) {
+			++s_driver_health.rx_errors;
 			return;
 		}
 		// DroneCAN sends temperature in Kelvin
@@ -498,24 +668,166 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 		s_motors[motor_index].health.temperature_c = temperature;
 		s_motors[motor_index].health.temp_err_flags = error;
 		s_motors[motor_index].health.temp_timestamp_ms = now_ms;
+		s_motors[motor_index].temperature_received = true;
 		taskEXIT_CRITICAL_FROM_ISR(saved);
 	}
 }
 
-// TODO: implement hbl3850_get_health(motor, health_stats)
-//   - Return W_INVALID_PARAM if motor >= HBL3850_MOTOR_COUNT; W_FAILURE if health_stats is NULL,
-//     the motor isn't configured, or it hasn't been heard yet.
-//   - The RX callback (an ISR) writes s_motors[motor].health, so copy it inside a critical section:
-//         taskENTER_CRITICAL();
-//         *health_stats = s_motors[motor].health;
-//         taskEXIT_CRITICAL();
+health_status_t hbl3850_get_status(void) {
+	health_status_t status = {
+		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
+		// TODO: add CANARDS_MODULE_ID_HBL3850 to rocketlib. AK45 is a placeholder; the two motor
+		// drivers are never built together.
+		.module_id = CANARDS_MODULE_ID_AK45,
 
-// TODO: implement hbl3850_get_status(void)
-//   - Build one health_status_t covering all configured motors (pattern: ak45_get_status()).
-//   - Skip motors that aren't configured.
-//   - Copy each motor's health inside taskENTER_CRITICAL()/taskEXIT_CRITICAL() before checking it.
-//   - Checks: offline if now - nodestatus_timestamp_ms > 3000 ms, node_health != 0,
-//     circuit_err_flags or temp_err_flags nonzero.
-//   - Needs a module ID; rocketlib has no CANARDS_MODULE_ID_HBL3850 yet.
+		.error_bitfield = 0
+	};
+
+	uint32_t now_ms = 0;
+
+	bool any_configured = false;
+
+	if (!s_driver_health.is_init) {
+		status.error_bitfield |= (1U << CANARDS_MODULE_E_NOT_INIT_OFFSET);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Driver not initialized");
+	}
+
+	for (unsigned int motor = 0; motor < HBL3850_MOTOR_COUNT; ++motor) {
+		hbl3850_health_t health;
+		bool configured;
+		bool node_received;
+		bool circuit_received;
+		bool temperature_received;
+		uint8_t node_id;
+
+		// Copy the data and its validity flags together, since the RX ISR writes them
+		taskENTER_CRITICAL();
+		configured = s_motors[motor].configured;
+		health = s_motors[motor].health;
+		node_received = s_motors[motor].heard;
+		circuit_received = s_motors[motor].circuit_received;
+		temperature_received = s_motors[motor].temperature_received;
+		node_id = s_motors[motor].node_id;
+		taskEXIT_CRITICAL();
+
+		if (!configured) {
+			continue;
+		}
+
+		any_configured = true;
+
+		if (timer_get_ms(&now_ms) != W_SUCCESS) {
+			++s_driver_health.timer_get_ms_fails;
+			status.error_bitfield |= (1U << CANARDS_MODULE_E_INTERNAL_OFFSET);
+			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Failed to get time");
+			break;
+		}
+
+		if (!node_received) {
+			status.error_bitfield |= (1U << CANARDS_MODULE_E_TIMEOUT_OFFSET);
+			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Motor %u (node %u): no NodeStatus",
+			         motor, node_id);
+		} else {
+			if ((uint32_t)(now_ms - health.nodestatus_timestamp_ms) > HBL3850_NODE_TIMEOUT_MS) {
+				status.error_bitfield |= (1U << CANARDS_MODULE_E_TIMEOUT_OFFSET);
+				log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Motor %u (node %u): offline", motor,
+				         node_id);
+			}
+
+			if (health.node_health != 0U) {
+				status.error_bitfield |= (1U << CANARDS_MODULE_E_ERROR_STATE_OFFSET);
+				log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+				         "Motor %u (node %u): NodeStatus health %u", motor, node_id,
+				         health.node_health);
+			}
+		}
+
+		if (!circuit_received ||
+		    ((uint32_t)(now_ms - health.circuit_timestamp_ms) > HBL3850_CIRCUIT_TIMEOUT_MS)) {
+			status.error_bitfield |= (1U << CANARDS_MODULE_E_NO_DATA_OFFSET);
+			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+			         "Motor %u (node %u): no recent CircuitStatus", motor, node_id);
+		} else if (health.circuit_err_flags != HBL3850_CIRCUIT_ERR_NONE) {
+			status.error_bitfield |= (1U << CANARDS_MODULE_E_DEVICE_FAULT_OFFSET);
+			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+			         "Motor %u (node %u): circuit error flags 0x%02x", motor, node_id,
+			         health.circuit_err_flags);
+		}
+
+		if (!temperature_received ||
+		    ((uint32_t)(now_ms - health.temp_timestamp_ms) > HBL3850_TEMP_TIMEOUT_MS)) {
+			status.error_bitfield |= (1U << CANARDS_MODULE_E_NO_DATA_OFFSET);
+			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+			         "Motor %u (node %u): no recent Temperature", motor, node_id);
+		} else if (health.temp_err_flags != HBL3850_TEMP_ERR_NONE) {
+			status.error_bitfield |= (1U << CANARDS_MODULE_E_DEVICE_FAULT_OFFSET);
+			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+			         "Motor %u (node %u): temperature error flags 0x%02x", motor, node_id,
+			         health.temp_err_flags);
+		}
+	}
+
+	if (!any_configured) {
+		status.error_bitfield |= (1U << CANARDS_MODULE_E_NOT_INIT_OFFSET);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "No motors configured");
+	}
+
+	// Driver-wide errors: report only if the counter went up since the last health check
+
+	if (s_driver_health.tx_errors != last_tx_errors) {
+		status.error_bitfield |= (1U << CANARDS_MODULE_E_TX_FAILURE_OFFSET);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "TX errors: %lu", s_driver_health.tx_errors);
+		last_tx_errors = s_driver_health.tx_errors;
+	}
+	if (s_driver_health.rx_errors != last_rx_errors) {
+		status.error_bitfield |= (1U << CANARDS_MODULE_E_RX_FAILURE_OFFSET);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "RX errors: %lu", s_driver_health.rx_errors);
+		last_rx_errors = s_driver_health.rx_errors;
+	}
+	if (s_driver_health.status_crc_fails != last_crc_fails) {
+		status.error_bitfield |= (1U << CANARDS_MODULE_E_CRC_FAILED_OFFSET);
+		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Status CRC fails: %lu",
+		         s_driver_health.status_crc_fails);
+		last_crc_fails = s_driver_health.status_crc_fails;
+	}
+
+	// Set severity last, after every bit has been added
+	if (status.error_bitfield != 0U) {
+		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
+	}
+
+	return status;
+}
+
+w_status_t hbl3850_get_health(hbl3850_motor_id_t motor, hbl3850_health_t *health_stats) {
+	if ((unsigned int)motor >= HBL3850_MOTOR_COUNT) {
+		++s_driver_health.invalid_args;
+		return W_INVALID_PARAM;
+	}
+
+	if (!s_motors[motor].configured) {
+		++s_driver_health.invalid_args;
+		return W_INVALID_PARAM;
+	}
+
+	if (health_stats == NULL) {
+		++s_driver_health.invalid_args;
+		return W_FAILURE;
+	}
+
+	w_status_t result = W_FAILURE;
+
+	taskENTER_CRITICAL();
+
+	if (s_motors[motor].heard || s_motors[motor].circuit_received ||
+	    s_motors[motor].temperature_received) {
+		*health_stats = s_motors[motor].health;
+		result = W_SUCCESS;
+	}
+
+	taskEXIT_CRITICAL();
+
+	return result;
+}
 
 #endif

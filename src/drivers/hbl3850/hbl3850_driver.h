@@ -77,7 +77,8 @@ w_status_t hbl3850_motor_init(hbl3850_motor_id_t motor, uint8_t node_id, uint8_t
  * @param[in] hfdcan Pointer to FDCAN handle struct for FDCAN peripheral
  * @param[in] can_init_timeout_ms Amount of time to wait to receive NodeStatus
  * @return W_SUCCESS, W_INVALID_PARAM if hfdcan is NULL, W_FAILURE if no motors are configured,
- * if CAN setup fails, or if a configured motor isn't heard within the timeout.
+ * if CAN setup fails, if a configured motor isn't heard within the timeout,
+ * or if it is called a second time.
  */
 w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms);
 
@@ -87,12 +88,12 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
  * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
  * @param[in] angle_deg Position command in degrees
  * @return W_SUCCESS on success, W_FAILURE on error, W_INVALID_PARAM if motor is invalid or not
- * configured or angle_deg is NaN
+ * configured, or angle_deg is NaN
  */
 w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_deg);
 
 /**
- * @brief Copies motor encoder values stored in queue to an hbl3850_encoder_t struct variable
+ * @brief Copies latest motor encoder values stored in queue to an hbl3850_encoder_t struct variable
  * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
  * @param[out] encoder Pointer to hbl3850_encoder_t struct variable
  * @return W_SUCCESS on success, W_FAILURE on error, W_INVALID_PARAM if motor is invalid
