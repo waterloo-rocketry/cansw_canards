@@ -329,4 +329,12 @@ add_test_group(test_telemetry
     ${PROC_SRC_DIR}/application/telemetry/telemetry.c
 )
 
+add_test_group(test_logger
+    # test file(s)
+    ${UNIT_TESTS_DIR}/logger_test.cpp
+    # src file(s)
+    ${PROC_SRC_DIR}/application/logger/log.c
+    ${PROC_SRC_DIR}/third_party/printf/printf.c
+)
+
 # TODO: add fsm unit tes once get a good version of codegen
