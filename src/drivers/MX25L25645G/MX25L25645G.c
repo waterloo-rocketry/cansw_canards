@@ -13,12 +13,12 @@
 #define FLASH_NOTIFICATION_INDEX 1
 
 // Cache size must always be less than 2^16 times of Page size. Both in bytes.
-#define CACHE_SIZE 2048
-#define PAGE_SIZE 256
+#define FLASH_CACHE_SIZE 2048
+#define FLASH_PAGE_SIZE 256
 // Each byte of lookahead can track 8 blocks on filesystem (rounding up)
-#define LOOKAHEAD_SIZE (((LOG_BUFFER_SIZE - 1) / 8) + 1) // Bytes
+#define FLASH_LOOKAHEAD_SIZE (((LOG_BUFFER_SIZE - 1) / 8) + 1) // Bytes
 
-static_assert(CACHE_SIZE < (0x10000 * PAGE_SIZE),
+static_assert(FLASH_CACHE_SIZE < (0x10000 * FLASH_PAGE_SIZE),
               "Flash Chip: Cache size must always be less than 2^16 times of page size");
 
 // TODO: add INIT Checks
@@ -38,9 +38,9 @@ static const uint32_t FLASH_PROG_DELAY_MS = 100;
 
 static const uint32_t FLASH_READ_DUMMY_CYCLE = 8;
 
-static uint8_t lfs_flash_read_buffer[CACHE_SIZE] = {0};
-static uint8_t lfs_flash_prog_buffer[CACHE_SIZE] = {0};
-static uint8_t lfs_flash_lookahead_buffer[LOOKAHEAD_SIZE] = {0};
+static uint8_t lfs_flash_read_buffer[FLASH_CACHE_SIZE] = {0};
+static uint8_t lfs_flash_prog_buffer[FLASH_CACHE_SIZE] = {0};
+static uint8_t lfs_flash_lookahead_buffer[FLASH_LOOKAHEAD_SIZE] = {0};
 
 /**
  * @brief State of the flash chip
@@ -427,6 +427,9 @@ static w_status_t flash_read(uint32_t address, uint8_t *data, uint32_t len) {
 		HAL_OSPI_Command((g_flash_ctx.spi_handle), &cmd_read, FLASH_SINGLE_DELAY_MS);
 	if (HAL_OK != hal_status) {
 		(g_flash_ctx.spi_state) = FLASH_SPI_READY;
+		if (W_SUCCESS != gpio_write((g_flash_ctx.ncs_pin), GPIO_LEVEL_HIGH, 0)) {
+			return W_IO_ERROR;
+		}
 		return W_IO_ERROR;
 	}
 
@@ -556,7 +559,7 @@ static w_status_t flash_spi_transmit(OSPI_RegularCmdTypeDef *cmd, uint8_t *data)
  */
 static w_status_t flash_write_page(uint32_t address, uint8_t *data, uint32_t len) {
 	// will not write for more than a page
-	if (((address % PAGE_SIZE) + len) > PAGE_SIZE) {
+	if (((address % FLASH_PAGE_SIZE) + len) > FLASH_PAGE_SIZE) {
 		return W_INVALID_PARAM;
 	}
 
@@ -846,12 +849,12 @@ const struct lfs_config cfg = {
 
 	// block device configuration
 	.read_size = 1,
-	.prog_size = PAGE_SIZE,
+	.prog_size = FLASH_PAGE_SIZE,
 	.block_size = SECTOR_SIZE,
 	.block_count = (MX25L25645G_FLASH_SIZE / SECTOR_SIZE),
 	.block_cycles = 500,
-	.cache_size = CACHE_SIZE,
-	.lookahead_size = LOOKAHEAD_SIZE,
+	.cache_size = FLASH_CACHE_SIZE,
+	.lookahead_size = FLASH_LOOKAHEAD_SIZE,
 	.compact_thresh = -1,
 
 	.read_buffer = lfs_flash_read_buffer,
