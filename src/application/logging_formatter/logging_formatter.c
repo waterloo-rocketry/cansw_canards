@@ -1,12 +1,20 @@
 #include "application/logging_formatter/logging_formatter.h"
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "common/common.h"
 #include <inttypes.h>
+
+#define CHUNK_SIZE 32768U
+#define TIMEOUT_MS 1000U
+#define FORMATTER_HEADER_SIZE 10U
+#define FORMATTER_CRC_SIZE 2U
+#define BLOCKS_PER_CHUNK 64
 
 typedef struct {
 	bool is_init;
 	bool invalid_param;
 	bool timed_out;
+	bool card_full;
 	uint16_t types_created;
 	uint32_t write_count;
 	uint32_t write_error;
@@ -117,11 +125,10 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		}
 
 		chunk_num = (block_count / BLOCKS_PER_CHUNK);
+		uint64_t lo = 2;
+		uint64_t hi = chunk_num;
 
-		uint32_t lo = 2;
-		uint32_t hi = chunk_num;
-
-		while (lo <= hi) {
+		while (lo < hi) {
 			chunk_num = lo + (hi - lo) / 2;
 			if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
 			    W_SUCCESS) {
@@ -133,11 +140,18 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 			}
 
 			if (0 == memcmp(&init_buffer, &zero_buffer, 32)) {
-				hi = chunk_num - 1;
+				hi = chunk_num;
 			} else {
 				lo = chunk_num + 1;
 			}
 		}
+
+		if ((block_count / BLOCKS_PER_CHUNK) <= lo){
+			logging_formatter_health.card_full = true;
+			return W_FAILURE;
+		}
+
+		chunk_num = lo;
 		found_address = true;
 		formatter_buffer.chunk = chunk_num;
 
