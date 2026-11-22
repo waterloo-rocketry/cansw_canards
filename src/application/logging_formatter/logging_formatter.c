@@ -146,7 +146,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 			}
 		}
 
-		if ((block_count / BLOCKS_PER_CHUNK) <= lo){
+		if ((block_count / BLOCKS_PER_CHUNK) <= lo) {
 			logging_formatter_health.card_full = true;
 			return W_FAILURE;
 		}
