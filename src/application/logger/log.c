@@ -24,6 +24,7 @@
 #define ERROR_WRITE_TRY_COUNT 20
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
+static const uint32_t MAX_ERROR_LOGGING_PERIOD_MS = 60000; // 1 min
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
@@ -97,6 +98,7 @@ static log_buffer_t log_error_buffers[NUM_ERROR_LOG_BUFFERS];
 static uint16_t current_error_buf_versions[NUM_ERROR_LOG_BUFFERS] = {
 	[0 ... NUM_ERROR_LOG_BUFFERS - 1] = 1
 };
+static uint32_t last_error_buffer_flush = 0;
 static uint8_t current_error_buf_num = 0;
 static SemaphoreHandle_t log_error_write_mutex = NULL;
 static QueueHandle_t error_buffers_queue = NULL;
@@ -723,10 +725,34 @@ void log_task(void *argument) {
 		// bool must_log_txt = (timer_get_ms(&cur_timestamps) == W_SUCCESS) &&
 		// ((last_text_logging_time + MAX_TXT_LOGGING_PERIOD_MS) < cur_timestamps);
 
+		// Force-flush a partially filled error buffer if none within past 60 seconds
+		if ((timer_get_ms(&cur_timestamps) == W_SUCCESS) &&
+		    ((cur_timestamps - last_error_buffer_flush) >= MAX_ERROR_LOGGING_PERIOD_MS) &&
+		    (xSemaphoreTake(log_error_write_mutex, 0) == pdPASS)) {
+			log_buffer_t *error_buffer = &log_error_buffers[current_error_buf_num];
+
+			// Only flush if there is at least one messag and it isn't already full
+			if (!error_buffer->is_full && (error_buffer->next_msg_num > 0)) {
+				// Incremement buffer
+				error_buffer->is_full = true;
+				current_error_buf_versions[current_error_buf_num]++;
+				current_error_buf_num = (current_error_buf_num + 1) % NUM_ERROR_LOG_BUFFERS;
+
+				// Queue current error buffer
+				if (xQueueSendToBack(error_buffers_queue, &error_buffer, 0) != pdPASS) {
+					logger_health.queue_send_fails++;
+					logger_health.os_error_occurred = true;
+				}
+			}
+			last_error_buffer_flush = cur_timestamps;
+			xSemaphoreGive(log_error_write_mutex);
+		}
+
 		bool must_log_txt = false;
 		bool have_msg = false;
 		uint32_t msgs_done = 0;
 		uint32_t max_msgs = DATA_MSGS_PER_BUFFER;
+		uint32_t write_size = LOG_BUFFER_SIZE;
 		sd_card_file_ctx_t *file_ctx = &data_file_ctx;
 		uint32_t log_write_try_count = 0;
 		// check data
@@ -746,9 +772,16 @@ void log_task(void *argument) {
 		} else if (xQueueReceive(error_buffers_queue, &buffer_to_print, 10) == pdPASS) {
 			// NEEDS LOTS OF REVIEWING
 			log_write_try_count = ERROR_WRITE_TRY_COUNT;
-			max_msgs = ERROR_MSGS_PER_BUFFER;
+			// Buffer may be partially filled (force-flushed): only wait for / write used slots so
+			// the zeroed tail never reaches the SD card for the decoder to misread.
+			max_msgs = buffer_to_print->next_msg_num;
+			write_size = max_msgs * MAX_ERROR_MSG_LENGTH;
 			file_ctx = &error_file_ctx;
 			have_msg = true;
+
+			if (timer_get_ms(&cur_timestamps) == W_SUCCESS) {
+				last_error_buffer_flush = cur_timestamps;
+			}
 		}
 
 		if (have_msg) {
@@ -767,8 +800,8 @@ void log_task(void *argument) {
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
 				uint32_t open_start_ms = 0;
 				timer_get_ms(&open_start_ms);
-				if (sd_card_file_write_open(file_ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
-				                            &size) == W_SUCCESS) {
+				if (sd_card_file_write_open(file_ctx, buffer_to_print->data, write_size, &size) ==
+				    W_SUCCESS) {
 					uint32_t open_end_ms = 0;
 					timer_get_ms(&open_end_ms);
 					/*
