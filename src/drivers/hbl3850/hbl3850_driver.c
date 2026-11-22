@@ -72,6 +72,23 @@ typedef struct {
 } hbl3850_rx_transfer_t;
 
 /**
+ * @brief Raw motor health data from NodeStatus, CircuitStatus and Temperature. float16 values are
+ * stored as raw bits (to limit operations in an ISR) and converted in hbl3850_get_health
+ */
+typedef struct {
+	uint8_t node_health;
+	uint8_t node_mode;
+	uint32_t nodestatus_timestamp_ms;
+	uint16_t voltage_bits; // float16, volts
+	uint16_t current_bits; // float16, amps
+	uint8_t circuit_err_flags;
+	uint32_t circuit_timestamp_ms;
+	uint16_t temperature_bits; // float16, Kelvin
+	uint8_t temp_err_flags;
+	uint32_t temp_timestamp_ms;
+} hbl3850_health_raw_t;
+
+/**
  * @brief Raw motor encoder data from Actuator.Status (to limit operations in an ISR)
  */
 typedef struct {
@@ -88,7 +105,7 @@ typedef struct {
 	uint8_t actuator_id;
 	hbl3850_encoder_raw_t encoder_raw;
 	bool encoder_received;
-	hbl3850_health_t health;
+	hbl3850_health_raw_t health;
 	bool configured;
 	hbl3850_rx_transfer_t status_rx;
 	volatile bool heard; // NodeStatus received at least once
@@ -662,12 +679,10 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 			++s_driver_health.rx_errors;
 			return;
 		}
-		float32_t voltage = half_to_float(rx_data[2] | rx_data[3] << 8);
-		float32_t current = half_to_float(rx_data[4] | rx_data[5] << 8);
-		uint8_t error = rx_data[6];
-		s_motors[motor_index].health.voltage_v = voltage;
-		s_motors[motor_index].health.current_a = current;
-		s_motors[motor_index].health.circuit_err_flags = error;
+		// Store raw float16 bits; get_health converts them in task context
+		s_motors[motor_index].health.voltage_bits = (uint16_t)(rx_data[2] | (rx_data[3] << 8));
+		s_motors[motor_index].health.current_bits = (uint16_t)(rx_data[4] | (rx_data[5] << 8));
+		s_motors[motor_index].health.circuit_err_flags = rx_data[6];
 		s_motors[motor_index].health.circuit_timestamp_ms = now_ms;
 		s_motors[motor_index].circuit_received = true;
 	} else if (typeID == TEMPERATURE_STATUS_TYPE) {
@@ -675,11 +690,9 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 			++s_driver_health.rx_errors;
 			return;
 		}
-		// DroneCAN sends temperature in Kelvin
-		float32_t temperature = half_to_float(rx_data[2] | rx_data[3] << 8) - 273.15F;
-		uint8_t error = rx_data[4];
-		s_motors[motor_index].health.temperature_c = temperature;
-		s_motors[motor_index].health.temp_err_flags = error;
+		// Store raw float16 bits; get_health converts them in task context
+		s_motors[motor_index].health.temperature_bits = (uint16_t)(rx_data[2] | (rx_data[3] << 8));
+		s_motors[motor_index].health.temp_err_flags = rx_data[4];
 		s_motors[motor_index].health.temp_timestamp_ms = now_ms;
 		s_motors[motor_index].temperature_received = true;
 	}
@@ -705,7 +718,7 @@ health_status_t hbl3850_get_status(void) {
 	}
 
 	for (unsigned int motor_id = 0; motor_id < HBL3850_MOTOR_COUNT; ++motor_id) {
-		hbl3850_health_t health;
+		hbl3850_health_raw_t health;
 		bool configured;
 		bool node_received;
 		bool circuit_received;
@@ -827,19 +840,30 @@ w_status_t hbl3850_get_health(hbl3850_motor_id_t motor, hbl3850_health_t *health
 		return W_FAILURE;
 	}
 
-	w_status_t result = W_FAILURE;
-
+	// Copy the raw data and its validity flags together, since the RX ISR writes them
 	taskENTER_CRITICAL();
-
-	if (s_motors[motor].heard || s_motors[motor].circuit_received ||
-	    s_motors[motor].temperature_received) {
-		*health_stats = s_motors[motor].health;
-		result = W_SUCCESS;
-	}
-
+	hbl3850_health_raw_t raw = s_motors[motor].health;
+	bool any_received = s_motors[motor].heard || s_motors[motor].circuit_received ||
+	                    s_motors[motor].temperature_received;
 	taskEXIT_CRITICAL();
 
-	return result;
+	if (!any_received) {
+		return W_FAILURE;
+	}
+
+	// Convert outside the critical section and the ISR to keep both short
+	health_stats->node_health = raw.node_health;
+	health_stats->node_mode = raw.node_mode;
+	health_stats->nodestatus_timestamp_ms = raw.nodestatus_timestamp_ms;
+	health_stats->voltage_v = half_to_float(raw.voltage_bits);
+	health_stats->current_a = half_to_float(raw.current_bits);
+	health_stats->circuit_err_flags = raw.circuit_err_flags;
+	health_stats->circuit_timestamp_ms = raw.circuit_timestamp_ms;
+	// DroneCAN sends temperature in Kelvin
+	health_stats->temperature_c = half_to_float(raw.temperature_bits) - 273.15F;
+	health_stats->temp_err_flags = raw.temp_err_flags;
+	health_stats->temp_timestamp_ms = raw.temp_timestamp_ms;
+	return W_SUCCESS;
 }
 
 #endif
