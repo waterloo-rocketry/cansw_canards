@@ -41,17 +41,17 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
-// Time before a task timesout in ticks
-#define FSM_TIMEOUT_TICKS 10
-#define HEALTH_CHECK_TICKS 2000
-#define CAN_HANDLER_HANDLE_RX_TICKS 250
-#define CAN_HANDLER_HANDLE_TX_TICKS 10
-#define MOVELLA_TICKS 30
-#define MS5611_TIMEOUT_TICKS 30
-#define LOGGER_TIMEOUT_TICKS 1000
-#define AD_BREAKOUT_TIMEOUT_TICKS 6
-#define TELEM_TIMEOUT_TICKS 3
-#define INIT_TIMEOUT_TICKS 1500
+// Time before a task timesout in milliseconds
+#define FSM_TIMEOUT_MS 10
+#define HEALTH_CHECK_MS 2500
+#define CAN_HANDLER_HANDLE_RX_MS 250
+#define CAN_HANDLER_HANDLE_TX_MS 18
+#define MOVELLA_MS 25
+#define MS5611_TIMEOUT_MS 25
+#define LOGGER_TIMEOUT_MS 275
+#define AD_BREAKOUT_TIMEOUT_MS 10
+#define TELEM_TIMEOUT_MS 10
+#define INIT_TIMEOUT_MS 1250
 
 static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
 
@@ -178,7 +178,7 @@ static void system_init_task(void *arg) {
 
 	// if can_handler doesnt exists and registration is not successfull
 	if ((NULL == fsm_task_handle) ||
-	    watchdog_register_task(fsm_task_handle, pdMS_TO_TICKS(FSM_TIMEOUT_TICKS)) != W_SUCCESS) {
+	    watchdog_register_task(fsm_task_handle, pdMS_TO_TICKS(FSM_TIMEOUT_MS)) != W_SUCCESS) {
 		// log fatal eerror message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register FSM task");
 		// proc_handle_fatal_error("watchdog");
@@ -188,7 +188,7 @@ static void system_init_task(void *arg) {
 	                           &health_checks_task_handle);
 
 	if ((NULL == health_checks_task_handle) ||
-	    watchdog_register_task(health_checks_task_handle, pdMS_TO_TICKS(HEALTH_CHECK_TICKS)) !=
+	    watchdog_register_task(health_checks_task_handle, pdMS_TO_TICKS(HEALTH_CHECK_MS)) !=
 	        W_SUCCESS) {
 		// log fatal eerror message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register health check task");
@@ -200,7 +200,7 @@ static void system_init_task(void *arg) {
 
 	// if can_handler doesnt exists and registration is not successfull
 	if ((NULL == can_handler_handle_rx) ||
-	    watchdog_register_task(can_handler_handle_rx, pdMS_TO_TICKS(CAN_HANDLER_HANDLE_RX_TICKS)) !=
+	    watchdog_register_task(can_handler_handle_rx, pdMS_TO_TICKS(CAN_HANDLER_HANDLE_RX_MS)) !=
 	        W_SUCCESS) {
 		// log fatal eerror message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register CAN RX task");
@@ -212,7 +212,7 @@ static void system_init_task(void *arg) {
 
 	// if can_handler doesnt exists and registration is not successfull
 	if ((NULL == can_handler_handle_tx) ||
-	    watchdog_register_task(can_handler_handle_tx, pdMS_TO_TICKS(CAN_HANDLER_HANDLE_TX_TICKS)) !=
+	    watchdog_register_task(can_handler_handle_tx, pdMS_TO_TICKS(CAN_HANDLER_HANDLE_TX_MS)) !=
 	        W_SUCCESS) {
 		// log fatal eerror message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register CAN TX task");
@@ -224,7 +224,7 @@ static void system_init_task(void *arg) {
 
 	// if can_handler doesnt exists and registration is not successfull
 	if ((NULL == movella_task_handle) ||
-	    watchdog_register_task(movella_task_handle, pdMS_TO_TICKS(MOVELLA_TICKS)) != W_SUCCESS) {
+	    watchdog_register_task(movella_task_handle, pdMS_TO_TICKS(MOVELLA_MS)) != W_SUCCESS) {
 		// log fatal eerror message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register movella task");
 		// proc_handle_fatal_error("watchdog");
@@ -235,8 +235,7 @@ static void system_init_task(void *arg) {
 
 	// if ms5611_task doesnt exits or registration is not successful
 	if ((NULL == ms5611_task_handle) ||
-	    watchdog_register_task(ms5611_task_handle,
-	                           pdMS_TO_TICKS(MS5611_TIMEOUT_TICKS) != W_SUCCESS)) {
+	    watchdog_register_task(ms5611_task_handle, pdMS_TO_TICKS(MS5611_TIMEOUT_MS)) != W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register ms5611 task");
 		// proc_handle_fatal_error("watchdog");
@@ -246,7 +245,7 @@ static void system_init_task(void *arg) {
 
 	// if log_task doesnt exits or registration is not successful
 	if ((NULL == log_task_handle) ||
-	    watchdog_register_task(log_task_handle, pdMS_TO_TICKS(LOGGER_TIMEOUT_TICKS)) != W_SUCCESS) {
+	    watchdog_register_task(log_task_handle, pdMS_TO_TICKS(LOGGER_TIMEOUT_MS)) != W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register log task");
 		// proc_handle_fatal_error("watchdog");
@@ -258,7 +257,7 @@ static void system_init_task(void *arg) {
 
 	// if ad_breakout_board_task doesnt exits or registration is not successful
 	if ((NULL == ad_breakout_task_handle) ||
-	    watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(AD_BREAKOUT_TIMEOUT_TICKS)) !=
+	    watchdog_register_task(ad_breakout_task_handle, pdMS_TO_TICKS(AD_BREAKOUT_TIMEOUT_MS)) !=
 	        W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register ad_breakout_board task");
@@ -270,8 +269,7 @@ static void system_init_task(void *arg) {
 
 	// if telemetry_task doesnt exits or registration is not successful
 	if ((NULL == telem_task_handle) ||
-	    watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(TELEM_TIMEOUT_TICKS)) !=
-	        W_SUCCESS) {
+	    watchdog_register_task(telem_task_handle, pdMS_TO_TICKS(TELEM_TIMEOUT_MS)) != W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register telemetry task");
 		// proc_handle_fatal_error("watchdog");
@@ -319,7 +317,7 @@ w_status_t init_tasks(void) {
 
 	// if Sysinit_task doesnt exits or registration is not successful
 	if ((NULL == init_task_handle) ||
-	    watchdog_register_task(init_task_handle, pdMS_TO_TICKS(INIT_TIMEOUT_TICKS)) != W_SUCCESS) {
+	    watchdog_register_task(init_task_handle, pdMS_TO_TICKS(INIT_TIMEOUT_MS)) != W_SUCCESS) {
 		// log fatal error message
 		log_text(0, LOG_LVL_WARN, "watchdog", "Failed to register SysInit task");
 		// proc_handle_fatal_error("watchdog");
