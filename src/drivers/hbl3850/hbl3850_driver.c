@@ -28,6 +28,7 @@
 #define CMD_PRIORITY 8U
 #define COMMAND_TYPE_UNITLESS 0U
 #define ARRAY_COMMAND_TYPE 1010U
+#define ARRAY_COMMAND_LEN 5U // actuator ID, command type, float16 value, tail
 #define ACTUATOR_STATUS_TYPE 1011U
 #define NODE_STATUS_TYPE 341U
 #define TEMPERATURE_STATUS_TYPE 1110U
@@ -114,6 +115,20 @@ typedef struct {
 } hbl3850_motor_t;
 
 /**
+ * @brief Copy of one motor's state that get_status reads, taken in a single critical section
+ */
+typedef struct {
+	bool configured;
+	uint8_t node_id;
+	hbl3850_health_raw_t health;
+	bool node_received;
+	bool circuit_received;
+	bool temperature_received;
+	bool time_ok; // whether now_ms was read successfully
+	uint32_t now_ms; // time of the snapshot, read in the same critical section
+} hbl3850_motor_snapshot_t;
+
+/**
  * @brief Status variables describing the health of the HBL3850 driver module
  */
 typedef struct {
@@ -159,13 +174,13 @@ w_status_t hbl3850_motor_init(hbl3850_motor_id_t motor, uint8_t node_id, uint8_t
 	}
 	for (hbl3850_motor_id_t m_id = 0; m_id < HBL3850_MOTOR_COUNT; ++m_id) {
 		if (s_motors[m_id].configured &&
-		    (m_id != motor && ((s_motors[m_id].node_id == node_id) ||
-		                       (s_motors[m_id].actuator_id == actuator_id)))) {
+		    ((m_id != motor) && ((s_motors[m_id].node_id == node_id) ||
+		                         (s_motors[m_id].actuator_id == actuator_id)))) {
 			++s_driver_health.invalid_args;
 			return W_INVALID_PARAM;
 		}
 	}
-	if (node_id == 0 || node_id > 127) {
+	if ((node_id == 0) || (node_id > 127)) {
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
@@ -325,6 +340,146 @@ static void stop_can(void) {
 }
 
 /**
+ * @brief Handle one Actuator.Status frame. Reassembles the 2-frame transfer, checks its CRC and
+ * stores the raw position and speed bits for the motor. Called from ISR context.
+ * @param[in] motor_index Index into s_motors of the sending motor
+ * @param[in] rx_data     Frame payload
+ * @param[in] len         Frame payload length in bytes
+ * @param[in] now_ms      Time the frame was received
+ */
+static void handle_actuator_status(int motor_index, const uint8_t *rx_data, uint32_t len,
+                                   uint32_t now_ms) {
+	// Tail byte: start (bit 7), end (bit 6), toggle (bit 5), transfer ID (bits 4-0)
+	uint8_t tail = rx_data[len - 1];
+	bool tail_start = (tail & TAIL_START_OF_TRANSFER) != 0;
+	bool tail_end = (tail & TAIL_END_OF_TRANSFER) != 0;
+	bool tail_toggle = (tail & TAIL_TOGGLE) != 0;
+	uint8_t transfer_id = tail & 0x1f;
+	hbl3850_rx_transfer_t *rx = &s_motors[motor_index].status_rx;
+
+	if ((tail_start && !tail_end && !tail_toggle) && (len == 8)) {
+		// Frame 1: transfer CRC (bytes 0-1), payload 0-4 (bytes 2-6), tail
+		rx->crc = (uint16_t)(rx_data[0] | (rx_data[1] << 8));
+		rx->payload[0] = rx_data[2];
+		rx->payload[1] = rx_data[3];
+		rx->payload[2] = rx_data[4];
+		rx->payload[3] = rx_data[5];
+		rx->payload[4] = rx_data[6];
+		rx->transfer_id = transfer_id;
+		rx->expect_toggle = true;
+		rx->len = 5;
+	} else if ((!tail_start && tail_end && tail_toggle) && (len == 4) && (rx->len == 5) &&
+	           (transfer_id == rx->transfer_id)) {
+		// TODO: record frame 1's receive time and reject frame 2 if it arrives after the DroneCAN
+		// transfer timeout (2 s), so a stale frame 1 can't pair with a much later frame 2
+		// Frame 2: payload 5-7 (bytes 0-2), tail
+		rx->payload[5] = rx_data[0];
+		rx->payload[6] = rx_data[1];
+		rx->payload[7] = rx_data[2];
+		uint16_t calc = dronecan_transfer_crc(ACTUATOR_STATUS_SIGNATURE, rx->payload, 8);
+		bool crc_ok = (calc == rx->crc);
+		rx->len = 0;
+		// Payload: actuator ID (0), position (1-2), force (3-4), speed (5-6), power (7)
+		if (!crc_ok) {
+			// Corrupted or mismatched frames, drop the reading
+			++s_driver_health.status_crc_fails;
+		} else if (rx->payload[0] != s_motors[motor_index].actuator_id) {
+			// Reading is for a different actuator, drop it
+			++s_driver_health.rx_errors;
+		} else {
+			// Store raw float16 bits; get_encoder converts them in task context
+			s_motors[motor_index].encoder_raw.pos_bits =
+				(uint16_t)((rx->payload[2] << 8) | rx->payload[1]);
+			s_motors[motor_index].encoder_raw.speed_bits =
+				(uint16_t)((rx->payload[6] << 8) | rx->payload[5]);
+			s_motors[motor_index].encoder_raw.timestamp_ms = now_ms;
+			s_motors[motor_index].encoder_received = true;
+		}
+	} else {
+		// Out-of-sequence or malformed frame: drop any partial transfer
+		rx->len = 0;
+		++s_driver_health.status_seq_drops;
+	}
+}
+
+/**
+ * @brief Check that a frame is a complete single-frame transfer of the expected length
+ * @param[in] rx_data      Frame payload
+ * @param[in] len          Frame payload length in bytes
+ * @param[in] expected_len Required payload length, including the tail byte
+ * @return true if the length matches and the tail has start and end set and toggle clear
+ */
+static bool is_single_frame(const uint8_t *rx_data, uint32_t len, uint32_t expected_len) {
+	if (len != expected_len) {
+		return false;
+	}
+	uint8_t tail = rx_data[len - 1];
+	return ((tail & TAIL_START_OF_TRANSFER) != 0) && ((tail & TAIL_END_OF_TRANSFER) != 0) &&
+	       ((tail & TAIL_TOGGLE) == 0);
+}
+
+/**
+ * @brief Handle one NodeStatus frame and update the motor's health. Called from ISR context.
+ * @param[in] motor_index Index into s_motors of the sending motor
+ * @param[in] rx_data     Frame payload
+ * @param[in] len         Frame payload length in bytes
+ * @param[in] now_ms      Time the frame was received
+ */
+static void handle_node_status(int motor_index, const uint8_t *rx_data, uint32_t len,
+                               uint32_t now_ms) {
+	if (!is_single_frame(rx_data, len, 8)) {
+		++s_driver_health.rx_errors;
+		return;
+	}
+	s_motors[motor_index].health.node_health = (rx_data[4] >> 6) & 0x03;
+	s_motors[motor_index].health.node_mode = (rx_data[4] >> 3) & 0x07;
+	s_motors[motor_index].health.nodestatus_timestamp_ms = now_ms;
+	// Set after health is written, so anything waiting on heard sees complete data
+	s_motors[motor_index].heard = true;
+}
+
+/**
+ * @brief Handle one CircuitStatus frame and store its raw values. Called from ISR context.
+ * @param[in] motor_index Index into s_motors of the sending motor
+ * @param[in] rx_data     Frame payload
+ * @param[in] len         Frame payload length in bytes
+ * @param[in] now_ms      Time the frame was received
+ */
+static void handle_circuit_status(int motor_index, const uint8_t *rx_data, uint32_t len,
+                                  uint32_t now_ms) {
+	if (!is_single_frame(rx_data, len, 8)) {
+		++s_driver_health.rx_errors;
+		return;
+	}
+	// Store raw float16 bits; get_health converts them in task context
+	s_motors[motor_index].health.voltage_bits = (uint16_t)(rx_data[2] | (rx_data[3] << 8));
+	s_motors[motor_index].health.current_bits = (uint16_t)(rx_data[4] | (rx_data[5] << 8));
+	s_motors[motor_index].health.circuit_err_flags = rx_data[6];
+	s_motors[motor_index].health.circuit_timestamp_ms = now_ms;
+	s_motors[motor_index].circuit_received = true;
+}
+
+/**
+ * @brief Handle one Temperature frame and store its raw values. Called from ISR context.
+ * @param[in] motor_index Index into s_motors of the sending motor
+ * @param[in] rx_data     Frame payload
+ * @param[in] len         Frame payload length in bytes
+ * @param[in] now_ms      Time the frame was received
+ */
+static void handle_temperature(int motor_index, const uint8_t *rx_data, uint32_t len,
+                               uint32_t now_ms) {
+	if (!is_single_frame(rx_data, len, 6)) {
+		++s_driver_health.rx_errors;
+		return;
+	}
+	// Store raw float16 bits; get_health converts them in task context
+	s_motors[motor_index].health.temperature_bits = (uint16_t)(rx_data[2] | (rx_data[3] << 8));
+	s_motors[motor_index].health.temp_err_flags = rx_data[4];
+	s_motors[motor_index].health.temp_timestamp_ms = now_ms;
+	s_motors[motor_index].temperature_received = true;
+}
+
+/**
  * @brief Check whether NodeStatus has been received from every configured motor
  * @return true if all configured motors have been heard, false otherwise
  */
@@ -344,7 +499,7 @@ static bool all_motors_heard(void) {
  */
 static int find_motor_by_node_id(uint8_t node_id) {
 	for (hbl3850_motor_id_t motor_id = 0; motor_id < HBL3850_MOTOR_COUNT; ++motor_id) {
-		if (s_motors[motor_id].node_id == node_id && s_motors[motor_id].configured) {
+		if ((s_motors[motor_id].node_id == node_id) && s_motors[motor_id].configured) {
 			return motor_id;
 		}
 	}
@@ -384,6 +539,8 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 			s_motors[motor_id].circuit_received = false;
 			s_motors[motor_id].temperature_received = false;
 			s_motors[motor_id].status_rx.len = 0;
+			// TODO: also clear health and encoder_raw, so a retried init (e.g. after a slot was
+			// reassigned to a new node ID) can't return the previous motor's stale data
 		}
 	}
 
@@ -424,6 +581,8 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 	}
 	uint32_t now_ms = start_ms;
 	while (!(all_motors_heard()) && (now_ms - start_ms <= can_init_timeout_ms)) {
+		// TODO: sleep min(500, remaining) so a short can_init_timeout_ms isn't overshot by up to
+		// 500 ms
 		vTaskDelay(pdMS_TO_TICKS(500));
 		if (timer_get_ms(&now_ms) != W_SUCCESS) {
 			++s_driver_health.timer_get_ms_fails;
@@ -487,7 +646,7 @@ static w_status_t hbl3850_can_transmit_ext(uint32_t ext_id, const uint8_t *data,
 }
 
 w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_deg) {
-	if (motor >= HBL3850_MOTOR_COUNT || isnan(angle_deg)) {
+	if ((motor >= HBL3850_MOTOR_COUNT) || isnan(angle_deg)) {
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
@@ -495,8 +654,9 @@ w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_d
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
-	// ArrayCommand payload: actuator ID, command type, float16 value (low byte first), tail
-	uint8_t data[5];
+	// ArrayCommand payload: actuator ID, command type, float16 value (low byte first), tail.
+	// The HAL copies TX data 4 bytes at a time, so the buffer is 8 bytes and only 5 are sent.
+	uint8_t data[8] = {0};
 	data[0] = s_motors[motor].actuator_id;
 	data[1] = COMMAND_TYPE_UNITLESS;
 	// The motor maps the unitless range -1..1 to -60..+60 degrees
@@ -519,7 +679,7 @@ w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_d
 	data[4] = TAIL_START_OF_TRANSFER | TAIL_END_OF_TRANSFER | g_cmd_transfer_id;
 	g_cmd_transfer_id = (g_cmd_transfer_id + 1) & 0x1f; // transfer ID is 5 bits, wraps at 32
 
-	return hbl3850_can_transmit_ext(can_id, data, sizeof(data));
+	return hbl3850_can_transmit_ext(can_id, data, ARRAY_COMMAND_LEN);
 }
 
 w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor, hbl3850_encoder_t *encoder) {
@@ -598,7 +758,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	int motor_index = find_motor_by_node_id((uint8_t)source);
 
 	// Ignore service frames and frames from unknown nodes
-	if (service || motor_index == -1) {
+	if (service || (motor_index == -1)) {
 		return;
 	}
 
@@ -610,92 +770,36 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 		return;
 	}
 
+	uint32_t len = rx_header.DataLength;
 	if (typeID == ACTUATOR_STATUS_TYPE) {
-		// Tail byte: start (bit 7), end (bit 6), toggle (bit 5), transfer ID (bits 4-0)
-		uint8_t tail = rx_data[rx_header.DataLength - 1];
-		bool tail_start = (tail & TAIL_START_OF_TRANSFER) != 0;
-		bool tail_end = (tail & TAIL_END_OF_TRANSFER) != 0;
-		bool tail_toggle = (tail & TAIL_TOGGLE) != 0;
-		uint8_t transfer_id = tail & 0x1f;
-		hbl3850_rx_transfer_t *rx = &s_motors[motor_index].status_rx;
-
-		if ((tail_start && !tail_end && !tail_toggle) && rx_header.DataLength == 8) {
-			// Frame 1: transfer CRC (bytes 0-1), payload 0-4 (bytes 2-6), tail
-			rx->crc = (uint16_t)(rx_data[0] | (rx_data[1] << 8));
-			rx->payload[0] = rx_data[2];
-			rx->payload[1] = rx_data[3];
-			rx->payload[2] = rx_data[4];
-			rx->payload[3] = rx_data[5];
-			rx->payload[4] = rx_data[6];
-			rx->transfer_id = transfer_id;
-			rx->expect_toggle = true;
-			rx->len = 5;
-			return;
-		} else if ((!tail_start && tail_end && tail_toggle) && (rx_header.DataLength == 4) &&
-		           (rx->len == 5) && (transfer_id == rx->transfer_id)) {
-			// Frame 2: payload 5-7 (bytes 0-2), tail
-			rx->payload[5] = rx_data[0];
-			rx->payload[6] = rx_data[1];
-			rx->payload[7] = rx_data[2];
-			uint16_t calc = dronecan_transfer_crc(ACTUATOR_STATUS_SIGNATURE, rx->payload, 8);
-			bool crc_ok = (calc == rx->crc);
-			rx->len = 0;
-			if (!crc_ok) {
-				++s_driver_health.status_crc_fails;
-				return;
-			} // corrupted or mismatched, drop it
-			// Payload: actuator ID (0), position (1-2), force (3-4), speed (5-6), power (7)
-			if (rx->payload[0] != s_motors[motor_index].actuator_id) {
-				++s_driver_health.rx_errors;
-				return;
-			}
-			// Store raw float16 bits; get_encoder converts them in task context
-			s_motors[motor_index].encoder_raw.pos_bits =
-				(uint16_t)((rx->payload[2] << 8) | rx->payload[1]);
-			s_motors[motor_index].encoder_raw.speed_bits =
-				(uint16_t)((rx->payload[6] << 8) | rx->payload[5]);
-			s_motors[motor_index].encoder_raw.timestamp_ms = now_ms;
-			s_motors[motor_index].encoder_received = true;
-		} else {
-			// Out-of-sequence or malformed frame: drop any partial transfer
-			rx->len = 0;
-			++s_driver_health.status_seq_drops;
-			return;
-		}
+		handle_actuator_status(motor_index, rx_data, len, now_ms);
 	} else if (typeID == NODE_STATUS_TYPE) {
-		if (rx_header.DataLength < 8) {
-			++s_driver_health.rx_errors;
-			return;
-		}
-		uint8_t health = (rx_data[4] >> 6) & 0x03;
-		uint8_t mode = (rx_data[4] >> 3) & 0x07;
-		s_motors[motor_index].health.node_health = health;
-		s_motors[motor_index].health.node_mode = mode;
-		s_motors[motor_index].health.nodestatus_timestamp_ms = now_ms;
-		// Set after health is written, so anything waiting on heard sees complete data
-		s_motors[motor_index].heard = true;
+		handle_node_status(motor_index, rx_data, len, now_ms);
 	} else if (typeID == CIRCUIT_STATUS_TYPE) {
-		if (rx_header.DataLength < 8) {
-			++s_driver_health.rx_errors;
-			return;
-		}
-		// Store raw float16 bits; get_health converts them in task context
-		s_motors[motor_index].health.voltage_bits = (uint16_t)(rx_data[2] | (rx_data[3] << 8));
-		s_motors[motor_index].health.current_bits = (uint16_t)(rx_data[4] | (rx_data[5] << 8));
-		s_motors[motor_index].health.circuit_err_flags = rx_data[6];
-		s_motors[motor_index].health.circuit_timestamp_ms = now_ms;
-		s_motors[motor_index].circuit_received = true;
+		handle_circuit_status(motor_index, rx_data, len, now_ms);
 	} else if (typeID == TEMPERATURE_STATUS_TYPE) {
-		if (rx_header.DataLength < 6) {
-			++s_driver_health.rx_errors;
-			return;
-		}
-		// Store raw float16 bits; get_health converts them in task context
-		s_motors[motor_index].health.temperature_bits = (uint16_t)(rx_data[2] | (rx_data[3] << 8));
-		s_motors[motor_index].health.temp_err_flags = rx_data[4];
-		s_motors[motor_index].health.temp_timestamp_ms = now_ms;
-		s_motors[motor_index].temperature_received = true;
+		handle_temperature(motor_index, rx_data, len, now_ms);
 	}
+}
+
+/**
+ * @brief Copy a motor's health state, validity flags and the current time together, since the RX
+ * ISR writes them. Reading the clock in the same critical section means a timestamp refreshed by
+ * the ISR can never be newer than now_ms. timer_get_ms only reads a timer register, so it's safe
+ * here.
+ * @param[in]  motor_id Index into s_motors
+ * @param[out] snapshot Copy of the motor's state
+ */
+static void take_motor_snapshot(hbl3850_motor_id_t motor_id, hbl3850_motor_snapshot_t *snapshot) {
+	taskENTER_CRITICAL();
+	snapshot->time_ok = (timer_get_ms(&snapshot->now_ms) == W_SUCCESS);
+	snapshot->configured = s_motors[motor_id].configured;
+	snapshot->node_id = s_motors[motor_id].node_id;
+	snapshot->health = s_motors[motor_id].health;
+	snapshot->node_received = s_motors[motor_id].heard;
+	snapshot->circuit_received = s_motors[motor_id].circuit_received;
+	snapshot->temperature_received = s_motors[motor_id].temperature_received;
+	taskEXIT_CRITICAL();
 }
 
 health_status_t hbl3850_get_status(void) {
@@ -708,8 +812,6 @@ health_status_t hbl3850_get_status(void) {
 		.error_bitfield = 0
 	};
 
-	uint32_t now_ms = 0;
-
 	bool any_configured = false;
 
 	if (!s_driver_health.is_init) {
@@ -718,77 +820,64 @@ health_status_t hbl3850_get_status(void) {
 	}
 
 	for (unsigned int motor_id = 0; motor_id < HBL3850_MOTOR_COUNT; ++motor_id) {
-		hbl3850_health_raw_t health;
-		bool configured;
-		bool node_received;
-		bool circuit_received;
-		bool temperature_received;
-		uint8_t node_id;
+		hbl3850_motor_snapshot_t snap;
+		take_motor_snapshot((hbl3850_motor_id_t)motor_id, &snap);
 
-		// Copy the data and its validity flags together, since the RX ISR writes them
-		taskENTER_CRITICAL();
-		configured = s_motors[motor_id].configured;
-		health = s_motors[motor_id].health;
-		node_received = s_motors[motor_id].heard;
-		circuit_received = s_motors[motor_id].circuit_received;
-		temperature_received = s_motors[motor_id].temperature_received;
-		node_id = s_motors[motor_id].node_id;
-		taskEXIT_CRITICAL();
+		// Only configured motors are checked (no continue/break, per safety-critical style)
+		if (snap.configured) {
+			any_configured = true;
 
-		if (!configured) {
-			continue;
-		}
+			if (!snap.time_ok) {
+				++s_driver_health.timer_get_ms_fails;
+				status.error_bitfield |= (1U << CANARDS_MODULE_E_INTERNAL_OFFSET);
+				log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Failed to get time");
+			} else {
+				if (!snap.node_received) {
+					status.error_bitfield |= (1U << CANARDS_MODULE_E_TIMEOUT_OFFSET);
+					log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+					         "Motor %u (node %u): no NodeStatus", motor_id, snap.node_id);
+				} else {
+					if ((uint32_t)(snap.now_ms - snap.health.nodestatus_timestamp_ms) >
+					    HBL3850_NODE_TIMEOUT_MS) {
+						status.error_bitfield |= (1U << CANARDS_MODULE_E_TIMEOUT_OFFSET);
+						log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+						         "Motor %u (node %u): offline", motor_id, snap.node_id);
+					}
 
-		any_configured = true;
+					if (snap.health.node_health != 0U) {
+						status.error_bitfield |= (1U << CANARDS_MODULE_E_ERROR_STATE_OFFSET);
+						log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+						         "Motor %u (node %u): NodeStatus health %u", motor_id, snap.node_id,
+						         snap.health.node_health);
+					}
+				}
 
-		if (timer_get_ms(&now_ms) != W_SUCCESS) {
-			++s_driver_health.timer_get_ms_fails;
-			status.error_bitfield |= (1U << CANARDS_MODULE_E_INTERNAL_OFFSET);
-			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Failed to get time");
-			break;
-		}
+				if (!snap.circuit_received ||
+				    ((uint32_t)(snap.now_ms - snap.health.circuit_timestamp_ms) >
+				     HBL3850_CIRCUIT_TIMEOUT_MS)) {
+					status.error_bitfield |= (1U << CANARDS_MODULE_E_NO_DATA_OFFSET);
+					log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+					         "Motor %u (node %u): no recent CircuitStatus", motor_id, snap.node_id);
+				} else if (snap.health.circuit_err_flags != HBL3850_CIRCUIT_ERR_NONE) {
+					status.error_bitfield |= (1U << CANARDS_MODULE_E_DEVICE_FAULT_OFFSET);
+					log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+					         "Motor %u (node %u): circuit error flags 0x%02x", motor_id,
+					         snap.node_id, snap.health.circuit_err_flags);
+				}
 
-		if (!node_received) {
-			status.error_bitfield |= (1U << CANARDS_MODULE_E_TIMEOUT_OFFSET);
-			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Motor %u (node %u): no NodeStatus",
-			         motor_id, node_id);
-		} else {
-			if ((uint32_t)(now_ms - health.nodestatus_timestamp_ms) > HBL3850_NODE_TIMEOUT_MS) {
-				status.error_bitfield |= (1U << CANARDS_MODULE_E_TIMEOUT_OFFSET);
-				log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Motor %u (node %u): offline",
-				         motor_id, node_id);
+				if (!snap.temperature_received ||
+				    ((uint32_t)(snap.now_ms - snap.health.temp_timestamp_ms) >
+				     HBL3850_TEMP_TIMEOUT_MS)) {
+					status.error_bitfield |= (1U << CANARDS_MODULE_E_NO_DATA_OFFSET);
+					log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+					         "Motor %u (node %u): no recent Temperature", motor_id, snap.node_id);
+				} else if (snap.health.temp_err_flags != HBL3850_TEMP_ERR_NONE) {
+					status.error_bitfield |= (1U << CANARDS_MODULE_E_DEVICE_FAULT_OFFSET);
+					log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
+					         "Motor %u (node %u): temperature error flags 0x%02x", motor_id,
+					         snap.node_id, snap.health.temp_err_flags);
+				}
 			}
-
-			if (health.node_health != 0U) {
-				status.error_bitfield |= (1U << CANARDS_MODULE_E_ERROR_STATE_OFFSET);
-				log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
-				         "Motor %u (node %u): NodeStatus health %u", motor_id, node_id,
-				         health.node_health);
-			}
-		}
-
-		if (!circuit_received ||
-		    ((uint32_t)(now_ms - health.circuit_timestamp_ms) > HBL3850_CIRCUIT_TIMEOUT_MS)) {
-			status.error_bitfield |= (1U << CANARDS_MODULE_E_NO_DATA_OFFSET);
-			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
-			         "Motor %u (node %u): no recent CircuitStatus", motor_id, node_id);
-		} else if (health.circuit_err_flags != HBL3850_CIRCUIT_ERR_NONE) {
-			status.error_bitfield |= (1U << CANARDS_MODULE_E_DEVICE_FAULT_OFFSET);
-			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
-			         "Motor %u (node %u): circuit error flags 0x%02x", motor_id, node_id,
-			         health.circuit_err_flags);
-		}
-
-		if (!temperature_received ||
-		    ((uint32_t)(now_ms - health.temp_timestamp_ms) > HBL3850_TEMP_TIMEOUT_MS)) {
-			status.error_bitfield |= (1U << CANARDS_MODULE_E_NO_DATA_OFFSET);
-			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
-			         "Motor %u (node %u): no recent Temperature", motor_id, node_id);
-		} else if (health.temp_err_flags != HBL3850_TEMP_ERR_NONE) {
-			status.error_bitfield |= (1U << CANARDS_MODULE_E_DEVICE_FAULT_OFFSET);
-			log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850",
-			         "Motor %u (node %u): temperature error flags 0x%02x", motor_id, node_id,
-			         health.temp_err_flags);
 		}
 	}
 
@@ -798,6 +887,8 @@ health_status_t hbl3850_get_status(void) {
 	}
 
 	// Driver-wide errors: report only if the counter went up since the last health check
+	// TODO: read each counter once into a local and use that for the compare, log and baseline, so
+	// an ISR increment between the log and the baseline update isn't lost
 
 	if (s_driver_health.tx_errors != last_tx_errors) {
 		status.error_bitfield |= (1U << CANARDS_MODULE_E_TX_FAILURE_OFFSET);

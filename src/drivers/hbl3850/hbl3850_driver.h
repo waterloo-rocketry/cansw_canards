@@ -79,7 +79,7 @@ w_status_t hbl3850_motor_init(hbl3850_motor_id_t motor, uint8_t node_id, uint8_t
  * @param[in] can_init_timeout_ms Amount of time to wait to receive NodeStatus
  * @return W_SUCCESS, W_INVALID_PARAM if hfdcan is NULL, W_FAILURE if no motors are configured,
  * if CAN setup fails, if a configured motor isn't heard within the timeout,
- * or if it is called a second time.
+ * or if the driver has already initialized successfully.
  */
 w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init_timeout_ms);
 
@@ -117,7 +117,7 @@ health_status_t hbl3850_get_status(void);
  * @param[in] motor Which motor (HBL3850_MOTOR_1..HBL3850_MOTOR_4)
  * @param[out] health_stats Pointer to hbl3850_health_t struct variable
  * @return W_SUCCESS on success, W_FAILURE if health_stats is NULL or no health data received yet,
- * W_INVALID_PARAM if motor is invalid
+ * W_INVALID_PARAM if motor is invalid or not configured
  */
 w_status_t hbl3850_get_health(hbl3850_motor_id_t motor, hbl3850_health_t *health_stats);
 
