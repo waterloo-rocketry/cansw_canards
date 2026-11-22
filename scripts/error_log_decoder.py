@@ -3,7 +3,7 @@
 # Will delete all the comments later, it is a bit cramped right now
 
 
-
+import sys # for logging errors :)
 import re # for regex
 import argparse # for command line args
 import struct # for converting binary info to float
@@ -130,28 +130,43 @@ def read_err_file(args, event_dict, file_dict, task_dict):
 def translate_log(chunk, event_dict, file_dict, task_dict):
     timestamp = int.from_bytes(chunk[0:4], byteorder="little") # int
     event_id = int.from_bytes(chunk[4:6], byteorder="little") # key
-    num_args = event_dict[event_id].num_args # int
-    message = event_dict[event_id].message # string
+
+    event_tuple = event_dict.get(event_id, "unknown") # named tuple
+    if (event_tuple == "unknown" and event_id != 0):
+            print(f"Unknown event ID: {event_id}", file=sys.stderr)
+            return "Unknown event id, no message found"
+    num_args = event_tuple.num_args # int
+    message = event_tuple.message # string
+
     task_id = int.from_bytes(chunk[6:7], byteorder="little") # key
-    task_name = task_dict[task_id] # string
+    task_name = task_dict.get(task_id, "unknown")
+    # If task id not found in dict, log unknown id
+    if (task_name == "unknown" and task_id != 0):
+        print(f"Unknown task ID: {task_id}", file=sys.stderr)
+
     file_id = int.from_bytes(chunk[7:8], byteorder="little") # key
-    filepath = file_dict[file_id] # string
+    filepath = file_dict.get(file_id, "unknown") # string
+    if (filepath == "unknown" and file_id != 0):
+        print(f"Unknown file ID: {file_id}", file=sys.stderr)
+
+    if (task_id == 0):
+        task_name = "LOG_TASK_ERROR" # TODO: Ask is this the right task name?
+    if (file_id == 0):
+            return None
+    if (event_id == 0):
+            return None
+    
     line_num = int.from_bytes(chunk[8:10], byteorder="little") # int
     counter = int.from_bytes(chunk[10:12], byteorder="little") # int
     # args = int.from_bytes(chunk[12:32], byteorder="little")
-                        # Before interpreting this, need to finalise how many bytes each arg will take,
-                        # and if it'll be 4 bytes per no matter what or e.g. 2 bytes for half-prec float
-                        # so we can write more numbers, etc.
-                        # For now, I will assume 4 bytes per no matter what.
     binary_args = [chunk[12:16], chunk[16:20], chunk[20:24], chunk[24:28], chunk[28:32]]
 
     # Insert args into message with arg placeholders
     msg_with_args = insert_args(message, binary_args)
 
-    # TODO: Format all info in a string. Ask what format we want for this.
-        # Timestamp: Event message occured X times, TASK: task, FILE: filepath, LINE: line
-
-    formatted_msg = msg_with_args # TEMP
+    # Timestamp: Event message occured X times, TASK: task, FILE: filepath, LINE: line
+    formatted_msg = f"{timestamp}: {msg_with_args} occured {counter} times, TASK: {task_name}, FILE: {filepath}, LINE: {line_num}."
+    
 
     return formatted_msg
 
@@ -235,9 +250,10 @@ def main():
     # Read the .err file, put into array of error log lines
     lines = read_err_file(args, event_dict, file_dict, task_dict)
 
-    # TODO: Write lines into .txt file
-    # TEMP: print them out
-    print(lines)
+    # Write lines into .txt file
+    with open('decoded_error_logs.txt', 'w', encoding='utf-8') as f:
+        for line in lines:
+            f.write(line + "\n")
 
 
 # Run script
