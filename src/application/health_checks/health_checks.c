@@ -95,6 +95,7 @@ w_status_t watchdog_kick(void) {
 			watchdog_tasks[i].last_kick_timestamp_ms = current_time_ms;
 
 			// log a message every second
+			// this could only be called at less than 10Hz
 			static uint32_t last_log_ms = 0;
 			if ((uint32_t)(current_time_ms - last_log_ms) == TASK_DELAY_MS) {
 				log_text(0, LOG_LVL_INFO, "watchdog", "Kick recieved %s, time=%lu",
