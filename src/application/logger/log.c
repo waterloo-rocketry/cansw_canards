@@ -8,6 +8,7 @@
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
+// TOOD: add when PR 705 goes through #include "application/logging_formatter/logging_formatter.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
@@ -31,12 +32,19 @@ static char error_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.ERR";
 static char text_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.TXT";
 static char data_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.BIN";
 
+// TODO: temporary until PR 705 goes through
+typedef enum {
+	LOGGING_FORMATTING_DATA = 0x00,
+	LOGGING_FORMATTING_ERROR = 0x01,
+	LOGGING_FORMATTING_TEXT = 0x02
+} logging_formatter_data_type_t;
+
 typedef struct {
 	char data[LOG_BUFFER_SIZE];
 	uint32_t next_msg_num;
 	SemaphoreHandle_t next_msg_num_mutex;
 	SemaphoreHandle_t msgs_done_semaphore;
-	bool is_not_data;
+	logging_formatter_data_type_t type;
 	bool is_full;
 } log_buffer_t;
 
@@ -202,21 +210,28 @@ static void log_reset_buffer(log_buffer_t *buffer) {
 	// Clear data region
 	memset(buffer->data, 0, LOG_BUFFER_SIZE);
 
-	// Write the buffer header message if it's a data buffer
-	if (!buffer->is_not_data) {
-		log_data_container_t data = {0};
-		data.header.version = LOG_DATA_FORMAT_VERSION;
-		data.header.index = total_data_log_buffers;
-		// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
-		uint32_t timestamp = 0;
-		(void)timer_get_ms(&timestamp);
-		log_data_write_to_region(buffer, 0, LOG_TYPE_HEADER, timestamp, &data);
-		total_data_log_buffers++;
+	switch (buffer->type) {
+		case LOGGING_FORMATTING_DATA: {
+			// Write the buffer header message for data buffers
+			log_data_container_t data = {0};
+			data.header.version = LOG_DATA_FORMAT_VERSION;
+			data.header.index = total_data_log_buffers;
+			// Use dummy timestamp of 0 if failed to get timestamp, as in log_text()
+			uint32_t timestamp = 0;
+			(void)timer_get_ms(&timestamp);
+			log_data_write_to_region(buffer, 0, LOG_TYPE_HEADER, timestamp, &data);
+			total_data_log_buffers++;
 
-		// Reset these last to avoid another task using this buffer before we're done resetting it
-		buffer->next_msg_num = 1;
-	} else {
-		buffer->next_msg_num = 0;
+			// Reset these last to avoid another task using this buffer before we're done
+			// resetting it
+			buffer->next_msg_num = 1;
+			break;
+		}
+		case LOGGING_FORMATTING_ERROR:
+		case LOGGING_FORMATTING_TEXT:
+		default:
+			buffer->next_msg_num = 0;
+			break;
 	}
 
 	buffer->is_full = false;
@@ -261,7 +276,7 @@ w_status_t log_init(void) {
 	// Initialize error buffers
 	for (int i = 0; i < NUM_ERROR_LOG_BUFFERS; i++) {
 		log_buffer_t *buffer = &log_error_buffers[i];
-		buffer->is_not_data = true;
+		buffer->type = LOGGING_FORMATTING_ERROR;
 		buffer->next_msg_num_mutex = xSemaphoreCreateMutex();
 		if (NULL == buffer->next_msg_num_mutex) {
 			logger_health.init_os_failed = true;
@@ -278,7 +293,7 @@ w_status_t log_init(void) {
 	// Initialize text buffers
 	for (int i = 0; i < NUM_TEXT_LOG_BUFFERS; i++) {
 		log_buffer_t *buffer = &log_text_buffers[i];
-		buffer->is_not_data = true;
+		buffer->type = LOGGING_FORMATTING_TEXT;
 		buffer->next_msg_num_mutex = xSemaphoreCreateMutex();
 		if (NULL == buffer->next_msg_num_mutex) {
 			logger_health.init_os_failed = true;
@@ -295,7 +310,7 @@ w_status_t log_init(void) {
 	// Initialize data buffers
 	for (int i = 0; i < NUM_DATA_LOG_BUFFERS; i++) {
 		log_buffer_t *buffer = &log_data_buffers[i];
-		buffer->is_not_data = false;
+		buffer->type = LOGGING_FORMATTING_DATA;
 		buffer->next_msg_num_mutex = xSemaphoreCreateMutex();
 		if (NULL == buffer->next_msg_num_mutex) {
 			logger_health.init_os_failed = true;
