@@ -1,11 +1,11 @@
 #ifndef CAN_SENSOR_H
 #define CAN_SENSOR_H
 
+#include <stdint.h>
 #include "rocketlib.h"
 #include "application/can_handler/can_handler.h"
 #include "drivers/timer/timer.h"
-#include <stdint.h>
-
+#include "common/math/math.h"
 
 /**
  * @brief Structure to hold GPS position data
@@ -32,6 +32,7 @@ typedef struct __attribute__((packed)) {
     uint8_t *utc_hours;
     uint8_t *utc_minutes;
     uint8_t *utc_seconds;
+    uint8_t *utc_dseconds;
 } gps_timestamp_data_t;
 
 
