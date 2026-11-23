@@ -72,6 +72,4 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
  */
 health_status_t lsm6dsv32x_get_status(void);
 
-void lsm6_test_task(void *args);
-
 #endif
