@@ -205,6 +205,7 @@ static w_status_t GPS_INFO_callback (const can_msg_t *msg) {
 /**
  * @brief callback function for the ms5611 barometer can message and writes message to buffer. 
  * @param msg incoming can message
+ * @note board baro scaling is equal to 1
  * @return status of the operation
  */
 static w_status_t MS5611_BARO_callback(const can_msg_t * msg) {
