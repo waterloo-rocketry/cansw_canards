@@ -251,18 +251,18 @@ w_status_t lsm6dsv32x_init() {
 
 	status |= lsm6dsv32x_check_sanity();
 
-	// register the GPIO interrupt
-	if (gpio_register_interrupt_callback(lsm6dsv32x_int1_isr_handler, IMU_INT1_Pin) != W_SUCCESS) {
-		log_text(10, LOG_LVL_WARN, "LSM6DSV32X", "Failed to register callback");
-		return W_FAILURE;
-	}
-
 	// Trigger INT1 on gyro DRDY
 	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x02);
 
 	if (status != W_SUCCESS) {
 		lsm6dsv32x_health.init_failed_write++;
 		log_text(1, LOG_LVL_FATAL, "LSM6DSV32X", "initfail");
+		return W_FAILURE;
+	}
+
+	// register the GPIO interrupt
+	if (gpio_register_interrupt_callback(lsm6dsv32x_int1_isr_handler, IMU_INT1_Pin) != W_SUCCESS) {
+		log_text(10, LOG_LVL_WARN, "LSM6DSV32X", "Failed to register callback");
 		return W_FAILURE;
 	}
 
