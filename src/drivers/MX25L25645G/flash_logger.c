@@ -67,7 +67,7 @@ w_status_t flash_file_sync(flash_file_t *p_file) {
 }
 
 static bool is_log_file(const char *filename) {
-	if (filename == NULL || strlen(filename) != 12) {
+	if ((NULL == filename) || strlen(filename) != 12) {
 		return false;
 	}
 	for (int i = 0; i < 8; i++) {
@@ -115,7 +115,10 @@ w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size
 		return W_FAILURE;
 	}
 	err = lfs_file_write(&lfs, &(p_file->file), p_buffer, size);
-	if (err < 0 || err != size) {
+	if (err < 0) {
+		return W_FAILURE;
+	}
+	if (((uint32_t) err) != size) {
 		return W_FAILURE;
 	}
 	p_file->status = FLASH_FILE_WAITING_FOR_SYNC;
@@ -135,8 +138,8 @@ w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size
 		return W_FAILURE;
 	}
 	err = lfs_file_read(&lfs, &(p_file->file), p_buffer, size);
-	if (err == size) {
-		return W_SUCCESS;
+	if (err < 0) {
+		return W_FAILURE;
 	}
 	return W_FAILURE;
 }

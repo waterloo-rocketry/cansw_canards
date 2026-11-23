@@ -43,7 +43,7 @@
 // Delay between initialization retries in milliseconds
 #define INIT_RETRY_DELAY_MS 1000
 
-static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10 * 1000; // 10 seconds
+static const uint32_t MOTOR_INIT_TIMEOUT_MS = 10; // 10 seconds
 
 // Initialize task handles to NULL
 TaskHandle_t log_task_handle = NULL;
@@ -151,13 +151,18 @@ static void system_init_task(void *arg) {
 	const char hello[] = "Hello world!";
 	char test[20];
 	flash_file_t data;
-	w_status_t err1 = flash_file_open(&data, "t.data", LFS_O_RDWR | LFS_O_CREAT);
-	w_status_t err2 = flash_file_write(&data, &hello, sizeof(hello), 0, LFS_SEEK_SET);
+	w_status_t err1 = flash_file_open(&data, "00000000.bin", LFS_O_RDWR | LFS_O_CREAT);
+ 	// w_status_t err2 = flash_file_write(&data, &hello, 12, 3, LFS_SEEK_SET);
 	w_status_t err3 = flash_file_sync(&data);
-	w_status_t err4 = flash_file_read(&data, &test, sizeof(hello), 0, LFS_SEEK_SET);
+	w_status_t err4 = flash_file_read(&data, &test, 20, 0, LFS_SEEK_SET);
 	w_status_t err5 = flash_file_close(&data);
 
-	if (err1 || err2 || err3 || err4 || err5) {
+	w_status_t err6 = flash_clear_logs();
+	if (err6 != 0) {
+		err6 += 1;
+	}
+
+	if (err1 || err3 || err4 || err5) {
 		non_crit_status = flash_init();
 	}
 
@@ -173,10 +178,6 @@ static void system_init_task(void *arg) {
 		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).", crit_status);
 		// critical err
 		proc_handle_fatal_error("sysinit");
-	}
-	w_status_t err6 = flash_clear_logs();
-	if (err6 < 0) {
-		err6 += 1;
 	}
 
 	done_sys_init = true;
