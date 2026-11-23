@@ -295,6 +295,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t n
 		raw_sd_card_health.consecutive_recoveries++;
 		if (raw_sd_card_health.consecutive_recoveries > MAX_CONSECUTIVE_RECOVERIES) {
 			// TODO: full bus recovery
+			raw_logger_SD_recover();
 		} else {
 			raw_sd_card_health.recovery_count++;
 		}
@@ -357,6 +358,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t n
 	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE,
 	                                   pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
 		action_state = RAW_RECOVERING;
+		(void)HAL_SD_Abort(raw_logger_handle);
 		task_handler = NULL;
 		raw_sd_card_health.read_error++;
 		raw_sd_card_health.timed_out = true;
@@ -423,6 +425,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uin
 		raw_sd_card_health.consecutive_recoveries++;
 		if (raw_sd_card_health.consecutive_recoveries > MAX_CONSECUTIVE_RECOVERIES) {
 			// TODO: full bus recovery
+			raw_logger_SD_recover();
 		} else if (raw_sd_card_health.recovery_count > 5) {
 			if (W_FAILURE == raw_logger_SD_recover()) {
 				// TODO: have a chat to figure out what to do when recovery fails
@@ -488,6 +491,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uin
 	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE,
 	                                   pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
 		action_state = RAW_RECOVERING;
+		(void)HAL_SD_Abort(raw_logger_handle);
 		task_handler = NULL;
 		raw_sd_card_health.write_error++;
 		raw_sd_card_health.timed_out = true;

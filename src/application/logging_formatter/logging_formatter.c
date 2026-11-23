@@ -245,6 +245,7 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 }
 
 // TODO: this needs a module update in health checks for it to be actually done
+// such as: timeout offset, possibly full card? idk to be considered
 health_status_t logging_formatter_get_status(void) {
 	health_status_t status = {
 		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
@@ -264,14 +265,11 @@ health_status_t logging_formatter_get_status(void) {
 	}
 
 	// Log operation statistics
-	log_text(0, LOG_LVL_INFO, "formatter",
-	         "%s, files_created=%" PRIu32 ", reads=%" PRIu32 ", writes=%" PRIu32,
+	log_text(0, LOG_LVL_INFO, "formatter", "%s, types_created=" PRIu16, ", writes=%" PRIu32,
 	         logging_formatter_health.is_init ? "init" : "not init",
-	         logging_formatter_health.write_count);
+	         logging_formatter_health.types_created, logging_formatter_health.write_count);
 
-	log_text(0, LOG_LVL_INFO, "formatter",
-	         "read_err=%" PRIu32 ", write_err=%" PRIu32 ", create_err=%" PRIu32
-	         ", not_writable=%" PRIu32,
+	log_text(0, LOG_LVL_INFO, "formatter", ", write_err=%" PRIu32,
 	         logging_formatter_health.write_error);
 
 	return status;
