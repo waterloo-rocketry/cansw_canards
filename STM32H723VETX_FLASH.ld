@@ -43,10 +43,10 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Specify the memory areas */
 MEMORY
 {
-  ITCMRAM (xrw)    : ORIGIN = 0x00000000,   LENGTH = 64K
+  ITCMRAM (xrw)    : ORIGIN = 0x00000000,   LENGTH = 128K
   DTCMRAM (xrw)    : ORIGIN = 0x20000000,   LENGTH = 128K
   FLASH    (rx)    : ORIGIN = 0x08000000,   LENGTH = 512K
-  RAM_D1  (xrw)    : ORIGIN = 0x24000000,   LENGTH = 320K
+  RAM_D1  (xrw)    : ORIGIN = 0x24000000,   LENGTH = 256K
   RAM_D2  (xrw)    : ORIGIN = 0x30000000,   LENGTH = 32K
   RAM_D3  (xrw)    : ORIGIN = 0x38000000,   LENGTH = 16K
 }
@@ -62,9 +62,51 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
+  /* Define the special memory locations */
+  /* FLASH porgram code */
+  .text_flash :
+  {
+    _sflash_text = .;        /* define a global symbols at start of FLASH only code */
+    . = ALIGN(4);
+    /* *startup_stm32h723vetx.o */
+    *startup_stm32h723vetx.o(.text)           /* .text sections (FLASH only code) */
+    *startup_stm32h723vetx.o(.text*)          /* .text* sections (FLASH only code) */
+    *startup_stm32h723vetx.o(.glue_7)         /* glue arm to thumb FLASH only code */
+    *startup_stm32h723vetx.o(.glue_7t)        /* glue thumb to arm FLASH only code */
+    *startup_stm32h723vetx.o(.eh_frame)
+
+    KEEP (*startup_stm32h723vetx.o(.init))
+    KEEP (*startup_stm32h723vetx.o(.fini))
+
+    /* *log.o */
+    *log.o(.text)           /* .text sections (FLASH only code) */
+    *log.o(.text*)          /* .text* sections (FLASH only code) */
+    *log.o(.glue_7)         /* glue arm to thumb FLASH only code */
+    *log.o(.glue_7t)        /* glue thumb to arm FLASH only code */
+    *log.o(.eh_frame)
+
+    KEEP (*log.o(.init))
+    KEEP (*log.o(.fini))
+
+    /* *log.o */
+    *cubemx_autogen*(.text)           /* .text sections (FLASH only code) */
+    *cubemx_autogen*(.text*)          /* .text* sections (FLASH only code) */
+    *cubemx_autogen*(.glue_7)         /* glue arm to thumb FLASH only code */
+    *cubemx_autogen*(.glue_7t)        /* glue thumb to arm FLASH only code */
+    *cubemx_autogen*(.eh_frame)
+
+    KEEP (*cubemx_autogen*(.init))
+    KEEP (*cubemx_autogen*(.fini))
+
+    . = ALIGN(4);
+    _eflash_text = .;        /* define a global symbols at end of code */
+  } >FLASH
+
+
   /* The program code and other data goes into FLASH */
   .text :
   {
+    _stext = .;        /* define a global symbols at start of code */
     . = ALIGN(4);
     *(.text)           /* .text sections (code) */
     *(.text*)          /* .text* sections (code) */
@@ -77,7 +119,7 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
-  } >FLASH
+  } >ITCMRAM AT> FLASH
 
   /* Constant data goes into FLASH */
   .rodata :
@@ -166,11 +208,16 @@ SECTIONS
     . = ALIGN(8);
   } >RAM_D1
 
+  /* used by the startup to initialize data */
+  _sisram4 = LOADADDR(.sram4);
+
   .sram4 :
   {
     . = ALIGN(4);
+    _ssram4 = .;        /* create a global symbol at sram4 start */
     *(.sram4)
     . = ALIGN(4);
+    _esram4 = .;        /* define a global symbol at sram4 end */
   } >RAM_D3 AT>FLASH
 
   /* Remove information from the standard libraries */
