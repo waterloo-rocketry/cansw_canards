@@ -101,7 +101,7 @@ typedef enum {
 
 	LOG_TYPE_SERVO_MOTOR = M(0x0c),
 
-  LOG_TYPE_MAX_RATE_ACCEL = M(0x0D),
+	LOG_TYPE_MAX_RATE_ACCEL = M(0x0d)
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -215,12 +215,12 @@ typedef union __attribute__((packed)) {
 		float motor_temperature; // C
 	} servo_motor;
 
-  // LOG_TYPE_MAX_RATE_ACCEL
-  // Note: it is possible that this array is not filled.
-  // In this case the empty entries will all contain 0
-  struct __attribute__((packed)) {
-    lsm6dsv32x_raw_imu_data_t data[MAX_RATE_IMU_ACCEL_DATA_PER_PACKET];
-  } max_rate_accel;
+	// LOG_TYPE_MAX_RATE_ACCEL
+	// Note: it is possible that this array is not filled.
+	// In this case the empty entries will all contain 0
+	struct __attribute__((packed)) {
+		lsm6dsv32x_raw_imu_data_t data[MAX_RATE_IMU_ACCEL_DATA_PER_PACKET];
+	} max_rate_accel;
 
 } log_data_container_t;
 

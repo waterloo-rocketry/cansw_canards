@@ -36,7 +36,7 @@ typedef struct {
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
 	w_status_t latest_status;
-  volatile bool is_full_read_fresh;
+	volatile bool is_full_read_fresh;
 } lsm6dsv32x_ctx_t;
 
 /**
@@ -135,8 +135,8 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 	       lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER] =
 		lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER];
-  
-  lsm6dsv32x_ctx.is_full_read_fresh = true;
+
+	lsm6dsv32x_ctx.is_full_read_fresh = true;
 }
 
 /**
@@ -348,7 +348,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[3] << 8) | latest_gyro_bytes[2]);
 		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[5] << 8) | latest_gyro_bytes[4]);
 
-			                       // measurements from the same time
+		// measurements from the same time
 
 		// Parse accelerometer raw data (next 6 bytes)
 		raw_acc->x = (uint16_t)(((uint16_t)latest_acc_bytes[1] << 8) | latest_acc_bytes[0]);
@@ -392,7 +392,7 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
 	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *gyro_sample_count,
 	uint8_t *acc_sample_count) {
-  lsm6dsv32x_ctx.is_full_read_fresh = false;
+	lsm6dsv32x_ctx.is_full_read_fresh = false;
 
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD][7]; // copy the bytes so they are safe while
@@ -418,38 +418,38 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 
 			if (GYRO_TAG == tag) {
 				// gyro sample
-      
-        // check for NULL to accept not wanting to fill an array
-        if (NULL != raw_gyros){
-          raw_gyros[gyro_index].x = x;
-          raw_gyros[gyro_index].y = y;
-          raw_gyros[gyro_index].z = z;
-          raw_gyros[gyro_index].timestamp_ms = timestamp_ms;
-        }
+
+				// check for NULL to accept not wanting to fill an array
+				if (NULL != raw_gyros) {
+					raw_gyros[gyro_index].x = x;
+					raw_gyros[gyro_index].y = y;
+					raw_gyros[gyro_index].z = z;
+					raw_gyros[gyro_index].timestamp_ms = timestamp_ms;
+				}
 
 				gyro_index++;
 			} else if (ACC_TAG == tag) {
 				// accel sample
 
-        // check for NULL to accept not wanting to fill an array
-        if (NULL != raw_accs) {
-          raw_accs[accel_index].x = x;
-          raw_accs[accel_index].y = y;
-          raw_accs[accel_index].z = z;
-          raw_accs[accel_index].timestamp_ms = timestamp_ms;
-        }
+				// check for NULL to accept not wanting to fill an array
+				if (NULL != raw_accs) {
+					raw_accs[accel_index].x = x;
+					raw_accs[accel_index].y = y;
+					raw_accs[accel_index].z = z;
+					raw_accs[accel_index].timestamp_ms = timestamp_ms;
+				}
 
 				accel_index++;
 			} else {
 				status = W_FAILURE;
 				lsm6dsv32x_health.wrong_fifo_tag++;
 			}
-      if (NULL != gyro_sample_count) {
-			  *gyro_sample_count = gyro_index;
-      }
-      if (NULL != acc_sample_count) {
-			  *acc_sample_count = accel_index;
-      }
+			if (NULL != gyro_sample_count) {
+				*gyro_sample_count = gyro_index;
+			}
+			if (NULL != acc_sample_count) {
+				*acc_sample_count = accel_index;
+			}
 		}
 
 		if (W_FAILURE == status) {
@@ -512,5 +512,5 @@ health_status_t lsm6dsv32x_get_status(void) {
 }
 
 bool lsm6dsv32x_is_full_read_fresh(void) {
-  return lsm6dsv32x_ctx.is_full_read_fresh;
+	return lsm6dsv32x_ctx.is_full_read_fresh;
 }
