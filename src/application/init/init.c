@@ -174,9 +174,9 @@ static void system_init_task(void *arg) {
 		// critical err
 		proc_handle_fatal_error("sysinit");
 	}
-	w_status_t err6= flash_clear_logs();
-	if (err6<0){
-		err6+=1;
+	w_status_t err6 = flash_clear_logs();
+	if (err6 < 0) {
+		err6 += 1;
 	}
 
 	done_sys_init = true;
