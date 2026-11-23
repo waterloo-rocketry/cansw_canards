@@ -95,7 +95,9 @@ typedef enum {
 
 	LOG_TYPE_AD_BREAKOUT = M(0x0b),
 
-	LOG_TYPE_SERVO_MOTOR = M(0x0c)
+	LOG_TYPE_SERVO_MOTOR = M(0x0c),
+
+  LOG_TYPE_MAX_RATE_ACCEL = M(0x0d),
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -208,6 +210,11 @@ typedef union __attribute__((packed)) {
 		float motor_current; // A
 		float motor_temperature; // C
 	} servo_motor;
+
+  // LOG_TYPE_MAX_RATE_ACCEL
+  struct __attribute__((packed)) {
+    lsm6dsv32x_raw_imu_data_t data[LSM6DSV32X_FIFO_READ_THRESHOLD];
+  } max_rate_accel;
 
 } log_data_container_t;
 

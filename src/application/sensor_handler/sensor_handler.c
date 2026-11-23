@@ -514,6 +514,13 @@ static w_status_t movella_state_sd_log(void) {
 	return status;
 }
 
+static w_status_t max_rate_accel_log(void) {
+  if (
+  w_status_t status = W_SUCCESS;
+  log_data_container_t container = {0};
+  return status;
+}
+
 /**
  * @brief Read data from the board
  * @param ctx pointer to the ctx storing the previously updated times for the sensors
@@ -936,6 +943,9 @@ w_status_t sensor_handler_init(void) {
 		{"Movella State", movella_state_sd_log, STATE_PAD_NAV, 1000 / 20},
 		{"Movella State", movella_state_sd_log, STATE_BOOST, 1000 / 20},
 		{"Movella State", movella_state_sd_log, STATE_ACT_ALLOWED, 1000 / 20},
+
+    // --- IMU max rate accel ---
+    // { "Sensor Max Rate", 
 	};
 
 	static const size_t telemetry_source_count =

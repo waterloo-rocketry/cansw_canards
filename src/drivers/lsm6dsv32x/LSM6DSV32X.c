@@ -36,7 +36,7 @@ typedef struct {
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
 	w_status_t latest_status;
-
+  bool is_full_read_fresh;
 } lsm6dsv32x_ctx_t;
 
 /**
@@ -135,6 +135,8 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 	       lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER] =
 		lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER];
+  
+  lsm6dsv32x_ctx.is_full_read_fresh = true;
 }
 
 /**
@@ -392,6 +394,8 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
 	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *gyro_sample_count,
 	uint8_t *acc_sample_count) {
+  lsm6dsv32x_ctx.is_full_read_fresh = false;
+
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD][7]; // copy the bytes so they are safe while
 	                                                      // doing calculations
@@ -495,4 +499,8 @@ health_status_t lsm6dsv32x_get_status(void) {
 	         lsm6dsv32x_health.wrong_fifo_tag, lsm6dsv32x_health.same_sensor_samples);
 
 	return status;
+}
+
+bool is_full_read_fresh(void) {
+  return lsm6dsv32x_ctx.is_full_read_fresh;
 }
