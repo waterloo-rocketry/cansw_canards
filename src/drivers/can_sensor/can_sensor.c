@@ -1,8 +1,10 @@
 #include "FreeRTOS.h"
+#include "task.h"
 
 #include "common/math/math.h"
 #include "drivers/can_sensor/can_sensor.h"
 #include "application/telemetry/telemetry.h"
+#include "drivers/timer/timer.h"
 
 /*
 callbacks needed:
@@ -25,12 +27,39 @@ typedef struct {
     float32_t baro_temp_deg;
 }baro_ms5611_t;
 
+typedef struct {
+    uint32_t altitude;
+    uint8_t daltitude;
+}gps_altitude_t;
+
 
 vector3d_t IIS2MDC_MAG_buffer;
+uint32_t IIS2MDC_MAG_timestamp;
+bool IIS2MDC_is_valid = false;
+
 gps_timestamp_data_t gps_timestamp_buffer;
-gps_position_data_t gps_position_buffer;
+uint32_t gps_timestamp_timestamp;
+bool gps_timestamp_is_valid = false;
+
+gps_altitude_t gps_altitude_buffer;
+uint32_t gps_altitude_timestamp;
+bool gps_altitude_is_valid = false;
+
+gps_position_data_t gps_lat_buffer;
+uint32_t gps_lat_timestamp;
+bool gps_lat_is_valid = false;
+
+gps_position_data_t gps_lon_buffer;
+uint32_t gps_lon_timestamp;
+bool gps_lon_is_valid = false;
+
 gps_info_t gps_info_buffer; 
+uint32_t gps_info_timestamp;
+bool gps_info_is_valid = false;
+
 baro_ms5611_t baro_ms5611_buffer;
+uint32_t baro_ms5611_timestamp;
+bool baro_ms5611_is_valid = false;
 
 //may need bools to keep track if buffer has actual data to prevent getter from reading before we write the first value
 
@@ -49,11 +78,13 @@ static w_status_t IIS2MDC_MAG_callback(const can_msg_t * msg) {
         return W_FAILURE;
     }
     if (sensor_id == DEM_3D_SENSOR_CANARD_IIS2MDC_MAG) {
+        IIS2MDC_is_valid = true;
         taskENTER_CRITICAL();
         IIS2MDC_MAG_buffer.x = (float64_t)((x - TELEMETRY_INT16_OFFSET)/1000.0);
         IIS2MDC_MAG_buffer.y = (float64_t)((y - TELEMETRY_INT16_OFFSET)/1000.0);
         IIS2MDC_MAG_buffer.z = (float64_t)((z - TELEMETRY_INT16_OFFSET)/1000.0);
         taskEXIT_CRITICAL();
+        timer_get_ms(&IIS2MDC_MAG_timestamp);
     }
     return W_SUCCESS;
 }
@@ -71,12 +102,14 @@ static w_status_t GPS_TIMESTAMP_callback (const can_msg_t * msg) {
     if (get_gps_time(msg, &utc_hours, &utc_minutes, &utc_seconds, &utc_dseconds) != W_SUCCESS) {
         return W_FAILURE;
     }
+    gps_timestamp_is_valid = true;
     taskENTER_CRITICAL();
     gps_timestamp_buffer.utc_hours = utc_hours;
     gps_timestamp_buffer.utc_minutes = utc_minutes;
     gps_timestamp_buffer.utc_seconds = utc_seconds;
     gps_timestamp_buffer.utc_dseconds = utc_dseconds;
     taskEXIT_CRITICAL();
+    timer_get_ms(&gps_timestamp_timestamp);
     return W_SUCCESS;
 }
 
@@ -91,10 +124,12 @@ static w_status_t GPS_ALTITUDE_callback (const can_msg_t *msg) {
     if (get_gps_alt(msg, &altitude, &daltitude) != W_SUCCESS) {
         return W_FAILURE;
     }
+    gps_altitude_is_valid = true;
     taskENTER_CRITICAL();
-    gps_position_buffer.altitude = altitude;
-    gps_position_buffer.daltitude = daltitude;
+    gps_altitude_buffer.altitude = altitude;
+    gps_altitude_buffer.daltitude = daltitude;
     taskEXIT_CRITICAL();
+    timer_get_ms(&gps_timestamp_timestamp);
     return W_SUCCESS;
 }
 
@@ -111,12 +146,14 @@ static w_status_t GPS_LATITUDE_callback (const can_msg_t *msg) {
     if (get_gps_lat(msg, &lat_degrees, &lat_minutes, &lat_dminutes_h, &lat_dir) != W_SUCCESS) {
         return W_FAILURE;
     }
+    gps_lat_is_valid = true;
     taskENTER_CRITICAL();
-    gps_position_buffer.lat_degrees = lat_degrees;
-    gps_position_buffer.lat_minutes = lat_minutes;
-    gps_position_buffer.lat_dminutes_h = lat_dminutes_h;
-    gps_position_buffer.lat_dir = lat_dir;
+    gps_lat_buffer.degrees = lat_degrees;
+    gps_lat_buffer.minutes = lat_minutes;
+    gps_lat_buffer.dminutes_h = lat_dminutes_h;
+    gps_lat_buffer.dir = lat_dir;
     taskEXIT_CRITICAL();
+    timer_get_ms(&gps_lat_timestamp);
     return W_SUCCESS;
 }
 
@@ -133,12 +170,14 @@ static w_status_t GPS_LONGITUDE_callback (const can_msg_t *msg) {
     if (get_gps_lon(msg, &lon_degrees, &lon_minutes, &lon_dminutes_h, &lon_dir) != W_SUCCESS) {
         return W_FAILURE;
     }
+    gps_lon_is_valid = true;
     taskENTER_CRITICAL();
-    gps_position_buffer.lon_degrees = lon_degrees;
-    gps_position_buffer.lon_minutes = lon_minutes;
-    gps_position_buffer.lon_dminutes_h = lon_dminutes_h;
-    gps_position_buffer.lon_dir = lon_dir;
+    gps_lon_buffer.degrees = lon_degrees;
+    gps_lon_buffer.minutes = lon_minutes;
+    gps_lon_buffer.dminutes_h = lon_dminutes_h;
+    gps_lon_buffer.dir = lon_dir;
     taskEXIT_CRITICAL();
+    timer_get_ms(&gps_lon_timestamp);
     return W_SUCCESS;
 }
 
@@ -154,16 +193,19 @@ static w_status_t GPS_INFO_callback (const can_msg_t *msg) {
     if (get_gps_info(msg, &num_sat, &quality) != W_SUCCESS) {
         return W_FAILURE;
     }
+    gps_info_is_valid = true;
     taskENTER_CRITICAL();
     gps_info_buffer.num_sat = num_sat;
     gps_info_buffer.quality = quality;
     taskEXIT_CRITICAL();
+    timer_get_ms(&gps_info_timestamp);
     return W_SUCCESS;
 }
 
 /**
  * @brief callback function for the ms5611 barometer can message and writes message to buffer. 
  * @param msg incoming can message
+ * @note board baro scaling is equal to 1
  * @return status of the operation
  */
 static w_status_t MS5611_BARO_callback(const can_msg_t * msg) {
@@ -174,10 +216,12 @@ static w_status_t MS5611_BARO_callback(const can_msg_t * msg) {
         return W_FAILURE;
     }
     if (sensor_id == DEM_2D_SENSOR_CANARD_MS5611_BARO_TEMP) {
+        baro_ms5611_is_valid = true;
         taskENTER_CRITICAL();
         baro_ms5611_buffer.baro_pres_pa = (float32_t)baro_pres_pa;
         baro_ms5611_buffer.baro_temp_deg = (float32_t)baro_temp_deg;
         taskEXIT_CRITICAL();
+        timer_get_ms(&baro_ms5611_timestamp);
     }
     return W_SUCCESS;
 }
@@ -199,7 +243,6 @@ w_status_t can_sensor_init() {
     }
     return W_SUCCESS;
 }
-
 
 
 
