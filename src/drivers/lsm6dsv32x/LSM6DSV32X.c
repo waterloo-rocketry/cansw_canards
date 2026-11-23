@@ -32,7 +32,7 @@ typedef enum {
 typedef struct {
 	I2C_HandleTypeDef *hi2c;
 	uint8_t dev_addr;
-	uint8_t dual_buffer[2][12];
+	uint8_t dual_buffer[2][LSM6DSV32X_FIFO_READ_THRESHOLD][7];
 	uint32_t timestamp_ms[2];
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
@@ -55,6 +55,8 @@ typedef struct {
 	uint32_t dma_data_transfer_failed_mem_read;
 	uint32_t get_gyro_acc_data_unswitched_callback;
 	uint32_t get_gyro_acc_data_lastest_status_failure;
+	uint32_t wrong_fifo_tag;
+	uint32_t same_sensor_samples;
 } lsm6dsv32x_health_t;
 
 // device addresses and configuration
@@ -71,11 +73,14 @@ static const float64_t GYRO_RANGE = 4000.0; // dps
 static const float64_t ACC_FS = 0.000976; // g / LSB
 static const float64_t GYRO_FS = 0.140; // dps / LSB
 
+static const uint8_t GYRO_TAG = 0x01;
+static const uint8_t ACC_TAG = 0x02;
+
 static const uint8_t LSM6DSV32X_EXPECTED_WHO_AM_I = 0x70;
 
 static lsm6dsv32x_ctx_t lsm6dsv32x_ctx = {.switched_callback = false};
 
-static const uint8_t CTX_BUFFER_SIZE = sizeof(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER]);
+static const uint16_t CTX_BUFFER_SIZE = sizeof(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER]);
 
 static lsm6dsv32x_health_t lsm6dsv32x_health = {0};
 
@@ -174,9 +179,11 @@ void lsm6dsv32x_int1_isr_handler() {
 
 	// begin dma read to the main buffer
 	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
+
 	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Read_DMA(
-		lsm6dsv32x_ctx.hi2c, (uint16_t)shifted_address, OUTX_L_G, I2C_MEMADD_SIZE_8BIT,
-		lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], (uint16_t)CTX_BUFFER_SIZE);
+		lsm6dsv32x_ctx.hi2c, (uint16_t)shifted_address, FIFO_DATA_OUT_TAG, I2C_MEMADD_SIZE_8BIT,
+		lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER][0], (uint16_t)CTX_BUFFER_SIZE);
+
 	if (hal_status != HAL_OK) {
 		lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE; // so that we can attempt send again
 		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
@@ -188,7 +195,8 @@ void lsm6dsv32x_int1_isr_handler() {
 
 /**
  * @brief Initializes the bit registers for
- * @note Must be called after bit registers are configured, called before flight!!!
+ * @note Must be called after bit registers are configured, called before
+ * flight!!!
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_init() {
@@ -203,19 +211,22 @@ w_status_t lsm6dsv32x_init() {
 
 	// LSM6DSV32X: https://www.st.com/resource/en/datasheet/lsm6dsv32x.pdf
 
-	// Accel ODR: 480 Hz
+	// Accel ODR: 7.68 KHz
 	// Accel mode: high performance
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL1_XL, 0x08);
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL1_XL, 0x0c);
 
-	// Gyro ODR: 480 Hz
+	// Gyro ODR: 960Hz
 	// Gyro mode: high performance
-	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL2_G, 0x08);
+	status |= write_1_byte(LSM6DSV32X_ADDR, CTRL2_G, 0x09);
 
-	// turn off all FIFO commands
-	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL1, 0x00);
-	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL2, 0x00);
-	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL3, 0x00);
+	// set FIFO to FIFO mode (fill until LSM6DSV32X_FIFO_THRESHOLD)
+	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL1, LSM6DSV32X_FIFO_THRESHOLD);
+	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL2, 0x80);
+	// set accel BDR to 7.68Khz and gyro BDR to 960Hz
+	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL3, 0x9c);
+	// set FIFO to continuous mode
 	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x00);
+	status |= write_1_byte(LSM6DSV32X_ADDR, FIFO_CTRL4, 0x06);
 
 	// set gyro range to +-4000dps
 	// set LPF bandwith to 241 (ODR/4)
@@ -246,8 +257,8 @@ w_status_t lsm6dsv32x_init() {
 		return W_FAILURE;
 	}
 
-	// Trigger INT1 when we get either data ready
-	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x01);
+	// Trigger INT1 on gyro DRDY
+	status |= write_1_byte(LSM6DSV32X_ADDR, INT1_CTRL, 0x02);
 
 	if (status != W_SUCCESS) {
 		lsm6dsv32x_health.init_failed_write++;
@@ -261,8 +272,8 @@ w_status_t lsm6dsv32x_init() {
 	lsm6dsv32x_ctx.switched_callback = true;
 
 	HAL_StatusTypeDef i2c_register_status = HAL_OK;
-	// register the I2C callback for the end of the DMA read to call the dma complete handler
-	// function
+	// register the I2C callback for the end of the DMA read to call the dma
+	// complete handler function
 	i2c_register_status |= HAL_I2C_RegisterCallback(
 		lsm6dsv32x_ctx.hi2c, HAL_I2C_MEM_RX_COMPLETE_CB_ID, lsm6dsv32x_dma_complete_handle);
 	i2c_register_status |= HAL_I2C_RegisterCallback(lsm6dsv32x_ctx.hi2c, HAL_I2C_ERROR_CB_ID,
@@ -287,7 +298,7 @@ w_status_t lsm6dsv32x_init() {
 }
 
 /**
- * @brief Retrieves all 12 bytes of imu data
+ * @brief Retrieves the latest 12 bytes of imu data
  * @param[out] acc_data    Processed accelerometer data (gravities)
  * @param[out] gyro_data   Processed gyroscope data (deg/s)
  * @param[out] raw_acc     Raw accelerometer data
@@ -298,7 +309,8 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
                                         lsm6dsv32x_raw_imu_data_t *raw_acc,
                                         lsm6dsv32x_raw_imu_data_t *raw_gyro) {
 	w_status_t status = W_SUCCESS;
-	uint8_t raw_bytes[12]; // copy the bytes so they are safe while doing calculations
+	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD]
+					 [7]; // copy the bytes so they are safe while doing calculations
 
 	if (lsm6dsv32x_ctx.switched_callback) {
 		taskENTER_CRITICAL();
@@ -311,18 +323,50 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 
 		taskEXIT_CRITICAL();
 
+		// find the latest samples
+		uint8_t *latest_gyro_bytes = NULL;
+		uint8_t *latest_acc_bytes = NULL;
+		uint8_t i = LSM6DSV32X_FIFO_THRESHOLD - 1;
+		do {
+			// the last two bits are not part of the tag. See datasheet section 9.84
+			uint8_t tag = raw_bytes[i][0] >> 3;
+			if (GYRO_TAG == tag) {
+				if (NULL == latest_gyro_bytes) {
+					latest_gyro_bytes = &raw_bytes[i][1];
+				}
+			} else if (ACC_TAG == tag) {
+				if (NULL == latest_acc_bytes) {
+					latest_acc_bytes = &raw_bytes[i][1];
+				}
+			} else {
+				// if the tag isn't the empty tag
+				if (0x00 != tag) {
+					lsm6dsv32x_health.wrong_fifo_tag++;
+				}
+			}
+			i--;
+		} while ((0 < i) && ((NULL == latest_gyro_bytes) || (NULL == latest_acc_bytes)));
+
+		if ((0 == i) && ((NULL == latest_gyro_bytes) || (NULL == latest_acc_bytes))) {
+			// can't read, we got only samples of one type
+			lsm6dsv32x_health.same_sensor_samples++;
+			lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure++;
+			return W_FAILURE;
+		}
+
 		// Parse gyroscope raw data (first 6 bytes)
-		raw_gyro->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
-		raw_gyro->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
-		raw_gyro->z = (uint16_t)(((uint16_t)raw_bytes[5] << 8) | raw_bytes[4]);
+		raw_gyro->x = (uint16_t)(((uint16_t)latest_gyro_bytes[1] << 8) | latest_gyro_bytes[0]);
+		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[3] << 8) | latest_gyro_bytes[2]);
+		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[5] << 8) | latest_gyro_bytes[4]);
 
 		raw_gyro->timestamp_ms =
-			raw_acc->timestamp_ms; // grab time from accel since it's the smae timestamp
+			raw_acc->timestamp_ms; // grab time from accel since they're both the latest
+			                       // measurements from the same time
 
 		// Parse accelerometer raw data (next 6 bytes)
-		raw_acc->x = (uint16_t)(((uint16_t)raw_bytes[7] << 8) | raw_bytes[6]);
-		raw_acc->y = (uint16_t)(((uint16_t)raw_bytes[9] << 8) | raw_bytes[8]);
-		raw_acc->z = (uint16_t)(((uint16_t)raw_bytes[11] << 8) | raw_bytes[10]);
+		raw_acc->x = (uint16_t)(((uint16_t)latest_acc_bytes[1] << 8) | latest_acc_bytes[0]);
+		raw_acc->y = (uint16_t)(((uint16_t)latest_acc_bytes[3] << 8) | latest_acc_bytes[2]);
+		raw_acc->z = (uint16_t)(((uint16_t)latest_acc_bytes[5] << 8) | latest_acc_bytes[4]);
 
 		// Convert to physical units
 		gyro_data->x = ((float64_t)((int16_t)raw_gyro->x)) * GYRO_FS;
@@ -332,6 +376,80 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		acc_data->x = ((float64_t)((int16_t)raw_acc->x)) * ACC_FS;
 		acc_data->y = ((float64_t)((int16_t)raw_acc->y)) * ACC_FS;
 		acc_data->z = ((float64_t)((int16_t)raw_acc->z)) * ACC_FS;
+
+		if (W_FAILURE == status) {
+			lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure++;
+		}
+	} else {
+		status = W_FAILURE;
+		lsm6dsv32x_health.get_gyro_acc_data_unswitched_callback++;
+	}
+
+	return status;
+}
+
+/**
+ * @brief Retrieves all samples of gyro and acc data stored in the FIFO
+ * @param[out] acc_data          Processed accelerometer data (gravities)
+ * @param[out] gyro_data         Processed gyroscope data (deg/s)
+ * @param[out] raw_acc           Raw accelerometer data
+ * @param[out] raw_gyro          Raw gyroscope data
+ * @param[out] gyro_sample_count The number of gyro samples in the FIFO
+ * @param[out] acc_sample_count  The number of acc samples in the FIFO
+ * @return Status of the operation
+ *
+ * NOTE: a W_FAILURE return doesn't necessarily mean that we don't have some good samples.
+ * It just means some samples were wrong.
+ */
+w_status_t lsm6dsv32x_get_full_gyro_acc_data(
+	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
+	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *gyro_sample_count,
+	uint8_t *acc_sample_count) {
+	w_status_t status = W_SUCCESS;
+	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD][7]; // copy the bytes so they are safe while
+	                                                      // doing calculations
+
+	if (lsm6dsv32x_ctx.switched_callback) {
+		taskENTER_CRITICAL();
+
+		// enter a critical section while copying the data
+		memcpy(raw_bytes, lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER], CTX_BUFFER_SIZE);
+		uint32_t timestamp_ms = lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER];
+		// get status
+		status = lsm6dsv32x_ctx.latest_status;
+
+		taskEXIT_CRITICAL();
+
+		uint8_t accel_index = 0, gyro_index = 0;
+		for (uint8_t i = 0; i < LSM6DSV32X_FIFO_READ_THRESHOLD; i++) {
+			uint8_t tag = raw_bytes[i][0] >> 3;
+			uint16_t x = (uint16_t)(raw_bytes[i][2] << 8) | raw_bytes[i][1];
+			uint16_t y = (uint16_t)(raw_bytes[i][4] << 8) | raw_bytes[i][3];
+			uint16_t z = (uint16_t)(raw_bytes[i][6] << 8) | raw_bytes[i][5];
+
+			if (GYRO_TAG == tag) {
+				// gyro sample
+				raw_gyros[gyro_index].x = x;
+				raw_gyros[gyro_index].y = y;
+				raw_gyros[gyro_index].z = z;
+				raw_gyros[gyro_index].timestamp_ms = timestamp_ms;
+
+				gyro_index++;
+			} else if (ACC_TAG == tag) {
+				// accel sample
+				raw_accs[accel_index].x = x;
+				raw_accs[accel_index].y = y;
+				raw_accs[accel_index].z = z;
+				raw_accs[accel_index].timestamp_ms = timestamp_ms;
+
+				accel_index++;
+			} else {
+				status = W_FAILURE;
+				lsm6dsv32x_health.wrong_fifo_tag++;
+			}
+			*gyro_sample_count = gyro_index;
+			*acc_sample_count = accel_index;
+		}
 
 		if (W_FAILURE == status) {
 			lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure++;
@@ -363,15 +481,15 @@ health_status_t lsm6dsv32x_get_status(void) {
 		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
 	}
 
-	log_text(
-		10, LOG_LVL_INFO, "LSM6DSV32X",
-		"init=%d, init_failed_write=%d, init_failed_register_cb=%d, is_insane=%d, sanity_checks=%d",
-		lsm6dsv32x_health.is_init, lsm6dsv32x_health.init_failed_write,
-		lsm6dsv32x_health.init_failed_register_callback, lsm6dsv32x_health.is_insane,
-		lsm6dsv32x_health.post_init_sanity_checks);
+	log_text(10, LOG_LVL_INFO, "LSM6DSV32X",
+	         "init=%d, init_failed_write=%d, init_failed_register_cb=%d, "
+	         "is_insane=%d, sanity_checks=%d",
+	         lsm6dsv32x_health.is_init, lsm6dsv32x_health.init_failed_write,
+	         lsm6dsv32x_health.init_failed_register_callback, lsm6dsv32x_health.is_insane,
+	         lsm6dsv32x_health.post_init_sanity_checks);
 
-	// expect the unswitched callback count to be high but most importantly constant. it is called
-	// about 10000 times before initialization completes
+	// expect the unswitched callback count to be high but most importantly
+	// constant. it is called about 10000 times before initialization completes
 	log_text(10, LOG_LVL_INFO, "LSM6DSV32X",
 	         "wrong_i2c=%d, unswitched_cb=%d, failed_timer=%d, fail_mem_read=%d",
 	         lsm6dsv32x_health.dma_handle_wrong_i2c,
@@ -380,10 +498,14 @@ health_status_t lsm6dsv32x_get_status(void) {
 	         lsm6dsv32x_health.dma_data_transfer_failed_mem_read);
 
 	log_text(10, LOG_LVL_INFO, "LSM6DSV32X",
-	         "get_data_unswitched_cb=%d, get_data_sts_fail=%d, latest_status=%d, bus_sts=%d",
+	         "get_data_unswitched_cb=%d, get_data_sts_fail=%d, latest_status=%d, "
+	         "bus_sts=%d",
 	         lsm6dsv32x_health.get_gyro_acc_data_unswitched_callback,
 	         lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure,
 	         lsm6dsv32x_ctx.latest_status, lsm6dsv32x_ctx.bus_status);
+
+	log_text(10, LOG_LVL_INFO, "LSM6DSV32X", "wrong_fifo_tag=%d, same_sensor_samples=%d",
+	         lsm6dsv32x_health.wrong_fifo_tag, lsm6dsv32x_health.same_sensor_samples);
 
 	return status;
 }
