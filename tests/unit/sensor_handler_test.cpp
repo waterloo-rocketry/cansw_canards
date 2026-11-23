@@ -54,6 +54,9 @@ extern "C" {
 	FAKE_VALUE_FUNC(w_status_t, ad_breakout_board_get_accel_data, vector3d_t*, uint32_t*);
 	FAKE_VALUE_FUNC(w_status_t, ad_breakout_board_get_gyro_data, float64_t*, uint32_t*);
 
+  FAKE_VALUE_FUNC(bool, lsm6dsv32x_is_full_read_fresh);
+FAKE_VALUE_FUNC(w_status_t, lsm6dsv32x_get_full_gyro_acc_data,
+                lsm6dsv32x_raw_imu_data_t*, lsm6dsv32x_raw_imu_data_t*, uint8_t*, uint8_t*);
 // fake can stuff
 // w_status_t can_handler_transmit(const can_msg_t *msg);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, const can_msg_t *);
@@ -205,6 +208,8 @@ protected:
 	void SetUp() override {
 		// Reset all fakes before each test
 		RESET_FAKE(lsm6dsv32x_get_gyro_acc_data);
+    RESET_FAKE(lsm6dsv32x_is_full_read_fresh);
+    RESET_FAKE(lsm6dsv32x_get_full_gyro_acc_data);
 		RESET_FAKE(ms5611_get_raw_pressure);
 		RESET_FAKE(iis2mdc_get_data);
 		RESET_FAKE(ak45_get_latest_feedback);
