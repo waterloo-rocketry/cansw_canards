@@ -18,6 +18,9 @@ typedef struct {
 	uint16_t types_created;
 	uint32_t write_count;
 	uint32_t write_error;
+	uint32_t data_writes;
+	uint32_t error_writes;
+	uint32_t text_writes;
 } logging_formatter_health_t;
 
 typedef struct {
@@ -40,6 +43,7 @@ static uint16_t crc16_table[256];
 w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
                                          logging_formatter_data_type_t type) {
 	if (!logging_formatter_health.is_init) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Not initialized.");
 		logging_formatter_health.write_error++;
 		return W_FAILURE;
 	}
@@ -51,6 +55,7 @@ w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
 
 	// check if file of this kind has already been created
 	if (logging_formatter_health.types_created & (1 << type)) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Data type was already created");
 		return W_FAILURE;
 	}
 
@@ -84,6 +89,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	if (W_SUCCESS != raw_logger_SD_init(p_sd_handle)) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Given task handler does not exist.");
 		return W_FAILURE;
 	}
 
@@ -121,6 +127,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		uint64_t block_count = 0;
 
 		if (raw_logger_get_SD_specs(&block_count, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
+			log_text(0, LOG_LVL_WARN, "FORMAT", "Unable to get SD specs.");
 			return W_FAILURE;
 		}
 
@@ -166,6 +173,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	if (!found_address) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Binary search failed.");
 		return W_FAILURE;
 	}
 
@@ -196,10 +204,12 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
                                     formatter_file_ctx_t *ctx) {
 	if (!logging_formatter_health.is_init) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Not initialized.");
 		return W_FAILURE;
 	}
 
 	if ((buffer_length + FORMATTER_HEADER_SIZE + FORMATTER_CRC_SIZE) != CHUNK_SIZE) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Buffer was of incorrect size.");
 		return W_FAILURE;
 	}
 
@@ -238,6 +248,18 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 		return W_FAILURE;
 	}
 
+	switch (ctx->data_type) {
+		case LOGGING_FORMATTING_DATA:
+			logging_formatter_health.data_writes++;
+			break;
+		case LOGGING_FORMATTING_ERROR:
+			logging_formatter_health.error_writes++;
+			break;
+		case LOGGING_FORMATTING_TEXT:
+			logging_formatter_health.text_writes++;
+			break;
+	}
+
 	formatter_buffer.chunk += 1;
 	logging_formatter_health.write_count++;
 
@@ -266,8 +288,11 @@ health_status_t logging_formatter_get_status(void) {
 
 	// Log operation statistics
 	log_text(0, LOG_LVL_INFO, "formatter", "%s, types_created=" PRIu16, ", writes=%" PRIu32,
+	         ", data writes=%" PRIu32, ", error writes=%" PRIu32, ", text writes=%" PRIu32,
 	         logging_formatter_health.is_init ? "init" : "not init",
-	         logging_formatter_health.types_created, logging_formatter_health.write_count);
+	         logging_formatter_health.types_created, logging_formatter_health.write_count,
+	         logging_formatter_health.data_writes, logging_formatter_health.error_writes,
+	         logging_formatter_health.text_writes);
 
 	log_text(0, LOG_LVL_INFO, "formatter", ", write_err=%" PRIu32,
 	         logging_formatter_health.write_error);
