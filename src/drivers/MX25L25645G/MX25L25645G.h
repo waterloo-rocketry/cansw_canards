@@ -13,7 +13,7 @@
  * communicating with the flash chip. W_FAILURE if already init or flash chip
  * registers are misconfigured.
  */
-w_status_t mx25l25645g_init();
+w_status_t mx25l25645g_init(void);
 
 /**
  * @brief Mount flash chip using littlefs file system.
@@ -24,7 +24,7 @@ w_status_t mx25l25645g_init();
  * @param[out] p_lfs Pointer to file system.
  *
  * @return w_status_t - W_SUCCESS on success. W_FAILURE if already init or
- * mount&format fails. W_INVALID_PARAM if block offset is invalid.
+ * mount&format fails.
  */
 w_status_t mx25l25645g_mount(lfs_t *p_lfs);
 
