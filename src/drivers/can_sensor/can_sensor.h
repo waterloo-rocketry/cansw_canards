@@ -2,9 +2,11 @@
 #define CAN_SENSOR_H
 
 #include <stdint.h>
+#include <stdint.h>
 #include "rocketlib.h"
 #include "application/can_handler/can_handler.h"
 #include "drivers/timer/timer.h"
+#include "common/math/math.h"
 #include "common/math/math.h"
 
 /**
@@ -18,6 +20,22 @@ typedef struct __attribute__((packed)) {
     uint8_t dir;
 } gps_position_data_t;
 
+/**
+ * @brief Structure to hold GPS timestamp data
+ * @note hours, minutes and seconds are in UTC time
+ */
+typedef struct __attribute__((packed)) {
+    uint8_t utc_hours;
+    uint8_t utc_minutes;
+    uint8_t utc_seconds;
+    uint8_t utc_dseconds;
+} gps_timestamp_data_t;
+
+
+/** 
+ * @brief Initializes the CAN sensor driver and sets up the necessary callbacks for handling incoming CAN messages related to sensors.
+ * @return status of the operation
+ */
 /**
  * @brief Structure to hold GPS timestamp data
  * @note hours, minutes and seconds are in UTC time
