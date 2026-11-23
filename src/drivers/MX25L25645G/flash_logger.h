@@ -71,7 +71,7 @@ w_status_t flash_file_sync(flash_file_t *p_file);
  * @param[in] whence reference point of the offset
  * @return W_SUCCESS if read the content
  * W_FAILURE for any error during seek or read
- * W_INVALID_PARAM
+ * W_INVALID_PARAM for parameter errorss
  */
 w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size, lfs_soff_t offset,
                            enum lfs_whence_flags whence);
@@ -80,6 +80,7 @@ w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size
  * opens and closes the directory
  * @return W_SUCCESS if all files are removed and the directory is closed
  * W_FAILURE otherwise
+ * if 1 log file failed to be removed, will return directly
  */
 w_status_t flash_clear_logs();
 
@@ -93,7 +94,7 @@ w_status_t flash_clear_logs();
  * @param[in] offset number of bytes to move the cursor
  * @param[in] whence reference point of the offset
  * @return W_FAILURE if file was not open or any error during seek or write
- * W_INVALID_PARAM if file is not LFS_O_WRONLY or LFS_O_RDWR.
+ * W_INVALID_PARAM for parameter issues
  * W_SUCCESS if successful
  */
 w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size_t size,
