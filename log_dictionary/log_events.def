@@ -557,7 +557,6 @@ EVENT(UART_INIT_CALLBACK_FAIL, 0x1b02, 1, "[WARN] [UART] initcbfail %d")
 EVENT(UART_INIT_FAIL, 0x1b03, 1, "[WARN] [UART] initfail %d")
 EVENT(UART_INIT_ISR_FAIL, 0x1b04, 1, "[WARN] [UART] initis %d")
 EVENT(UART_INIT_RX_FAIL, 0x1b05, 1, "[WARN] [UART] initrx %d")
-event xyz failed  
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */

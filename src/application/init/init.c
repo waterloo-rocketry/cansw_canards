@@ -22,6 +22,7 @@
 #include "application/sensor_handler/sensor_handler.h"
 #include "application/telemetry/telemetry.h"
 #include "drivers/MS5611/MS5611.h"
+#include "drivers/MX25L25645G/MX25L25645G.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
@@ -63,7 +64,8 @@ const uint32_t fsm_task_priority = configMAX_PRIORITIES - 1;
 // prioritize not missing injectorvalveopen msg
 // TODO: could dynamically reduce this priority after flight starts?
 const uint32_t can_handler_rx_priority = 45;
-// in general, prioritize consumers (estimator) over producers (imus) to avoid congestion
+// in general, prioritize consumers (estimator) over producers (imus) to avoid
+// congestion
 const uint32_t can_handler_tx_priority = 40;
 // TODO: update when sure (based on old imu handler priority)
 const uint32_t movella_task_priority = 20;
@@ -77,7 +79,8 @@ bool done_sys_init = false;
 const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
 
 // Motor calibration callback.
-// Run this in init to avoid blocking other tasks for too long, so blinky will survive.
+// Run this in init to avoid blocking other tasks for too long, so blinky will
+// survive.
 static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
 	can_actuator_id_t msg_id;
 	can_actuator_state_t msg_state;
@@ -146,6 +149,9 @@ static void system_init_task(void *arg) {
 	non_crit_status |= adxl380_init();
 	non_crit_status |= adxrs649_init();
 
+	// Must be init after gpio
+	non_crit_status |= mx25l25645g_init();
+
 	if (non_crit_status != W_SUCCESS) {
 		// Log non-critical initialization failure
 		log_text(10, LOG_LVL_WARN, "init", "Non-crit init fail 0x%lx (log)", non_crit_status);
@@ -153,7 +159,8 @@ static void system_init_task(void *arg) {
 
 	// cannot continue if any of the critical inits fail
 	if (crit_status != W_SUCCESS) {
-		// Log critical initialization failure - specific modules should have logged details
+		// Log critical initialization failure - specific modules should have logged
+		// details
 		log_text(10, LOG_LVL_FATAL, "init", "crit init fail (status: 0x%lx).", crit_status);
 		// critical err
 		proc_handle_fatal_error("sysinit");

@@ -263,6 +263,6 @@ typedef enum __attribute__((packed)) {
 } log_task_id_t;
 
 LOG_STATIC_ASSERT(sizeof(log_task_id_t) <= 1, "log_task_id_t must be at 1 byte");
-/* END GENERATED FILE ENUM */
+/* END GENERATED TASK ENUM */
 
 #endif
