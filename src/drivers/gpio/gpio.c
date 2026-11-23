@@ -70,8 +70,8 @@ static gpio_pin_data_t gpio_map[GPIO_PIN_COUNT] = {
  * Struct representing GPIO pin interrupt set
  */
 typedef struct {
-	const gpio_isr_callback_t callback;
-	const uint16_t gpio_pin;
+	gpio_isr_callback_t callback;
+	uint16_t gpio_pin;
 } gpio_isr_callback_data_t;
 
 static gpio_isr_callback_data_t g_isr_map[MAX_GPIO_INTERRUPTS] = {0};
@@ -226,8 +226,8 @@ w_status_t gpio_register_interrupt_callback(const gpio_isr_callback_t p_callback
 	}
 
 	// create callback
-	gpio_isr_callback_data_t new_callback = {.callback = p_callback_fcn, .gpio_pin = gpio_pin};
-	memcpy(&g_isr_map[g_isr_max_index], &new_callback, sizeof(g_isr_map[g_isr_max_index]));
+	g_isr_map[g_isr_max_index].callback = p_callback_fcn;
+	g_isr_map[g_isr_max_index].gpio_pin = gpio_pin;
 
 	// increment counter
 	g_isr_max_index++;
