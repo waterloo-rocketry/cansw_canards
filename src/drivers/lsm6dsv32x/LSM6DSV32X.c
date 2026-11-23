@@ -36,7 +36,7 @@ typedef struct {
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
 	w_status_t latest_status;
-  bool is_full_read_fresh;
+  volatile bool is_full_read_fresh;
 } lsm6dsv32x_ctx_t;
 
 /**
@@ -348,8 +348,6 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[3] << 8) | latest_gyro_bytes[2]);
 		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[5] << 8) | latest_gyro_bytes[4]);
 
-		raw_gyro->timestamp_ms =
-			raw_acc->timestamp_ms; // grab time from accel since they're both the latest
 			                       // measurements from the same time
 
 		// Parse accelerometer raw data (next 6 bytes)
@@ -420,26 +418,38 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 
 			if (GYRO_TAG == tag) {
 				// gyro sample
-				raw_gyros[gyro_index].x = x;
-				raw_gyros[gyro_index].y = y;
-				raw_gyros[gyro_index].z = z;
-				raw_gyros[gyro_index].timestamp_ms = timestamp_ms;
+      
+        // check for NULL to accept not wanting to fill an array
+        if (NULL != raw_gyros){
+          raw_gyros[gyro_index].x = x;
+          raw_gyros[gyro_index].y = y;
+          raw_gyros[gyro_index].z = z;
+          raw_gyros[gyro_index].timestamp_ms = timestamp_ms;
+        }
 
 				gyro_index++;
 			} else if (ACC_TAG == tag) {
 				// accel sample
-				raw_accs[accel_index].x = x;
-				raw_accs[accel_index].y = y;
-				raw_accs[accel_index].z = z;
-				raw_accs[accel_index].timestamp_ms = timestamp_ms;
+
+        // check for NULL to accept not wanting to fill an array
+        if (NULL != raw_accs) {
+          raw_accs[accel_index].x = x;
+          raw_accs[accel_index].y = y;
+          raw_accs[accel_index].z = z;
+          raw_accs[accel_index].timestamp_ms = timestamp_ms;
+        }
 
 				accel_index++;
 			} else {
 				status = W_FAILURE;
 				lsm6dsv32x_health.wrong_fifo_tag++;
 			}
-			*gyro_sample_count = gyro_index;
-			*acc_sample_count = accel_index;
+      if (NULL != gyro_sample_count) {
+			  *gyro_sample_count = gyro_index;
+      }
+      if (NULL != acc_sample_count) {
+			  *acc_sample_count = accel_index;
+      }
 		}
 
 		if (W_FAILURE == status) {
@@ -501,6 +511,6 @@ health_status_t lsm6dsv32x_get_status(void) {
 	return status;
 }
 
-bool is_full_read_fresh(void) {
+bool lsm6dsv32x_is_full_read_fresh(void) {
   return lsm6dsv32x_ctx.is_full_read_fresh;
 }

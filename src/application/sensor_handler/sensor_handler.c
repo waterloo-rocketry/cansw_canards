@@ -515,9 +515,31 @@ static w_status_t movella_state_sd_log(void) {
 }
 
 static w_status_t max_rate_accel_log(void) {
-  if (
+  if (!lsm6dsv32x_is_full_read_fresh()) {
+    // this is an expected result, because the sensor period doesn't exactly line up with the telemetry timing
+    return W_SUCCESS;
+  }
   w_status_t status = W_SUCCESS;
-  log_data_container_t container = {0};
+
+  lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD];
+  uint8_t acc_sample_count = 0;
+
+  status = lsm6dsv32x_get_full_gyro_acc_data(raw_accs, NULL, NULL, &acc_sample_count);
+
+  for (uint8_t i = 0; i < acc_sample_count; i+= MAX_RATE_IMU_ACCEL_DATA_PER_PACKET){
+    log_data_container_t container = {0};
+    uint8_t remaining = acc_sample_count - i;
+    if (remaining < MAX_RATE_IMU_ACCEL_DATA_PER_PACKET) {
+      memcpy(container.max_rate_accel.data, &raw_accs[i], sizeof(lsm6dsv32x_raw_imu_data_t) * remaining);
+    }
+    else {
+      memcpy(container.max_rate_accel.data, &raw_accs[i], sizeof(lsm6dsv32x_raw_imu_data_t) * MAX_RATE_IMU_ACCEL_DATA_PER_PACKET);
+    }
+    if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MAX_RATE_ACCEL, &container) != W_SUCCESS){
+      sensor_handler_state.log_data_fail_count++;
+      status |= W_FAILURE;
+    }
+  }
   return status;
 }
 
@@ -945,7 +967,14 @@ w_status_t sensor_handler_init(void) {
 		{"Movella State", movella_state_sd_log, STATE_ACT_ALLOWED, 1000 / 20},
 
     // --- IMU max rate accel ---
-    // { "Sensor Max Rate", 
+    { "Sensor Max Rate", max_rate_accel_log, STATE_IDLE, 1000 / 1000},
+    { "Sensor Max Rate", max_rate_accel_log, STATE_SLEEPY, 1000 / 1000},
+    { "Sensor Max Rate", max_rate_accel_log, STATE_RECOVERY, 1000 / 1000},
+    { "Sensor Max Rate", max_rate_accel_log, STATE_PAD_FILTER, 1000 / 1000},
+    { "Sensor Max Rate", max_rate_accel_log, STATE_PAD_NAV, 1000 / 1000},
+    { "Sensor Max Rate", max_rate_accel_log, STATE_BOOST, 1000 / 1000},
+    { "Sensor Max Rate", max_rate_accel_log, STATE_ACT_ALLOWED, 1000 / 1000},
+
 	};
 
 	static const size_t telemetry_source_count =

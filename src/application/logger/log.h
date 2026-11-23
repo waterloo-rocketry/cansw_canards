@@ -60,6 +60,10 @@
  */
 #define M(v) ((((v) & 0xffff) << 16) | LOG_DATA_MAGIC)
 
+// the number of lsm6dsv32x_raw_imu_data_t structs we can fit inside a packet.
+// we have 24 bytes of max packet size, and each lsm6dsv32x_raw_imu_data_t struct is 10 bytes
+#define MAX_RATE_IMU_ACCEL_DATA_PER_PACKET 2
+
 /**
  * All possible types of log messages emitted by log_data().
  * Make sure to update scripts/logparse.py too!
@@ -97,7 +101,7 @@ typedef enum {
 
 	LOG_TYPE_SERVO_MOTOR = M(0x0c),
 
-  LOG_TYPE_MAX_RATE_ACCEL = M(0x0d),
+  LOG_TYPE_MAX_RATE_ACCEL = M(0x0D),
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -212,8 +216,10 @@ typedef union __attribute__((packed)) {
 	} servo_motor;
 
   // LOG_TYPE_MAX_RATE_ACCEL
+  // Note: it is possible that this array is not filled.
+  // In this case the empty entries will all contain 0
   struct __attribute__((packed)) {
-    lsm6dsv32x_raw_imu_data_t data[LSM6DSV32X_FIFO_READ_THRESHOLD];
+    lsm6dsv32x_raw_imu_data_t data[MAX_RATE_IMU_ACCEL_DATA_PER_PACKET];
   } max_rate_accel;
 
 } log_data_container_t;

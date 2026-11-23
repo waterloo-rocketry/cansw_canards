@@ -83,6 +83,11 @@ FORMATS = {
         "angle", "curr", "temp",
     ]),
 
+    M(0x0D): Spec("max_rate_accel", "<hhhIhhhI", 
+    [
+        "x1", "y1", "z1", "ts1", "x2", "y2", "z2", "ts2"
+    ]),
+
     # Insert new types above this line in the format:
     # M(unique_small_integer): Spec(name, format, [field, ...]),
 }

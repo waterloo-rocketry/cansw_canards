@@ -72,4 +72,6 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
  */
 health_status_t lsm6dsv32x_get_status(void);
 
+bool lsm6dsv32x_is_full_read_fresh(void);
+
 #endif
