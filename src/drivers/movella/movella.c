@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "semphr.h"
@@ -237,12 +238,12 @@ health_status_t movella_get_status(void) {
 	if (movella_health.recent_dead_data_count) {
 		movella_health.recent_dead_data_count = 0;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_COMM_FAILURE_OFFSET);
 	}
 
 	if (!s_movella.initialized) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	return status;

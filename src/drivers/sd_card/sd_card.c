@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "drivers/sd_card/sd_card.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
@@ -252,25 +253,25 @@ health_status_t sd_card_get_status(void) {
 
 	if (!sd_card_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	if (sd_card_health.file_error) {
 		sd_card_health.file_error = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_FILE_SYSTEM_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_FILE_SYSTEM_OFFSET);
 	}
 
 	if (sd_card_health.invalid_param) {
 		sd_card_health.invalid_param = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 	}
 
 	if (sd_card_health.semaphore_take_fail) {
 		sd_card_health.semaphore_take_fail = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_OS_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OS_OFFSET);
 	}
 
 	// Log operation statistics

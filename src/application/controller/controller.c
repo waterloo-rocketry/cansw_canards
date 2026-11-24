@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include <math.h>
 
 #include "FreeRTOS.h"
@@ -260,31 +261,31 @@ health_status_t controller_get_status(void) {
 
 	if (controller_error_stats.ctx_is_null) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 		controller_error_stats.ctx_is_null = false;
 	}
 
 	if (controller_error_stats.controller_not_run) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_CODEGEN_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_CODEGEN_OFFSET);
 		controller_error_stats.controller_not_run = false;
 	}
 
 	if (controller_error_stats.can_telem_tx_fail) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_TX_FAILURE_OFFSET);
 		controller_error_stats.can_telem_tx_fail = false;
 	}
 
 	if (controller_error_stats.queue_is_empty) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OS_OFFSET);
 		controller_error_stats.queue_is_empty = false;
 	}
 
 	if (controller_error_stats.is_init == false) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	// Log all error statistics

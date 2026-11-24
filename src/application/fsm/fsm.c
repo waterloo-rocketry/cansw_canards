@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "FreeRTOS.h"
 #include "stm32h7xx_hal.h"
 #include "task.h"
@@ -352,25 +353,25 @@ health_status_t fsm_get_status(void) {
 
 	if (fsm_health.loop_timer_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_LOOP_TIMING_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_LOOP_TIMING_OFFSET);
 		fsm_health.loop_timer_failed = false;
 	}
 
 	if (fsm_health.get_timer_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INTERNAL_OFFSET);
 		fsm_health.get_timer_failed = false;
 	}
 
 	if (fsm_health.is_in_unknown_state) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 		fsm_health.is_in_unknown_state = false;
 	}
 
 	if (!fsm_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	log_text(10, LOG_LVL_INFO, "fsm",

@@ -58,7 +58,7 @@
  * Place v in upper 16 bits and LOG_DATA_MAGIC in lower 16 bits.
  * If changing this macro, make sure to update it in scripts/logparse.py too!
  */
-#define M(v) ((((v) & 0xffff) << 16) | LOG_DATA_MAGIC)
+#define M(v) ((((v) & 0xffff) * 65536) | LOG_DATA_MAGIC)
 
 /**
  * All possible types of log messages emitted by log_data().

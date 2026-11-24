@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "FreeRTOS.h"
 #include "math.h"
 #include "queue.h"
@@ -458,31 +459,31 @@ health_status_t navigator_get_status(void) {
 
 	if (navigator_error_stats.ctx_is_null) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 		navigator_error_stats.ctx_is_null = false;
 	}
 
 	if (navigator_error_stats.can_telem_tx_fail) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_TX_FAILURE_OFFSET);
 		navigator_error_stats.can_telem_tx_fail = false;
 	}
 
 	if (navigator_error_stats.nav_not_run) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_LOOP_TIMING_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_LOOP_TIMING_OFFSET);
 		navigator_error_stats.nav_not_run = false;
 	}
 
 	if (navigator_error_stats.queue_is_empty) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OS_OFFSET);
 		navigator_error_stats.queue_is_empty = false;
 	}
 
 	if (!navigator_error_stats.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	// Log all error statistics

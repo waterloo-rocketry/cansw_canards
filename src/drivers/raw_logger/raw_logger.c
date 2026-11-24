@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "drivers/raw_logger/raw_logger.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"
@@ -85,19 +86,19 @@ health_status_t raw_logger_SD_get_status(void) {
 
 	if (!raw_sd_card_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	if (raw_sd_card_health.invalid_param) {
 		raw_sd_card_health.invalid_param = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 	}
 
 	if (raw_sd_card_health.semaphore_take_fail) {
 		raw_sd_card_health.semaphore_take_fail = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_OS_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OS_OFFSET);
 	}
 
 	// Log operation statistics

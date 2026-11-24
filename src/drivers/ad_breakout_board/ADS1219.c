@@ -140,7 +140,7 @@ w_status_t ads1219_set_gain(ads1219_handle_t *p_handle, uint8_t gain) {
 	if (gain == ADS1219_GAIN_ONE) {
 		value = 0;
 	} else if (gain == ADS1219_GAIN_FOUR) {
-		value = (1 << 4);
+		value = 16; // bit 4
 	} else {
 		return W_INVALID_PARAM;
 	}
@@ -214,7 +214,7 @@ w_status_t ads1219_get_data_rate(ads1219_handle_t *p_handle, uint8_t *rate) {
 		return status;
 	}
 
-	*rate = (reg & ~ADS1219_CONFIG_MASK_DR) >> 2;
+	*rate = (reg & ~ADS1219_CONFIG_MASK_DR) / 4;
 	return W_SUCCESS;
 }
 
@@ -228,7 +228,7 @@ w_status_t ads1219_set_data_rate(ads1219_handle_t *p_handle, uint8_t rate) {
 	if (rate > 3) {
 		return W_INVALID_PARAM;
 	}
-	return ads1219_modify_register(p_handle, rate << 2, ADS1219_CONFIG_MASK_DR);
+	return ads1219_modify_register(p_handle, rate * 4, ADS1219_CONFIG_MASK_DR);
 }
 
 /**
@@ -244,7 +244,7 @@ w_status_t ads1219_get_conversion_mode(ads1219_handle_t *p_handle, uint8_t *mode
 		return status;
 	}
 
-	*mode = (reg & ~ADS1219_CONFIG_MASK_CM) >> 1;
+	*mode = (reg & ~ADS1219_CONFIG_MASK_CM) / 2;
 	return W_SUCCESS;
 }
 
@@ -258,7 +258,7 @@ w_status_t ads1219_set_conversion_mode(ads1219_handle_t *p_handle, uint8_t mode)
 	if (mode > 1) {
 		return W_INVALID_PARAM;
 	}
-	return ads1219_modify_register(p_handle, mode << 1, ADS1219_CONFIG_MASK_CM);
+	return ads1219_modify_register(p_handle, mode * 2, ADS1219_CONFIG_MASK_CM);
 }
 
 /**
@@ -310,7 +310,7 @@ w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
 	}
 
 	/* concat the raw data */
-	uint32_t raw = ((((uint32_t)buf[0] << 8) | (uint32_t)buf[1]) << 8) | (uint32_t)buf[2];
+	uint32_t raw = ((((uint32_t)buf[0] * 256U) | (uint32_t)buf[1]) * 256U) | (uint32_t)buf[2];
 
 	// preserve two's-complement in 32 bit
 	raw = (raw ^ 0x00800000) - 0x00800000;

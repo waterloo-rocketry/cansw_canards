@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
@@ -191,20 +192,20 @@ health_status_t power_handler_get_status(void) {
 	gpio_read_status |= gpio_read(GPIO_PIN_PG_EXT_5V, &pg_ext_5v, 5);
 
 	if (W_SUCCESS != gpio_read_status) {
-		status.error_bitfield |= (1U) << CANARDS_MODULE_E_HARDWARE_FAIL_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_HARDWARE_FAIL_OFFSET);
 		log_text(1, LOG_LVL_WARN, "power_handler",
 		         "ERROR: gpio read failed during get status. Code:%lx", gpio_read_status);
 	}
 
 	if (GPIO_LEVEL_LOW == flt1) {
-		status.error_bitfield |= (1U) << CANARDS_MODULE_E_BAT1_FAULT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_BAT1_FAULT_OFFSET);
 		power_handler_status.lipo_1_fault_count++;
 		log_text(1, LOG_LVL_WARN, "power_handler", "bat 1 power fault. Fault count: %d",
 		         power_handler_status.lipo_1_fault_count);
 	}
 
 	if (GPIO_LEVEL_LOW == flt2) {
-		status.error_bitfield |= (1U) << CANARDS_MODULE_E_BAT2_FAULT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_BAT2_FAULT_OFFSET);
 		power_handler_status.lipo_2_fault_count++;
 		log_text(1, LOG_LVL_WARN, "power_handler", "bat 2 power fault. Fault count: %d",
 		         power_handler_status.lipo_2_fault_count);
@@ -212,16 +213,16 @@ health_status_t power_handler_get_status(void) {
 
 	// External 5V output device fault
 	if (GPIO_LEVEL_LOW == pg_ext_5v) {
-		status.error_bitfield |= (1U) << CANARDS_MODULE_E_DEVICE_FAULT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_DEVICE_FAULT_OFFSET);
 	}
 
 	// Power draining state: external 5V enabled while in low power mode
 	if ((!power_handler_status.lipo_state) && power_handler_status.external_5v_enabled) {
-		status.error_bitfield |= (1U) << CANARDS_MODULE_E_LOW_POWER_MODE_WITH_EXT_5V_ON_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_LOW_POWER_MODE_WITH_EXT_5V_ON_OFFSET);
 	}
 
 	if (W_SUCCESS != transmit_curr_volt_status_can_msg()) {
-		status.error_bitfield |= (1U) << CANARDS_MODULE_E_TX_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_TX_FAILURE_OFFSET);
 	}
 
 	if (0 != status.error_bitfield) {
@@ -229,7 +230,7 @@ health_status_t power_handler_get_status(void) {
 	}
 
 	if (!power_handler_status.initialized) {
-		status.error_bitfield |= (1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
 	}
 
@@ -244,7 +245,7 @@ uint32_t power_handler_get_board_status(void) {
 
 	gpio_level_t pg_ext_5v = GPIO_LEVEL_HIGH;
 	if (gpio_read(GPIO_PIN_PG_EXT_5V, &pg_ext_5v, 5) != W_SUCCESS) {
-		board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
+		board_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 		power_handler_status.io_error_count++;
 		log_text(1, LOG_LVL_WARN, "power_handler",
 		         "gpio read failed for ext 5v power good. IO error count: %d",
@@ -253,7 +254,7 @@ uint32_t power_handler_get_board_status(void) {
 
 	// External 5V output efuse fault
 	if (GPIO_LEVEL_LOW == pg_ext_5v) {
-		board_bitfield |= (1U) << E_5V_EFUSE_FAULT_OFFSET;
+		board_bitfield |= pow2_u32(E_5V_EFUSE_FAULT_OFFSET);
 		power_handler_status.external_5v_fault_count++;
 		log_text(1, LOG_LVL_WARN, "power_handler", "ext 5v output fault. Fault count: %d",
 		         power_handler_status.external_5v_fault_count);
@@ -263,14 +264,14 @@ uint32_t power_handler_get_board_status(void) {
 	// trigger the fault
 	if (W_SUCCESS == adc_get_converted_val(ISENS_5V, &adc_value)) {
 		if (adc_value > I5V_MAX) {
-			board_bitfield |= (1U) << E_5V_OVER_CURR_OFFSET;
+			board_bitfield |= pow2_u32(E_5V_OVER_CURR_OFFSET);
 			power_handler_status.overcurrent_count++;
 			log_text(1, LOG_LVL_WARN, "power_handler",
 			         "5v power rail current fault. Fault count: %d",
 			         power_handler_status.overcurrent_count);
 		}
 	} else {
-		board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
+		board_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 		power_handler_status.io_error_count++;
 		log_text(1, LOG_LVL_WARN, "power_handler",
 		         "adc read failed for 5v rail current. IO error count: %d",
@@ -279,14 +280,14 @@ uint32_t power_handler_get_board_status(void) {
 
 	if (W_SUCCESS == adc_get_converted_val(ISENS_3V3, &adc_value)) {
 		if (adc_value > I3V3_MAX) {
-			board_bitfield |= (1U) << E_LOCAL_RAIL_OVER_CURR_OFFSET;
+			board_bitfield |= pow2_u32(E_LOCAL_RAIL_OVER_CURR_OFFSET);
 			power_handler_status.overcurrent_count++;
 			log_text(1, LOG_LVL_WARN, "power_handler",
 			         "3v3 power rail current fault. Fault count: %d",
 			         power_handler_status.overcurrent_count);
 		}
 	} else {
-		board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
+		board_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 		power_handler_status.io_error_count++;
 		log_text(1, LOG_LVL_WARN, "power_handler",
 		         "adc read failed for 3v3 rail current. IO error count: %d",
@@ -301,14 +302,14 @@ uint32_t power_handler_get_board_status(void) {
 			if (W_SUCCESS == adc_get_converted_val(VSENS_CHG, &adc_value)) {
 				// under volt not handled as it is not expected to be on all the time
 				if (adc_value > VCHG_MAX) {
-					board_bitfield |= (1U) << E_CHARGE_RAIL_OVER_VOLT_OFFSET;
+					board_bitfield |= pow2_u32(E_CHARGE_RAIL_OVER_VOLT_OFFSET);
 					power_handler_status.charge_rail_over_volt_count++;
 					log_text(1, LOG_LVL_WARN, "power_handler",
 					         "charge rail over voltage. Fault count: %d",
 					         power_handler_status.charge_rail_over_volt_count);
 				}
 			} else {
-				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
+				board_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 				power_handler_status.io_error_count++;
 				log_text(1, LOG_LVL_WARN, "power_handler",
 				         "adc read failed for charge voltage. IO error count: %d",
@@ -321,20 +322,20 @@ uint32_t power_handler_get_board_status(void) {
 		case POWER_INPUT_RKT:
 			if (W_SUCCESS == adc_get_converted_val(VSENS_RKT, &adc_value)) {
 				if (adc_value < VRKT_MIN) {
-					board_bitfield |= (1U) << E_12V_UNDER_VOLT_OFFSET;
+					board_bitfield |= pow2_u32(E_12V_UNDER_VOLT_OFFSET);
 					power_handler_status.rkt_12v_under_volt_count++;
 					log_text(1, LOG_LVL_WARN, "power_handler",
 					         "12v rocket rail under voltage. Fault count: %d",
 					         power_handler_status.rkt_12v_under_volt_count);
 				} else if (adc_value > VRKT_MAX) {
-					board_bitfield |= (1U) << E_12V_OVER_VOLT_OFFSET;
+					board_bitfield |= pow2_u32(E_12V_OVER_VOLT_OFFSET);
 					power_handler_status.rkt_12v_over_volt_count++;
 					log_text(1, LOG_LVL_WARN, "power_handler",
 					         "12v rocket rail over voltage. Fault count: %d",
 					         power_handler_status.rkt_12v_over_volt_count);
 				}
 			} else {
-				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
+				board_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 				power_handler_status.io_error_count++;
 				log_text(1, LOG_LVL_WARN, "power_handler",
 				         "adc read failed for rocket voltage. IO error count: %d",
@@ -347,20 +348,20 @@ uint32_t power_handler_get_board_status(void) {
 		case POWER_INPUT_BAT:
 			if (W_SUCCESS == adc_get_converted_val(VSENS_BAT1, &adc_value)) {
 				if (adc_value < VBAT_MIN) {
-					board_bitfield |= (1U) << E_BATT_UNDER_VOLT_OFFSET;
+					board_bitfield |= pow2_u32(E_BATT_UNDER_VOLT_OFFSET);
 					power_handler_status.batt_under_volt_count++;
 					log_text(1, LOG_LVL_WARN, "power_handler",
 					         "batt 1 under voltage. Fault count: %d",
 					         power_handler_status.batt_under_volt_count);
 				} else if (adc_value > VBAT_MAX) {
-					board_bitfield |= (1U) << E_BATT_OVER_VOLT_OFFSET;
+					board_bitfield |= pow2_u32(E_BATT_OVER_VOLT_OFFSET);
 					power_handler_status.batt_over_volt_count++;
 					log_text(1, LOG_LVL_WARN, "power_handler",
 					         "batt 1 over voltage. Fault count: %d",
 					         power_handler_status.batt_over_volt_count);
 				}
 			} else {
-				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
+				board_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 				power_handler_status.io_error_count++;
 				log_text(1, LOG_LVL_WARN, "power_handler",
 				         "adc read failed for battery 1 voltage. IO error count: %d",
@@ -369,20 +370,20 @@ uint32_t power_handler_get_board_status(void) {
 
 			if (W_SUCCESS == adc_get_converted_val(VSENS_BAT2, &adc_value)) {
 				if (adc_value < VBAT_MIN) {
-					board_bitfield |= (1U) << E_BATT_UNDER_VOLT_OFFSET;
+					board_bitfield |= pow2_u32(E_BATT_UNDER_VOLT_OFFSET);
 					power_handler_status.batt_under_volt_count++;
 					log_text(1, LOG_LVL_WARN, "power_handler",
 					         "batt 2 under voltage. Fault count: %d",
 					         power_handler_status.batt_under_volt_count);
 				} else if (adc_value > VBAT_MAX) {
-					board_bitfield |= (1U) << E_BATT_OVER_VOLT_OFFSET;
+					board_bitfield |= pow2_u32(E_BATT_OVER_VOLT_OFFSET);
 					power_handler_status.batt_over_volt_count++;
 					log_text(1, LOG_LVL_WARN, "power_handler",
 					         "batt 2 over voltage. Fault count: %d",
 					         power_handler_status.batt_over_volt_count);
 				}
 			} else {
-				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
+				board_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 				power_handler_status.io_error_count++;
 				log_text(1, LOG_LVL_WARN, "power_handler",
 				         "adc read failed for battery 2 voltage. IO error count: %d",
@@ -391,14 +392,14 @@ uint32_t power_handler_get_board_status(void) {
 
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT1, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
-					board_bitfield |= (1U) << E_BATT_OVER_CURR_OFFSET;
+					board_bitfield |= pow2_u32(E_BATT_OVER_CURR_OFFSET);
 					power_handler_status.overcurrent_count++;
 					log_text(1, LOG_LVL_WARN, "power_handler",
 					         "Bat1 over current! Over current fault count: %d",
 					         power_handler_status.overcurrent_count);
 				}
 			} else {
-				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
+				board_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 				power_handler_status.io_error_count++;
 				log_text(1, LOG_LVL_WARN, "power_handler",
 				         "adc read failed for battery 1 current. IO error count: %d",
@@ -407,14 +408,14 @@ uint32_t power_handler_get_board_status(void) {
 
 			if (W_SUCCESS == adc_get_converted_val(ISENS_BAT2, &adc_value)) {
 				if (adc_value > IBAT_MAX) {
-					board_bitfield |= (1U) << E_BATT_OVER_CURR_OFFSET;
+					board_bitfield |= pow2_u32(E_BATT_OVER_CURR_OFFSET);
 					power_handler_status.overcurrent_count++;
 					log_text(1, LOG_LVL_WARN, "power_handler",
 					         "Bat2 over current! Over current fault count: %d",
 					         power_handler_status.overcurrent_count);
 				}
 			} else {
-				board_bitfield |= (1U) << E_IO_ERROR_OFFSET;
+				board_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 				power_handler_status.io_error_count++;
 				log_text(1, LOG_LVL_WARN, "power_handler",
 				         "adc read failed for battery 2 current. IO error count: %d",

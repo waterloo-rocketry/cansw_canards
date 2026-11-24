@@ -147,9 +147,9 @@ w_status_t altimu_get_acc_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data
 	uint8_t raw_bytes[6];
 	w_status_t status = i2c_read_reg(I2C_BUS_4, LSM6DSO_ADDR, OUTX_L_A, raw_bytes, 6);
 	if (W_SUCCESS == status) {
-		raw_data->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
-		raw_data->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
-		raw_data->z = (uint16_t)(((uint16_t)raw_bytes[5] << 8) | raw_bytes[4]);
+		raw_data->x = (uint16_t)(((uint16_t)raw_bytes[1] * 256U) | raw_bytes[0]);
+		raw_data->y = (uint16_t)(((uint16_t)raw_bytes[3] * 256U) | raw_bytes[2]);
+		raw_data->z = (uint16_t)(((uint16_t)raw_bytes[5] * 256U) | raw_bytes[4]);
 		data->x = (int16_t)raw_data->x * ACC_FS;
 		data->y = (int16_t)raw_data->y * ACC_FS;
 		data->z = (int16_t)raw_data->z * ACC_FS;
@@ -165,9 +165,9 @@ w_status_t altimu_get_gyro_data(vector3d_t *data, altimu_raw_imu_data_t *raw_dat
 	uint8_t raw_bytes[6];
 	w_status_t status = i2c_read_reg(I2C_BUS_4, LSM6DSO_ADDR, OUTX_L_G, raw_bytes, 6);
 	if (W_SUCCESS == status) {
-		raw_data->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
-		raw_data->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
-		raw_data->z = (uint16_t)(((uint16_t)raw_bytes[5] << 8) | raw_bytes[4]);
+		raw_data->x = (uint16_t)(((uint16_t)raw_bytes[1] * 256U) | raw_bytes[0]);
+		raw_data->y = (uint16_t)(((uint16_t)raw_bytes[3] * 256U) | raw_bytes[2]);
+		raw_data->z = (uint16_t)(((uint16_t)raw_bytes[5] * 256U) | raw_bytes[4]);
 		data->x = (int16_t)raw_data->x * GYRO_FS;
 		data->y = (int16_t)raw_data->y * GYRO_FS;
 		data->z = (int16_t)raw_data->z * GYRO_FS;
@@ -193,14 +193,14 @@ w_status_t altimu_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_data,
 	status |= i2c_read_reg(I2C_BUS_4, LSM6DSO_ADDR, OUTX_L_G, raw_bytes, 12);
 	if (W_SUCCESS == status) {
 		// Parse gyroscope raw data (first 6 bytes)
-		raw_gyro->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
-		raw_gyro->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
-		raw_gyro->z = (uint16_t)(((uint16_t)raw_bytes[5] << 8) | raw_bytes[4]);
+		raw_gyro->x = (uint16_t)(((uint16_t)raw_bytes[1] * 256U) | raw_bytes[0]);
+		raw_gyro->y = (uint16_t)(((uint16_t)raw_bytes[3] * 256U) | raw_bytes[2]);
+		raw_gyro->z = (uint16_t)(((uint16_t)raw_bytes[5] * 256U) | raw_bytes[4]);
 
 		// Parse accelerometer raw data (next 6 bytes)
-		raw_acc->x = (uint16_t)(((uint16_t)raw_bytes[7] << 8) | raw_bytes[6]);
-		raw_acc->y = (uint16_t)(((uint16_t)raw_bytes[9] << 8) | raw_bytes[8]);
-		raw_acc->z = (uint16_t)(((uint16_t)raw_bytes[11] << 8) | raw_bytes[10]);
+		raw_acc->x = (uint16_t)(((uint16_t)raw_bytes[7] * 256U) | raw_bytes[6]);
+		raw_acc->y = (uint16_t)(((uint16_t)raw_bytes[9] * 256U) | raw_bytes[8]);
+		raw_acc->z = (uint16_t)(((uint16_t)raw_bytes[11] * 256U) | raw_bytes[10]);
 
 		// Convert to physical units
 		gyro_data->x = (int16_t)raw_gyro->x * GYRO_FS;
@@ -247,9 +247,9 @@ w_status_t altimu_get_mag_data(vector3d_t *data, altimu_raw_imu_data_t *raw_data
 	uint8_t raw_bytes[6];
 	status |= i2c_read_reg(I2C_BUS_4, LIS3MDL_ADDR, LIS3_OUT_X_L, raw_bytes, 6);
 	if (W_SUCCESS == status) {
-		raw_data->x = (uint16_t)(((uint16_t)raw_bytes[1] << 8) | raw_bytes[0]);
-		raw_data->y = (uint16_t)(((uint16_t)raw_bytes[3] << 8) | raw_bytes[2]);
-		raw_data->z = (uint16_t)(((uint16_t)raw_bytes[5] << 8) | raw_bytes[4]);
+		raw_data->x = (uint16_t)(((uint16_t)raw_bytes[1] * 256U) | raw_bytes[0]);
+		raw_data->y = (uint16_t)(((uint16_t)raw_bytes[3] * 256U) | raw_bytes[2]);
+		raw_data->z = (uint16_t)(((uint16_t)raw_bytes[5] * 256U) | raw_bytes[4]);
 		data->x = (int16_t)raw_data->x * MAG_FS;
 		data->y = (int16_t)raw_data->y * MAG_FS;
 		data->z = (int16_t)raw_data->z * MAG_FS;
@@ -281,12 +281,12 @@ w_status_t altimu_get_baro_data(altimu_barometer_data_t *data, altimu_raw_baro_d
 	uint8_t raw_bytes[5];
 	status |= i2c_read_reg(I2C_BUS_4, LPS22DF_ADDR, LPS_PRESS_OUT_XL, raw_bytes, 5);
 	if (W_SUCCESS == status) {
-		raw_data->pressure = (int32_t)((((uint32_t)raw_bytes[2] << 16) |
-		                                ((uint32_t)raw_bytes[1] << 8) | (uint32_t)raw_bytes[0])
-		                               << 8) >>
-		                     8;
+		raw_data->pressure = (int32_t)((((uint32_t)raw_bytes[2] * 65536U) |
+		                                ((uint32_t)raw_bytes[1] * 256U) | (uint32_t)raw_bytes[0]) *
+		                               256U) /
+		                     256;
 
-		raw_data->temperature = (int16_t)((raw_bytes[4] << 8) | raw_bytes[3]);
+		raw_data->temperature = (int16_t)((raw_bytes[4] * 256U) | raw_bytes[3]);
 		data->pressure = raw_data->pressure * BARO_FS;
 		data->temperature = raw_data->temperature * TEMP_FS;
 	} else {

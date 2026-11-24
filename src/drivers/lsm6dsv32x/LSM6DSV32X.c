@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "FreeRTOS.h"
 #include "i2c.h"
 #include "main.h"
@@ -270,7 +271,7 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 	// actively being streamed via DMA into the Buffer from the IMU
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_BUSY;
 
-	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
+	const uint8_t shifted_address = (LSM6DSV32X_ADDR * 2U);
 
 	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Read_DMA(
 		lsm6dsv32x_ctx.hi2c, shifted_address, FIFO_DATA_OUT_TAG, I2C_MEMADD_SIZE_8BIT,
@@ -316,7 +317,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		uint8_t i = LSM6DSV32X_FIFO_THRESHOLD - 1;
 		do {
 			// the last two bits are not part of the tag. See datasheet section 9.84
-			uint8_t tag = raw_bytes[i][0] >> 3;
+			uint8_t tag = raw_bytes[i][0] / 8U;
 			if (GYRO_TAG == tag) {
 				if (NULL == latest_gyro_bytes) {
 					latest_gyro_bytes = &raw_bytes[i][1];
@@ -342,18 +343,18 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		}
 
 		// Parse gyroscope raw data (first 6 bytes)
-		raw_gyro->x = (uint16_t)(((uint16_t)latest_gyro_bytes[1] << 8) | latest_gyro_bytes[0]);
-		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[3] << 8) | latest_gyro_bytes[2]);
-		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[5] << 8) | latest_gyro_bytes[4]);
+		raw_gyro->x = (uint16_t)(((uint16_t)latest_gyro_bytes[1] * 256U) | latest_gyro_bytes[0]);
+		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[3] * 256U) | latest_gyro_bytes[2]);
+		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[5] * 256U) | latest_gyro_bytes[4]);
 
 		raw_gyro->timestamp_ms =
 			raw_acc->timestamp_ms; // grab time from accel since they're both the latest
 			                       // measurements from the same time
 
 		// Parse accelerometer raw data (next 6 bytes)
-		raw_acc->x = (uint16_t)(((uint16_t)latest_acc_bytes[1] << 8) | latest_acc_bytes[0]);
-		raw_acc->y = (uint16_t)(((uint16_t)latest_acc_bytes[3] << 8) | latest_acc_bytes[2]);
-		raw_acc->z = (uint16_t)(((uint16_t)latest_acc_bytes[5] << 8) | latest_acc_bytes[4]);
+		raw_acc->x = (uint16_t)(((uint16_t)latest_acc_bytes[1] * 256U) | latest_acc_bytes[0]);
+		raw_acc->y = (uint16_t)(((uint16_t)latest_acc_bytes[3] * 256U) | latest_acc_bytes[2]);
+		raw_acc->z = (uint16_t)(((uint16_t)latest_acc_bytes[5] * 256U) | latest_acc_bytes[4]);
 
 		// Convert to physical units
 		gyro_data->x = ((float64_t)((int16_t)raw_gyro->x)) * GYRO_FS;
@@ -409,10 +410,10 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 
 		uint8_t accel_index = 0, gyro_index = 0;
 		for (uint8_t i = 0; i < LSM6DSV32X_FIFO_READ_THRESHOLD; i++) {
-			uint8_t tag = raw_bytes[i][0] >> 3;
-			uint16_t x = (uint16_t)(raw_bytes[i][2] << 8) | raw_bytes[i][1];
-			uint16_t y = (uint16_t)(raw_bytes[i][4] << 8) | raw_bytes[i][3];
-			uint16_t z = (uint16_t)(raw_bytes[i][6] << 8) | raw_bytes[i][5];
+			uint8_t tag = raw_bytes[i][0] / 8U;
+			uint16_t x = (uint16_t)(raw_bytes[i][2] * 256U) | raw_bytes[i][1];
+			uint16_t y = (uint16_t)(raw_bytes[i][4] * 256U) | raw_bytes[i][3];
+			uint16_t z = (uint16_t)(raw_bytes[i][6] * 256U) | raw_bytes[i][5];
 
 			if (GYRO_TAG == tag) {
 				// gyro sample
@@ -459,13 +460,13 @@ health_status_t lsm6dsv32x_get_status(void) {
 	// I2C errors
 	if (W_IO_ERROR == lsm6dsv32x_ctx.latest_status) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_COMM_FAILURE_OFFSET);
 	}
 
 	// Failed initialization on critical component
 	if (!lsm6dsv32x_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	log_text(10, LOG_LVL_INFO, "LSM6DSV32X",

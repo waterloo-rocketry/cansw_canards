@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include <inttypes.h>
 #include <stdint.h>
 
@@ -499,40 +500,40 @@ health_status_t flight_phase_get_status(void) {
 	if (flight_phase_status.is_queue_full) {
 		flight_phase_status.is_queue_full = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OS_OFFSET);
 	}
 
 	// Invalid event sent
 	if (flight_phase_status.invalid_event) {
 		flight_phase_status.invalid_event = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_UNEXPECTED_EVENT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_UNEXPECTED_EVENT_OFFSET);
 	}
 
 	// Error state flight phase
 	if (flight_phase_status.is_in_error_state) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_ERROR_STATE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_ERROR_STATE_OFFSET);
 	}
 
 	// Invalid data actuator data
 	if (flight_phase_status.invalid_actuator_data_format) {
 		flight_phase_status.invalid_actuator_data_format = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_COMM_FAILURE_OFFSET);
 	}
 
 	// Not initialized
 	if (!flight_phase_status.initialized) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	// Null context pointer
 	if (flight_phase_status.ctx_is_null) {
 		flight_phase_status.ctx_is_null = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_FATAL;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 	}
 
 	log_text(1, LOG_LVL_INFO, "FlightPhase",

@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -619,55 +620,55 @@ health_status_t logger_get_status(void) {
 
 	if (!logger_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	if (logger_health.buffer_is_full) {
 		logger_health.buffer_is_full = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_OVERFLOW_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OVERFLOW_OFFSET);
 	}
 
 	if (logger_health.timeout_occurred) {
 		logger_health.timeout_occurred = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_TIMEOUT_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_TIMEOUT_OFFSET);
 	}
 
 	if (logger_health.os_error_occurred) {
 		logger_health.os_error_occurred = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_OS_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OS_OFFSET);
 	}
 
 	if (logger_health.invalid_param) {
 		logger_health.invalid_param = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 	}
 
 	if (logger_health.region_overflow) {
 		logger_health.region_overflow = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_OUT_OF_BOUNDS_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OUT_OF_BOUNDS_OFFSET);
 	}
 
 	if (logger_health.fs_open_flush_failed) {
 		logger_health.fs_open_flush_failed = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_FILE_SYSTEM_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_FILE_SYSTEM_OFFSET);
 	}
 
 	// The two init flags below are deliberately not cleared. log_init() is called once and never
 	// retried, so an init failure persists until reboot and must be reported on every health check.
 	if (logger_health.init_os_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_OS_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OS_OFFSET);
 	}
 
 	if (logger_health.init_fs_create_write_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_FILE_SYSTEM_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_FILE_SYSTEM_OFFSET);
 	}
 
 	log_text(10, LOG_LVL_INFO, "logger",

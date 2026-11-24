@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include <inttypes.h>
 #include <math.h>
 #include <string.h>
@@ -17,7 +18,7 @@ static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
 static const uint8_t IIS2MDC_I2C_ADDR = 0x1e;
 
 // HAL takes the 8-bit left shifted address for HAL_I2C_Mem_Read_DMA calls.
-static const uint16_t IIS2MDC_HAL_ADDR = (uint16_t)(IIS2MDC_I2C_ADDR << 1);
+static const uint16_t IIS2MDC_HAL_ADDR = (uint16_t)(IIS2MDC_I2C_ADDR * 2U);
 
 // Register addresses
 // TODO: Calibration needs to be done in a magnetic field to get offset values written into the
@@ -37,10 +38,10 @@ static const uint32_t IIS2MDC_SUB_AUTO_INC = 0x80;
 static const uint32_t IIS2MDC_WHO_AM_I_VAL = 0x40;
 
 // Resets config registers
-static const uint32_t IIS2MDC_CFG_A_SOFT_RESET = (1 << 5);
+static const uint32_t IIS2MDC_CFG_A_SOFT_RESET = 32; // bit 5
 
 // Enables self-testing
-static const uint8_t IIS2MDC_CFG_C_SELF_TEST = (1 << 1);
+static const uint8_t IIS2MDC_CFG_C_SELF_TEST = 2; // bit 1
 
 // Output data rate in hz, matching the init config
 static const uint32_t IIS2MDC_ODR_HZ = 100;
@@ -173,9 +174,9 @@ static w_status_t iis2mdc_write_reg(uint8_t reg, uint8_t val) {
  * for an axis. This is casted to uint16 for raw data and int16 for gauss.
  */
 static void iis2mdc_convert_sample(const uint8_t *buf, iis2mdc_raw_data_t *raw, vector3d_t *data) {
-	raw->x = (uint16_t)((((uint16_t)buf[1]) << 8) | buf[0]);
-	raw->y = (uint16_t)((((uint16_t)buf[3]) << 8) | buf[2]);
-	raw->z = (uint16_t)((((uint16_t)buf[5]) << 8) | buf[4]);
+	raw->x = (uint16_t)((((uint16_t)buf[1]) * 256U) | buf[0]);
+	raw->y = (uint16_t)((((uint16_t)buf[3]) * 256U) | buf[2]);
+	raw->z = (uint16_t)((((uint16_t)buf[5]) * 256U) | buf[4]);
 
 	data->x = ((float64_t)((int16_t)raw->x)) * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
 	data->y = ((float64_t)((int16_t)raw->y)) * IIS2MDC_SENSITIVITY_GAUSS_PER_LSB;
@@ -518,49 +519,49 @@ health_status_t iis2mdc_get_status(void) {
 	// Driver not initialized
 	if (iis2mdc_state != IIS2MDC_STATE_ASYNC_DMA_ACTIVE) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	// I2C/DMA failure
 	if (iis2mdc_health.communication_failure) {
 		iis2mdc_health.communication_failure = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_COMM_FAILURE_OFFSET);
 	}
 
 	// Invalid operation
 	if (iis2mdc_health.internal_error) {
 		iis2mdc_health.internal_error = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INTERNAL_OFFSET);
 	}
 
 	// Out of bounds data
 	if (iis2mdc_health.out_of_bounds_data) {
 		iis2mdc_health.out_of_bounds_data = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_OUT_OF_BOUNDS_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OUT_OF_BOUNDS_OFFSET);
 	}
 
 	// Self test timeout
 	if (iis2mdc_health.timeout) {
 		iis2mdc_health.timeout = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_TIMEOUT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_TIMEOUT_OFFSET);
 	}
 
 	// Get data on invalid cache
 	if (iis2mdc_health.no_data_invalid_cache) {
 		iis2mdc_health.no_data_invalid_cache = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NO_DATA_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NO_DATA_OFFSET);
 	}
 
 	// I2C mismatch or null param
 	if (iis2mdc_health.invalid_param) {
 		iis2mdc_health.invalid_param = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 	}
 
 	log_text(1, LOG_LVL_INFO, "iis2mdc",

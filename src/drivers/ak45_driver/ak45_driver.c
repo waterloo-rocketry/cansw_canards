@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -137,13 +138,13 @@ static w_status_t ak45_parse_feedback(const uint8_t *data, ak45_feedback_t *fb) 
 		return W_FAILURE;
 	}
 
-	int16_t raw_pos = (int16_t)(((uint16_t)data[0] << 8) | data[1]);
+	int16_t raw_pos = (int16_t)(((uint16_t)data[0] * 256U) | data[1]);
 	fb->position_deg = (float32_t)raw_pos * AK45_POS_FB_TO_DEG;
 
-	int16_t raw_speed = (int16_t)(((uint16_t)data[2] << 8) | data[3]);
+	int16_t raw_speed = (int16_t)(((uint16_t)data[2] * 256U) | data[3]);
 	fb->speed_erpm = (float32_t)raw_speed * AK45_SPEED_FB_TO_ERPM;
 
-	int16_t raw_current = (int16_t)(((uint16_t)data[4] << 8) | data[5]);
+	int16_t raw_current = (int16_t)(((uint16_t)data[4] * 256U) | data[5]);
 	fb->current_a = (float32_t)raw_current * AK45_CURRENT_FB_TO_A;
 
 	fb->temperature_c = (int8_t)data[6];
@@ -286,25 +287,25 @@ static w_status_t ak45_sd_telemetry(void) {
 /************************************** TELEM **************************************/
 
 w_status_t ak45_send_position_cmd(float32_t angle_deg) {
-	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | AK45_DRIVER_ID;
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS * 256U) | AK45_DRIVER_ID;
 
 	int32_t pos_raw = (int32_t)(angle_deg * AK45_POS_CMD_DEG_TO_POS);
 	uint8_t data[4];
-	data[0] = (uint8_t)(((uint32_t)pos_raw >> 24) & 0xff);
-	data[1] = (uint8_t)(((uint32_t)pos_raw >> 16) & 0xff);
-	data[2] = (uint8_t)(((uint32_t)pos_raw >> 8) & 0xff);
+	data[0] = (uint8_t)(((uint32_t)pos_raw / 16777216U) & 0xff);
+	data[1] = (uint8_t)(((uint32_t)pos_raw / 65536U) & 0xff);
+	data[2] = (uint8_t)(((uint32_t)pos_raw / 256U) & 0xff);
 	data[3] = (uint8_t)((uint32_t)pos_raw & 0xff);
 
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
 }
 
 w_status_t ak45_send_current_cmd(int32_t current_mA) {
-	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT << 8) | AK45_DRIVER_ID;
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT * 256U) | AK45_DRIVER_ID;
 
 	uint8_t data[4];
-	data[0] = (uint8_t)(((uint32_t)current_mA >> 24) & 0xff);
-	data[1] = (uint8_t)(((uint32_t)current_mA >> 16) & 0xff);
-	data[2] = (uint8_t)(((uint32_t)current_mA >> 8) & 0xff);
+	data[0] = (uint8_t)(((uint32_t)current_mA / 16777216U) & 0xff);
+	data[1] = (uint8_t)(((uint32_t)current_mA / 65536U) & 0xff);
+	data[2] = (uint8_t)(((uint32_t)current_mA / 256U) & 0xff);
 	data[3] = (uint8_t)((uint32_t)current_mA & 0xff);
 
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
@@ -312,19 +313,19 @@ w_status_t ak45_send_current_cmd(int32_t current_mA) {
 
 w_status_t ak45_send_pos_velo_cmd(float32_t angle_deg, uint16_t mag_speed_rpm,
                                   int16_t accel_rpm_s2) {
-	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS_SPD << 8) | AK45_DRIVER_ID;
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS_SPD * 256U) | AK45_DRIVER_ID;
 
 	uint32_t pos_raw = ((int32_t)(angle_deg * AK45_POS_CMD_DEG_TO_POS));
 	uint8_t data[8];
-	data[0] = (uint8_t)((pos_raw >> 24) & 0xff);
-	data[1] = (uint8_t)((pos_raw >> 16) & 0xff);
-	data[2] = (uint8_t)((pos_raw >> 8) & 0xff);
+	data[0] = (uint8_t)((pos_raw / 16777216U) & 0xff);
+	data[1] = (uint8_t)((pos_raw / 65536U) & 0xff);
+	data[2] = (uint8_t)((pos_raw / 256U) & 0xff);
 	data[3] = (uint8_t)(pos_raw & 0xff);
 
-	data[4] = (uint8_t)(((uint16_t)mag_speed_rpm >> 8) & 0xff);
+	data[4] = (uint8_t)(((uint16_t)mag_speed_rpm / 256U) & 0xff);
 	data[5] = (uint8_t)((uint16_t)mag_speed_rpm & 0xff);
 
-	data[6] = (uint8_t)((accel_rpm_s2 >> 8) & 0xff);
+	data[6] = (uint8_t)(((uint16_t)accel_rpm_s2 / 256U) & 0xff);
 	data[7] = (uint8_t)(accel_rpm_s2 & 0xff);
 
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_8);
@@ -358,8 +359,8 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 	motor_filter.FilterIndex = 0;
 	motor_filter.FilterType = FDCAN_FILTER_DUAL;
 	motor_filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
-	motor_filter.FilterID1 = (uint32_t)(CAN_REAL_TIME_FEEDBACK << 8) | AK45_DRIVER_ID;
-	motor_filter.FilterID2 = (uint32_t)(CAN_START_FRAME << 8) | AK45_DRIVER_ID;
+	motor_filter.FilterID1 = (uint32_t)(CAN_REAL_TIME_FEEDBACK * 256U) | AK45_DRIVER_ID;
+	motor_filter.FilterID2 = (uint32_t)(CAN_START_FRAME * 256U) | AK45_DRIVER_ID;
 
 	if (HAL_FDCAN_ConfigFilter(g_ak45_hfdcan, &motor_filter) != HAL_OK) {
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "FDCAN filter config failed");
@@ -471,7 +472,7 @@ w_status_t ak45_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_init
 }
 
 w_status_t ak45_send_disable_cmd(void) {
-	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT << 8) | AK45_DRIVER_ID;
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_CURRENT * 256U) | AK45_DRIVER_ID;
 	uint8_t data[4] = {0, 0, 0, 0};
 	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
 }
@@ -495,7 +496,7 @@ w_status_t ak45_get_latest_feedback(ak45_feedback_t *fb) {
 }
 
 w_status_t ak45_send_set_origin(void) {
-	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE << 8) | AK45_DRIVER_ID;
+	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_ORIGIN_HERE * 256U) | AK45_DRIVER_ID;
 	uint8_t zero_data[1] = {0};
 	return ak45_can_transmit_ext(ext_id, zero_data, FDCAN_DLC_BYTES_1);
 }
@@ -529,7 +530,7 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 		return;
 	}
 
-	uint32_t expected_id = ((uint32_t)CAN_REAL_TIME_FEEDBACK << 8) | AK45_DRIVER_ID;
+	uint32_t expected_id = ((uint32_t)CAN_REAL_TIME_FEEDBACK * 256U) | AK45_DRIVER_ID;
 
 	if ((rx_header.IdType != FDCAN_EXTENDED_ID) || (rx_header.Identifier != expected_id)) {
 		ak45_health.rx_errors++;
@@ -565,28 +566,28 @@ health_status_t ak45_get_status(void) {
 
 	if (!ak45_health.hard_stop_calibrated) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_CALIBRATED_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_CALIBRATED_OFFSET);
 	}
 
 	if (ak45_health.hard_stop_cal_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_FAILED_CALIBRATION_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_FAILED_CALIBRATION_OFFSET);
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "ak45", "Failed calibration.");
 	}
 
 	if (ak45_health.cmd_tx_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_TX_FAILURE_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_TX_FAILURE_OFFSET);
 	}
 
 	if (ak45_health.feedback_rx_failed) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_RX_FAILURE_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_RX_FAILURE_OFFSET);
 	}
 
 	if (!ak45_health.is_init) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= ((1U) << CANARDS_MODULE_E_NOT_INIT_OFFSET);
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	log_text(LOG_WAIT_MS, LOG_LVL_INFO, "ak45",

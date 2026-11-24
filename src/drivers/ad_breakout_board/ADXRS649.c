@@ -1,4 +1,5 @@
 
+#include "common/math/pow2.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -269,19 +270,19 @@ health_status_t adxrs649_get_status(void) {
 
 	if (!is_initialized) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	if (adxrs649_health.invalid_param) {
 		adxrs649_health.invalid_param = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 	}
 
 	if (adxrs649_health.comm_failure) {
 		adxrs649_health.comm_failure = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_COMM_FAILURE_OFFSET);
 	}
 
 	log_text(1, LOG_LVL_INFO, "ADXRS649",

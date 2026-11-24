@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "FreeRTOS.h"
 #include "fdcan.h"
 #include "printf.h"
@@ -149,7 +150,7 @@ uint32_t check_watchdog_tasks(void) {
 	// cannot run health check without timer
 	if (timer_get_ms(&current_time_ms) != W_SUCCESS) {
 		log_text(0, LOG_LVL_WARN, "health_checks", "timer_get_ms failure");
-		status_bitfield |= 1 << E_IO_ERROR_OFFSET;
+		status_bitfield |= pow2_u32(E_IO_ERROR_OFFSET);
 		return status_bitfield;
 	}
 
@@ -171,7 +172,7 @@ uint32_t check_watchdog_tasks(void) {
 				log_text(0, LOG_LVL_WARN, "health", "CAN send failure for watchdog timeout msg");
 			}
 			log_text(0, LOG_LVL_WARN, "health_checks", "task timeout: %d", *task_name);
-			status_bitfield |= 1 << E_WATCHDOG_TIMEOUT_OFFSET;
+			status_bitfield |= pow2_u32(E_WATCHDOG_TIMEOUT_OFFSET);
 		}
 
 		// resetting for next check
@@ -237,7 +238,7 @@ static uint32_t check_modules_status(void) {
 	}
 
 	if (status != W_SUCCESS) {
-		status_bitfield |= (1 << E_CANARD_MODULE_FAILURE_OFFSET);
+		status_bitfield |= pow2_u32(E_CANARD_MODULE_FAILURE_OFFSET);
 	}
 
 	return status_bitfield;

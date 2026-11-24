@@ -37,6 +37,7 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include "common/math/pow2.h"
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -69,7 +70,7 @@
 #define ADXL38X_PART_ID_EXPECTED ADXL38X_RESET_PART_ID
 
 #ifndef BIT
-#define BIT(x) ((uint32_t)1U << (x))
+#define BIT(x) pow2_u32(x)
 #endif
 
 static const uint8_t ADX38X_SCALE_MUL[3] = {1, 2, 4};
@@ -79,26 +80,26 @@ static w_status_t adxl38x_set_to_standby(adxl38x_dev_t *p_dev);
 
 static uint8_t adxl38x_mask_shift_u8(uint8_t mask) {
 	uint8_t shift = 0;
-	while (((mask >> shift) & 0x1) == 0 && shift < 8) {
+	while (((mask / pow2_u32(shift)) & 0x1) == 0 && shift < 8) {
 		shift++;
 	}
 	return shift;
 }
 
 uint8_t adxl38x_field_prep_u8(uint8_t mask, uint8_t value) {
-	return (uint8_t)((value << adxl38x_mask_shift_u8(mask)) & mask);
+	return (uint8_t)((value * pow2_u32(adxl38x_mask_shift_u8(mask))) & mask);
 }
 
 static uint8_t adxl38x_field_get_u8(uint8_t mask, uint8_t value) {
-	return (uint8_t)((value & mask) >> adxl38x_mask_shift_u8(mask));
+	return (uint8_t)((value & mask) / pow2_u32(adxl38x_mask_shift_u8(mask)));
 }
 
 static uint16_t adxl38x_get_unaligned_be16(const uint8_t *p_data) {
-	return (uint16_t)(((uint16_t)p_data[0] << 8) | p_data[1]);
+	return (uint16_t)(((uint16_t)p_data[0] * 256U) | p_data[1]);
 }
 
 static uint32_t adxl38x_get_unaligned_be32(const uint8_t *p_data) {
-	return ((uint32_t)p_data[0] << 24) | ((uint32_t)p_data[1] << 16) | ((uint32_t)p_data[2] << 8) |
+	return ((uint32_t)p_data[0] * 16777216U) | ((uint32_t)p_data[1] * 65536U) | ((uint32_t)p_data[2] * 256U) |
 	       (uint32_t)p_data[3];
 }
 
@@ -449,7 +450,7 @@ w_status_t adxl38x_get_temp(adxl38x_dev_t *p_dev, float32_t *p_temp_degC) {
 		return ret;
 	}
 
-	temp_raw_lsb = (int32_t)(adxl38x_get_unaligned_be16(array_raw_data) >> 4);
+	temp_raw_lsb = (int32_t)(adxl38x_get_unaligned_be16(array_raw_data) / 16U);
 	temp_raw_lsb -= ADXL38X_TEMP_OFFSET;
 	*p_temp_degC = ((float32_t)temp_raw_lsb * (float32_t)ADXL38X_TEMP_SCALE_DEN) /
 	               (float32_t)ADXL38X_TEMP_SCALE_NUM;
@@ -506,7 +507,7 @@ w_status_t adxl38x_get_raw_data(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channe
 
 	while (tzyx != 0) {
 		num_bytes += (uint16_t)(tzyx & 0x01);
-		tzyx >>= 1;
+		tzyx /= 2U;
 	}
 	num_bytes = (uint16_t)(num_bytes * 2);
 
@@ -525,7 +526,7 @@ w_status_t adxl38x_get_raw_data(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channe
 			array_rearranged_data[i] = 0;
 			array_rearranged_data[i + 1] = 0;
 		}
-		tzyx >>= 1;
+		tzyx /= 2U;
 	}
 
 	if (p_raw_x != NULL) {
@@ -538,7 +539,7 @@ w_status_t adxl38x_get_raw_data(adxl38x_dev_t *p_dev, adxl38x_ch_select_t channe
 		*p_raw_z = adxl38x_get_unaligned_be16(array_rearranged_data + 4);
 	}
 	if (p_raw_temp != NULL) {
-		*p_raw_temp = (uint16_t)(adxl38x_get_unaligned_be16(array_rearranged_data + 6) >> 4);
+		*p_raw_temp = (uint16_t)(adxl38x_get_unaligned_be16(array_rearranged_data + 6) / 16U);
 	}
 
 	return W_SUCCESS;
@@ -722,10 +723,10 @@ w_status_t adxl38x_selftest(adxl38x_dev_t *p_dev, adxl38x_op_mode_t op_mode, boo
 		st_delta_data[k] = st_delta_data[k] * ADXL38X_ST_LIMIT_DENOMINATOR;
 	}
 
-	low_limit_xy = (ADXL380_XY_ST_LIMIT_MIN * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(p_dev->range);
-	up_limit_xy = (ADXL380_XY_ST_LIMIT_MAX * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(p_dev->range);
-	low_limit_z = (ADXL380_Z_ST_LIMIT_MIN * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(p_dev->range);
-	up_limit_z = (ADXL380_Z_ST_LIMIT_MAX * ADXL380_ACC_SENSITIVITY) >> (uint8_t)(p_dev->range);
+	low_limit_xy = (ADXL380_XY_ST_LIMIT_MIN * ADXL380_ACC_SENSITIVITY) / (int32_t)pow2_u32((uint8_t)(p_dev->range));
+	up_limit_xy = (ADXL380_XY_ST_LIMIT_MAX * ADXL380_ACC_SENSITIVITY) / (int32_t)pow2_u32((uint8_t)(p_dev->range));
+	low_limit_z = (ADXL380_Z_ST_LIMIT_MIN * ADXL380_ACC_SENSITIVITY) / (int32_t)pow2_u32((uint8_t)(p_dev->range));
+	up_limit_z = (ADXL380_Z_ST_LIMIT_MAX * ADXL380_ACC_SENSITIVITY) / (int32_t)pow2_u32((uint8_t)(p_dev->range));
 
 	if ((st_delta_data[0] >= low_limit_xy) && (st_delta_data[0] <= up_limit_xy)) {
 		*p_st_x = true;
@@ -782,7 +783,7 @@ w_status_t adxl38x_accel_set_FIFO(adxl38x_dev_t *p_dev, uint16_t num_samples, bo
 		return ret;
 	}
 
-	fifo_samples_high = (uint8_t)(num_samples >> 8);
+	fifo_samples_high = (uint8_t)(num_samples / 256U);
 	fifo_samples_high &= BIT(0);
 	write_data = fifo_samples_high;
 

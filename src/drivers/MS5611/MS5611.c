@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include <inttypes.h>
@@ -45,7 +46,7 @@ typedef enum {
 
 // ADC read command
 #define MS5611_CMD_ADC_READ 0x00
-#define MS5611_CMD_PROM_READ_BASE 0xa0 /* OR with (addr << 1) for addr 0..7 */
+#define MS5611_CMD_PROM_READ_BASE 0xa0 /* OR with (addr * 2) for addr 0..7 */
 
 // calibration coefficient indices in PROM readout
 #define MS5611_COEFF_SENS 1
@@ -228,7 +229,7 @@ static w_status_t baro_read_adc(uint32_t *out) {
 		return W_FAILURE;
 	}
 
-	*out = (((uint32_t)prom_buf[0] << 16) | ((uint32_t)prom_buf[1] << 8) | prom_buf[2]);
+	*out = (((uint32_t)prom_buf[0] * 65536U) | ((uint32_t)prom_buf[1] * 256U) | prom_buf[2]);
 
 	return W_SUCCESS;
 }
@@ -255,21 +256,21 @@ static w_status_t a_ms5611_crc_check(uint16_t *n_prom, uint8_t crc) {
 	{
 		if (cnt & 0x1) /* check LSB */
 		{
-			n_rem ^= (uint16_t)((n_prom[cnt >> 1]) & 0x00ff); /* run part1 */
+			n_rem ^= (uint16_t)((n_prom[cnt / 2U]) & 0x00ff); /* run part1 */
 		} else {
-			n_rem ^= (uint16_t)(n_prom[cnt >> 1] >> 8); /* run part1 */
+			n_rem ^= (uint16_t)(n_prom[cnt / 2U] / 256U); /* run part1 */
 		}
 		for (n_bit = 8; n_bit > 0; n_bit--) /* loop all */
 		{
 			if ((n_rem & 0x8000U) != 0) /* check bit */
 			{
-				n_rem = (n_rem << 1) ^ 0x3000; /* run part2 */
+				n_rem = (uint16_t)(n_rem * 2U) ^ 0x3000; /* run part2 */
 			} else {
-				n_rem = (n_rem << 1); /* run part2 */
+				n_rem = (uint16_t)(n_rem * 2U); /* run part2 */
 			}
 		}
 	}
-	n_rem = (0x000f & (n_rem >> 12)); /* get rem */
+	n_rem = (0x000f & (n_rem / 4096U)); /* get rem */
 	n_prom[7] = (0xff00U & crc_read); /* set crc read */
 
 	if (n_rem != crc) {
@@ -299,7 +300,7 @@ static w_status_t ms5611_prom_read(void) {
 			return W_FAILURE;
 		}
 
-		prom_coef[i] = (((uint16_t)prom_buf[0] << 8) | prom_buf[1]);
+		prom_coef[i] = (((uint16_t)prom_buf[0] * 256U) | prom_buf[1]);
 	}
 
 	status |= a_ms5611_crc_check(prom_coef, (uint8_t)(prom_coef[7] & 0x0f));
@@ -441,13 +442,13 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	}
 
 	/* First-order compensation */
-	dt = (int32_t)handle.cached_temp_d2 - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) << 8);
+	dt = (int32_t)handle.cached_temp_d2 - (((int32_t)handle.prom_coef[MS5611_COEFF_TREF]) * 256);
 	temp = SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES +
-	       (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) >> 23);
-	off = (((int64_t)handle.prom_coef[MS5611_COEFF_OFF]) << 16) +
-	      ((((int64_t)handle.prom_coef[MS5611_COEFF_TCO]) * dt) >> 7);
-	sens = (((int64_t)handle.prom_coef[MS5611_COEFF_SENS]) << 15) +
-	       ((((int64_t)handle.prom_coef[MS5611_COEFF_TCS]) * dt) >> 8);
+	       (int32_t)(((int64_t)dt * handle.prom_coef[MS5611_COEFF_TEMPSENS]) / 8388608);
+	off = (((int64_t)handle.prom_coef[MS5611_COEFF_OFF]) * 65536) +
+	      ((((int64_t)handle.prom_coef[MS5611_COEFF_TCO]) * dt) / 128);
+	sens = (((int64_t)handle.prom_coef[MS5611_COEFF_SENS]) * 32768) +
+	       ((((int64_t)handle.prom_coef[MS5611_COEFF_TCS]) * dt) / 256);
 
 	/* Second-order cold compensation */
 	T2 = 0;
@@ -455,20 +456,20 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 	sens2 = 0;
 
 	if (temp < SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) {
-		T2 = ((int64_t)dt * dt) >> 31;
+		T2 = ((int64_t)dt * dt) / 2147483648LL;
 		off2 = (5 * ((int64_t)(temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) *
-		             (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) >>
-		       1;
+		             (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) /
+		       2;
 		sens2 = (5 * ((int64_t)(temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES) *
-		              (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) >>
-		        2;
+		              (temp - SECOND_COMP_TEMP_THRESHOLD_CENTI_DEGREES))) /
+		        4;
 
 		if (temp < SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES) {
 			off2 += 7 * ((int64_t)(temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES) *
 			             (temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES));
 			sens2 += (11 * ((int64_t)(temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES) *
-			                (temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES))) >>
-			         1;
+			                (temp - SECOND_COMP_LOW_TEMP_THRESHOLD_CENTI_DEGREES))) /
+			         2;
 		}
 
 		temp -= T2;
@@ -476,7 +477,7 @@ static w_status_t ms5611_read_raw_pressure(ms5611_raw_result_t *result, uint32_t
 		sens -= sens2;
 	}
 
-	p = (int32_t)((((int64_t)d1 * sens >> 21) - off) >> 15);
+	p = (int32_t)((((int64_t)d1 * sens / 2097152) - off) / 32768);
 
 	result->temperature_centideg = temp;
 	result->pressure_centimbar = (int32_t)p;
@@ -576,28 +577,28 @@ health_status_t ms5611_get_status(void) {
 	// Not initialized
 	if (!handle.initialized) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	// Semaphore take/give fail
 	if (ms5611_health.semaphore_fail) {
 		ms5611_health.semaphore_fail = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_OS_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_OS_OFFSET);
 	}
 
 	// I2C read/write fail
 	if (ms5611_health.i2c_communication_fail) {
 		ms5611_health.i2c_communication_fail = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_COMM_FAILURE_OFFSET);
 	}
 
 	// CRC Check fail
 	if (ms5611_health.crc_check_failure) {
 		ms5611_health.crc_check_failure = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_CRC_FAILED_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_CRC_FAILED_OFFSET);
 	}
 
 	// Reinitialized while already initialized, deinitialized before init, Read attempted before
@@ -605,14 +606,14 @@ health_status_t ms5611_get_status(void) {
 	if (ms5611_health.invalid_operation) {
 		ms5611_health.invalid_operation = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INTERNAL_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INTERNAL_OFFSET);
 	}
 
 	// Null parameter sent
 	if (ms5611_health.invalid_parameter) {
 		ms5611_health.invalid_parameter = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 	}
 
 	log_text(10, LOG_LVL_INFO, "ms5611",

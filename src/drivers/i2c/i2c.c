@@ -196,7 +196,7 @@ w_status_t i2c_read_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, uint8_t
 	}
 
 	// Convert 7-bit device address to 8-bit HAL format by shifting left and have HAL set R/W bit
-	uint16_t hal_addr = (uint16_t)(device_addr << 1);
+	uint16_t hal_addr = (uint16_t)(device_addr * 2U);
 
 	// Acquire the bus mutex to ensure exclusive access during the transfer
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
@@ -242,7 +242,7 @@ w_status_t i2c_write_reg(i2c_bus_t bus, uint8_t device_addr, uint8_t reg, const 
 	}
 
 	// Convert 7-bit device address to 8-bit HAL format by shifting left and have HAL set R/W bit
-	uint16_t hal_addr = (uint16_t)(device_addr << 1);
+	uint16_t hal_addr = (uint16_t)(device_addr * 2U);
 
 	// Acquire bus mutex with timeout
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {
@@ -286,7 +286,7 @@ w_status_t i2c_write_data(i2c_bus_t bus, uint8_t device_addr, const uint8_t *dat
 	}
 
 	// Convert 7-bit device address to 8-bit HAL format by shifting left and have HAL set R/W bit
-	uint16_t hal_addr = (uint16_t)(device_addr << 1);
+	uint16_t hal_addr = (uint16_t)(device_addr * 2U);
 
 	// Acquire bus mutex with timeout
 	if (xSemaphoreTake(handle->mutex, pdMS_TO_TICKS(handle->timeout_ms)) != pdTRUE) {

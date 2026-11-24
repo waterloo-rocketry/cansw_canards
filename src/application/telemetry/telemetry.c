@@ -1,3 +1,4 @@
+#include "common/math/pow2.h"
 #include "telemetry.h"
 #include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
@@ -210,8 +211,8 @@ health_status_t telemetry_get_status(void) {
 
 	if (g_telemetry_stats.failed_transmissions > 0 || g_telemetry_stats.overdue_count > 0) {
 		// status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		// status.error_bitfield = (1) << MODULE_ERR_TELEMETRY_NOT_INIT;
-		//  status.error_bitfield = (1) << MODULE_ERR_TELEMETRY_FAILED_TX;
+		// status.error_bitfield = pow2_u32(MODULE_ERR_TELEMETRY_NOT_INIT);
+		//  status.error_bitfield = pow2_u32(MODULE_ERR_TELEMETRY_FAILED_TX);
 	}
 
 	return status;

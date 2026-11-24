@@ -1,4 +1,5 @@
 
+#include "common/math/pow2.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -152,9 +153,9 @@ w_status_t adxl380_get_raw_accel(adxl380_raw_accel_data_t *p_raw_data) {
 		return W_FAILURE;
 	}
 
-	p_raw_data->x = (uint16_t)((((uint16_t)raw_data_array[0]) << 8) | raw_data_array[1]);
-	p_raw_data->y = (uint16_t)((((uint16_t)raw_data_array[2]) << 8) | raw_data_array[3]);
-	p_raw_data->z = (uint16_t)((((uint16_t)raw_data_array[4]) << 8) | raw_data_array[5]);
+	p_raw_data->x = (uint16_t)((((uint16_t)raw_data_array[0]) * 256U) | raw_data_array[1]);
+	p_raw_data->y = (uint16_t)((((uint16_t)raw_data_array[2]) * 256U) | raw_data_array[3]);
+	p_raw_data->z = (uint16_t)((((uint16_t)raw_data_array[4]) * 256U) | raw_data_array[5]);
 
 	return W_SUCCESS;
 }
@@ -243,19 +244,19 @@ health_status_t adxl380_get_status(void) {
 
 	if (!is_initialized) {
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_NOT_INIT_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_NOT_INIT_OFFSET);
 	}
 
 	if (adxl380_health.invalid_param) {
 		adxl380_health.invalid_param = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_INVALID_PARAM_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_INVALID_PARAM_OFFSET);
 	}
 
 	if (adxl380_health.comm_failure) {
 		adxl380_health.comm_failure = false;
 		status.severity = CANARDS_HEALTH_SEVERITY_HEALTH_ERROR;
-		status.error_bitfield |= 1 << CANARDS_MODULE_E_COMM_FAILURE_OFFSET;
+		status.error_bitfield |= pow2_u32(CANARDS_MODULE_E_COMM_FAILURE_OFFSET);
 	}
 
 	log_text(1, LOG_LVL_INFO, "ADXL380",
