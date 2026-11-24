@@ -215,7 +215,7 @@ TEST_F(Lsm6dsv32xTest, WrongWordTypes) {
     uint8_t gyro_sample_count;
     uint8_t acc_sample_count;
 
-    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &gyro_sample_count, &acc_sample_count);
+    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &acc_sample_count, &gyro_sample_count);
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
@@ -244,7 +244,7 @@ TEST_F(Lsm6dsv32xTest, OnlySomeCorrectWordTypes) {
     uint8_t gyro_sample_count;
     uint8_t acc_sample_count;
 
-    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &gyro_sample_count, &acc_sample_count);
+    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &acc_sample_count, &gyro_sample_count);
 
     // data from the fake
     // gyro 1: 0xCC, 0x10, 0xCC, 0xCC, 0xCC,  0x10,

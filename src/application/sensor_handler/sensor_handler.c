@@ -131,6 +131,8 @@ typedef struct {
 // keeps the cross-task hand-off atomic without a separate lock.
 static QueueHandle_t g_sensor_data_queue = NULL;
 
+static uint32_t last_max_rate_accel_timestamp_tenth_ms = 0;
+
 /**
  * @brief Peek the latest telemetry snapshot from the mailbox.
  * @return W_SUCCESS if a snapshot was available, W_FAILURE otherwise.
@@ -515,11 +517,6 @@ static w_status_t movella_state_sd_log(void) {
 }
 
 static w_status_t max_rate_accel_log(void) {
-	if (!lsm6dsv32x_is_full_read_fresh()) {
-		// this is an expected result, because the sensor period doesn't exactly line up with the
-		// telemetry timing
-		return W_SUCCESS;
-	}
 	w_status_t status = W_SUCCESS;
 
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD];
@@ -969,10 +966,7 @@ w_status_t sensor_handler_init(void) {
 		{"Movella State", movella_state_sd_log, STATE_ACT_ALLOWED, 1000 / 20},
 
 		// --- IMU max rate accel ---
-		{"Sensor Max Rate", max_rate_accel_log, STATE_IDLE, 1000 / 1000},
-		{"Sensor Max Rate", max_rate_accel_log, STATE_SLEEPY, 1000 / 1000},
 		{"Sensor Max Rate", max_rate_accel_log, STATE_RECOVERY, 1000 / 1000},
-		{"Sensor Max Rate", max_rate_accel_log, STATE_PAD_FILTER, 1000 / 1000},
 		{"Sensor Max Rate", max_rate_accel_log, STATE_PAD_NAV, 1000 / 1000},
 		{"Sensor Max Rate", max_rate_accel_log, STATE_BOOST, 1000 / 1000},
 		{"Sensor Max Rate", max_rate_accel_log, STATE_ACT_ALLOWED, 1000 / 1000},
