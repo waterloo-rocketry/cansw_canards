@@ -3,7 +3,7 @@
 #include "MX25L25645G.h"
 #include <ctype.h>
 
-static lfs_t lfs;
+lfs_t lfs;
 
 w_status_t flash_init() {
 	if (W_SUCCESS != mx25l25645g_init()) {
@@ -67,7 +67,7 @@ w_status_t flash_file_sync(flash_file_t *p_file) {
 }
 
 static bool is_log_file(const char *filename) {
-	if ((NULL == filename) || strlen(filename) != 12) {
+	if ((NULL == filename) || strlen(filename) != 12) { //filename is "xxxxxxxx.txt" 8 hexadecimal value + 4 chars that are either ".txt" or ".bin"
 		return false;
 	}
 	for (int i = 0; i < 8; i++) {
@@ -142,4 +142,8 @@ w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size
 		return W_FAILURE;
 	}
 	return W_FAILURE;
+}
+
+lfs_t get_lfs(){
+	return lfs;
 }

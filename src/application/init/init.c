@@ -151,17 +151,34 @@ static void system_init_task(void *arg) {
 	const char hello[] = "Hello world!";
 	char test[20];
 	flash_file_t data;
+	flash_file_t data2;
+	flash_file_t data3;
+	flash_file_t data4;
+	flash_file_t data5;
+	lfs_dir_t dir;
+	struct lfs_info info;
+	int nb_files=0;
+	int nb_files_after=0;
 	w_status_t err1 = flash_file_open(&data, "00000000.bin", LFS_O_RDWR | LFS_O_CREAT);
- 	// w_status_t err2 = flash_file_write(&data, &hello, 12, 3, LFS_SEEK_SET);
+	flash_file_open(&data2, "smth.bin", LFS_O_RDWR | LFS_O_CREAT);
+	flash_file_open(&data3, "00000000.txt", LFS_O_RDWR | LFS_O_CREAT);
+	flash_file_open(&data4, "dont_delete.bin", LFS_O_RDWR | LFS_O_CREAT);
+	flash_file_open(&data5, "00000001.bin", LFS_O_RDWR | LFS_O_CREAT);
+ 	w_status_t err2 = flash_file_write(&data, &hello, 12, 3, LFS_SEEK_SET);
 	w_status_t err3 = flash_file_sync(&data);
 	w_status_t err4 = flash_file_read(&data, &test, 20, 0, LFS_SEEK_SET);
 	w_status_t err5 = flash_file_close(&data);
-
+	lfs_t lfs= get_lfs();
+	while (lfs_dir_read(&lfs, &dir, &info)>0){
+		nb_files+=1;
+	}
 	w_status_t err6 = flash_clear_logs();
 	if (err6 != 0) {
 		err6 += 1;
 	}
-
+	while (lfs_dir_read(&lfs, &dir, &info)>0){
+		nb_files_after+=1;
+	}
 	if (err1 || err3 || err4 || err5) {
 		non_crit_status = flash_init();
 	}
