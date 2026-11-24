@@ -2,11 +2,9 @@
 #define CAN_SENSOR_H
 
 #include <stdint.h>
-#include <stdint.h>
 #include "rocketlib.h"
 #include "application/can_handler/can_handler.h"
 #include "drivers/timer/timer.h"
-#include "common/math/math.h"
 #include "common/math/math.h"
 
 /**
