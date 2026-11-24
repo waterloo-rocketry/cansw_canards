@@ -72,7 +72,7 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
 
 #ifndef ENABLE_BENCHMARK
 
-#define BENCHMARK_FILE_INIT(n)
+#define BENCHMARK_FILE_INIT(n, target_period_us)
 #define SINGLE_BENCHMARK_START(i) ((void)0)
 #define SINGLE_BENCHMARK_END(i) ((void)0)
 #define BENCHMARK_RESET(i) ((void)0)
@@ -93,10 +93,10 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
  * 	- This function must be called with file-wide scope
  * 	- make sure all benchmark points take less than 7 seconds to execute
  */
-#define BENCHMARK_FILE_INIT(n, target_period_us)                                                                     \
-	STATIC_ASSERT(BENCH_TARGET_US > 0, "define BENCH_TARGET_US (period in microseconds)");         \
+#define BENCHMARK_FILE_INIT(n, target_period_us)                                                   \
+	STATIC_ASSERT(target_period_us > 0, "target_period_us (period in microseconds)");              \
 	static const uint8_t BENCHMARK_COUNT = (n);                                                    \
-	static const uint32_t BENCHMARK_BUDGET = BENCH_US_TO_CYCLES(target_period_us);                  \
+	static const uint32_t BENCHMARK_BUDGET = BENCH_US_TO_CYCLES(target_period_us);                 \
 	static uint8_t BENCHMARK_STARTED[n];                                                           \
 	static uint32_t BENCHMARK_WARMUP_SEEN[n];                                                      \
 	static uint32_t BENCHMARK_TIME_START[n];                                                       \
