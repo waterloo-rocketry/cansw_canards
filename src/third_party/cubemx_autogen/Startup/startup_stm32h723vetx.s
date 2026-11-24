@@ -45,6 +45,34 @@ defined in linker script */
 .word  _ebss
 /* stack used for SystemInit_ExtMemCtl; always internal RAM used */
 
+/* start address for the initialization values of the .text_itcm section.
+defined in linker script */
+.word  _sitext_itcm
+/* start address for the .text_itcm section. defined in linker script */
+.word  _stext_itcm
+/* end address for the .text_itcm section. defined in linker script */
+.word  _etext_itcm
+
+/* start address for the initialization values of the .data_ramd1 section.
+defined in linker script */
+.word  _sidata_ramd1
+/* start address for the .data_ramd1 section. defined in linker script */
+.word  _sdata_ramd1
+/* end address for the .data_ramd1 section. defined in linker script */
+.word  _edata_ramd1
+
+/* start address for the .bss_ramd1 section. defined in linker script */
+.word  _sbss_ramd1
+/* end address for the .bss_ramd1 section. defined in linker script */
+.word  _ebss_ramd1
+
+/* start address for the initialization values of the .rodata section.
+defined in linker script */
+.word  _sirodata
+/* start address for the .rodata section. defined in linker script */
+.word  _srodata
+/* end address for the .rodata section. defined in linker script */
+.word  _erodata
 
 /* start address for the initialization values of the .sram4 section.
 defined in linker script */
@@ -81,6 +109,26 @@ Ram_Flash_Copy:
     pop {r4}
     bx lr
 
+/**
+  * @brief Subprocedure for zeroing over the RAM section
+  * @param r0 start point stored in RAM
+  * @param r1 end point in RAM
+  * retval : None
+*/
+  .type Ram_Zeroing, %function
+Ram_Zeroing:
+  movs r3, #0
+  b LoopFillZerobss
+
+  FillZerobss:
+    str  r3, [r0]
+    adds r0, r0, #4
+
+  LoopFillZerobss:
+    cmp r0, r1
+    bcc FillZerobss
+
+    bx lr
 
 /**
  * @brief  This is the code that gets called when the processor first
@@ -102,10 +150,31 @@ Reset_Handler:
 /* Call the clock system initialization function.*/
   bl  SystemInit
 
+/* Copy the ITCM segment initializers from flash to SRAM */
+  ldr r0, =_stext_itcm
+  ldr r1, =_etext_itcm
+  ldr r2, =_sitext_itcm
+  
+  bl Ram_Flash_Copy
+
 /* Copy the data segment initializers from flash to SRAM */
   ldr r0, =_sdata
   ldr r1, =_edata
   ldr r2, =_sidata
+  
+  bl Ram_Flash_Copy
+
+/* Copy the data RAM D1 segment initializers from flash to SRAM */
+  ldr r0, =_sdata_ramd1
+  ldr r1, =_edata_ramd1
+  ldr r2, =_sidata_ramd1
+  
+  bl Ram_Flash_Copy
+
+/* Copy the data RoData segment initializers from flash to SRAM */
+  ldr r0, =_srodata
+  ldr r1, =_erodata
+  ldr r2, =_sirodata
   
   bl Ram_Flash_Copy
 
@@ -117,18 +186,16 @@ Reset_Handler:
   bl Ram_Flash_Copy
 
 /* Zero fill the bss segment. */
-  ldr r2, =_sbss
-  ldr r4, =_ebss
-  movs r3, #0
-  b LoopFillZerobss
+  ldr r0, =_sbss
+  ldr r1, =_ebss
 
-FillZerobss:
-  str  r3, [r2]
-  adds r2, r2, #4
+  bl Ram_Zeroing
 
-LoopFillZerobss:
-  cmp r2, r4
-  bcc FillZerobss
+/* Zero fill the bss_ramd1 segment. */
+  ldr r0, =_sbss_ramd1
+  ldr r1, =_ebss_ramd1
+
+  bl Ram_Zeroing
 
 /* Call static constructors */
     bl __libc_init_array
