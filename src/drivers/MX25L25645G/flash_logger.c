@@ -19,8 +19,9 @@ static bool is_log_file(const char *filename) {
 	return ((0 == strcmp(filename + 8, ".txt")) || (0 == strcmp(filename + 8, ".bin")));
 }
 
-w_status_t flash_init() {
-	if (W_SUCCESS != mx25l25645g_init()) {
+w_status_t flash_init(bool already_init) {
+	//already_init = no need to check that initialization works
+	if ((!already_init) && (W_SUCCESS != mx25l25645g_init())) {
 		return W_FAILURE;
 	}
 	return mx25l25645g_mount(&lfs);
@@ -28,6 +29,11 @@ w_status_t flash_init() {
 
 w_status_t flash_file_open(flash_file_t *p_file, const char *p_path, const int16_t flags) {
 	if ((NULL == p_file) || (NULL == p_path)) {
+		return W_INVALID_PARAM;
+	}
+	if ((FLASH_FILE_OPEN == (p_file->status)) || (FLASH_FILE_READING == (p_file->status)) ||
+	(FLASH_FILE_SYNCING == (p_file->status)) || (FLASH_FILE_WAITING_FOR_SYNC == (p_file->status))
+	 || (FLASH_FILE_WRITING == (p_file->status)) ){
 		return W_INVALID_PARAM;
 	}
 	if (FLASH_FILE_CLOSED == (p_file->status)) {

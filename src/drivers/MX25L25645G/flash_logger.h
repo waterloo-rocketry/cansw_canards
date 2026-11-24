@@ -40,7 +40,7 @@ w_status_t flash_init();
  * @param[in] p_path Filepath to open
  * @param[in] flags Flags to open the file. See littlefs docs for more info
  * @return w_status_t - W_SUCCESS if opened. W_INVALID_PARAM if file or filename
- * passed is NULL. W_FAILURE in all other cases.
+ * passed is NULL or if file status says file should not be opened. W_FAILURE in all other cases.
  */
 w_status_t flash_file_open(flash_file_t *p_file, const char *p_path, int16_t flags);
 
