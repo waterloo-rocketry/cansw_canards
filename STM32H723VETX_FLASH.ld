@@ -64,43 +64,111 @@ SECTIONS
 
   /* Define the special memory locations */
   /* FLASH porgram code */
-  .text_flash :
+  .text_itcm :
   {
     _sflash_text = .;        /* define a global symbols at start of FLASH only code */
     . = ALIGN(4);
-    /* *startup_stm32h723vetx.o */
-    *startup_stm32h723vetx.o(.text)           /* .text sections (FLASH only code) */
-    *startup_stm32h723vetx.o(.text*)          /* .text* sections (FLASH only code) */
-    *startup_stm32h723vetx.o(.glue_7)         /* glue arm to thumb FLASH only code */
-    *startup_stm32h723vetx.o(.glue_7t)        /* glue thumb to arm FLASH only code */
-    *startup_stm32h723vetx.o(.eh_frame)
+    /* src/application */
+    *src/application/*(.text)           /* .text sections (FLASH only code) */
+    *src/application/*(.text*)          /* .text* sections (FLASH only code) */
+    *src/application/*(.glue_7)         /* glue arm to thumb FLASH only code */
+    *src/application/*(.glue_7t)        /* glue thumb to arm FLASH only code */
+    *src/application/*(.eh_frame)
 
-    KEEP (*startup_stm32h723vetx.o(.init))
-    KEEP (*startup_stm32h723vetx.o(.fini))
+    KEEP (*src/application/*(.init))
+    KEEP (*src/application/*(.fini))
 
-    /* *log.o */
-    *log.o(.text)           /* .text sections (FLASH only code) */
-    *log.o(.text*)          /* .text* sections (FLASH only code) */
-    *log.o(.glue_7)         /* glue arm to thumb FLASH only code */
-    *log.o(.glue_7t)        /* glue thumb to arm FLASH only code */
-    *log.o(.eh_frame)
+    /* *src/drivers/* */
+    *src/drivers/*(.text)           /* .text sections (FLASH only code) */
+    *src/drivers/*(.text*)          /* .text* sections (FLASH only code) */
+    *src/drivers/*(.glue_7)         /* glue arm to thumb FLASH only code */
+    *src/drivers/*(.glue_7t)        /* glue thumb to arm FLASH only code */
+    *src/drivers/*(.eh_frame)
 
-    KEEP (*log.o(.init))
-    KEEP (*log.o(.fini))
+    KEEP (*src/drivers/*(.init))
+    KEEP (*src/drivers/*(.fini))
 
-    /* *log.o */
-    *cubemx_autogen*(.text)           /* .text sections (FLASH only code) */
-    *cubemx_autogen*(.text*)          /* .text* sections (FLASH only code) */
-    *cubemx_autogen*(.glue_7)         /* glue arm to thumb FLASH only code */
-    *cubemx_autogen*(.glue_7t)        /* glue thumb to arm FLASH only code */
-    *cubemx_autogen*(.eh_frame)
+    /* */closedrocket/*
+    */closedrocket/*(.text)           /* .text sections (FLASH only code) */
+    */closedrocket/*(.text*)          /* .text* sections (FLASH only code) */
+    */closedrocket/*(.glue_7)         /* glue arm to thumb FLASH only code */
+    */closedrocket/*(.glue_7t)        /* glue thumb to arm FLASH only code */
+    */closedrocket/*(.eh_frame)
 
-    KEEP (*cubemx_autogen*(.init))
-    KEEP (*cubemx_autogen*(.fini))
+    KEEP (*/closedrocket/*(.init))
+    KEEP (*/closedrocket/*(.fini))
+
+    /* HAL Drivers & src */
+    */src/third_party/cubemx_autogen/Drivers/*(.text)           /* .text sections (FLASH only code) */
+    */src/third_party/cubemx_autogen/Drivers/*(.text*)          /* .text* sections (FLASH only code) */
+    */src/third_party/cubemx_autogen/Drivers/*(.glue_7)         /* glue arm to thumb FLASH only code */
+    */src/third_party/cubemx_autogen/Drivers/*(.glue_7t)        /* glue thumb to arm FLASH only code */
+    */src/third_party/cubemx_autogen/Drivers/*(.eh_frame)
+
+    KEEP (*/src/third_party/cubemx_autogen/Drivers/*(.init))
+    KEEP (*/src/third_party/cubemx_autogen/Drivers/*(.fini))
+
+    */src/third_party/cubemx_autogen/src/*(.text)           /* .text sections (FLASH only code) */
+    */src/third_party/cubemx_autogen/src/*(.text*)          /* .text* sections (FLASH only code) */
+    */src/third_party/cubemx_autogen/src/*(.glue_7)         /* glue arm to thumb FLASH only code */
+    */src/third_party/cubemx_autogen/src/*(.glue_7t)        /* glue thumb to arm FLASH only code */
+    */src/third_party/cubemx_autogen/src/*(.eh_frame)
+
+    KEEP (*/src/third_party/cubemx_autogen/src/*(.init))
+    KEEP (*/src/third_party/cubemx_autogen/src/*(.fini))
+
 
     . = ALIGN(4);
     _eflash_text = .;        /* define a global symbols at end of code */
-  } >FLASH
+  } >ITCMRAM AT>FLASH
+
+
+  /* used by the startup to initialize data */
+  _siflash_data = LOADADDR(.flash_data);
+
+  /* Initialized data sections goes into RAM, load LMA copy after code */
+  .flash_data :
+  {
+    . = ALIGN(4);
+    _sdflash_data = .;        /* create a global symbol at data start */
+    /* drivers */
+    *src/drivers/*(.data)           /* .data sections */
+    *src/drivers/*(.data*)          /* .data* sections */
+    *src/drivers/*(.RamFunc)        /* .RamFunc sections */
+    *src/drivers/*(.RamFunc*)       /* .RamFunc* sections */
+
+    /* logger */
+    *log.o(.data)           /* .data sections */
+    *log.o(.data*)          /* .data* sections */
+    *log.o(.RamFunc)        /* .RamFunc sections */
+    *log.o(.RamFunc*)       /* .RamFunc* sections */
+
+    . = ALIGN(4);
+    _edflash_data = .;        /* define a global symbol at data end */
+  } >RAM_D1 AT> FLASH
+
+  /* Uninitialized data section */
+  . = ALIGN(4);
+  .flash_bss :
+  {
+    /* This is used by the startup in order to initialize the .bss section */
+    _sflash_bss = .;         /* define a global symbol at bss start */
+    __flash_bss_start__ = _sflash_bss;
+    
+    /* drivers */
+    *src/drivers/*(.bss)
+    *src/drivers/*(.bss*)
+    *src/drivers/*(COMMON)
+
+    /* log.o */
+    *log.o(.bss)
+    *log.o(.bss*)
+    *log.o(COMMON)
+
+    . = ALIGN(4);
+    _eflash_bss = .;         /* define a global symbol at bss end */
+    __flash_bss_end__ = _eflash_bss;
+  } >RAM_D1
 
 
   /* The program code and other data goes into FLASH */
@@ -119,7 +187,7 @@ SECTIONS
 
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
-  } >ITCMRAM AT> FLASH
+  } >FLASH
 
   /* Constant data goes into FLASH */
   .rodata :
@@ -128,7 +196,7 @@ SECTIONS
     *(.rodata)         /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
     . = ALIGN(4);
-  } >FLASH
+  } DTCM AT>FLASH
 
   .ARM.extab (READONLY) : /* The READONLY keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
   {
@@ -179,7 +247,7 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >RAM_D1 AT> FLASH
+  } >DTCMRAM AT> FLASH
 
   /* Uninitialized data section */
   . = ALIGN(4);
@@ -195,7 +263,7 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
-  } >RAM_D1
+  } >DTCMRAM
 
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack :
