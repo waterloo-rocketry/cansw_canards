@@ -21,8 +21,6 @@
 #define BENCH_US_TO_CYCLES(time_us) ((uint32_t)(time_us) * BENCH_CYCLES_PER_US)
 #define BENCH_CYCLES_TO_US(num_cycles) ((uint32_t)(num_cycles) / BENCH_CYCLES_PER_US)
 
-/* benchmark config */
-#define BENCH_TARGET_US 2500U // TODO: set target runtime in microseconds, 2.5ms example shown
 // TODO: add `BENCHMARK_FILE_INIT(n)` to the .c file before using the benchmark
 
 #define BENCH_WARMUP_N 32U
@@ -95,10 +93,10 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
  * 	- This function must be called with file-wide scope
  * 	- make sure all benchmark points take less than 7 seconds to execute
  */
-#define BENCHMARK_FILE_INIT(n)                                                                     \
+#define BENCHMARK_FILE_INIT(n, target_period_us)                                                                     \
 	STATIC_ASSERT(BENCH_TARGET_US > 0, "define BENCH_TARGET_US (period in microseconds)");         \
 	static const uint8_t BENCHMARK_COUNT = (n);                                                    \
-	static const uint32_t BENCHMARK_BUDGET = BENCH_US_TO_CYCLES(BENCH_TARGET_US);                  \
+	static const uint32_t BENCHMARK_BUDGET = BENCH_US_TO_CYCLES(target_period_us);                  \
 	static uint8_t BENCHMARK_STARTED[n];                                                           \
 	static uint32_t BENCHMARK_WARMUP_SEEN[n];                                                      \
 	static uint32_t BENCHMARK_TIME_START[n];                                                       \
@@ -135,6 +133,7 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
 		if (((i) < BENCHMARK_COUNT) && (BENCHMARK_STARTED[i] != 0)) {                              \
 			__asm volatile("" ::: "memory");                                                       \
 			uint32_t _dt = DWT->CYCCNT - BENCHMARK_TIME_START[i];                                  \
+			__asm volatile("" ::: "memory");                                                       \
 			BENCHMARK_STARTED[i] = 0;                                                              \
 			if (BENCHMARK_WARMUP_SEEN[i] < BENCH_WARMUP_N) {                                       \
 				BENCHMARK_WARMUP_SEEN[i]++;                                                        \
