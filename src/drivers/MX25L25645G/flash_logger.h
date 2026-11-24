@@ -29,9 +29,11 @@ typedef struct {
  *
  * Initializes the flash chip and mount it using littlefs.
  *
+ * @param[in] bool If the flash should be mounted on error from init
+ *
  * @return w_status_t - W_SUCCESS if initialized and mounted. W_FAILURE if not.
  */
-w_status_t flash_init();
+w_status_t flash_init(bool already_init);
 
 /**
  * @brief Open a file
