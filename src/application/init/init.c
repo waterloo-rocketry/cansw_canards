@@ -21,7 +21,6 @@
 #include "application/telemetry/telemetry.h"
 #include "drivers/MS5611/MS5611.h"
 #include "drivers/MX25L25645G/MX25L25645G.h"
-#include "drivers/MX25L25645G/flash_logger.h"
 #include "drivers/ad_breakout_board/ADXL380.h"
 #include "drivers/ad_breakout_board/ADXRS649.h"
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
