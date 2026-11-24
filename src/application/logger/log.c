@@ -521,12 +521,14 @@ void log_task(void *argument) {
 				uint32_t write_start_ms = 0;
 				if (timer_get_ms(&write_start_ms) != W_SUCCESS) {
 					write_start_ms = UINT32_MAX;
+					log_text(10, LOG_LVL_WARN, "timer", "timer failed to get time");
 				}
 				if (logging_formatting_write(buffer_to_print->data, LOG_BUFFER_SIZE, file_ctx) ==
 				    W_SUCCESS) {
 					uint32_t write_end_ms = 0;
 					if (timer_get_ms(&write_end_ms) != W_SUCCESS) {
 						write_end_ms = UINT32_MAX;
+						log_text(10, LOG_LVL_WARN, "timer", "timer failed to get time");
 					}
 					log_text(10, LOG_LVL_INFO, "logger_write", "open_time=%d, try=%d",
 					         write_end_ms - write_start_ms, i + 1);
