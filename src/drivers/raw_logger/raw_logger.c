@@ -376,7 +376,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t n
 
 	if (RAW_READY != action_state) {
 		xSemaphoreGive(sd_mutex);
-		return W_FAILURE;
+		return W_INVALID_PARAM;
 	}
 
 	raw_sd_card_health.consecutive_recoveries = 0;
