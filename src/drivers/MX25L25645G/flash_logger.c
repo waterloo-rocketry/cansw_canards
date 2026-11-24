@@ -37,7 +37,6 @@ w_status_t flash_file_open(flash_file_t *p_file, const char *p_path, const int16
 		(p_file->status) = FLASH_FILE_OPEN;
 		return W_SUCCESS;
 	}
-
 	(p_file->status) = FLASH_FILE_NOT_INIT;
 
 	if (0 != lfs_file_open(&lfs, &(p_file->file), p_path, flags)) {
@@ -69,7 +68,7 @@ w_status_t flash_file_close(flash_file_t *p_file) {
 	if (0 != lfs_file_close(&lfs, &(p_file->file))) {
 		return W_FAILURE;
 	}
-
+	(p_file->status) = FLASH_FILE_CLOSED;
 	return W_SUCCESS;
 }
 
@@ -99,19 +98,35 @@ w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size
 	if (LFS_O_WRONLY != (LFS_O_WRONLY & ((p_file->file).flags))) {
 		return W_INVALID_PARAM;
 	}
+	bool to_sync = false; // keep the sync status if writing fails
+	if (FLASH_FILE_WAITING_FOR_SYNC == (p_file->status)) {
+		to_sync = true;
+	}
 	(p_file->status) = FLASH_FILE_WRITING;
 	int err = lfs_file_seek(&lfs, &(p_file->file), offset, whence); // sets the cursor
 	if (0 > err) {
-		(p_file->status) = FLASH_FILE_OPEN;
+		if (to_sync) {
+			(p_file->status) = FLASH_FILE_WAITING_FOR_SYNC;
+		} else {
+			(p_file->status) = FLASH_FILE_OPEN;
+		}
 		return W_FAILURE;
 	}
 	err = lfs_file_write(&lfs, &(p_file->file), p_buffer, size);
 	if (0 > err) {
-		(p_file->status) = FLASH_FILE_OPEN;
+		if (to_sync) {
+			(p_file->status) = FLASH_FILE_WAITING_FOR_SYNC;
+		} else {
+			(p_file->status) = FLASH_FILE_OPEN;
+		}
 		return W_FAILURE;
 	}
 	if (((uint32_t)err) != size) {
-		(p_file->status) = FLASH_FILE_OPEN;
+		if (to_sync) {
+			(p_file->status) = FLASH_FILE_WAITING_FOR_SYNC;
+		} else {
+			(p_file->status) = FLASH_FILE_OPEN;
+		}
 		return W_FAILURE;
 	}
 	(p_file->status) = FLASH_FILE_WAITING_FOR_SYNC;
@@ -126,23 +141,31 @@ w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size
 	if (LFS_O_RDONLY != (LFS_O_RDONLY & ((p_file->file).flags))) {
 		return W_INVALID_PARAM;
 	}
+	bool to_sync = false; // keep the sync status if reading fails
+	if (FLASH_FILE_WAITING_FOR_SYNC == (p_file->status)) {
+		to_sync = true;
+	}
 	(p_file->status) = FLASH_FILE_READING;
 	int err = lfs_file_seek(&lfs, &(p_file->file), offset, whence); // sets the cursor
 	if (0 > err) {
-		(p_file->status) = FLASH_FILE_OPEN;
+		if (to_sync) {
+			(p_file->status) = FLASH_FILE_WAITING_FOR_SYNC;
+		} else {
+			(p_file->status) = FLASH_FILE_OPEN;
+		}
 		return W_FAILURE;
 	}
 	err = lfs_file_read(&lfs, &(p_file->file), p_buffer, size);
 	if (0 > err) {
-		(p_file->status) = FLASH_FILE_OPEN;
+		if (to_sync) {
+			(p_file->status) = FLASH_FILE_WAITING_FOR_SYNC;
+		} else {
+			(p_file->status) = FLASH_FILE_OPEN;
+		}
 		return W_FAILURE;
 	}
 	(p_file->status) = FLASH_FILE_OPEN;
-	return W_FAILURE;
-}
-
-lfs_t get_lfs() {
-	return lfs;
+	return W_SUCCESS;
 }
 
 w_status_t flash_clear_logs() {

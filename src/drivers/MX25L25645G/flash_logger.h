@@ -119,5 +119,4 @@ w_status_t flash_clear_logs();
 w_status_t flash_file_write(flash_file_t *p_file, const void *p_buffer, lfs_size_t size,
                             lfs_soff_t offset, enum lfs_whence_flags whence);
 
-lfs_t get_lfs(); // used for testing
 #endif // FLASH_LOGGER_H
