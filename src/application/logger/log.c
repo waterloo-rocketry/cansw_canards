@@ -519,11 +519,15 @@ void log_task(void *argument) {
 			uint32_t size = 0;
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
 				uint32_t write_start_ms = 0;
-				timer_get_ms(&write_start_ms);
+				if (timer_get_ms(&write_start_ms) != W_SUCCESS) {
+					write_start_ms = UINT32_MAX;
+				}
 				if (logging_formatting_write(buffer_to_print->data, LOG_BUFFER_SIZE, file_ctx) ==
 				    W_SUCCESS) {
 					uint32_t write_end_ms = 0;
-					timer_get_ms(&write_end_ms);
+					if (timer_get_ms(&write_end_ms) != W_SUCCESS) {
+						write_end_ms = UINT32_MAX;
+					}
 					log_text(10, LOG_LVL_INFO, "logger_write", "open_time=%d, try=%d",
 					         write_end_ms - write_start_ms, i + 1);
 					gpio_toggle(GPIO_PIN_BLUE_LED, 0);
