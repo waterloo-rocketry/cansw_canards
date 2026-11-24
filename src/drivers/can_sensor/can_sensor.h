@@ -58,7 +58,7 @@ w_status_t can_sensor_init();
 /**
  * @brief getter function for the CANARD_IIS2MDC_MAG message, returns the magnetometer readings and timestamp
  * @param mag_data [out] pointer to store the magnetometer readings and timestamp
- * @param timestamp_ms [out] pointer to store the timestamp of the message recieved
+ * @param timestamp_ms [out] pointer to store the timestamp of the message received
  * @return status of the operation
  */
 w_status_t can_get_canard_IIS2MDC_MAG(vector3d_t *mag_data, uint32_t *timestamp_ms);
