@@ -29,6 +29,7 @@
 #include "fmac.h"
 #include "gpio.h"
 #include "i2c.h"
+#include "mdma.h"
 #include "octospi.h"
 #include "sdmmc.h"
 #include "tim.h"
@@ -70,7 +71,6 @@ void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MPU_Config(void);
 void MX_FREERTOS_Init(void);
-
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -115,6 +115,7 @@ int main(void) {
 	MX_GPIO_Init();
 	MX_DMA_Init();
 	MX_BDMA_Init();
+	MX_MDMA_Init();
 	MX_CORDIC_Init();
 	MX_FMAC_Init();
 	MX_FDCAN3_Init();
