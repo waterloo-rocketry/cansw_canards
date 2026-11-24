@@ -443,7 +443,7 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 
 	// Write the message to the buffer
 	w_status_t res = log_data_write_to_region(buffer, msg_num, type, timestamp, data);
-	if (W_OVERFLOW == res || W_INVALID_PARAM == res) {
+	if ((W_OVERFLOW == res) || (W_INVALID_PARAM == res)) {
 		// msg_num was invalid (is_init, buffer, data must all have made sense at this point)
 		logger_health.invalid_region_moments++;
 		logger_health.region_overflow = true;

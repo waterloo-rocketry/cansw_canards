@@ -10,7 +10,11 @@
 #include "drivers/altimu-10/altimu-10.h"
 #include "stm32h7xx_hal.h"
 
-/* Size of a single buffer (bytes) */
+/**
+ * Size of a single buffer (bytes).
+ * This is the size of one chunk (32768 bytes) subtracted by the size of the header and footer for
+ * the formatter (12 bytes).
+*/
 #define LOG_BUFFER_SIZE 32756
 // #define LOG_BUFFER_SIZE 16384
 /* Size of each message region in text buffers (bytes) */

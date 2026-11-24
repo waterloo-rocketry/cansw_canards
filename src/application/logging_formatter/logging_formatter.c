@@ -204,12 +204,12 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
                                     formatter_file_ctx_t *ctx) {
 	if (!logging_formatter_health.is_init) {
-		log_text(0, LOG_LVL_WARN, "FORMAT", "Not initialized.");
+		// TODO: log_text for errors
 		return W_FAILURE;
 	}
 
 	if ((buffer_length + FORMATTER_HEADER_SIZE + FORMATTER_CRC_SIZE) != CHUNK_SIZE) {
-		log_text(0, LOG_LVL_WARN, "FORMAT", "Buffer was of incorrect size.");
+		// TODO: log_text for errors
 		return W_FAILURE;
 	}
 
@@ -257,6 +257,8 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 			break;
 		case LOGGING_FORMATTING_TEXT:
 			logging_formatter_health.text_writes++;
+			break;
+		default:
 			break;
 	}
 
