@@ -13,7 +13,7 @@
  * @brief Structure to hold GPS position data
  * @note lat_dir is in 'N' or 'S', lon_dir is in 'E' or 'W'
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
 	uint8_t degrees;
 	uint8_t minutes;
 	uint16_t dminutes_h;
@@ -24,7 +24,7 @@ typedef struct __attribute__((packed)) {
  * @brief Structure to hold GPS timestamp data
  * @note hours, minutes and seconds are in UTC time
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t utc_hours;
     uint8_t utc_minutes;
     uint8_t utc_seconds;
@@ -40,7 +40,7 @@ typedef struct __attribute__((packed)) {
  * @brief Structure to hold GPS timestamp data
  * @note hours, minutes and seconds are in UTC time
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t utc_hours;
     uint8_t utc_minutes;
     uint8_t utc_seconds;
@@ -52,7 +52,7 @@ typedef struct __attribute__((packed)) {
  * @brief Initializes the CAN sensor driver and sets up the necessary callbacks for handling incoming CAN messages related to sensors.
  * @return status of the operation
  */
-w_status_t can_sensor_init();
+w_status_t can_sensor_init(void);
 
 //------getter functions -------
 /**
