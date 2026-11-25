@@ -21,10 +21,12 @@
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
 
 /* Filename for the master log index file that stores the run count */
-static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
+static const char *LOG_RUN_COUNT_FILENAME __attribute__((section(".ramd1_data"))) = "LOGRUN.BIN";
 
-static char text_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.TXT";
-static char data_log_filename[FILENAME_STRING_SIZE] = "XXXXXXXX.BIN";
+static char text_log_filename[FILENAME_STRING_SIZE] __attribute__((section(".ramd1_data"))) =
+	"XXXXXXXX.TXT";
+static char data_log_filename[FILENAME_STRING_SIZE] __attribute__((section(".ramd1_data"))) =
+	"XXXXXXXX.BIN";
 
 typedef struct {
 	char data[LOG_BUFFER_SIZE];
@@ -67,8 +69,8 @@ typedef struct {
 	bool init_fs_create_write_failed; // SD file create/write failed during init
 } logger_health_t;
 
-static log_buffer_t log_text_buffers[NUM_TEXT_LOG_BUFFERS];
-static log_buffer_t log_data_buffers[NUM_DATA_LOG_BUFFERS];
+static log_buffer_t log_text_buffers[NUM_TEXT_LOG_BUFFERS] __attribute__((section(".ramd1_bss")));
+static log_buffer_t log_data_buffers[NUM_DATA_LOG_BUFFERS] __attribute__((section(".ramd1_bss")));
 static uint32_t current_text_buf_num = 0;
 static uint32_t current_data_buf_num = 0;
 /* Mutex that protects access of current_text_buf_num */

@@ -12,7 +12,8 @@
 #include <stdint.h>
 #include <string.h>
 /* Static buffer pool for all channels */
-static uint8_t s_buffer_pool[UART_CHANNEL_COUNT][UART_MAX_LEN * UART_NUM_RX_BUFFERS];
+static uint8_t s_buffer_pool[UART_CHANNEL_COUNT][UART_MAX_LEN * UART_NUM_RX_BUFFERS]
+	__attribute__((section(".ramd1_bss")));
 
 static uint16_t MAX_UART_ATTEMPTS = 5;
 

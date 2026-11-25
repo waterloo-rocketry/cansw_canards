@@ -901,8 +901,7 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	w_status_t motor_status =
 		read_motor_meas(ctx, &(imu_output->motor_encoder_meas), current_time_ms);
 
-	if ((board_status != W_SUCCESS) && (ad_status != W_SUCCESS) &&
-	    (motor_status != W_SUCCESS)) {
+	if ((board_status != W_SUCCESS) && (ad_status != W_SUCCESS) && (motor_status != W_SUCCESS)) {
 		status = W_FAILURE;
 	} else {
 		status = W_SUCCESS;

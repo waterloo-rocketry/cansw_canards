@@ -45,6 +45,156 @@ defined in linker script */
 .word  _ebss
 /* stack used for SystemInit_ExtMemCtl; always internal RAM used */
 
+/* start address for the initialization values of the .itcm_text section.
+defined in linker script */
+.word  _siitcm_text
+/* start address for the .itcm_text section. defined in linker script */
+.word  _sitcm_text
+/* end address for the .itcm_text section. defined in linker script */
+.word  _eitcm_text
+
+/* start address for the initialization values of the .ramd1_data section.
+defined in linker script */
+.word  _siramd1_data
+/* start address for the .ramd1_data section. defined in linker script */
+.word  _sramd1_data
+/* end address for the .ramd1_data section. defined in linker script */
+.word  _eramd1_data
+
+/* start address for the .ramd1_bss section. defined in linker script */
+.word  _sramd1_bss
+/* end address for the .ramd1_bss section. defined in linker script */
+.word  _eramd1_bss
+
+/* start address for the initialization values of the .rodata section.
+defined in linker script */
+.word  _sirodata
+/* start address for the .rodata section. defined in linker script */
+.word  _srodata
+/* end address for the .rodata section. defined in linker script */
+.word  _erodata
+
+/* start address for the initialization values of the .sram4 section.
+defined in linker script */
+.word  _sisram4
+/* start address for the .sram4 section. defined in linker script */
+.word  _ssram4
+/* end address for the .sram4 section. defined in linker script */
+.word  _esram4
+
+.section .text
+/**
+  * @brief: Subprocedure for checking if itcm and RAM D1 is split was correctly 
+  * @retval
+  */
+  .type Check_Ram, %function
+Check_Ram:
+  // FLASH_OPTSR2_CUR
+  ldr r1, =0x52002000 // the base address
+  ldr r2, [r1, #0x70]
+
+  // check if our memory is set correctly
+  movs r0, #0x03
+  and r2, r0, r2
+  movs r0, #0x01
+  cmp r2, r0
+  beq Ram_Set 
+
+  // set the ram correctly
+  // unlock the key
+  ldr r0, =0x08192A3B // KEY 1
+  str r0, [r1, #0x008]
+
+  ldr r0, =0x4C5D6E7F // KEY 2
+  str r0, [r1, #0x008]
+
+  // read the current value and set the last bits correctly
+  ldr r2, [r1, #0x70]
+  ldr r0, =0xFFFFFFFC
+  and r2, r2, r0
+
+  movs r0, #0x01
+  orr r2, r2, r0
+  str r2, [r1, #0x74]
+
+  // command start
+  ldr r2, [r1, #0x18]
+  ldr r0, =0x02
+  orr r2, r2, r0
+  str r2, [r1, #0x18]
+
+  // go through loop until bit is cleared
+  Loop_opt_busy:
+    ldr r2, [r1, #0x01C]
+    ldr r0, =0x01
+    and r2, r2, r0
+    cmp r2, r0
+    beq Loop_opt_busy
+  
+    /* system reset */
+    dsb                         /* Complete pending memory accesses */
+    ldr r0, =0xE000ED0C          /* SCB->AIRCR */
+    ldr r1, [r0]
+    and r1, r1, #0x700          /* Preserve interrupt priority grouping */
+    ldr r2, =0x05FA0004          /* Required key + SYSRESETREQ */
+    orr r1, r1, r2
+    str r1, [r0]
+    dsb                         /* Ensure reset request reaches hardware */
+
+  ResetWait:
+    b ResetWait
+
+  Ram_Set:
+    bx lr
+
+
+/**
+  * @brief Subprocedure for copying over the flash data to RAM section
+  * @param r0 start point stored in RAM
+  * @param r1 end point in RAM
+  * @param r2 start point for in flash
+  * @retval : None
+  */
+  .type Ram_Flash_Copy, %function
+Ram_Flash_Copy:
+  push {r4}
+  movs r3, #0
+  b LoopCopyDataInit
+
+  CopyDataInit:
+    ldr r4, [r2, r3]
+    str r4, [r0, r3]
+    adds r3, r3, #4
+
+  LoopCopyDataInit:
+    adds r4, r0, r3
+    cmp r4, r1
+    bcc CopyDataInit
+
+    pop {r4}
+    bx lr
+
+/**
+  * @brief Subprocedure for zeroing over the RAM section
+  * @param r0 start point stored in RAM
+  * @param r1 end point in RAM
+  * retval : None
+*/
+  .type Ram_Zeroing, %function
+Ram_Zeroing:
+  movs r3, #0
+  b LoopFillZerobss
+
+  FillZerobss:
+    str  r3, [r0]
+    adds r0, r0, #4
+
+  LoopFillZerobss:
+    cmp r0, r1
+    bcc FillZerobss
+
+    bx lr
+
 /**
  * @brief  This is the code that gets called when the processor first
  *          starts execution following a reset event. Only the absolutely
@@ -58,6 +208,9 @@ defined in linker script */
   .weak  Reset_Handler
   .type  Reset_Handler, %function
 Reset_Handler:
+
+  bl Check_Ram
+
   ldr   sp, =_estack      /* set stack pointer */
 
 /* Call the ExitRun0Mode function to configure the power supply */
@@ -65,35 +218,52 @@ Reset_Handler:
 /* Call the clock system initialization function.*/
   bl  SystemInit
 
+/* Copy the ITCM segment initializers from flash to SRAM */
+  ldr r0, =_sitcm_text
+  ldr r1, =_eitcm_text
+  ldr r2, =_siitcm_text
+  
+  bl Ram_Flash_Copy
+
 /* Copy the data segment initializers from flash to SRAM */
   ldr r0, =_sdata
   ldr r1, =_edata
   ldr r2, =_sidata
-  movs r3, #0
-  b LoopCopyDataInit
+  
+  bl Ram_Flash_Copy
 
-CopyDataInit:
-  ldr r4, [r2, r3]
-  str r4, [r0, r3]
-  adds r3, r3, #4
+/* Copy the data RAM D1 segment initializers from flash to SRAM */
+  ldr r0, =_sramd1_data
+  ldr r1, =_eramd1_data
+  ldr r2, =_siramd1_data
+  
+  bl Ram_Flash_Copy
 
-LoopCopyDataInit:
-  adds r4, r0, r3
-  cmp r4, r1
-  bcc CopyDataInit
+/* Copy the data RoData segment initializers from flash to SRAM */
+  ldr r0, =_srodata
+  ldr r1, =_erodata
+  ldr r2, =_sirodata
+  
+  bl Ram_Flash_Copy
+
+/* Copy the sram4 segment initializers from flash to SRAM4 */
+  ldr r0, =_ssram4
+  ldr r1, =_esram4
+  ldr r2, =_sisram4
+  
+  bl Ram_Flash_Copy
+
 /* Zero fill the bss segment. */
-  ldr r2, =_sbss
-  ldr r4, =_ebss
-  movs r3, #0
-  b LoopFillZerobss
+  ldr r0, =_sbss
+  ldr r1, =_ebss
 
-FillZerobss:
-  str  r3, [r2]
-  adds r2, r2, #4
+  bl Ram_Zeroing
 
-LoopFillZerobss:
-  cmp r2, r4
-  bcc FillZerobss
+/* Zero fill the ramd1_bss segment. */
+  ldr r0, =_sramd1_bss
+  ldr r1, =_eramd1_bss
+
+  bl Ram_Zeroing
 
 /* Call static constructors */
     bl __libc_init_array

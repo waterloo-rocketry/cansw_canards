@@ -45,26 +45,26 @@ defined in linker script */
 .word  _ebss
 /* stack used for SystemInit_ExtMemCtl; always internal RAM used */
 
-/* start address for the initialization values of the .text_itcm section.
+/* start address for the initialization values of the .itcm_text section.
 defined in linker script */
-.word  _sitext_itcm
-/* start address for the .text_itcm section. defined in linker script */
-.word  _stext_itcm
-/* end address for the .text_itcm section. defined in linker script */
-.word  _etext_itcm
+.word  _siitcm_text
+/* start address for the .itcm_text section. defined in linker script */
+.word  _sitcm_text
+/* end address for the .itcm_text section. defined in linker script */
+.word  _eitcm_text
 
-/* start address for the initialization values of the .data_ramd1 section.
+/* start address for the initialization values of the .ramd1_data section.
 defined in linker script */
-.word  _sidata_ramd1
-/* start address for the .data_ramd1 section. defined in linker script */
-.word  _sdata_ramd1
-/* end address for the .data_ramd1 section. defined in linker script */
-.word  _edata_ramd1
+.word  _siramd1_data
+/* start address for the .ramd1_data section. defined in linker script */
+.word  _sramd1_data
+/* end address for the .ramd1_data section. defined in linker script */
+.word  _eramd1_data
 
-/* start address for the .bss_ramd1 section. defined in linker script */
-.word  _sbss_ramd1
-/* end address for the .bss_ramd1 section. defined in linker script */
-.word  _ebss_ramd1
+/* start address for the .ramd1_bss section. defined in linker script */
+.word  _sramd1_bss
+/* end address for the .ramd1_bss section. defined in linker script */
+.word  _eramd1_bss
 
 /* start address for the initialization values of the .rodata section.
 defined in linker script */
@@ -219,9 +219,9 @@ Reset_Handler:
   bl  SystemInit
 
 /* Copy the ITCM segment initializers from flash to SRAM */
-  ldr r0, =_stext_itcm
-  ldr r1, =_etext_itcm
-  ldr r2, =_sitext_itcm
+  ldr r0, =_sitcm_text
+  ldr r1, =_eitcm_text
+  ldr r2, =_siitcm_text
   
   bl Ram_Flash_Copy
 
@@ -233,9 +233,9 @@ Reset_Handler:
   bl Ram_Flash_Copy
 
 /* Copy the data RAM D1 segment initializers from flash to SRAM */
-  ldr r0, =_sdata_ramd1
-  ldr r1, =_edata_ramd1
-  ldr r2, =_sidata_ramd1
+  ldr r0, =_sramd1_data
+  ldr r1, =_eramd1_data
+  ldr r2, =_siramd1_data
   
   bl Ram_Flash_Copy
 
@@ -259,9 +259,9 @@ Reset_Handler:
 
   bl Ram_Zeroing
 
-/* Zero fill the bss_ramd1 segment. */
-  ldr r0, =_sbss_ramd1
-  ldr r1, =_ebss_ramd1
+/* Zero fill the ramd1_bss segment. */
+  ldr r0, =_sramd1_bss
+  ldr r1, =_eramd1_bss
 
   bl Ram_Zeroing
 

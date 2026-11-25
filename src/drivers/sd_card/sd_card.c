@@ -91,7 +91,8 @@ w_status_t sd_card_file_read(const char *file_name, char *buffer, uint32_t bytes
 		return W_FAILURE;
 	}
 
-	FIL file;
+	// FIL contains an SD DMA sector buffer; sd_mutex serializes access to this object.
+	static FIL file __attribute__((section(".ramd1_bss")));
 	FRESULT res;
 
 	/* Open the file in read mode. */
@@ -140,7 +141,8 @@ w_status_t sd_card_file_write(const char *file_name, const char *buffer, uint32_
 		return W_FAILURE;
 	}
 
-	FIL file;
+	// FIL contains an SD DMA sector buffer; sd_mutex serializes access to this object.
+	static FIL file __attribute__((section(".ramd1_bss")));
 	FRESULT res;
 
 	/* Open the file in write mode.
@@ -204,7 +206,8 @@ w_status_t sd_card_file_create(const char *file_name) {
 		return W_FAILURE;
 	}
 
-	FIL file;
+	// FIL contains an SD DMA sector buffer; sd_mutex serializes access to this object.
+	static FIL file __attribute__((section(".ramd1_bss")));
 	FRESULT res;
 
 	/* Create a new file. The FA_CREATE_NEW flag causes the function to fail if the file already

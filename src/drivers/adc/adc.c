@@ -13,9 +13,9 @@
 #define ADC3_NUM_CHANNELS 2
 
 // Active DMA buffers
-static uint16_t adc1_dma_counts[ADC1_NUM_CHANNELS];
-static uint16_t adc2_dma_counts[ADC2_NUM_CHANNELS];
-static uint16_t adc3_dma_counts[ADC3_NUM_CHANNELS];
+static uint16_t adc1_dma_counts[ADC1_NUM_CHANNELS] __attribute__((section(".ramd1_bss")));
+static uint16_t adc2_dma_counts[ADC2_NUM_CHANNELS] __attribute__((section(".ramd1_bss")));
+static uint16_t adc3_dma_counts[ADC3_NUM_CHANNELS] __attribute__((section(".ramd1_bss")));
 
 typedef struct {
 	uint16_t *buffer; // DMA buffer

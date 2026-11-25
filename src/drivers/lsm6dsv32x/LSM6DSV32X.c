@@ -77,7 +77,8 @@ static const uint8_t ACC_TAG = 0x02;
 
 static const uint8_t LSM6DSV32X_EXPECTED_WHO_AM_I = 0x70;
 
-static lsm6dsv32x_ctx_t lsm6dsv32x_ctx = {.switched_callback = false};
+static lsm6dsv32x_ctx_t lsm6dsv32x_ctx
+	__attribute__((section(".ramd1_data"))) = {.switched_callback = false};
 
 static const uint16_t CTX_BUFFER_SIZE = sizeof(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER]);
 

@@ -65,25 +65,20 @@ SECTIONS
   /* Define the special memory locations */
   /* FLASH porgram code */
 
-  _sitext_itcm = LOADADDR(.text_itcm);
-  .text_itcm :
+  _siitcm_text = LOADADDR(.itcm_text);
+  .itcm_text :
   {
-    _stext_itcm = .;        /* define a global symbols at start of FLASH only code */
+    _sitcm_text = .;        /* define a global symbols at start of FLASH only code */
     . = ALIGN(4);
+
     /* src/application */
-    EXCLUDE_FILE (*/init.o */hil.o) 
+    EXCLUDE_FILE (*log.o */init.o */hil.o */health_checks.o */*_handler.o)
     *src/application/*(.text .text* .glue_7 .glue_7t .eh_frame)
 
     KEEP (*src/application/*(.init))
     KEEP (*src/application/*(.fini))
 
-    /* *src/drivers/* */
-    *src/drivers/*(.text)           /* .text sections (FLASH only code) */
-    *src/drivers/*(.text*)          /* .text* sections (FLASH only code) */
-    *src/drivers/*(.glue_7)         /* glue arm to thumb FLASH only code */
-    *src/drivers/*(.glue_7t)        /* glue thumb to arm FLASH only code */
-    *src/drivers/*(.eh_frame)
-
+    *src/drivers/*(.text .text* .glue_7 .glue_7t .eh_frame)
     KEEP (*src/drivers/*(.init))
     KEEP (*src/drivers/*(.fini))
 
@@ -98,6 +93,7 @@ SECTIONS
     KEEP (*/closedrocket/*(.fini))
 
     /* HAL Drivers & src */
+    EXCLUDE_FILE (*/FatFs/*) 
     */src/third_party/cubemx_autogen/Drivers/STM32H7xx_HAL_Driver/*(.text .text* .glue_7 .glue_7t .eh_frame)
 
     KEEP (*/src/third_party/cubemx_autogen/Drivers/*(.init))
@@ -111,55 +107,57 @@ SECTIONS
 
 
     . = ALIGN(4);
-    _etext_itcm = .;        /* define a global symbols at end of code */
+    _eitcm_text = .;        /* define a global symbols at end of code */
   } >ITCMRAM AT>FLASH
 
 
   /* used by the startup to initialize data */
-  _sidata_ramd1 = LOADADDR(.data_ramd1);
+  _siramd1_data = LOADADDR(.ramd1_data);
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
-  .data_ramd1 :
+  .ramd1_data :
   {
     . = ALIGN(4);
-    _sdata_ramd1 = .;        /* create a global symbol at data start */
-    /* drivers */
-    *src/drivers/*(.data)           /* .data sections */
-    *src/drivers/*(.data*)          /* .data* sections */
-    *src/drivers/*(.RamFunc)        /* .RamFunc sections */
-    *src/drivers/*(.RamFunc*)       /* .RamFunc* sections */
+    _sramd1_data = .;        /* create a global symbol at data start */
+    
 
-    /* logger */
-    *log.o(.data)           /* .data sections */
-    *log.o(.data*)          /* .data* sections */
-    *log.o(.RamFunc)        /* .RamFunc sections */
-    *log.o(.RamFunc*)       /* .RamFunc* sections */
+    /* collect anything put into this region */
+    *(.ramd1_data)
+
+    /* CubeMX Source Special Cases */
+    *sd_diskio.o(.data .data* .RamFunc .RamFunc*)
+    *bsp_driver_sd.o(.data .data* .RamFunc .RamFunc*)
+    *sdmmc.o(.data .data* .RamFunc .RamFunc*)
+
+    /* FatFS */
+    */src/third_party/cubemx_autogen/Drivers/STM32H7xx_HAL_Driver/FatFs/*(.data .data* .RamFunc .RamFunc*)
 
     . = ALIGN(4);
-    _edata_ramd1 = .;        /* define a global symbol at data end */
+    _eramd1_data = .;        /* define a global symbol at data end */
   } >RAM_D1 AT> FLASH
 
   /* Uninitialized data section */
   . = ALIGN(4);
-  .bss_ramd1 :
+  .ramd1_bss :
   {
     /* This is used by the startup in order to initialize the .bss section */
-    _sbss_ramd1 = .;         /* define a global symbol at bss start */
-    __bss_ramd1_start__ = _sbss_ramd1;
-    
-    /* drivers */
-    *src/drivers/*(.bss)
-    *src/drivers/*(.bss*)
-    *src/drivers/*(COMMON)
+    _sramd1_bss = .;         /* define a global symbol at bss start */
+    __ramd1_bss_start__ = _sramd1_bss;
 
-    /* log.o */
-    *log.o(.bss)
-    *log.o(.bss*)
-    *log.o(COMMON)
+    /* collect anything put into this region */
+    *(.ramd1_bss)
+
+    /* CubeMX Source Special Cases */
+    *sd_diskio.o(.bss .bss* COMMON)
+    *bsp_driver_sd.o(.bss .bss* COMMON)
+    *sdmmc.o(.bss .bss* COMMON)
+
+    /* FatFS */
+    */src/third_party/cubemx_autogen/Drivers/STM32H7xx_HAL_Driver/FatFs/*(.bss .bss* COMMON)
 
     . = ALIGN(4);
-    _ebss_ramd1 = .;         /* define a global symbol at bss end */
-    __bss_ramd1_end__ = _ebss_ramd1;
+    _eramd1_bss = .;         /* define a global symbol at bss end */
+    __ramd1_bss_end__ = _eramd1_bss;
   } >RAM_D1
 
 
