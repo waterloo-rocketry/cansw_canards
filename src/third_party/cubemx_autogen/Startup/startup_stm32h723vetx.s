@@ -84,12 +84,77 @@ defined in linker script */
 
 .section .text
 /**
+  * @brief: Subprocedure for checking if itcm and RAM D1 is split was correctly 
+  * @retval
+  */
+  .type Check_Ram, %function
+Check_Ram:
+  // FLASH_OPTSR2_CUR
+  ldr r1, =0x52002000 // the base address
+  ldr r2, [r1, #0x70]
+
+  // check if our memory is set correctly
+  movs r0, #0x03
+  and r2, r0, r2
+  movs r0, #0x01
+  cmp r2, r0
+  beq Ram_Set 
+
+  // set the ram correctly
+  // unlock the key
+  ldr r0, =0x08192A3B // KEY 1
+  str r0, [r1, #0x008]
+
+  ldr r0, =0x4C5D6E7F // KEY 2
+  str r0, [r1, #0x008]
+
+  // read the current value and set the last bits correctly
+  ldr r2, [r1, #0x70]
+  ldr r0, =0xFFFFFFFC
+  and r2, r2, r0
+
+  movs r0, #0x01
+  orr r2, r2, r0
+  str r2, [r1, #0x74]
+
+  // command start
+  ldr r2, [r1, #0x18]
+  ldr r0, =0x02
+  orr r2, r2, r0
+  str r2, [r1, #0x18]
+
+  // go through loop until bit is cleared
+  Loop_opt_busy:
+    ldr r2, [r1, #0x01C]
+    ldr r0, =0x01
+    and r2, r2, r0
+    cmp r2, r0
+    beq Loop_opt_busy
+  
+    /* system reset */
+    dsb                         /* Complete pending memory accesses */
+    ldr r0, =0xE000ED0C          /* SCB->AIRCR */
+    ldr r1, [r0]
+    and r1, r1, #0x700          /* Preserve interrupt priority grouping */
+    ldr r2, =0x05FA0004          /* Required key + SYSRESETREQ */
+    orr r1, r1, r2
+    str r1, [r0]
+    dsb                         /* Ensure reset request reaches hardware */
+
+  ResetWait:
+    b ResetWait
+
+  Ram_Set:
+    bx lr
+
+
+/**
   * @brief Subprocedure for copying over the flash data to RAM section
   * @param r0 start point stored in RAM
   * @param r1 end point in RAM
   * @param r2 start point for in flash
-  * retval : None
-*/
+  * @retval : None
+  */
   .type Ram_Flash_Copy, %function
 Ram_Flash_Copy:
   push {r4}
@@ -143,6 +208,9 @@ Ram_Zeroing:
   .weak  Reset_Handler
   .type  Reset_Handler, %function
 Reset_Handler:
+
+  bl Check_Ram
+
   ldr   sp, =_estack      /* set stack pointer */
 
 /* Call the ExitRun0Mode function to configure the power supply */
