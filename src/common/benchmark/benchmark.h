@@ -25,6 +25,8 @@
 
 #define BENCH_WARMUP_N 32U
 #define BENCH_HIST_BIN_COUNT 6U
+STATIC_ASSERT(256 > BENCH_HIST_BIN_COUNT, "BENCH_HIST_BIN_COUNT must be less than 256");
+STATIC_ASSERT(0 <= BENCH_HIST_BIN_COUNT, "BENCH_HIST_BIN_COUNT must be an unsigned integer");
 
 // histogram percentiles
 #define BENCH_HIST_PCT_0 10U
@@ -87,8 +89,9 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
 
 /**
  * @brief a macro function for initializing benchmarking capability for benchmarking
- * @param[in] number_of_benchmark_points (uint8_t) number of benchmark points that will be measured
+ * @param[in] n (uint8_t) number of benchmark points that will be measured
  * within this file (ie, how many things to benchmark)
+ * @param[in] target_period_us (uint32_t) the target period of the benchmarking
  * @details:
  * 	- This function must be called with file-wide scope
  * 	- make sure all benchmark points take less than 7 seconds to execute
@@ -140,7 +143,7 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
 			} else {                                                                               \
 				BENCHMARK_LAST[i] = _dt;                                                           \
 				BENCHMARK_TIME_SUMS[i] += _dt;                                                     \
-				if ((BENCHMARK_COUNTERS[i] == 0) || (_dt < BENCHMARK_TIME_MIN[i])) {               \
+				if ((0 == BENCHMARK_COUNTERS[i]) || (_dt < BENCHMARK_TIME_MIN[i])) {               \
 					BENCHMARK_TIME_MIN[i] = _dt;                                                   \
 				}                                                                                  \
 				if (_dt > BENCHMARK_TIME_MAX[i]) {                                                 \
@@ -181,7 +184,7 @@ uint32_t bench_hist_bin(uint32_t cycles, uint32_t budget);
  */
 #define GET_BENCHMARK_STAT(i, p_data)                                                              \
 	do {                                                                                           \
-		uint32_t _b;                                                                               \
+		uint8_t _b;                                                                                \
 		if (((p_data) != NULL) && ((i) < BENCHMARK_COUNT)) {                                       \
 			(p_data)->last = BENCHMARK_LAST[i];                                                    \
 			(p_data)->min = BENCHMARK_TIME_MIN[i];                                                 \
