@@ -638,8 +638,8 @@ void log_task(void *argument) {
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
 				uint32_t write_start_ms = 0;
 				timer_get_ms(&write_start_ms);
-				if (W_SUCCESS == sd_card_file_write_open(&log_file->ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
-				                            &size)) {
+				if (W_SUCCESS == sd_card_file_write_open(&log_file->ctx, buffer_to_print->data,
+				                                         LOG_BUFFER_SIZE, &size)) {
 					log_file->unsynced_bytes += size;
 
 					uint32_t write_end_ms = 0;
