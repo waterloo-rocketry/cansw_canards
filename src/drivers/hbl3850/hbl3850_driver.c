@@ -43,6 +43,15 @@
 #define CAN_CLASSIC_MAX_LEN 8U // max payload bytes in a classic CAN frame
 #define DRONECAN_MAX_NODE_ID 127U
 
+// DroneCAN 29-bit message ID: priority (bits 28-24), type ID (bits 23-8), service (bit 7), source
+// node ID (bits 6-0)
+#define DRONECAN_PRIORITY_SHIFT 24U
+#define DRONECAN_TYPE_ID_SHIFT 8U
+#define DRONECAN_TYPE_ID_MASK 0xffffU
+#define DRONECAN_SERVICE_SHIFT 7U
+#define DRONECAN_SERVICE_MASK 0x01U
+#define DRONECAN_SOURCE_NODE_MASK 0x7fU
+
 // Frame lengths in bytes, including the tail byte
 #define NODE_STATUS_FRAME_LEN 8U
 #define CIRCUIT_STATUS_FRAME_LEN 8U
@@ -148,7 +157,7 @@ typedef struct {
 	bool node_received;
 	bool circuit_received;
 	bool temperature_received;
-	uint32_t now_ms; // time of the snapshot, read in the same critical section
+	uint32_t now_ms; // time of the snapshot, read after the critical section
 } hbl3850_motor_snapshot_t;
 
 /**
@@ -174,8 +183,9 @@ static const uint16_t LOG_WAIT_MS = 0;
 static FDCAN_HandleTypeDef *g_hfdcan = NULL;
 static uint8_t g_cmd_transfer_id = 0;
 // ArrayCommand CAN ID: priority (bits 28-24) | message type (bits 23-8) | our node ID (bits 6-0)
-static const uint32_t can_id =
-	((uint32_t)CMD_PRIORITY << 24) | ((uint32_t)ARRAY_COMMAND_TYPE << 8) | OUR_NODE_ID;
+static const uint32_t can_id = ((uint32_t)CMD_PRIORITY << DRONECAN_PRIORITY_SHIFT) |
+                               ((uint32_t)ARRAY_COMMAND_TYPE << DRONECAN_TYPE_ID_SHIFT) |
+                               OUR_NODE_ID;
 static hbl3850_motor_t s_motors[HBL3850_MOTOR_COUNT];
 static hbl3850_driver_health_t s_driver_health = {0};
 
@@ -183,33 +193,38 @@ static uint32_t last_tx_errors = 0;
 static uint32_t last_rx_errors = 0;
 static uint32_t last_crc_fails = 0;
 
-w_status_t hbl3850_motor_init(hbl3850_motor_id_t motor, uint8_t node_id, uint8_t actuator_id) {
+w_status_t hbl3850_motor_init(hbl3850_motor_id_t motor_id, uint8_t node_id, uint8_t actuator_id) {
 	if (s_driver_health.is_init) {
 		return W_FAILURE;
 	}
-	if (motor >= HBL3850_MOTOR_COUNT) {
+	if (motor_id >= HBL3850_MOTOR_COUNT) {
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
-	if (node_id == OUR_NODE_ID) {
+	if (s_motors[motor_id].configured) {
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
-	for (hbl3850_motor_id_t m_id = 0; m_id < HBL3850_MOTOR_COUNT; ++m_id) {
-		if (s_motors[m_id].configured &&
-		    ((m_id != motor) && ((s_motors[m_id].node_id == node_id) ||
-		                         (s_motors[m_id].actuator_id == actuator_id)))) {
+	if (OUR_NODE_ID == node_id) {
+		++s_driver_health.invalid_args;
+		return W_INVALID_PARAM;
+	}
+	for (hbl3850_motor_id_t other_motor_id = 0; other_motor_id < HBL3850_MOTOR_COUNT;
+	     ++other_motor_id) {
+		if (s_motors[other_motor_id].configured &&
+		    ((s_motors[other_motor_id].node_id == node_id) ||
+		     (s_motors[other_motor_id].actuator_id == actuator_id))) {
 			++s_driver_health.invalid_args;
 			return W_INVALID_PARAM;
 		}
 	}
-	if ((node_id == 0) || (node_id > DRONECAN_MAX_NODE_ID)) {
+	if ((0 == node_id) || (node_id > DRONECAN_MAX_NODE_ID)) {
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
-	s_motors[motor].node_id = node_id;
-	s_motors[motor].actuator_id = actuator_id;
-	s_motors[motor].configured = true;
+	s_motors[motor_id].node_id = node_id;
+	s_motors[motor_id].actuator_id = actuator_id;
+	s_motors[motor_id].configured = true;
 	return W_SUCCESS;
 }
 
@@ -227,7 +242,7 @@ static uint16_t float_to_half(float32_t value) {
 	uint32_t mant = fp32 & FP32_MANT_MASK;
 
 	// FP32 is Infinity or NaN (all 8 exponent bits are 1)
-	if (raw_exponent == 0xffU) {
+	if (0xffU == raw_exponent) {
 		if (mant != 0U) {
 			// Preserve NaN (set quiet NaN bit 0x0200U + top mantissa bits)
 			return (uint16_t)(sign | (0x1fU << FP16_MANT_BITS) | 0x0200U | (mant >> MANT_DELTA));
@@ -288,21 +303,21 @@ static float32_t half_to_float(uint16_t value) {
 
 	uint32_t fp32 = 0U;
 
-	if (exponent == 0U) {
-		if (mant == 0U) {
+	if (0U == exponent) {
+		if (0U == mant) {
 			// Signed zero (+/- 0.0)
 			fp32 = sign;
 		} else {
 			// Subnormal FP16: shift mantissa left until implicit leading 1 reaches bit 10
 			exponent = BIAS_DELTA + 1U;
-			while ((mant & 0x0400U) == 0U) {
+			while (0U == (mant & 0x0400U)) {
 				mant <<= 1;
 				exponent--;
 			}
 			mant &= FP16_MANT_MASK;
 			fp32 = sign | (exponent << FP32_MANT_BITS) | (mant << MANT_DELTA);
 		}
-	} else if (exponent == 31U) {
+	} else if (31U == exponent) {
 		// Infinity (mant == 0) or NaN (mant != 0)
 		fp32 = sign | (0xffU << FP32_MANT_BITS) | (mant << MANT_DELTA);
 	} else {
@@ -380,7 +395,7 @@ static void handle_actuator_status(int motor_index, const uint8_t *rx_data, uint
 	uint8_t transfer_id = tail & TAIL_TRANSFER_ID_MASK;
 	hbl3850_rx_transfer_t *rx = &s_motors[motor_index].status_rx;
 
-	if ((tail_start && !tail_end && !tail_toggle) && (len == ACTUATOR_STATUS_FRAME1_LEN)) {
+	if ((tail_start && !tail_end && !tail_toggle) && (ACTUATOR_STATUS_FRAME1_LEN == len)) {
 		// Frame 1: transfer CRC (bytes 0-1), payload 0-4 (bytes 2-6), tail
 		rx->crc = (uint16_t)(rx_data[0] | (rx_data[1] << 8));
 		rx->payload[0] = rx_data[2];
@@ -391,8 +406,8 @@ static void handle_actuator_status(int motor_index, const uint8_t *rx_data, uint
 		rx->transfer_id = transfer_id;
 		rx->expect_toggle = true;
 		rx->len = ACTUATOR_STATUS_FRAME1_PAYLOAD;
-	} else if ((!tail_start && tail_end && tail_toggle) && (len == ACTUATOR_STATUS_FRAME2_LEN) &&
-	           (rx->len == ACTUATOR_STATUS_FRAME1_PAYLOAD) && (transfer_id == rx->transfer_id)) {
+	} else if ((!tail_start && tail_end && tail_toggle) && (ACTUATOR_STATUS_FRAME2_LEN == len) &&
+	           (ACTUATOR_STATUS_FRAME1_PAYLOAD == rx->len) && (transfer_id == rx->transfer_id)) {
 		// TODO: record frame 1's receive time and reject frame 2 if it arrives after the DroneCAN
 		// transfer timeout (2 s), so a stale frame 1 can't pair with a much later frame 2
 		// Frame 2: payload 5-7 (bytes 0-2), tail
@@ -439,7 +454,7 @@ static bool is_single_frame(const uint8_t *rx_data, uint32_t len, uint32_t expec
 	}
 	uint8_t tail = rx_data[len - 1];
 	return ((tail & TAIL_START_OF_TRANSFER) != 0) && ((tail & TAIL_END_OF_TRANSFER) != 0) &&
-	       ((tail & TAIL_TOGGLE) == 0);
+	       (0 == (tail & TAIL_TOGGLE));
 }
 
 /**
@@ -565,8 +580,8 @@ w_status_t hbl3850_driver_init(FDCAN_HandleTypeDef *hfdcan, const uint32_t can_i
 			s_motors[motor_id].circuit_received = false;
 			s_motors[motor_id].temperature_received = false;
 			s_motors[motor_id].status_rx.len = 0;
-			// TODO: also clear health and encoder_raw, so a retried init (e.g. after a slot was
-			// reassigned to a new node ID) can't return the previous motor's stale data
+			// TODO: also clear health and encoder_raw, so a retried init can't return stale data
+			// from the failed attempt
 		}
 	}
 
@@ -671,19 +686,19 @@ static w_status_t hbl3850_can_transmit_ext(uint32_t ext_id, const uint8_t *data,
 	return W_SUCCESS;
 }
 
-w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_deg) {
-	if ((motor >= HBL3850_MOTOR_COUNT) || isnan(angle_deg)) {
+w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor_id, float32_t angle_deg) {
+	if ((motor_id >= HBL3850_MOTOR_COUNT) || isnan(angle_deg)) {
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
-	if (!s_motors[motor].configured) {
+	if (!s_motors[motor_id].configured) {
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 	// ArrayCommand payload: actuator ID, command type, float16 value (low byte first), tail.
 	// The HAL copies TX data 4 bytes at a time, so the buffer is 8 bytes and only 5 are sent.
 	uint8_t data[CAN_CLASSIC_MAX_LEN] = {0};
-	data[0] = s_motors[motor].actuator_id;
+	data[0] = s_motors[motor_id].actuator_id;
 	data[1] = COMMAND_TYPE_UNITLESS;
 	// The motor maps the unitless range -1..1 to -60..+60 degrees
 	float32_t converted_angle = angle_deg / HBL3850_MAX_ANGLE_DEG;
@@ -708,8 +723,8 @@ w_status_t hbl3850_send_position_cmd(hbl3850_motor_id_t motor, float32_t angle_d
 	return hbl3850_can_transmit_ext(can_id, data, ARRAY_COMMAND_LEN);
 }
 
-w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor, hbl3850_encoder_t *encoder) {
-	if (motor >= HBL3850_MOTOR_COUNT) {
+w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor_id, hbl3850_encoder_t *encoder) {
+	if (motor_id >= HBL3850_MOTOR_COUNT) {
 		++s_driver_health.invalid_args;
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "motor does not exist.");
 		return W_INVALID_PARAM;
@@ -719,7 +734,7 @@ w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor, hbl3850_encoder_t *enco
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "Encoder does not exist");
 		return W_FAILURE;
 	}
-	if (!s_motors[motor].configured) {
+	if (!s_motors[motor_id].configured) {
 		++s_driver_health.invalid_args;
 		log_text(LOG_WAIT_MS, LOG_LVL_WARN, "hbl3850", "motor is not configured");
 		return W_INVALID_PARAM;
@@ -727,8 +742,8 @@ w_status_t hbl3850_get_encoder(hbl3850_motor_id_t motor, hbl3850_encoder_t *enco
 
 	// Copy the latest reading and its flag together, since the RX ISR writes them
 	taskENTER_CRITICAL();
-	hbl3850_encoder_raw_t raw = s_motors[motor].encoder_raw;
-	bool received = s_motors[motor].encoder_received;
+	hbl3850_encoder_raw_t raw = s_motors[motor_id].encoder_raw;
+	bool received = s_motors[motor_id].encoder_received;
 	taskEXIT_CRITICAL();
 
 	if (!received) {
@@ -772,19 +787,19 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	}
 
 	// DroneCAN frames always use 29-bit IDs and end with a tail byte
-	if ((rx_header.IdType != FDCAN_EXTENDED_ID) || (rx_header.DataLength == 0)) {
+	if ((rx_header.IdType != FDCAN_EXTENDED_ID) || (0 == rx_header.DataLength)) {
 		return;
 	}
 
 	// DroneCAN 29-bit ID: type ID = bits 23-8, service = bit 7, source node = bits 6-0
 	uint32_t id = rx_header.Identifier;
-	uint32_t typeID = (id << 8) >> 16;
-	uint32_t service = (id << 24) >> 31;
-	uint32_t source = (id << 25) >> 25;
+	uint32_t typeID = (id >> DRONECAN_TYPE_ID_SHIFT) & DRONECAN_TYPE_ID_MASK;
+	uint32_t service = (id >> DRONECAN_SERVICE_SHIFT) & DRONECAN_SERVICE_MASK;
+	uint32_t source = id & DRONECAN_SOURCE_NODE_MASK;
 	int motor_index = find_motor_by_node_id((uint8_t)source);
 
 	// Ignore service frames and frames from unknown nodes
-	if (service || (motor_index == -1)) {
+	if ((service != 0U) || (-1 == motor_index)) {
 		return;
 	}
 
@@ -797,22 +812,22 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 	}
 
 	uint32_t len = rx_header.DataLength;
-	if (typeID == ACTUATOR_STATUS_TYPE) {
+	if (ACTUATOR_STATUS_TYPE == typeID) {
 		handle_actuator_status(motor_index, rx_data, len, now_ms);
-	} else if (typeID == NODE_STATUS_TYPE) {
+	} else if (NODE_STATUS_TYPE == typeID) {
 		handle_node_status(motor_index, rx_data, len, now_ms);
-	} else if (typeID == CIRCUIT_STATUS_TYPE) {
+	} else if (CIRCUIT_STATUS_TYPE == typeID) {
 		handle_circuit_status(motor_index, rx_data, len, now_ms);
-	} else if (typeID == TEMPERATURE_STATUS_TYPE) {
+	} else if (TEMPERATURE_STATUS_TYPE == typeID) {
 		handle_temperature(motor_index, rx_data, len, now_ms);
 	}
 }
 
 /**
- * @brief Copy a motor's health state, validity flags and the current time together, since the RX
- * ISR writes them. Reading the clock in the same critical section means a timestamp refreshed by
- * the ISR can never be newer than now_ms. timer_get_ms only reads a timer register, so it's safe
- * here.
+ * @brief Copy a motor's health state and validity flags together, since the RX ISR writes them.
+ * The clock is read after the critical section to keep it short. Don't read it before the critical
+ * section: the ISR could then store a timestamp newer than now_ms, and the unsigned age would wrap
+ * and report a healthy motor as offline.
  * @param[in]  motor_id Index into s_motors
  * @param[out] snapshot Copy of the motor's state
  * @return W_SUCCESS, or W_FAILURE if the current time couldn't be read. The other fields are copied
@@ -821,11 +836,9 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 static w_status_t take_motor_snapshot(hbl3850_motor_id_t motor_id,
                                       hbl3850_motor_snapshot_t *snapshot) {
 	w_status_t status = W_SUCCESS;
+
 	// Single exit after taskEXIT_CRITICAL, so interrupts are always re-enabled
 	taskENTER_CRITICAL();
-	if (timer_get_ms(&snapshot->now_ms) != W_SUCCESS) {
-		status = W_FAILURE;
-	}
 	snapshot->configured = s_motors[motor_id].configured;
 	snapshot->node_id = s_motors[motor_id].node_id;
 	snapshot->health = s_motors[motor_id].health;
@@ -833,6 +846,10 @@ static w_status_t take_motor_snapshot(hbl3850_motor_id_t motor_id,
 	snapshot->circuit_received = s_motors[motor_id].circuit_received;
 	snapshot->temperature_received = s_motors[motor_id].temperature_received;
 	taskEXIT_CRITICAL();
+
+	if (timer_get_ms(&snapshot->now_ms) != W_SUCCESS) {
+		status = W_FAILURE;
+	}
 	return status;
 }
 
@@ -949,27 +966,27 @@ health_status_t hbl3850_get_status(void) {
 	return status;
 }
 
-w_status_t hbl3850_get_health(hbl3850_motor_id_t motor, hbl3850_health_t *health_stats) {
-	if ((unsigned int)motor >= HBL3850_MOTOR_COUNT) {
+w_status_t hbl3850_get_health(hbl3850_motor_id_t motor_id, hbl3850_health_t *health_stats) {
+	if ((unsigned int)motor_id >= HBL3850_MOTOR_COUNT) {
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 
-	if (!s_motors[motor].configured) {
+	if (!s_motors[motor_id].configured) {
 		++s_driver_health.invalid_args;
 		return W_INVALID_PARAM;
 	}
 
-	if (health_stats == NULL) {
+	if (NULL == health_stats) {
 		++s_driver_health.invalid_args;
 		return W_FAILURE;
 	}
 
 	// Copy the raw data and its validity flags together, since the RX ISR writes them
 	taskENTER_CRITICAL();
-	hbl3850_health_raw_t raw = s_motors[motor].health;
-	bool any_received = s_motors[motor].heard || s_motors[motor].circuit_received ||
-	                    s_motors[motor].temperature_received;
+	hbl3850_health_raw_t raw = s_motors[motor_id].health;
+	bool any_received = s_motors[motor_id].heard || s_motors[motor_id].circuit_received ||
+	                    s_motors[motor_id].temperature_received;
 	taskEXIT_CRITICAL();
 
 	if (!any_received) {
