@@ -25,6 +25,7 @@
 
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
 static const uint32_t MAX_ERROR_LOGGING_PERIOD_MS = 60000; // 1 min
+static const uint32_t MAX_ERROR_LOGGING_DUPLICATION_PERIOD_MS = 1000; // 1 sec
 
 /* Filename for the master log index file that stores the run count */
 static const char *LOG_RUN_COUNT_FILENAME = "LOGRUN.BIN";
@@ -370,7 +371,7 @@ w_status_t log_init(void) {
 	return status;
 }
 
-w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_ID,
+w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_id,
                      uint16_t line_number, log_error_id_t error_code,
                      const uint32_t args[LOG_ERROR_MAX_ARGS]) {
 	uint32_t timestamp = 0;
@@ -397,7 +398,7 @@ w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_fil
 	log_buffer_t *const buffer = &log_error_buffers[current_error_buf_num];
 
 	// Get current task
-	log_task_id_t task_ID = (log_task_id_t)uxTaskGetTaskNumber(xTaskGetCurrentTaskHandle());
+	log_task_id_t task_id = (log_task_id_t)uxTaskGetTaskNumber(xTaskGetCurrentTaskHandle());
 
 	// Aggregate if possible, must be same buffer and version
 	if (current_error_buf_num == log_error_site->last_logged_buffer &&
@@ -412,7 +413,8 @@ w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_fil
 		memcpy(&prev_msg, prev_dest, sizeof(prev_msg));
 
 		// To aggregate, must be same task, within last second, and same arguments
-		if (task_ID == prev_msg.log_task_id && (timestamp - prev_msg.timestamp) <= 1000 &&
+		if (task_id == prev_msg.log_task_id &&
+		    (timestamp - prev_msg.timestamp) <= MAX_ERROR_LOGGING_DUPLICATION_PERIOD_MS &&
 		    memcmp(args, prev_msg.args, sizeof(prev_msg.args)) == 0) {
 			if (prev_msg.counter < UINT16_MAX) {
 				prev_msg.counter++;
@@ -466,8 +468,8 @@ w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_fil
 	log_error_msg_t new_error_msg = {
 		.timestamp = timestamp,
 		.log_error_id = error_code,
-		.log_task_id = task_ID,
-		.log_file_id = file_ID,
+		.log_task_id = task_id,
+		.log_file_id = file_id,
 		.line_number = line_number,
 		.counter = 0,
 	};
