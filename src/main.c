@@ -28,6 +28,7 @@
 #include "fmac.h"
 #include "gpio.h"
 #include "i2c.h"
+#include "mdma.h"
 #include "octospi.h"
 #include "sdmmc.h"
 #include "tim.h"
@@ -37,6 +38,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "application/init/init.h"
+
+#ifdef ENABLE_BENCHMARK
+#include "common/benchmark/benchmark.h"
+#endif
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -123,6 +128,7 @@ int main(void) {
 	MX_GPIO_Init();
 	MX_DMA_Init();
 	MX_BDMA_Init();
+	MX_MDMA_Init();
 	MX_CORDIC_Init();
 	MX_FMAC_Init();
 	MX_FDCAN3_Init();
@@ -144,8 +150,13 @@ int main(void) {
 	MX_UART7_Init();
 	MX_TIM2_Init();
 	MX_TIM5_Init();
+	MX_TIM23_Init();
 	/* USER CODE BEGIN 2 */
 	DWT_Init();
+
+#ifdef ENABLE_BENCHMARK
+	DWT_init();
+#endif
 
 	// this should be our only change in main.c - the rest is auto-gen. This is the entrypoint to
 	// our actual code
