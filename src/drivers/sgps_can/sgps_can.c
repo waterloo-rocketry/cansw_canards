@@ -77,7 +77,7 @@ static w_status_t IIS2MDC_MAG_callback(const can_msg_t * msg) {
     if (get_3d_analog_sensor_data_16bit(msg, &sensor_id, &x, &y, &z)  != W_SUCCESS) {
         return W_FAILURE;
     }
-    if (sensor_id == DEM_3D_SENSOR_CANARD_IIS2MDC_MAG) {
+    if (DEM_3D_SENSOR_CANARD_IIS2MDC_MAG == sensor_id) {
         taskENTER_CRITICAL();
         IIS2MDC_MAG_buffer.x = (float64_t)((x - TELEMETRY_INT16_OFFSET) / can_scale_factor[SCALE_BOARD_MAG].scale);
         IIS2MDC_MAG_buffer.y = (float64_t)((y - TELEMETRY_INT16_OFFSET) / can_scale_factor[SCALE_BOARD_MAG].scale);
