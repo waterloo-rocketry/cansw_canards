@@ -234,7 +234,7 @@ static w_status_t MS5611_BARO_callback(const can_msg_t * msg) {
  * @param none
  * @return status of the operation
  */
-w_status_t can_sensor_init() {
+w_status_t can_sensor_init(void){
     if (can_handler_register_callback(MSG_SENSOR_3D_ANALOG16,IIS2MDC_MAG_callback) != W_SUCCESS ||      
         can_handler_register_callback(MSG_GPS_TIMESTAMP, GPS_TIMESTAMP_callback) != W_SUCCESS || 
         can_handler_register_callback(MSG_GPS_ALTITUDE, GPS_ALTITUDE_callback) != W_SUCCESS || 
