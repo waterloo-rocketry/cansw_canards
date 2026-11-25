@@ -12,12 +12,15 @@ extern "C" {
 #include "drivers/i2c/i2c.h"
 #include "application/logger/log.h"
 #include "common/math/math.h"
+#include "drivers/gpio/gpio.h"
 
 // Needed only so lsm6dsv32x_init() can run in test setup
 FAKE_VALUE_FUNC(w_status_t, i2c_write_reg, i2c_bus_t, uint8_t, uint8_t, const uint8_t *, uint8_t)
 FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *, uint8_t)
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...)
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *)
+
+FAKE_VALUE_FUNC(w_status_t, gpio_register_interrupt_callback, gpio_isr_callback_t, uint16_t)
 
 extern void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c);
 I2C_HandleTypeDef hi2c1;
@@ -110,6 +113,7 @@ class Lsm6dsv32xTest : public ::testing::Test {
         RESET_FAKE(i2c_read_reg);
         RESET_FAKE(timer_get_ms);
         RESET_FAKE(log_text);
+        RESET_FAKE(gpio_register_interrupt_callback);
         FFF_RESET_HISTORY();
 
     }
@@ -119,6 +123,7 @@ class Lsm6dsv32xTest : public ::testing::Test {
 
 TEST_F(Lsm6dsv32xTest, InitSuccess) {
     i2c_write_reg_fake.return_val = W_SUCCESS;
+    gpio_register_interrupt_callback_fake.return_val = W_SUCCESS;
     i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake_whoami;
 
     EXPECT_EQ(lsm6dsv32x_init(), W_SUCCESS);
@@ -126,6 +131,7 @@ TEST_F(Lsm6dsv32xTest, InitSuccess) {
 
 TEST_F(Lsm6dsv32xTest, InitFailByI2CWrite) {
     i2c_write_reg_fake.return_val = W_FAILURE;
+    gpio_register_interrupt_callback_fake.return_val = W_SUCCESS;
     i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake_whoami;
 
     EXPECT_EQ(lsm6dsv32x_init(), W_FAILURE);
@@ -133,7 +139,16 @@ TEST_F(Lsm6dsv32xTest, InitFailByI2CWrite) {
 
 TEST_F(Lsm6dsv32xTest, InitFailBySanityCheck) {
     i2c_write_reg_fake.return_val = W_FAILURE;
+    gpio_register_interrupt_callback_fake.return_val = W_SUCCESS;
     i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake_false_whoami;
+
+    EXPECT_EQ(lsm6dsv32x_init(), W_FAILURE);
+}
+
+TEST_F(Lsm6dsv32xTest, InitFailByCallback) {
+    i2c_write_reg_fake.return_val = W_SUCCESS;
+    gpio_register_interrupt_callback_fake.return_val = W_FAILURE;
+    i2c_read_reg_fake.custom_fake = i2c_read_reg_custom_fake_whoami;
 
     EXPECT_EQ(lsm6dsv32x_init(), W_FAILURE);
 }
@@ -318,10 +333,6 @@ TEST_F(Lsm6dsv32xTest, BothDataGetFunctionsMatch) {
     EXPECT_EQ(raw_acc[0].x, single_raw_acc.x);
     EXPECT_EQ(raw_acc[0].y, single_raw_acc.y);
     EXPECT_EQ(raw_acc[0].z, single_raw_acc.z);
-}
-
-TEST_F(Lsm6dsv32xTest, InteruptSuccessOnNotInit) {
-    EXPECT_EQ(lsm6dsv32x_int1_isr_handler(), W_SUCCESS);
 }
 
 // TODO: figure out how to test convertion

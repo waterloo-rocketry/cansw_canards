@@ -11,6 +11,10 @@
 
 #include "rocketlib.h"
 
+#define MAX_GPIO_INTERRUPTS 2
+
+typedef void (*gpio_isr_callback_t)(void);
+
 /**
  * Enum representing GPIO pin level
  */
@@ -46,7 +50,7 @@ typedef enum {
 /**
  * Initialize gpio module. Inits status trackers and mutexes
  */
-w_status_t gpio_init();
+w_status_t gpio_init(void);
 
 /**
  * Read the current level of `pin` into `level`.
@@ -70,5 +74,14 @@ w_status_t gpio_toggle(gpio_pin_t pin, uint32_t timeout);
  * @return CAN board status bitfield
  */
 health_status_t gpio_get_status(void);
+
+/**
+ * @brief Register a gpio pin with an interrupt callback function
+ * @param[in] p_callback_fcn is the pointer to callback function
+ * @param[in] gpio_pin is the pin number for the associated GPIO pin
+ * @return the status of the registration
+ */
+w_status_t gpio_register_interrupt_callback(const gpio_isr_callback_t p_callback_fcn,
+                                            const uint16_t gpio_pin);
 
 #endif // GPIO_H
