@@ -33,7 +33,7 @@
 // 2 from recieve notif to exec complete
 // 3 from sensor handler
 // 4 from fsm exec
-BENCHMARK_FILE_INIT(5);
+BENCHMARK_FILE_INIT(5, 2500);
 
 extern TaskHandle_t fsm_task_handle;
 

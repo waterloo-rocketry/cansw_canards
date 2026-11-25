@@ -247,16 +247,24 @@ static void system_init_task(void *arg) {
 		if ((i % 2) == 0) {
 			get_nav_codegen_benchmark_data(nav_benchmark_datas);
 			for (uint8_t j = 0; j < 10; j++) {
-				log_text(0, LOG_LVL_INFO, "SystemInit", "Nav %u S: %llu, C: %lu, M: %lu, Ave %llf", j,
-				         nav_benchmark_datas[j].sum, nav_benchmark_datas[j].count, nav_benchmark_datas[j].max,
-				         nav_benchmark_datas[j].average);
+				log_text(0, LOG_LVL_INFO, "SystemInit", "Nav %u L: %lu, Ma: %lu, Mi: %lu, C %lu, S %llu OB %lu",
+				         j, nav_benchmark_datas[j].last, nav_benchmark_datas[j].max,
+				         nav_benchmark_datas[j].min, nav_benchmark_datas[j].count, nav_benchmark_datas[j].sum, nav_benchmark_datas[j].over_budget_count);
+
+				log_text(0, LOG_LVL_INFO, "SystemInit", "Nav %u HIST 0: %lu, 1: %lu, 2: %lu, 3 %lu, 4: %lu 5: %lu",
+				         j, nav_benchmark_datas[j].hist[0], nav_benchmark_datas[j].hist[1],
+				         nav_benchmark_datas[j].hist[2], nav_benchmark_datas[j].hist[3], nav_benchmark_datas[j].hist[4], nav_benchmark_datas[j].hist[5]);
 			}
 
 			get_fsm_benchmark_data(nav_benchmark_datas);
 			for (uint8_t k = 0; k < 5; k++) {
-				log_text(0, LOG_LVL_INFO, "SystemInit", "FSM %u S: %llu, C: %lu, M: %lu, Ave %llf", k,
-				         nav_benchmark_datas[k].sum, nav_benchmark_datas[k].count, nav_benchmark_datas[k].max,
-				         nav_benchmark_datas[k].average);
+				log_text(0, LOG_LVL_INFO, "SystemInit", "FSM %u L: %lu, Ma: %lu, Mi: %lu, C %lu, S %llu OB %lu",
+				         k, fsm_benchmark_datas[k].last, fsm_benchmark_datas[k].max,
+				         fsm_benchmark_datas[k].min, fsm_benchmark_datas[k].count, fsm_benchmark_datas[k].sum, fsm_benchmark_datas[k].over_budget_count);
+
+				log_text(0, LOG_LVL_INFO, "SystemInit", "FSM %u HIST 0: %lu, 1: %lu, 2: %lu, 3 %lu, 4: %lu 5: %lu",
+				         k, fsm_benchmark_datas[k].hist[0], fsm_benchmark_datas[k].hist[1],
+				         fsm_benchmark_datas[k].hist[2], fsm_benchmark_datas[k].hist[3], fsm_benchmark_datas[k].hist[4], fsm_benchmark_datas[k].hist[5]);
 			}
 
 			// FreeRTOS runtime and stack statistics.
