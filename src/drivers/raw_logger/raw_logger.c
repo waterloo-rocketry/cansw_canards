@@ -426,10 +426,6 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uin
 		if (raw_sd_card_health.consecutive_recoveries > MAX_CONSECUTIVE_RECOVERIES) {
 			// TODO: full bus recovery
 			raw_logger_SD_recover();
-		} else if (raw_sd_card_health.recovery_count > 5) {
-			if (W_FAILURE == raw_logger_SD_recover()) {
-				// TODO: have a chat to figure out what to do when recovery fails
-			}
 		} else {
 			raw_sd_card_health.recovery_count++;
 		}

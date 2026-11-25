@@ -22,10 +22,9 @@
 static const uint32_t MAX_TXT_LOGGING_PERIOD_MS = 120000; // 2 min
 
 /* Filename for the master log index file that stores the run count */
-static formatter_file_ctx_t text_ctx;
-static formatter_file_ctx_t data_ctx;
-static formatter_file_ctx_t error_ctx;
-static uint32_t write_counter = 0;
+static formatter_file_ctx_t text_ctx = {0};
+static formatter_file_ctx_t data_ctx = {0};
+static formatter_file_ctx_t error_ctx = {0};
 
 typedef struct {
 	uint8_t data[LOG_BUFFER_SIZE];
