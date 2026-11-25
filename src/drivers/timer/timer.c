@@ -6,9 +6,10 @@
  * (currently configured to tick at 10,000 Hz or 0.1ms/tick)
  */
 
-#include "drivers/timer/timer.h"
-#include "application/logger/log.h"
 #include "stm32h7xx_hal.h"
+
+#include "application/logger/log.h"
+#include "drivers/timer/timer.h"
 #ifdef HIL
 #include "application/hil/hil.h"
 
@@ -17,12 +18,25 @@ extern bool done_sys_init;
 
 // external timer handle declaration
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim23;
 
 // Error tracking
 static timer_health_t timer_health = {0};
 
 // make sure to report error if not initialized
 static bool g_timer_initialized = false;
+
+#ifdef GTEST
+void timer_reset_for_test(void) {
+	g_timer_initialized = false;
+	timer_health = (timer_health_t){0};
+}
+#endif
+
+// update the FreeRTOS Counter to use a 1Mhz internal clock
+unsigned long getRunTimeCounterValue(void) {
+	return __HAL_TIM_GET_COUNTER(&htim23);
+}
 
 /**
  * @brief initialize the HAL TIM for the timer
@@ -35,7 +49,7 @@ w_status_t timer_init() {
 		return W_SUCCESS;
 	}
 
-	if (HAL_OK != HAL_TIM_Base_Start(&htim2)) {
+	if ((HAL_OK != HAL_TIM_Base_Start(&htim2)) || (HAL_OK != HAL_TIM_Base_Start(&htim23))) {
 		return W_FAILURE;
 	}
 

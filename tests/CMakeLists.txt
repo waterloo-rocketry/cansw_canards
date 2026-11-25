@@ -29,6 +29,8 @@ if(UNIX AND NOT APPLE)
 endif()
 
 add_compile_definitions(GTEST)
+# Host build: CMSIS-DSP skips cmsis_compiler.h so mock __DSB/__ISB don't clash with cmsis_gcc.h
+add_compile_definitions(__GNUC_PYTHON__)
 
 
 # Define paths
@@ -176,6 +178,7 @@ set(TEST_COMMON_INCS
     ${FFF_DIR}
     ${PROC_SRC_DIR}
     ${PROC_SRC_DIR}/third_party
+    ${PROC_SRC_DIR}/third_party/printf
     ${PROC_SRC_DIR}/third_party/rocketlib
     ${PROC_SRC_DIR}/third_party/closedrocket/embedded-coder/codegen/lib/GNC_codegen
     ${LOG_DICT_DIR}
@@ -236,6 +239,11 @@ add_test_group(test_timer
     ${UNIT_TESTS_DIR}/timer_test.cpp
     # src file(s)
     ${PROC_SRC_DIR}/drivers/timer/timer.c
+)
+
+add_test_group(test_benchmark
+    ${UNIT_TESTS_DIR}/benchmark_test.cpp
+    ${PROC_SRC_DIR}/common/benchmark/benchmark.c
 )
 
 add_test_group(test_sensor_handler
