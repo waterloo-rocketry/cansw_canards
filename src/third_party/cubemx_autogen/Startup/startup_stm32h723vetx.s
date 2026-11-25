@@ -96,7 +96,7 @@ Check_Ram:
   // check if our memory is set correctly
   movs r0, #0x03
   and r2, r0, r2
-  movs r0, #0x01
+  movs r0, #0x00
   cmp r2, r0
   beq Ram_Set 
 
@@ -113,7 +113,7 @@ Check_Ram:
   ldr r0, =0xFFFFFFFC
   and r2, r2, r0
 
-  movs r0, #0x01
+  movs r0, #0x00
   orr r2, r2, r0
   str r2, [r1, #0x74]
 

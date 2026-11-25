@@ -43,10 +43,10 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Specify the memory areas */
 MEMORY
 {
-  ITCMRAM (xrw)    : ORIGIN = 0x00000000,   LENGTH = 128K
+  ITCMRAM (xrw)    : ORIGIN = 0x00000000,   LENGTH = 64K
   DTCMRAM (xrw)    : ORIGIN = 0x20000000,   LENGTH = 128K
   FLASH    (rx)    : ORIGIN = 0x08000000,   LENGTH = 512K
-  RAM_D1  (xrw)    : ORIGIN = 0x24000000,   LENGTH = 256K
+  RAM_D1  (xrw)    : ORIGIN = 0x24000000,   LENGTH = 320K
   RAM_D2  (xrw)    : ORIGIN = 0x30000000,   LENGTH = 32K
   RAM_D3  (xrw)    : ORIGIN = 0x38000000,   LENGTH = 16K
 }
@@ -71,16 +71,28 @@ SECTIONS
     _sitcm_text = .;        /* define a global symbols at start of FLASH only code */
     . = ALIGN(4);
 
-    /* src/application */
-    EXCLUDE_FILE (*log.o */init.o */hil.o */health_checks.o */*_handler.o)
-    *src/application/*(.text .text* .glue_7 .glue_7t .eh_frame)
+    /* fsm */
+    *fsm.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*fsm.o(.init))
+    KEEP (*fsm.o(.fini))
 
-    KEEP (*src/application/*(.init))
-    KEEP (*src/application/*(.fini))
+    *sensor_handler.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*sensor_handler.o(.init))
+    KEEP (*sensor_handler.o(.fini))
 
-    *src/drivers/*(.text .text* .glue_7 .glue_7t .eh_frame)
-    KEEP (*src/drivers/*(.init))
-    KEEP (*src/drivers/*(.fini))
+
+    *flight_phase.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*flight_phase.o(.init))
+    KEEP (*flight_phase.o(.fini))
+
+    *controller.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*controller.o(.init))
+    KEEP (*controller.o(.fini))
+
+    *navigator.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*navigator.o(.init))
+    KEEP (*navigator.o(.fini))
+
 
     /* */closedrocket/*
     */closedrocket/*(.text)           /* .text sections (FLASH only code) */
@@ -92,19 +104,24 @@ SECTIONS
     KEEP (*/closedrocket/*(.init))
     KEEP (*/closedrocket/*(.fini))
 
-    /* HAL Drivers & src */
-    EXCLUDE_FILE (*/FatFs/*) 
-    */src/third_party/cubemx_autogen/Drivers/STM32H7xx_HAL_Driver/*(.text .text* .glue_7 .glue_7t .eh_frame)
+    /* HAL Drivers */
+    *stm32h7xx_hal_i2c.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*stm32h7xx_hal_i2c.o(.init))
+    KEEP (*stm32h7xx_hal_i2c.o(.fini))
 
-    KEEP (*/src/third_party/cubemx_autogen/Drivers/*(.init))
-    KEEP (*/src/third_party/cubemx_autogen/Drivers/*(.fini))
+    *stm32h7xx_hal_dma.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*stm32h7xx_hal_dma.o(.init))
+    KEEP (*stm32h7xx_hal_dma.o(.fini))
 
-    EXCLUDE_FILE (*system_stm32h7xx.o) 
-    */src/third_party/cubemx_autogen/src/*(.text .text* .glue_7 .glue_7t .eh_frame)
+    *stm32h7xx_hal_cortex.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*stm32h7xx_hal_cortex.o(.init))
+    KEEP (*stm32h7xx_hal_cortex.o(.fini))
 
-    KEEP (*/src/third_party/cubemx_autogen/src/*(.init))
-    KEEP (*/src/third_party/cubemx_autogen/src/*(.fini))
+    /* FreeRTOS */ 
+    */src/third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS*(.text .text* .glue_7 .glue_7t .eh_frame)
 
+    KEEP (*/src/third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS*(.init))
+    KEEP (*/src/third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS*(.fini))
 
     . = ALIGN(4);
     _eitcm_text = .;        /* define a global symbols at end of code */
