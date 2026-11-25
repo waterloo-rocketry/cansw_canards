@@ -1,10 +1,6 @@
 #ifndef LOGGING_FORMATTER_H
 #define LOGGING_FORMATTER_H
 
-#define CHUNK_SIZE 32768
-#define TIMEOUT_MS 200
-#define HEADER_FOOTER_SIZE 10
-
 #include "drivers/raw_logger/raw_logger.h"
 
 typedef enum {

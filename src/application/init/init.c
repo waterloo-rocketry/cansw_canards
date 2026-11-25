@@ -3,6 +3,7 @@
 #include "adc.h" // For hadc1
 #include "fdcan.h" // For hfdcan1 and hfdcan3
 #include "i2c.h" // For hi2c2, hi2c4
+#include "sdmmc.h" // For log.c
 #include "stm32h7xx_hal.h"
 #include "task.h"
 #include "usart.h"
@@ -109,7 +110,7 @@ static void system_init_task(void *arg) {
 
 	// init logging and telem
 	non_crit_status |= sd_card_init();
-	non_crit_status |= log_init();
+	non_crit_status |= log_init(&hsd2);
 	crit_status |= telemetry_init();
 
 	// motor init
@@ -212,7 +213,6 @@ static void system_init_task(void *arg) {
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
-
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
 			// TODO: TEST ONLY
 			if (ak45_hard_stop_calibrate(&ak45_calibration_config) != W_SUCCESS) {

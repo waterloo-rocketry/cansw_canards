@@ -1,15 +1,26 @@
 #include "application/logging_formatter/logging_formatter.h"
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "common/common.h"
 #include <inttypes.h>
+
+#define CHUNK_SIZE 32768U
+#define TIMEOUT_MS 1000U
+#define FORMATTER_HEADER_SIZE 10U
+#define FORMATTER_CRC_SIZE 2U
+#define BLOCKS_PER_CHUNK 64
 
 typedef struct {
 	bool is_init;
 	bool invalid_param;
 	bool timed_out;
+	bool card_full;
 	uint16_t types_created;
 	uint32_t write_count;
 	uint32_t write_error;
+	uint32_t data_writes;
+	uint32_t error_writes;
+	uint32_t text_writes;
 } logging_formatter_health_t;
 
 typedef struct {
@@ -25,8 +36,6 @@ static SD_HandleTypeDef *logging_formatter_handle = NULL;
 
 static const uint8_t HEADER[4] = {67, 107, 207, 255};
 
-static uint16_t CRC_footer = 0;
-
 static uint64_t chunk_num = 0;
 
 static uint16_t crc16_table[256];
@@ -34,17 +43,19 @@ static uint16_t crc16_table[256];
 w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
                                          logging_formatter_data_type_t type) {
 	if (!logging_formatter_health.is_init) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Not initialized.");
 		logging_formatter_health.write_error++;
 		return W_FAILURE;
 	}
 
-	if ((NULL == file) || (0 == (uint32_t)type)) {
+	if (NULL == file) {
 		logging_formatter_health.invalid_param = true;
 		return W_FAILURE;
 	}
 
 	// check if file of this kind has already been created
 	if (logging_formatter_health.types_created & (1 << type)) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Data type was already created");
 		return W_FAILURE;
 	}
 
@@ -78,6 +89,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	if (W_SUCCESS != raw_logger_SD_init(p_sd_handle)) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Given task handler does not exist.");
 		return W_FAILURE;
 	}
 
@@ -100,13 +112,9 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		return W_FAILURE;
 	}
 
-	while (HAL_SD_GetCardState(logging_formatter_handle) != HAL_SD_CARD_TRANSFER) {
-		vTaskDelay(pdMS_TO_TICKS(1));
-	}
-
 	bool found_address = false;
 
-	if (0 == memcmp(&init_buffer, &zero_buffer, TIMEOUT_MS)) {
+	if (0 == memcmp(&init_buffer, &zero_buffer, BLOCKSIZE)) {
 		formatter_buffer.chunk = chunk_num;
 		found_address = true;
 	}
@@ -114,17 +122,20 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	uint32_t erase_size_blocks = 0;
 
 	// to get the size of the SD card in the case that we're not solely writing with a 16GB card
-	if (raw_logger_get_SD_specs(&chunk_num, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
-		return W_FAILURE;
-	}
-
-	chunk_num = (chunk_num / 64);
-
-	uint32_t lo = 2;
-	uint32_t hi = chunk_num;
 
 	if (!found_address) {
-		while (lo <= hi) {
+		uint64_t block_count = 0;
+
+		if (raw_logger_get_SD_specs(&block_count, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
+			log_text(0, LOG_LVL_WARN, "FORMAT", "Unable to get SD specs.");
+			return W_FAILURE;
+		}
+
+		chunk_num = (block_count / BLOCKS_PER_CHUNK);
+		uint64_t lo = 2;
+		uint64_t hi = chunk_num;
+
+		while (lo < hi) {
 			chunk_num = lo + (hi - lo) / 2;
 			if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
 			    W_SUCCESS) {
@@ -136,18 +147,25 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 			}
 
 			if (0 == memcmp(&init_buffer, &zero_buffer, 32)) {
-				hi = chunk_num - 1;
+				hi = chunk_num;
 			} else {
 				lo = chunk_num + 1;
 			}
 		}
+
+		if ((block_count / BLOCKS_PER_CHUNK) <= lo) {
+			logging_formatter_health.card_full = true;
+			return W_FAILURE;
+		}
+
+		chunk_num = lo;
 		found_address = true;
 		formatter_buffer.chunk = chunk_num;
-	}
 
-	if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
-	    W_SUCCESS) {
-		return W_FAILURE;
+		if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
+		    W_SUCCESS) {
+			return W_FAILURE;
+		}
 	}
 
 	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
@@ -155,6 +173,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	if (!found_address) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Binary search failed.");
 		return W_FAILURE;
 	}
 
@@ -185,10 +204,12 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
                                     formatter_file_ctx_t *ctx) {
 	if (!logging_formatter_health.is_init) {
+		// TODO: log_text for errors
 		return W_FAILURE;
 	}
 
-	if ((buffer_length + HEADER_FOOTER_SIZE) != CHUNK_SIZE) {
+	if ((buffer_length + FORMATTER_HEADER_SIZE + FORMATTER_CRC_SIZE) != CHUNK_SIZE) {
+		// TODO: log_text for errors
 		return W_FAILURE;
 	}
 
@@ -206,24 +227,39 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 	}
 	ctx->chunk_count += 1;
 
-	memcpy(&formatter_buffer.writing_buffer[10], buffer, buffer_length);
+	memcpy(&formatter_buffer.writing_buffer[FORMATTER_HEADER_SIZE], buffer, buffer_length);
 
-	uint16_t CRC_footer = 0xffff;
-	for (uint16_t i = 0; i < buffer_length; i++) {
-		uint8_t index = (CRC_footer ^ buffer[i]) & 0xff;
-		CRC_footer = (CRC_footer >> 8) ^ crc16_table[index];
+	uint16_t crc = 0xffff;
+	for (uint32_t i = 0; i < (CHUNK_SIZE - FORMATTER_CRC_SIZE); i++) {
+		uint8_t index = (uint8_t)((crc ^ formatter_buffer.writing_buffer[i]) & 0xff);
+		crc = (crc >> 8) ^ crc16_table[index];
 	}
+
+	formatter_buffer.writing_buffer[CHUNK_SIZE - 2] = (uint8_t)(crc >> 8);
+	formatter_buffer.writing_buffer[CHUNK_SIZE - 1] = (uint8_t)(crc & 0xff);
 
 	// Taking the left 8 bits and then taking the right 8 bits of a 16 bit number
 	// 0xFF = 0b11111111
-	formatter_buffer.writing_buffer[CHUNK_SIZE - 2] = CRC_footer >> 8;
-	formatter_buffer.writing_buffer[CHUNK_SIZE - 1] = CRC_footer & 0xff;
 
 	if (W_SUCCESS != raw_logger_SD_write(formatter_buffer.writing_buffer,
 	                                     formatter_buffer.chunk * CHUNK_SIZE, CHUNK_SIZE,
 	                                     TIMEOUT_MS)) {
 		logging_formatter_health.write_error++;
 		return W_FAILURE;
+	}
+
+	switch (ctx->data_type) {
+		case LOGGING_FORMATTING_DATA:
+			logging_formatter_health.data_writes++;
+			break;
+		case LOGGING_FORMATTING_ERROR:
+			logging_formatter_health.error_writes++;
+			break;
+		case LOGGING_FORMATTING_TEXT:
+			logging_formatter_health.text_writes++;
+			break;
+		default:
+			break;
 	}
 
 	formatter_buffer.chunk += 1;
@@ -233,6 +269,7 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 }
 
 // TODO: this needs a module update in health checks for it to be actually done
+// such as: timeout offset, possibly full card? idk to be considered
 health_status_t logging_formatter_get_status(void) {
 	health_status_t status = {
 		.severity = CANARDS_HEALTH_SEVERITY_HEALTH_OK,
@@ -252,14 +289,14 @@ health_status_t logging_formatter_get_status(void) {
 	}
 
 	// Log operation statistics
-	log_text(0, LOG_LVL_INFO, "formatter",
-	         "%s, files_created=%" PRIu32 ", reads=%" PRIu32 ", writes=%" PRIu32,
+	log_text(0, LOG_LVL_INFO, "formatter", "%s, types_created=" PRIu16, ", writes=%" PRIu32,
+	         ", data writes=%" PRIu32, ", error writes=%" PRIu32, ", text writes=%" PRIu32,
 	         logging_formatter_health.is_init ? "init" : "not init",
-	         logging_formatter_health.write_count);
+	         logging_formatter_health.types_created, logging_formatter_health.write_count,
+	         logging_formatter_health.data_writes, logging_formatter_health.error_writes,
+	         logging_formatter_health.text_writes);
 
-	log_text(0, LOG_LVL_INFO, "formatter",
-	         "read_err=%" PRIu32 ", write_err=%" PRIu32 ", create_err=%" PRIu32
-	         ", not_writable=%" PRIu32,
+	log_text(0, LOG_LVL_INFO, "formatter", ", write_err=%" PRIu32,
 	         logging_formatter_health.write_error);
 
 	return status;
