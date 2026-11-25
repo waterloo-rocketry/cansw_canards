@@ -226,7 +226,7 @@ static void system_init_task(void *arg) {
 
 	// benchmark stuff
 	benchmark_data_t nav_benchmark_datas[10] = {0};
-	benchmark_data_t fsm_benchmark_datas[3] = {0};
+	benchmark_data_t fsm_benchmark_datas[5] = {0};
 	TaskHandle_t timer_task_handle = xTimerGetTimerDaemonTaskHandle();
 	TaskHandle_t default_task_handle = (TaskHandle_t)defaultTaskHandle;
 
@@ -256,7 +256,7 @@ static void system_init_task(void *arg) {
 				         nav_benchmark_datas[j].hist[2], nav_benchmark_datas[j].hist[3], nav_benchmark_datas[j].hist[4], nav_benchmark_datas[j].hist[5]);
 			}
 
-			get_fsm_benchmark_data(nav_benchmark_datas);
+			get_fsm_benchmark_data(fsm_benchmark_datas);
 			for (uint8_t k = 0; k < 5; k++) {
 				log_text(0, LOG_LVL_INFO, "SystemInit", "FSM %u L: %lu, Ma: %lu, Mi: %lu, C %lu, S %llu OB %lu",
 				         k, fsm_benchmark_datas[k].last, fsm_benchmark_datas[k].max,
