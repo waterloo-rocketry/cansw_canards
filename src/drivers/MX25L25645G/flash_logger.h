@@ -1,5 +1,6 @@
 #ifndef FLASH_LOGGER_H
 #define FLASH_LOGGER_H
+#include "MX25L25645G.h"
 #include "common/common.h"
 #include "littlefs/lfs.h"
 
@@ -30,6 +31,8 @@ typedef struct {
 	int16_t flags;
 	bool reopened_last; // tracker for if the file was reopened last time it reached the threshold
 	                    // for reopening
+	uint32_t buffer[FLASH_CACHE_SIZE]; // buffer must be of size cache_size
+	struct lfs_file_config file_cfg;
 } flash_file_t;
 
 /**

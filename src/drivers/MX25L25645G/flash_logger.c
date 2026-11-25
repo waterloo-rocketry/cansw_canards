@@ -23,6 +23,8 @@ static_assert(THRESHOLD_FOR_FILE_REOPEN < THRESHOLD_FILE_IN_ERROR,
 
 #define VAL_DECREMENT_ON_REOPEN (70)
 
+#define FORCE_REMOUNT_ON_CLOSE_ERR (true)
+
 static lfs_t lfs;
 
 static flash_file_t *open_files[MAX_NUM_FILES] = {NULL};
@@ -68,7 +70,10 @@ static bool is_log_file(const char *filename) {
 static w_status_t flash_remount() {
 	for (uint8_t file_i = 0; file_i < MAX_NUM_FILES; file_i++) {
 		if (NULL != open_files[file_i]) {
-			lfs_file_close(&lfs, &(open_files[file_i]->file));
+			if ((LFS_ERR_OK != lfs_file_close(&lfs, &(open_files[file_i]->file))) &&
+			    (FORCE_REMOUNT_ON_CLOSE_ERR)) {
+				return W_FAILURE;
+			}
 			(open_files[file_i]->status) = FLASH_FILE_CLOSED;
 			(open_files[file_i]->waiting_for_sync) = false; // closing a file syncs it
 		}
@@ -76,13 +81,21 @@ static w_status_t flash_remount() {
 	if (LFS_ERR_OK != lfs_unmount(&lfs)) {
 		return W_FAILURE;
 	}
-	flash_init();
+	if (W_SUCCESS != flash_init()) {
+		return W_FAILURE;
+	}
 	for (uint8_t file_i = 0; file_i < MAX_NUM_FILES; file_i++) {
 		if (NULL != open_files[file_i]) {
-			lfs_file_open(&lfs, &(open_files[file_i]->file), (open_files[file_i]->name),
-			              (open_files[file_i]->flags));
+			if (LFS_ERR_OK !=
+			    lfs_file_opencfg(&lfs, &(open_files[file_i]->file), (open_files[file_i]->name),
+			                     (open_files[file_i]->flags), &(open_files[file_i]->file_cfg))) {
+				// If errors on straight open, has a high chance
+				// of being in error so should be closer to reopening
+				(open_files[file_i]->errors) = THRESHOLD_FOR_FILE_REOPEN / 2;
+			} else {
+				(open_files[file_i]->errors) = 0;
+			}
 			(open_files[file_i]->status) = FLASH_FILE_OPEN;
-			(open_files[file_i]->errors) = 0;
 		}
 	}
 	return W_SUCCESS;
@@ -104,19 +117,19 @@ static w_status_t flash_remount() {
 static w_status_t handle_error(flash_file_t *p_file) {
 	(p_file->errors) += 1;
 
-	if (THRESHOLD_FOR_FILE_REOPEN != 0) {
-		if (THRESHOLD_FOR_FILE_REOPEN <= (p_file->errors)) {
-			// This doesn't use the open/close functions declared in this file
-			// to avoid an infinite loop of errors.
-			if (!(p_file->reopened_last)) {
-				lfs_file_close(&lfs, &(p_file->file));
-				lfs_file_open(&lfs, &(p_file->file), (p_file->name), (p_file->flags));
+	if ((0 != THRESHOLD_FOR_FILE_REOPEN) && ((p_file->errors) >= THRESHOLD_FOR_FILE_REOPEN)) {
+		// This doesn't use the open/close functions declared in this file
+		// to avoid an infinite loop of errors.
+		if (!(p_file->reopened_last)) {
+			if ((LFS_ERR_OK == lfs_file_close(&lfs, &(p_file->file))) &&
+			    (LFS_ERR_OK == lfs_file_opencfg(&lfs, &(p_file->file), (p_file->name),
+			                                    (p_file->flags), &(p_file->file_cfg)))) {
 				(p_file->reopened_last) = true;
 				(p_file->errors) -= VAL_DECREMENT_ON_REOPEN;
-			} else {
-				(p_file->reopened_last) = false;
 			}
 		}
+	} else {
+		(p_file->reopened_last) = false;
 	}
 
 	if (0 != THRESHOLD_FOR_REMOUNT) {
@@ -175,7 +188,12 @@ w_status_t flash_file_open(flash_file_t *p_file, const char *p_path, const int16
 			__attribute__((fallthrough));
 		case FLASH_FILE_CLOSED:
 			(p_file->status) = FLASH_FILE_OPENING;
-			if (LFS_ERR_OK != lfs_file_open(&lfs, &(p_file->file), p_path, flags)) {
+			// Define file opening config (configure file buffer)
+			((p_file->file_cfg).buffer) = (p_file->buffer);
+			((p_file->file_cfg).attr_count) = 0;
+			((p_file->file_cfg).attrs) = NULL;
+			if (LFS_ERR_OK !=
+			    lfs_file_opencfg(&lfs, &(p_file->file), p_path, flags, &(p_file->file_cfg))) {
 				handle_error(p_file);
 				return W_FAILURE;
 			}
@@ -327,23 +345,23 @@ w_status_t flash_file_read(flash_file_t *p_file, void *p_buffer, lfs_size_t size
 w_status_t flash_clear_logs() {
 	lfs_dir_t dir;
 	struct lfs_info info;
-	int32_t err = lfs_dir_open(&lfs, &dir, "/"); // need to iterate over log files
+	int32_t err_dir_open = lfs_dir_open(&lfs, &dir, "/"); // need to iterate over log files
 	// assumed everything is in the root directory
-	if (LFS_ERR_OK > err) {
+	if (LFS_ERR_OK > err_dir_open) {
 		return W_FAILURE;
 	}
 	// Iterate over all entries in a directory (end signified by 0).
-	while ((err = lfs_dir_read(&lfs, &dir, &info)) > 0) {
+	while ((err_dir_open = lfs_dir_read(&lfs, &dir, &info)) > 0) {
 		if ((LFS_TYPE_REG == (info.type)) && (is_log_file(info.name))) {
-			err = lfs_remove(&lfs, (info.name));
-			if (LFS_ERR_OK > err) {
+			err_dir_open = lfs_remove(&lfs, (info.name));
+			if (LFS_ERR_OK > err_dir_open) {
 				lfs_dir_close(&lfs, &dir);
 				return W_FAILURE;
 			}
 		}
 	}
-	const int32_t err1 = lfs_dir_close(&lfs, &dir);
-	if ((LFS_ERR_OK > err) || (LFS_ERR_OK > err1)) {
+	const int32_t err_dir_close = lfs_dir_close(&lfs, &dir);
+	if ((LFS_ERR_OK > err_dir_open) || (LFS_ERR_OK > err_dir_close)) {
 		return W_FAILURE;
 	}
 	return W_SUCCESS;
