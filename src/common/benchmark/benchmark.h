@@ -21,7 +21,7 @@
 #define BENCH_US_TO_CYCLES(time_us) ((uint32_t)(time_us) * BENCH_CYCLES_PER_US)
 #define BENCH_CYCLES_TO_US(num_cycles) ((uint32_t)(num_cycles) / BENCH_CYCLES_PER_US)
 
-// TODO: add `BENCHMARK_FILE_INIT(n)` to the .c file before using the benchmark
+// TODO: add `BENCHMARK_FILE_INIT(n, target_period_us)` to the .c file before using the benchmark
 
 #define BENCH_WARMUP_N 32U
 #define BENCH_HIST_BIN_COUNT 6U

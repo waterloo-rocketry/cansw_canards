@@ -4,6 +4,8 @@
 #include <gtest/gtest.h>
 
 #define ENABLE_BENCHMARK
+ #define BENCH_TARGET_US 1000u
+
 
 extern "C" {
 #include <stddef.h>
@@ -18,7 +20,7 @@ int snprintf_(char *s, size_t n, const char *format, ...) {
 
 DEFINE_FFF_GLOBALS;
 
-BENCHMARK_FILE_INIT(1);
+BENCHMARK_FILE_INIT(1, BENCH_TARGET_US);
 
 class BenchmarkTest : public ::testing::Test {
 protected:
