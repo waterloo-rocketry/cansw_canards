@@ -527,8 +527,8 @@ static w_status_t log_sync(log_file_t *log_file, bool force) {
 		return W_SUCCESS;
 	}
 
-	for (uint32_t i = 0; i < SYNC_TRY_COUNT; i++) {
-		if (sd_card_file_sync(&log_file->ctx) == W_SUCCESS) {
+	for (uint8_t i = 0; i < SYNC_TRY_COUNT; i++) {
+		if (W_SUCCESS == sd_card_file_sync(&log_file->ctx)) {
 			uint32_t end_ms = 0;
 			(void)timer_get_ms(&end_ms);
 			log_file->last_sync_ms = end_ms;
@@ -617,7 +617,7 @@ void log_task(void *argument) {
 			log_file = &text_file;
 			have_msg = true;
 
-			if (timer_get_ms(&cur_timestamps) == W_SUCCESS) {
+			if (W_SUCCESS == timer_get_ms(&cur_timestamps)) {
 				last_text_logging_time = cur_timestamps;
 			}
 		}
@@ -638,8 +638,8 @@ void log_task(void *argument) {
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
 				uint32_t write_start_ms = 0;
 				timer_get_ms(&write_start_ms);
-				if (sd_card_file_write_open(&log_file->ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
-				                            &size) == W_SUCCESS) {
+				if (W_SUCCESS == sd_card_file_write_open(&log_file->ctx, buffer_to_print->data, LOG_BUFFER_SIZE,
+				                            &size)) {
 					log_file->unsynced_bytes += size;
 
 					uint32_t write_end_ms = 0;
