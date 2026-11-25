@@ -4,6 +4,8 @@
 
 #include "stm32h7xx_hal.h"
 
+static const uint32_t DWT_UNLOCK_VAL = 0xc5acce55UL;
+
 const uint32_t BENCH_HIST_EDGE_PCT[BENCH_HIST_BIN_COUNT - 1] = {
 	BENCH_HIST_PCT_0, BENCH_HIST_PCT_1, BENCH_HIST_PCT_2, BENCH_HIST_PCT_3, BENCH_HIST_PCT_4,
 };
@@ -21,7 +23,7 @@ void DWT_init(void) {
 	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
 
 	// Unlock DWT registers on Cortex-M7.
-	DWT->LAR = 0xc5acce55UL;
+	DWT->LAR = DWT_UNLOCK_VAL;
 
 	// Reset and enable the CPU cycle counter.
 	DWT->CYCCNT = 0;
