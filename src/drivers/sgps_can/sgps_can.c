@@ -62,7 +62,6 @@ static baro_ms5611_t baro_ms5611_buffer;
 static uint32_t baro_ms5611_timestamp;
 static bool baro_ms5611_is_valid = false;
 
-//may need bools to keep track if buffer has actual data to prevent getter from reading before we write the first value
 
 /**
  * @brief callback function for the IIS2MDC mag sensor; raised when corresponding can message is read and writes to buffer
