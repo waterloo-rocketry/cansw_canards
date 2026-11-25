@@ -18,6 +18,10 @@ typedef struct {
 
 w_status_t timer_init();
 
+#ifdef GTEST
+void timer_reset_for_test(void);
+#endif
+
 /**
  * @brief tracks system time since program startup
  * @details retrieves time passed in the form of clock ticks, timer resolution set to 0.1ms (10000Hz

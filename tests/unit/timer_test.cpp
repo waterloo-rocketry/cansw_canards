@@ -8,6 +8,7 @@ extern "C" {
 #include "rocketlib.h"
 #include "stm32h7xx_hal.h"
 #include "utils/mock_log.hpp"
+unsigned long getRunTimeCounterValue(void);
 }
 
 static void set_successful_init() {
@@ -22,11 +23,14 @@ protected:
         RESET_FAKE(__HAL_TIM_GET_COUNTER);
         RESET_FAKE(HAL_TIM_Base_Start);
         FFF_RESET_HISTORY();
+        timer_reset_for_test();
 
         // initialize the timer handle
         memset(&timer_reg, 0, sizeof(TIM_TypeDef));
         htim2.Instance = &timer_reg;
         htim2.State = HAL_TIM_STATE_BUSY;
+        htim23.Instance = &timer_reg;
+        htim23.State = HAL_TIM_STATE_BUSY;
 
         // set default return values for the mocks
         __HAL_TIM_GET_COUNTER_fake.return_val = 1000; // Will give 100ms by default
@@ -36,7 +40,6 @@ protected:
     TIM_TypeDef timer_reg;
 };
 
-// TODO: for future have a way to reset init variable
 // TEST NO INIT FIRST to make the static global boolean is not being overridden 
 // TEST_F(TimerTest, GetMsNoInitFails) {
 //     // Arrange
@@ -84,6 +87,20 @@ TEST_F(TimerTest, InitFailureWithHALFailure) {
     w_status_t status = timer_init();
 
     EXPECT_EQ(status, W_FAILURE);
+}
+
+TEST_F(TimerTest, GetRunTimeCounterValueReadsTim23) {
+
+    // Arrange
+    __HAL_TIM_GET_COUNTER_fake.return_val = 42;
+
+    // Act
+    unsigned long value = getRunTimeCounterValue();
+
+    // Assert
+    EXPECT_EQ(value, 42ul);
+    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.call_count, 1);
+    EXPECT_EQ(__HAL_TIM_GET_COUNTER_fake.arg0_val, &htim23);
 }
 
 

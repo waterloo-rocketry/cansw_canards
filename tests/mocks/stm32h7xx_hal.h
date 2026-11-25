@@ -28,6 +28,30 @@ typedef enum {
 #include "hal_uart_mock.h"
 #include "fatfs.h"
 
+// Cortex-M DWT / CoreDebug stubs so host tests can compile DWT_init and cycle probes
+typedef struct {
+	volatile uint32_t CTRL;
+	volatile uint32_t CYCCNT;
+	volatile uint32_t LAR;
+} DWT_Type;
+extern DWT_Type DWT_regs;
+#define DWT (&DWT_regs)
+#define DWT_CTRL_CYCCNTENA_Msk (1u)
+
+typedef struct {
+	volatile uint32_t DEMCR;
+} CoreDebug_Type;
+extern CoreDebug_Type CoreDebug_regs;
+#define CoreDebug (&CoreDebug_regs)
+#define CoreDebug_DEMCR_TRCENA_Msk (1u)
+
+#ifndef __DSB
+#define __DSB() ((void)0)
+#endif
+#ifndef __ISB
+#define __ISB() ((void)0)
+#endif
+
 // Declare (but do not define) mock here. Actual definition is in stm32h7xx_hal.c to avoid
 // multiple-definitions errors
 DECLARE_FAKE_VOID_FUNC(HAL_Init);
