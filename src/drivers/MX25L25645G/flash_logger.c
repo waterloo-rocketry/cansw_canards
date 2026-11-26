@@ -7,6 +7,11 @@
 
 // TODO: set actual values for these constants, right now their just vibes
 
+/**
+ * The following defines (until static variables) are used to configure the
+ * error handling. All these values can be changed depending on how severe you
+ * want error handling to be and on the configuration.
+ */
 // Percent of files that need to be in an error state for the file system
 // to remount (in percentage points). 0 to never remount.
 #define THRESHOLD_FOR_REMOUNT (100)
@@ -117,6 +122,7 @@ static w_status_t flash_remount() {
 static w_status_t handle_error(flash_file_t *p_file) {
 	(p_file->errors) += 1;
 
+	// If THRESHOLD_FOR_FILE_REOPEN is 0, skip reopening files
 	if ((0 != THRESHOLD_FOR_FILE_REOPEN) && ((p_file->errors) >= THRESHOLD_FOR_FILE_REOPEN)) {
 		// This doesn't use the open/close functions declared in this file
 		// to avoid an infinite loop of errors.
@@ -132,6 +138,7 @@ static w_status_t handle_error(flash_file_t *p_file) {
 		(p_file->reopened_last) = false;
 	}
 
+	// If THRESHOLD_FOR_REMOUNT is 0, skip remounting
 	if (0 != THRESHOLD_FOR_REMOUNT) {
 		uint8_t num_files_in_error = 0;
 		for (uint8_t file_i = 0; MAX_NUM_FILES > file_i; file_i++) {
@@ -172,7 +179,7 @@ w_status_t flash_file_open(flash_file_t *p_file, const char *p_path, const int16
 		// Intended to fall through since a closed file would already be
 		// in the open_files array and should not be readded.
 		case FLASH_FILE_NOT_INIT:
-			if (MAX_NUM_FILES <= 1 + num_open_files) {
+			if ((1 + num_open_files) >= MAX_NUM_FILES) {
 				return W_FAILURE;
 			}
 			for (uint8_t file_i = 0; file_i < MAX_NUM_FILES; file_i++) {
@@ -351,7 +358,8 @@ w_status_t flash_clear_logs() {
 		return W_FAILURE;
 	}
 	// Iterate over all entries in a directory (end signified by 0).
-	while ((err_dir_open = lfs_dir_read(&lfs, &dir, &info)) > 0) {
+	err_dir_open = lfs_dir_read(&lfs, &dir, &info);
+	while ((err_dir_open) > 0) {
 		if ((LFS_TYPE_REG == (info.type)) && (is_log_file(info.name))) {
 			err_dir_open = lfs_remove(&lfs, (info.name));
 			if (LFS_ERR_OK > err_dir_open) {
@@ -359,6 +367,7 @@ w_status_t flash_clear_logs() {
 				return W_FAILURE;
 			}
 		}
+		err_dir_open = lfs_dir_read(&lfs, &dir, &info);
 	}
 	const int32_t err_dir_close = lfs_dir_close(&lfs, &dir);
 	if ((LFS_ERR_OK > err_dir_open) || (LFS_ERR_OK > err_dir_close)) {
