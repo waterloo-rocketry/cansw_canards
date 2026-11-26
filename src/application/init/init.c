@@ -35,6 +35,8 @@
 #include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
+#include "common/benchmark/benchmark.h"
+#include "drivers/MX25L25645G/flash_logger.h"
 
 // Maximum number of initialization retries before giving up
 #define MAX_INIT_RETRIES 1
@@ -160,6 +162,37 @@ static void system_init_task(void *arg) {
 	}
 
 	done_sys_init = true;
+	flash_file_t p_file;
+	char * message= "hello, how long does it take to write 53 characters?";
+	char read_buffer[100];
+	benchmark_data_t benchmark_0;
+	benchmark_data_t benchmark_1;
+	benchmark_data_t benchmark_2;
+	benchmark_data_t benchmark_3;
+	benchmark_data_t benchmark_4;
+
+	DWT_init();
+	BENCHMARK_FILE_INIT(5,6000000);
+	SINGLE_BENCHMARK_START(0);
+	flash_init();
+	SINGLE_BENCHMARK_END(0);
+	SINGLE_BENCHMARK_START(1);
+	flash_file_open(&p_file, "00000000.bin", LFS_O_RDWR| LFS_O_CREAT);
+	SINGLE_BENCHMARK_END(1);
+	SINGLE_BENCHMARK_START(2);
+	flash_file_write(&p_file, message, 60, 5, 1);
+	SINGLE_BENCHMARK_END(2);
+	SINGLE_BENCHMARK_START(3);
+	flash_file_read(&p_file, &read_buffer, 30, 5, 1, 30);
+	SINGLE_BENCHMARK_END(3);
+	SINGLE_BENCHMARK_START(4);
+	file_flash_close(&p_file);
+	GET_BENCHMARK_STAT(0, &benchmark_0);
+	GET_BENCHMARK_STAT(1, &benchmark_1);
+	GET_BENCHMARK_STAT(2, &benchmark_2);
+	GET_BENCHMARK_STAT(3, &benchmark_3);
+	GET_BENCHMARK_STAT(4, &benchmark_4);
+	
 
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
