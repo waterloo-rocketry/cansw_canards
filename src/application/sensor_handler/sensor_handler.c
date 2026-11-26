@@ -519,21 +519,38 @@ static w_status_t movella_state_sd_log(void) {
 static w_status_t max_rate_accel_log(void) {
 	w_status_t status = W_SUCCESS;
 
-	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD];
+  // set it all to zero 
+	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD] = {0};
+  lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD] = {0};
 	uint8_t acc_sample_count = 0;
+  uint8_t gyro_sample_count = 0;
+  uint32_t tenth_ms_timestamp;
 
-	status = lsm6dsv32x_get_full_gyro_acc_data(raw_accs, NULL, NULL, &acc_sample_count);
+	status |= lsm6dsv32x_get_full_gyro_acc_data(raw_accs, raw_gyros, &acc_sample_count, &gyro_sample_count, &tenth_ms_timestamp);
+
+  if (tenth_ms_timestamp == last_max_rate_accel_timestamp_tenth_ms){
+    // re-reading the same burst, so just ignore it
+    // TODO: REMOVE 
+    log_text(10, LOG_LVL_INFO, "testing", "SAME TIMESTAMP");
+    return W_SUCCESS;
+  }
+
+  last_max_rate_accel_timestamp_tenth_ms = tenth_ms_timestamp;
 
 	for (uint8_t i = 0; i < acc_sample_count; i += MAX_RATE_IMU_ACCEL_DATA_PER_PACKET) {
 		log_data_container_t container = {0};
-		uint8_t remaining = acc_sample_count - i;
-		if (remaining < MAX_RATE_IMU_ACCEL_DATA_PER_PACKET) {
-			memcpy(container.max_rate_accel.data, &raw_accs[i],
-			       sizeof(lsm6dsv32x_raw_imu_data_t) * remaining);
-		} else {
-			memcpy(container.max_rate_accel.data, &raw_accs[i],
-			       sizeof(lsm6dsv32x_raw_imu_data_t) * MAX_RATE_IMU_ACCEL_DATA_PER_PACKET);
-		}
+    log_text(10, LOG_LVL_DEBUG, "testing", "x: %d", raw_accs[i].x);
+    container.max_rate_accel.x1 = raw_accs[i].x;
+    container.max_rate_accel.y1 = raw_accs[i].y;
+    container.max_rate_accel.z1 = raw_accs[i].z;
+    container.max_rate_accel.x2 = raw_accs[i + 1].x;
+    container.max_rate_accel.y2 = raw_accs[i + 1].y;
+    container.max_rate_accel.z2 = raw_accs[i + 1].z;
+    container.max_rate_accel.x3 = raw_accs[i + 2].x;
+    container.max_rate_accel.y3 = raw_accs[i + 2].y;
+    container.max_rate_accel.z3 = raw_accs[i + 2].z;
+		container.max_rate_accel.timestamp = tenth_ms_timestamp;
+
 		if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MAX_RATE_ACCEL, &container) != W_SUCCESS) {
 			sensor_handler_state.log_data_fail_count++;
 			status |= W_FAILURE;
@@ -966,6 +983,7 @@ w_status_t sensor_handler_init(void) {
 		{"Movella State", movella_state_sd_log, STATE_ACT_ALLOWED, 1000 / 20},
 
 		// --- IMU max rate accel ---
+		{"Sensor Max Rate", max_rate_accel_log, STATE_IDLE, 1000 / 1000},
 		{"Sensor Max Rate", max_rate_accel_log, STATE_RECOVERY, 1000 / 1000},
 		{"Sensor Max Rate", max_rate_accel_log, STATE_PAD_NAV, 1000 / 1000},
 		{"Sensor Max Rate", max_rate_accel_log, STATE_BOOST, 1000 / 1000},

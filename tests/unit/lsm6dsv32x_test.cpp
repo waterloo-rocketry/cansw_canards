@@ -18,6 +18,7 @@ FAKE_VALUE_FUNC(w_status_t, i2c_write_reg, i2c_bus_t, uint8_t, uint8_t, const ui
 FAKE_VALUE_FUNC(w_status_t, i2c_read_reg, i2c_bus_t, uint8_t, uint8_t, uint8_t *, uint8_t)
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *, ...)
 FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *)
+FAKE_VALUE_FUNC(w_status_t, timer_get_tenth_ms, uint32_t *)
 
 extern void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c);
 I2C_HandleTypeDef hi2c1;
@@ -109,6 +110,7 @@ class Lsm6dsv32xTest : public ::testing::Test {
         RESET_FAKE(i2c_write_reg);
         RESET_FAKE(i2c_read_reg);
         RESET_FAKE(timer_get_ms);
+        RESET_FAKE(timer_get_tenth_ms);
         RESET_FAKE(log_text);
         FFF_RESET_HISTORY();
 
@@ -214,8 +216,9 @@ TEST_F(Lsm6dsv32xTest, WrongWordTypes) {
     lsm6dsv32x_raw_imu_data_t raw_gyro[LSM6DSV32X_FIFO_READ_THRESHOLD];
     uint8_t gyro_sample_count;
     uint8_t acc_sample_count;
+    uint32_t ts;
 
-    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &acc_sample_count, &gyro_sample_count);
+    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &acc_sample_count, &gyro_sample_count, &ts);
 
     // Assert
     EXPECT_EQ(status, W_FAILURE);
@@ -243,8 +246,9 @@ TEST_F(Lsm6dsv32xTest, OnlySomeCorrectWordTypes) {
     lsm6dsv32x_raw_imu_data_t raw_gyro[LSM6DSV32X_FIFO_READ_THRESHOLD];
     uint8_t gyro_sample_count;
     uint8_t acc_sample_count;
+    uint32_t ts;
 
-    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &acc_sample_count, &gyro_sample_count);
+    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &acc_sample_count, &gyro_sample_count, &ts);
 
     // data from the fake
     // gyro 1: 0xCC, 0x10, 0xCC, 0xCC, 0xCC,  0x10,
@@ -288,13 +292,14 @@ TEST_F(Lsm6dsv32xTest, BothDataGetFunctionsMatch) {
     lsm6dsv32x_raw_imu_data_t raw_gyro[LSM6DSV32X_FIFO_READ_THRESHOLD];
     uint8_t gyro_sample_count;
     uint8_t acc_sample_count;
+    uint32_t ts;
 
     vector3d_t single_acc;
     vector3d_t single_gyro;
     lsm6dsv32x_raw_imu_data_t single_raw_acc;
     lsm6dsv32x_raw_imu_data_t single_raw_gyro;
 
-    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &gyro_sample_count, &acc_sample_count);
+    w_status_t status = lsm6dsv32x_get_full_gyro_acc_data(raw_acc, raw_gyro, &gyro_sample_count, &acc_sample_count, &ts);
     w_status_t single_status = lsm6dsv32x_get_gyro_acc_data(&single_acc, &single_gyro, &single_raw_acc, &single_raw_gyro);
 
     // data from the fake

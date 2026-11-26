@@ -62,7 +62,7 @@
 
 // the number of lsm6dsv32x_raw_imu_data_t structs we can fit inside a packet.
 // we have 24 bytes of max packet size, and each lsm6dsv32x_raw_imu_data_t struct is 10 bytes
-#define MAX_RATE_IMU_ACCEL_DATA_PER_PACKET 2
+#define MAX_RATE_IMU_ACCEL_DATA_PER_PACKET 3
 
 /**
  * All possible types of log messages emitted by log_data().
@@ -219,7 +219,16 @@ typedef union __attribute__((packed)) {
 	// Note: it is possible that this array is not filled.
 	// In this case the empty entries will all contain 0
 	struct __attribute__((packed)) {
-		lsm6dsv32x_raw_imu_data_t data[MAX_RATE_IMU_ACCEL_DATA_PER_PACKET];
+    uint16_t x1;
+    uint16_t y1;
+    uint16_t z1;
+    uint16_t x2;
+    uint16_t y2;
+    uint16_t z2;
+    uint16_t x3;
+    uint16_t y3;
+    uint16_t z3;
+    uint32_t timestamp;
 	} max_rate_accel;
 
 } log_data_container_t;
