@@ -6,7 +6,7 @@
 #include "semphr.h"
 #include <inttypes.h>
 
-FATFS g_fs_obj;
+FATFS g_fs_obj __attribute__((section(".ramd1_bss")));
 
 /**
  * @brief SD card module health stats

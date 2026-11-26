@@ -147,7 +147,7 @@ SECTIONS
     *sdmmc.o(.data .data* .RamFunc .RamFunc*)
 
     /* FatFS */
-    */src/third_party/cubemx_autogen/Drivers/STM32H7xx_HAL_Driver/FatFs/*(.data .data* .RamFunc .RamFunc*)
+    */src/third_party/cubemx_autogen/Middlewares/Third_Party/FatFs/*(.data .data* .RamFunc .RamFunc*)
 
     . = ALIGN(4);
     _eramd1_data = .;        /* define a global symbol at data end */
@@ -170,7 +170,7 @@ SECTIONS
     *sdmmc.o(.bss .bss* COMMON)
 
     /* FatFS */
-    */src/third_party/cubemx_autogen/Drivers/STM32H7xx_HAL_Driver/FatFs/*(.bss .bss* COMMON)
+    */src/third_party/cubemx_autogen/Middlewares/Third_Party/FatFs/*(.bss .bss* COMMON)
 
     . = ALIGN(4);
     _eramd1_bss = .;         /* define a global symbol at bss end */
