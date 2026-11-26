@@ -40,6 +40,8 @@ static uint64_t chunk_num = 0;
 
 static uint16_t crc16_table[256];
 
+static uint32_t chunk_hi = 0;
+
 w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
                                          logging_formatter_data_type_t type) {
 	if (!logging_formatter_health.is_init) {
@@ -134,6 +136,17 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		chunk_num = (block_count / BLOCKS_PER_CHUNK);
 		uint64_t lo = 2;
 		uint64_t hi = chunk_num;
+		chunk_hi = hi;
+
+		if (raw_logger_SD_read(init_buffer, hi * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
+			W_SUCCESS) {
+			return W_FAILURE;
+		}
+
+		if (0 != memcmp(&init_buffer, &zero_buffer, 32)) {
+			logging_formatter_health.card_full = true;
+			return W_FAILURE;
+		}
 
 		while (lo < hi) {
 			chunk_num = lo + (hi - lo) / 2;
@@ -208,6 +221,10 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 		return W_FAILURE;
 	}
 
+	if (logging_formatter_health.card_full) {
+		return W_FAILURE;
+	}
+
 	if ((buffer_length + FORMATTER_HEADER_SIZE + FORMATTER_CRC_SIZE) != CHUNK_SIZE) {
 		// TODO: log_text for errors
 		return W_FAILURE;
@@ -260,6 +277,10 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 			break;
 		default:
 			break;
+	}
+
+	if (formatter_buffer.chunk == chunk_hi) {
+		logging_formatter_health.card_full = true;
 	}
 
 	formatter_buffer.chunk += 1;
