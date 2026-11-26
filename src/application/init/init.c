@@ -77,6 +77,7 @@ const uint32_t health_checks_task_priority = 10;
 
 bool done_sys_init = false;
 const uint32_t telem_task_priority = 10; // TODO: decide telem task priority
+BENCHMARK_FILE_INIT(8,6000000);
 
 // Motor calibration callback.
 // Run this in init to avoid blocking other tasks for too long, so blinky will
@@ -163,36 +164,74 @@ static void system_init_task(void *arg) {
 
 	done_sys_init = true;
 	flash_file_t p_file;
-	char * message= "hello, how long does it take to write 53 characters?";
+	const char *message = "hello, how long does it take to write 53 characters?";
 	char read_buffer[100];
 	benchmark_data_t benchmark_0;
 	benchmark_data_t benchmark_1;
 	benchmark_data_t benchmark_2;
 	benchmark_data_t benchmark_3;
 	benchmark_data_t benchmark_4;
+	benchmark_data_t benchmark_5;
+	benchmark_data_t benchmark_6;
+	benchmark_data_t benchmark_7;
+	int counter=0;
+	char filename[13];
 
 	DWT_init();
-	BENCHMARK_FILE_INIT(5,6000000);
 	SINGLE_BENCHMARK_START(0);
 	flash_init();
 	SINGLE_BENCHMARK_END(0);
-	SINGLE_BENCHMARK_START(1);
-	flash_file_open(&p_file, "00000000.bin", LFS_O_RDWR| LFS_O_CREAT);
-	SINGLE_BENCHMARK_END(1);
-	SINGLE_BENCHMARK_START(2);
-	flash_file_write(&p_file, message, 60, 5, 1);
-	SINGLE_BENCHMARK_END(2);
-	SINGLE_BENCHMARK_START(3);
-	flash_file_read(&p_file, &read_buffer, 30, 5, 1, 30);
-	SINGLE_BENCHMARK_END(3);
-	SINGLE_BENCHMARK_START(4);
-	file_flash_close(&p_file);
+
+	for (int k=0; k<100;k++){
+		if (0 == k%10){
+			snprintf(filename, 13, "%07d.bin", counter);
+		}
+		else{
+			snprintf(filename, 13, "%08d.bin", counter);
+		}
+		SINGLE_BENCHMARK_START(1);
+		flash_file_open(&p_file, filename, LFS_O_RDWR| LFS_O_CREAT);
+		SINGLE_BENCHMARK_END(1);
+		SINGLE_BENCHMARK_START(2);
+		flash_file_write(&p_file, message, 60, 5, 1);
+		SINGLE_BENCHMARK_END(2);
+		SINGLE_BENCHMARK_START(6);
+		flash_file_sync(&p_file);
+		SINGLE_BENCHMARK_END(6);
+		SINGLE_BENCHMARK_START(3);
+		flash_file_read(&p_file, read_buffer, 30, 5, 0, 30);
+		SINGLE_BENCHMARK_END(3);
+		SINGLE_BENCHMARK_START(4);
+		file_flash_close(&p_file);
+		SINGLE_BENCHMARK_END(4);
+		counter+=1;
+	}
 	GET_BENCHMARK_STAT(0, &benchmark_0);
 	GET_BENCHMARK_STAT(1, &benchmark_1);
 	GET_BENCHMARK_STAT(2, &benchmark_2);
 	GET_BENCHMARK_STAT(3, &benchmark_3);
 	GET_BENCHMARK_STAT(4, &benchmark_4);
-	
+	GET_BENCHMARK_STAT(6, &benchmark_6);
+
+	uint32_t init_time= BENCH_CYCLES_TO_US(benchmark_0.last);
+	uint32_t open_time= BENCH_CYCLES_TO_US(benchmark_1.sum / benchmark_1.count);
+	uint32_t write_time= BENCH_CYCLES_TO_US(benchmark_2.sum / benchmark_2.count);
+	uint32_t read_time= BENCH_CYCLES_TO_US(benchmark_3.sum / benchmark_3.count);
+	uint32_t close_time= BENCH_CYCLES_TO_US(benchmark_4.sum / benchmark_4.count);
+	uint32_t sync_time= BENCH_CYCLES_TO_US(benchmark_6.sum/benchmark_6.count);
+
+	SINGLE_BENCHMARK_START(5);
+	flash_clear_logs();
+	SINGLE_BENCHMARK_END(5);
+	GET_BENCHMARK_STAT(5, &benchmark_5);
+	uint32_t clear_logs_time= BENCH_CYCLES_TO_US(benchmark_5.last);
+	SINGLE_BENCHMARK_START(7);
+	flash_reformat(false);
+	SINGLE_BENCHMARK_END(7);
+	GET_BENCHMARK_STAT(7, &benchmark_7);
+	uint32_t reformat_time= BENCH_CYCLES_TO_US(benchmark_7.last);
+	uint32_t tot= init_time + open_time + write_time + sync_time + read_time + close_time + clear_logs_time + reformat_time;
+
 
 	// Create FreeRTOS tasks
 	BaseType_t task_status = pdTRUE;
