@@ -164,6 +164,7 @@ static void system_init_task(void *arg) {
 
 	done_sys_init = true;
 	flash_file_t p_file;
+	lfs_size_t p_read_size;
 	const char *message = "hello, how long does it take to write 53 characters?";
 	char read_buffer[100];
 	benchmark_data_t benchmark_0;
@@ -199,10 +200,10 @@ static void system_init_task(void *arg) {
 		flash_file_sync(&p_file);
 		SINGLE_BENCHMARK_END(6);
 		SINGLE_BENCHMARK_START(3);
-		flash_file_read(&p_file, read_buffer, 30, 5, 0, 30);
+		flash_file_read(&p_file, read_buffer, 30, 5, 0, &p_read_size);
 		SINGLE_BENCHMARK_END(3);
 		SINGLE_BENCHMARK_START(4);
-		file_flash_close(&p_file);
+		flash_file_close(&p_file);
 		SINGLE_BENCHMARK_END(4);
 		counter+=1;
 	}
