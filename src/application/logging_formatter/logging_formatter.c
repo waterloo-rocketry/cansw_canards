@@ -138,8 +138,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		uint64_t hi = chunk_num;
 		chunk_hi = hi;
 
-		if (raw_logger_SD_read(init_buffer, hi * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
-			W_SUCCESS) {
+		if (raw_logger_SD_read(init_buffer, hi * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) != W_SUCCESS) {
 			return W_FAILURE;
 		}
 
