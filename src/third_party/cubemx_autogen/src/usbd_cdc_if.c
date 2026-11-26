@@ -277,7 +277,7 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
       hil_parse_rx_bytes(Buf[i]);
   }
   #endif
-    
+
     USBD_CDC_SetRxBuffer(&hUsbDeviceHS, &Buf[0]);
     USBD_CDC_ReceivePacket(&hUsbDeviceHS);
 
