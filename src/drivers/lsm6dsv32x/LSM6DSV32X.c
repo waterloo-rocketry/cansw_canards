@@ -33,8 +33,7 @@ typedef struct {
 	uint8_t dev_addr;
 	uint8_t dual_buffer[2][LSM6DSV32X_FIFO_READ_THRESHOLD][7];
 	uint32_t timestamp_ms[2];
-  // this can overflow, so just use it for fingerprinting readings
-  uint32_t accel_burst_tenth_ms[2];
+	// this can overflow, so just use it for fingerprinting readings
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
 	w_status_t latest_status;
@@ -57,7 +56,7 @@ typedef struct {
 	uint32_t get_gyro_acc_data_lastest_status_failure;
 	uint32_t wrong_fifo_tag;
 	uint32_t same_sensor_samples;
-  uint32_t could_not_get_tenth_ms;
+	uint32_t could_not_get_tenth_ms;
 } lsm6dsv32x_health_t;
 
 // device addresses and configuration
@@ -137,8 +136,6 @@ void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
 	       lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER] =
 		lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER];
-  lsm6dsv32x_ctx.accel_burst_tenth_ms[LSM6DSV32X_READ_BUFFER] = lsm6dsv32x_ctx.accel_burst_tenth_ms[LSM6DSV32X_WRITE_BUFFER];
-
 }
 
 /**
@@ -268,12 +265,6 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 		return W_FAILURE;
 	}
 
-  // store the tenth ms timestamp for fingerprinting the accel bursts
-  if (timer_get_tenth_ms(&lsm6dsv32x_ctx.accel_burst_tenth_ms[LSM6DSV32X_WRITE_BUFFER]) != W_SUCCESS){
-    lsm6dsv32x_health.could_not_get_tenth_ms ++;
-    return W_FAILURE;
-  }
-
 	lsm6dsv32x_ctx.latest_status = W_SUCCESS;
 
 	// set the bus to occupied meanining that data is
@@ -398,9 +389,8 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  */
 w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
-	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD],
-	uint8_t *acc_sample_count, uint8_t *gyro_sample_count, uint32_t *timestamp_tenth_ms) {
-
+	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *acc_sample_count,
+	uint8_t *gyro_sample_count) {
 	w_status_t status = W_SUCCESS;
 	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD][7]; // copy the bytes so they are safe while
 	                                                      // doing calculations
@@ -416,8 +406,6 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 
 		taskEXIT_CRITICAL();
 
-    *timestamp_tenth_ms = lsm6dsv32x_ctx.accel_burst_tenth_ms[LSM6DSV32X_READ_BUFFER];
-
 		uint8_t accel_index = 0, gyro_index = 0;
 		for (uint8_t i = 0; i < LSM6DSV32X_FIFO_READ_THRESHOLD; i++) {
 			uint8_t tag = raw_bytes[i][0] >> 3;
@@ -428,19 +416,19 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 			if (GYRO_TAG == tag) {
 				// gyro sample
 
-        raw_gyros[gyro_index].x = x;
-        raw_gyros[gyro_index].y = y;
-        raw_gyros[gyro_index].z = z;
-        raw_gyros[gyro_index].timestamp_ms = timestamp_ms;
+				raw_gyros[gyro_index].x = x;
+				raw_gyros[gyro_index].y = y;
+				raw_gyros[gyro_index].z = z;
+				raw_gyros[gyro_index].timestamp_ms = timestamp_ms;
 
 				gyro_index++;
 			} else if (ACC_TAG == tag) {
 				// accel sample
 
-        raw_accs[accel_index].x = x;
-        raw_accs[accel_index].y = y;
-        raw_accs[accel_index].z = z;
-        raw_accs[accel_index].timestamp_ms = timestamp_ms;
+				raw_accs[accel_index].x = x;
+				raw_accs[accel_index].y = y;
+				raw_accs[accel_index].z = z;
+				raw_accs[accel_index].timestamp_ms = timestamp_ms;
 
 				accel_index++;
 			} else {
@@ -508,8 +496,10 @@ health_status_t lsm6dsv32x_get_status(void) {
 	         lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure,
 	         lsm6dsv32x_ctx.latest_status, lsm6dsv32x_ctx.bus_status);
 
-	log_text(10, LOG_LVL_INFO, "LSM6DSV32X", "wrong_fifo_tag=%d, same_sensor_samples=%d, could_not_get_tenth_ms=%d",
-	         lsm6dsv32x_health.wrong_fifo_tag, lsm6dsv32x_health.same_sensor_samples, lsm6dsv32x_health.could_not_get_tenth_ms);
+	log_text(10, LOG_LVL_INFO, "LSM6DSV32X",
+	         "wrong_fifo_tag=%d, same_sensor_samples=%d, could_not_get_tenth_ms=%d",
+	         lsm6dsv32x_health.wrong_fifo_tag, lsm6dsv32x_health.same_sensor_samples,
+	         lsm6dsv32x_health.could_not_get_tenth_ms);
 
 	return status;
 }

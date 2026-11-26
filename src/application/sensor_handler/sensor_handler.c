@@ -131,7 +131,7 @@ typedef struct {
 // keeps the cross-task hand-off atomic without a separate lock.
 static QueueHandle_t g_sensor_data_queue = NULL;
 
-static uint32_t last_max_rate_accel_timestamp_tenth_ms = 0;
+static uint32_t last_max_rate_accel_timestamp_ms = 0;
 
 /**
  * @brief Peek the latest telemetry snapshot from the mailbox.
@@ -519,37 +519,38 @@ static w_status_t movella_state_sd_log(void) {
 static w_status_t max_rate_accel_log(void) {
 	w_status_t status = W_SUCCESS;
 
-  // set it all to zero 
+	// set it all to zero
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD] = {0};
-  lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD] = {0};
+	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD] = {0};
 	uint8_t acc_sample_count = 0;
-  uint8_t gyro_sample_count = 0;
-  uint32_t tenth_ms_timestamp;
+	uint8_t gyro_sample_count = 0;
 
-	status |= lsm6dsv32x_get_full_gyro_acc_data(raw_accs, raw_gyros, &acc_sample_count, &gyro_sample_count, &tenth_ms_timestamp);
+	status |= lsm6dsv32x_get_full_gyro_acc_data(raw_accs, raw_gyros, &acc_sample_count,
+	                                            &gyro_sample_count);
 
-  if (tenth_ms_timestamp == last_max_rate_accel_timestamp_tenth_ms){
-    // re-reading the same burst, so just ignore it
-    // TODO: REMOVE 
-    log_text(10, LOG_LVL_INFO, "testing", "SAME TIMESTAMP");
-    return W_SUCCESS;
-  }
+	// compare the first timestamp because it's guaranteed to be
+	if (raw_accs[0].timestamp_ms == last_max_rate_accel_timestamp_ms) {
+		// re-reading the same burst, so just ignore it
+		// TODO: REMOVE
+		log_text(10, LOG_LVL_INFO, "testing", "SAME TIMESTAMP");
+		return W_SUCCESS;
+	}
 
-  last_max_rate_accel_timestamp_tenth_ms = tenth_ms_timestamp;
+	last_max_rate_accel_timestamp_ms = raw_accs[0].timestamp_ms;
 
 	for (uint8_t i = 0; i < acc_sample_count; i += MAX_RATE_IMU_ACCEL_DATA_PER_PACKET) {
 		log_data_container_t container = {0};
-    log_text(10, LOG_LVL_DEBUG, "testing", "x: %d", raw_accs[i].x);
-    container.max_rate_accel.x1 = raw_accs[i].x;
-    container.max_rate_accel.y1 = raw_accs[i].y;
-    container.max_rate_accel.z1 = raw_accs[i].z;
-    container.max_rate_accel.x2 = raw_accs[i + 1].x;
-    container.max_rate_accel.y2 = raw_accs[i + 1].y;
-    container.max_rate_accel.z2 = raw_accs[i + 1].z;
-    container.max_rate_accel.x3 = raw_accs[i + 2].x;
-    container.max_rate_accel.y3 = raw_accs[i + 2].y;
-    container.max_rate_accel.z3 = raw_accs[i + 2].z;
-		container.max_rate_accel.timestamp = tenth_ms_timestamp;
+
+		container.max_rate_accel.x1 = raw_accs[i].x;
+		container.max_rate_accel.y1 = raw_accs[i].y;
+		container.max_rate_accel.z1 = raw_accs[i].z;
+		container.max_rate_accel.x2 = raw_accs[i + 1].x;
+		container.max_rate_accel.y2 = raw_accs[i + 1].y;
+		container.max_rate_accel.z2 = raw_accs[i + 1].z;
+		container.max_rate_accel.x3 = raw_accs[i + 2].x;
+		container.max_rate_accel.y3 = raw_accs[i + 2].y;
+		container.max_rate_accel.z3 = raw_accs[i + 2].z;
+		container.max_rate_accel.timestamp = raw_accs[0].timestamp_ms;
 
 		if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MAX_RATE_ACCEL, &container) != W_SUCCESS) {
 			sensor_handler_state.log_data_fail_count++;

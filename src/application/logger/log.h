@@ -219,16 +219,16 @@ typedef union __attribute__((packed)) {
 	// Note: it is possible that this array is not filled.
 	// In this case the empty entries will all contain 0
 	struct __attribute__((packed)) {
-    uint16_t x1;
-    uint16_t y1;
-    uint16_t z1;
-    uint16_t x2;
-    uint16_t y2;
-    uint16_t z2;
-    uint16_t x3;
-    uint16_t y3;
-    uint16_t z3;
-    uint32_t timestamp;
+		uint16_t x1;
+		uint16_t y1;
+		uint16_t z1;
+		uint16_t x2;
+		uint16_t y2;
+		uint16_t z2;
+		uint16_t x3;
+		uint16_t y3;
+		uint16_t z3;
+		uint32_t timestamp;
 	} max_rate_accel;
 
 } log_data_container_t;

@@ -56,7 +56,7 @@ extern "C" {
 
   FAKE_VALUE_FUNC(bool, lsm6dsv32x_is_full_read_fresh);
 FAKE_VALUE_FUNC(w_status_t, lsm6dsv32x_get_full_gyro_acc_data,
-                lsm6dsv32x_raw_imu_data_t*, lsm6dsv32x_raw_imu_data_t*, uint8_t*, uint8_t*, uint32_t*);
+                lsm6dsv32x_raw_imu_data_t*, lsm6dsv32x_raw_imu_data_t*, uint8_t*, uint8_t*);
 // fake can stuff
 // w_status_t can_handler_transmit(const can_msg_t *msg);
 FAKE_VALUE_FUNC(w_status_t, can_handler_transmit, const can_msg_t *);
