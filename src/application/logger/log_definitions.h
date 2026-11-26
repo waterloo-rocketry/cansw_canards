@@ -1,23 +1,17 @@
 #ifndef LOG__DEFINITIONS_H
 #define LOG__DEFINITIONS_H
 
-#ifdef __cplusplus
-#define LOG_STATIC_ASSERT static_assert
-#else
-#define LOG_STATIC_ASSERT _Static_assert
-#endif
-
 /* BEGIN GENERATED ERROR ENUM
     A standard error value is split in two parts:
     First two digits represent the file name
     Next two digits count up from 0x00
 */
 typedef enum __attribute__((packed)) {
-	LOG_ERRORS_ERROR = 0x00,
-	LOG_ERRORS_MAX_SIZE = 0xffff
+	LOG_ERROR_ERROR = 0x00,
+	LOG_ERROR_MAX_SIZE = 0xffff
 } log_error_id_t;
 
-LOG_STATIC_ASSERT(sizeof(log_error_id_t) == 2, "log_file_error_t must be 2 bytes");
+STATIC_ASSERT(sizeof(log_error_id_t) == 2, "log_file_error_t must be 2 bytes");
 /* END GENERATED ERROR ENUM */
 
 /* BEGIN GENERATED FILE ENUM */
@@ -53,7 +47,7 @@ typedef enum __attribute__((packed)) {
 	LOG_FILES_SIZE_PIN = 0xff
 } log_file_id_t;
 
-LOG_STATIC_ASSERT(sizeof(log_file_id_t) == 1, "log_file_id_t must be 1 byte");
+STATIC_ASSERT(sizeof(log_file_id_t) == 1, "log_file_id_t must be 1 byte");
 /* END GENERATED FILE ENUM */
 
 /* BEGIN GENERATED TASK ENUM
@@ -74,7 +68,7 @@ typedef enum __attribute__((packed)) {
 	LOG_TASK_MAX_SIZE = 0xff
 } log_task_id_t;
 
-LOG_STATIC_ASSERT(sizeof(log_task_id_t) <= 1, "log_task_id_t must be at 1 byte");
+STATIC_ASSERT(sizeof(log_task_id_t) <= 1, "log_task_id_t must be at 1 byte");
 /* END GENERATED TASK ENUM */
 
 #endif

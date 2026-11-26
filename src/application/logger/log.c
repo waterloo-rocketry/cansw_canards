@@ -57,10 +57,10 @@ typedef struct {
 	log_file_id_t log_file_id;
 	uint16_t line_number;
 	uint16_t counter;
-	uint32_t args[LOG_ERROR_MAX_ARGS];
+	uint32_t args[MAX_LOG_ERROR__ARGS];
 } log_error_msg_t;
 
-_Static_assert(sizeof(log_error_msg_t) == MAX_ERROR_MSG_LENGTH, "Struct size must be 32 bytes");
+STATIC_ASSERT(sizeof(log_error_msg_t) == MAX_ERROR_MSG_LENGTH, "Struct size must be 32 bytes");
 
 /**
  * A collection of status variables describing the current health of the logger module.
@@ -373,7 +373,7 @@ w_status_t log_init(void) {
 
 w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_id,
                      uint16_t line_number, log_error_id_t error_code,
-                     const uint32_t args[LOG_ERROR_MAX_ARGS]) {
+                     const uint32_t args[MAX_LOG_ERROR__ARGS]) {
 	uint32_t timestamp = 0;
 	(void)timer_get_ms(&timestamp);
 
@@ -401,8 +401,9 @@ w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_fil
 	log_task_id_t task_id = (log_task_id_t)uxTaskGetTaskNumber(xTaskGetCurrentTaskHandle());
 
 	// Aggregate if possible, must be same buffer and version
-	if (current_error_buf_num == log_error_site->last_logged_buffer &&
-	    current_error_buf_versions[current_error_buf_num] == log_error_site->last_logged_version) {
+	if ((current_error_buf_num == log_error_site->last_logged_buffer) &&
+	    (current_error_buf_versions[current_error_buf_num] ==
+	     log_error_site->last_logged_version)) {
 		// Read previous characters into struct
 		log_error_msg_t prev_msg = {0};
 
@@ -413,9 +414,9 @@ w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_fil
 		memcpy(&prev_msg, prev_dest, sizeof(prev_msg));
 
 		// To aggregate, must be same task, within last second, and same arguments
-		if (task_id == prev_msg.log_task_id &&
-		    (timestamp - prev_msg.timestamp) <= MAX_ERROR_LOGGING_DUPLICATION_PERIOD_MS &&
-		    memcmp(args, prev_msg.args, sizeof(prev_msg.args)) == 0) {
+		if ((task_id == prev_msg.log_task_id) &&
+		    ((timestamp - prev_msg.timestamp) <= MAX_ERROR_LOGGING_DUPLICATION_PERIOD_MS) &&
+		    (memcmp(args, prev_msg.args, sizeof(prev_msg.args)) == 0)) {
 			if (prev_msg.counter < UINT16_MAX) {
 				prev_msg.counter++;
 			}

@@ -12,7 +12,7 @@ from collections import namedtuple # for storing event info from def file
 
 # Constants for file paths
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEF_DIR = REPO_ROOT / "log_dictionary"
+DEF_DIR = REPO_ROOT / "src" / "application" / "logger" / "log_dictionary"
 
 
 # .def file regex formats

@@ -1,27 +1,4 @@
-/*
-* events.def
-*
-* Defines every event the program can log.
-*
-* Each entry has the form:
-*   EVENT(enum_name, event_id, num_args, message)
-*
-*   enum_name  Identifier used in code (e.g. SENSOR_TIMEOUT) <- Note: A LOG_ERRORS prefix will be automatically added to the enum name
-*   event_id   32-bit ID, described below
-*   num_args   Number of format arguments the message takes
-*   message    printf-style message string
-*
-* event_id layout (16-bit number, hex):
-*
-*     0x  FF EE
-*         |  |
-*         |  +-- Event code (1 byte): counts up within the file
-*         |
-*         +----- File ID (1 byte): log_file_id_t of the file that emitted the event
-*
-* Example: 0x1B06
-*   File = 0x1B (uart.c), Code = 0x06
-*/
+/* READ THE README FILE BEFORE EDITING */
 
 /* ==========================================================================
 * can_handler.c            source_id = 0x01
@@ -372,3 +349,5 @@
 /* --- INFO (severity 3) --- */
 
 /* --- DEBUG (severity 4) --- */
+
+

@@ -17,9 +17,9 @@
 /* Size of each message region in error buffers (bytes) */
 #define MAX_ERROR_MSG_LENGTH 32
 /* Max number of optional arguments to LOG_ERROR, each stored in a 4-byte slot */
-#define LOG_ERROR_MAX_ARGS 5
+#define MAX_LOG_ERROR__ARGS 5
 /* Size of the argument region in each error message (bytes) */
-#define LOG_ERROR_VARIADIC_ARGUMENTS_LENGTH (LOG_ERROR_MAX_ARGS * sizeof(uint32_t))
+#define LOG_ERROR_VARIADIC_ARGUMENTS_LENGTH (MAX_LOG_ERROR__ARGS * sizeof(uint32_t))
 /* Size of each message region in text buffers (bytes) */
 #define MAX_TEXT_MSG_LENGTH 128
 /**
@@ -29,20 +29,24 @@
 #define MAX_DATA_MSG_LENGTH 32
 /* Number of message regions in a single error buffer */
 #define ERROR_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_ERROR_MSG_LENGTH)
+STATIC_ASSERT(ERROR_MSGS_PER_BUFFER == 1024,
+              "Number of error logs per buffer was not correctly calculated");
 /* Number of message regions in a single text buffer */
 #define TEXT_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_TEXT_MSG_LENGTH)
+STATIC_ASSERT(TEXT_MSGS_PER_BUFFER == 256,
+              "Number of text logs per buffer was not correctly calculated");
 /* Number of message regions in a single data buffer */
 #define DATA_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_DATA_MSG_LENGTH)
+STATIC_ASSERT(DATA_MSGS_PER_BUFFER == 1024,
+              "Number of data logs per buffer was not correctly calculated");
 
-#if LOG_BUFFER_SIZE % MAX_ERROR_MSG_LENGTH != 0
-#warning "Error log message region size does not pack evenly into buffer size"
-#endif
-#if LOG_BUFFER_SIZE % MAX_TEXT_MSG_LENGTH != 0
-#warning "Text log message region size does not pack evenly into buffer size"
-#endif
-#if LOG_BUFFER_SIZE % MAX_DATA_MSG_LENGTH != 0
-#warning "Data log message region size does not pack evenly into buffer size"
-#endif
+/* Each log each be able to pack evenly within the buffer size */
+STATIC_ASSERT(LOG_BUFFER_SIZE % MAX_ERROR_MSG_LENGTH == 0,
+              "Error log message region size does not pack evenly into buffer size");
+STATIC_ASSERT(LOG_BUFFER_SIZE % MAX_TEXT_MSG_LENGTH == 0,
+              "Text log message region size does not pack evenly into buffer size");
+STATIC_ASSERT(LOG_BUFFER_SIZE % MAX_DATA_MSG_LENGTH == 0,
+              "Data log message region size does not pack evenly into buffer size");
 
 /* Number of error log buffers <-- PLACEHOLDER VALUE, NEEDS REVIEWING */
 #define NUM_ERROR_LOG_BUFFERS 1
@@ -248,7 +252,7 @@ w_status_t log_init(void);
  */
 w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_ID,
                      uint16_t line_number, log_error_id_t error_code,
-                     const uint32_t args[LOG_ERROR_MAX_ARGS]);
+                     const uint32_t args[MAX_LOG_ERROR__ARGS]);
 /**
  * @brief Log a message in text form to the text log file.
  *
@@ -304,13 +308,13 @@ static inline uint32_t log_error_arg_f32(float f) {
 	    double: log_error_arg_f32,                                                                 \
 	    default: log_error_arg_u32)(x)
 
-// Pad the argument list with zeros so there are always LOG_ERROR_MAX_ARGS slots
+// Pad the argument list with zeros so there are always MAX_LOG_ERROR__ARGS slots
 #define LOG_ERROR_PACK(zero_parameter_case_slot, a, b, c, d, e, ...)                               \
 	{LOG_ERROR_ARG(a), LOG_ERROR_ARG(b), LOG_ERROR_ARG(c), LOG_ERROR_ARG(d), LOG_ERROR_ARG(e)}
 /**
  * @brief Log a message in an encoded form to the error log file.
  * 		  Requires #DEFINE LOG_FILE_ID at the top of the file
- * 		  Accepts up to LOG_ERROR_MAX_ARGS (5) optional arguments of up to 4 bytes each
+ * 		  Accepts up to MAX_LOG_ERROR__ARGS (5) arguments of up to 4 bytes each
  * 		  (ints, uints, chars, bools, floats, doubles are casted to a float).
  *
  * @param timeout Maximum amount of time to block waiting to log, in ms
@@ -321,10 +325,10 @@ static inline uint32_t log_error_arg_f32(float f) {
 #define LOG_ERROR(timeout, error_id, ...)                                                          \
 	({                                                                                             \
 		static log_error_site_t this_site = {0};                                                   \
-		_Static_assert(sizeof((double[]){0, ##__VA_ARGS__}) <=                                     \
-		                   (1 + LOG_ERROR_MAX_ARGS) * sizeof(double),                              \
-		               "LOG_ERROR takes at most 5 optional arguments");                            \
-		const uint32_t log_error_args_[LOG_ERROR_MAX_ARGS] =                                       \
+		STATIC_ASSERT(sizeof((double[]){0, ##__VA_ARGS__}) <=                                      \
+		                  (1 + MAX_LOG_ERROR__ARGS) * sizeof(double),                              \
+		              "LOG_ERROR takes at most 5 arguments");                                      \
+		const uint32_t log_error_args_[MAX_LOG_ERROR__ARGS] =                                      \
 			LOG_ERROR_PACK(0, ##__VA_ARGS__, 0, 0, 0, 0, 0, 0);                                    \
 		log_error(&this_site, timeout, LOG_FILE_ID, __LINE__, error_id, log_error_args_);          \
 	})

@@ -94,29 +94,23 @@ def write_definitions(definitions_path, events_list, files_list, tasks_list):
         "#ifndef LOG__DEFINITIONS_H",
         "#define LOG__DEFINITIONS_H",
         "",
-        "#ifdef __cplusplus",
-        "#define LOG_STATIC_ASSERT static_assert",
-        "#else",
-        "#define LOG_STATIC_ASSERT _Static_assert",
-        "#endif",
-        "",
         "/* BEGIN GENERATED ERROR ENUM",
         "    A standard error value is split in two parts:",
         "    First two digits represent the file name",
         "    Next two digits count up from 0x00",
         "*/",
         "typedef enum __attribute__((packed)) {",
-        "\tLOG_ERRORS_ERROR = 0x00,"
+        "\tLOG_ERROR_ERROR = 0x00,"
     ]
 
     for enum_name, enum_value in events_list:
-        lines.append(f"\tLOG_ERRORS_{enum_name} = {enum_value},")
+        lines.append(f"\tLOG_ERROR_{enum_name} = {enum_value},")
 
     lines.extend([
-        "\tLOG_ERRORS_MAX_SIZE = 0xffff",
+        "\tLOG_ERROR_MAX_SIZE = 0xffff",
         "} log_error_id_t;",
         "",
-        'LOG_STATIC_ASSERT(sizeof(log_error_id_t) == 2, "log_file_error_t must be 2 bytes");',
+        'STATIC_ASSERT(sizeof(log_error_id_t) == 2, "log_file_error_t must be 2 bytes");',
         "/* END GENERATED ERROR ENUM */",
         "",
         "/* BEGIN GENERATED FILE ENUM */",
@@ -131,7 +125,7 @@ def write_definitions(definitions_path, events_list, files_list, tasks_list):
         "\tLOG_FILES_SIZE_PIN = 0xff",
         "} log_file_id_t;",
         "",
-        'LOG_STATIC_ASSERT(sizeof(log_file_id_t) == 1, "log_file_id_t must be 1 byte");',
+        'STATIC_ASSERT(sizeof(log_file_id_t) == 1, "log_file_id_t must be 1 byte");',
         "/* END GENERATED FILE ENUM */",
         "",
         "/* BEGIN GENERATED TASK ENUM",
@@ -148,7 +142,7 @@ def write_definitions(definitions_path, events_list, files_list, tasks_list):
         "\tLOG_TASK_MAX_SIZE = 0xff",
         "} log_task_id_t;",
         "",
-        'LOG_STATIC_ASSERT(sizeof(log_task_id_t) <= 1, "log_task_id_t must be at 1 byte");',
+        'STATIC_ASSERT(sizeof(log_task_id_t) <= 1, "log_task_id_t must be at 1 byte");',
         "/* END GENERATED TASK ENUM */",
         "",
         "#endif"
@@ -158,14 +152,15 @@ def write_definitions(definitions_path, events_list, files_list, tasks_list):
 
 def main():
     root = Path(__file__).resolve().parents[1]
-    dictionary_path = root / "log_dictionary"
+    logger_path = root / "src" / "application" / "logger"
+    dictionary_path = logger_path / "log_dictionary"
     definitions_path = (
-        root / "src" / "application" / "logger" / "log_definitions.h"
+        logger_path / "log_definitions.h"
     )
 
     # Parsing log_events.def
-    events_path = dictionary_path / "log_events.def"
-    events_list = parse_definitions(events_path, "EVENT", expected_num_fields = 4)
+    events_path = dictionary_path / "log_errors.def"
+    events_list = parse_definitions(events_path, "ERROR", expected_num_fields = 4)
 
     # Parsing log_events.def
     files_path = dictionary_path / "log_files.def"

@@ -1,7 +1,4 @@
-/*
-* .def file containing all Files used by the program (E.g programs from /application, /driver, etc.).
-* Format: FILE_ID(enum_file_name, file_id, file_path)
-*/
+/* READ THE README FILE BEFORE EDITING */
 
 FILE_ID(LOG_FILES_CAN_HANDLER_C,    0x01, "/application/can_handler.c")
 FILE_ID(LOG_FILES_CONTROLLER_C,     0x02, "/application/controller.c")

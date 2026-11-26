@@ -1,10 +1,4 @@
-/*
-* .def file containing all FreeRTOS tasks that can emit logs.
-* Task IDs increment by one starting from 0x01 (0x00 is reserved for LOG_TASK_ERROR).
-* Each task's ID is assigned in init.c with vTaskSetTaskNumber().
-* Format: TASK_ID(enum_task_name, task_id, task_name)
-*     task_name is the name string passed to xTaskCreate()
-*/
+/* READ THE README FILE BEFORE EDITING */
 
 TASK_ID(LOG_TASK_INIT,           0x01, "SysInit")
 TASK_ID(LOG_TASK_FSM,            0x02, "fsm")
