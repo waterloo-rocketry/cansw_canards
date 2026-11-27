@@ -472,7 +472,7 @@ w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_fil
 		.log_task_id = task_id,
 		.log_file_id = file_id,
 		.line_number = line_number,
-		.counter = 0,
+		.counter = 1,
 	};
 	memcpy(new_error_msg.args, args, sizeof(new_error_msg.args));
 

@@ -8,7 +8,7 @@ import re # for regex
 import argparse # for command line args
 import struct # for converting binary info to float
 from pathlib import Path # for getting file path
-from collections import namedtuple # for storing event info from def file
+from collections import namedtuple # for storing error info from def file
 
 # Constants for file paths
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -17,7 +17,7 @@ DEF_DIR = REPO_ROOT / "src" / "application" / "logger" / "log_dictionary"
 
 # .def file regex formats
 COMMENTS = r'^(?:\s*/\*.*?\*/)*\s*'   # To account for /* ... */ comments before an entry
-EVENT_PATTERN = re.compile(COMMENTS + r'EVENT\(\s*(\w+)\s*,\s*(0[xX][0-9a-fA-F]+|\d+)\s*,\s*(\d+)\s*,\s*"(.*)"\s*\)')
+ERROR_PATTERN = re.compile(COMMENTS + r'ERROR\(\s*(\w+)\s*,\s*(0[xX][0-9a-fA-F]+|\d+)\s*,\s*(\d+)\s*,\s*"(.*)"\s*\)')
 FILE_PATTERN = re.compile(COMMENTS + r'FILE_ID\(\s*(\w+)\s*,\s*(0[xX][0-9a-fA-F]+|\d+)\s*,\s*"(.*)"\s*\)')
 TASK_PATTERN = re.compile(COMMENTS + r'TASK_ID\(\s*(\w+)\s*,\s*(0[xX][0-9a-fA-F]+|\d+)\s*,\s*"(.*)"\s*\)')
 # First group for decimal points, second for length modifiers, third for type
@@ -29,44 +29,44 @@ float_plac = "fFgGeE"
 
 
 
-# nametuple for event dictionary
-Event = namedtuple("Event", ["num_args", "message"])
+# nametuple for error dictionary
+Error = namedtuple("Error", ["num_args", "message"])
 
 
 # Error log size
 ERR_LOG_SIZE = 32
 
 
-# Read event def file, create + return dictionary of all error log strings
-def get_event_dict(args):
-    # Create dictionary that will store event info
-    event_info = {}
+# Read error def file, create + return dictionary of all error log strings
+def get_error_dict(args):
+    # Create dictionary that will store error info
+    error_info = {}
 
 
-    # Loop through event def file and store relevant lines
-    with open(args.events_def, 'r', encoding='utf-8') as file:
+    # Loop through error def file and store relevant lines
+    with open(args.errors_def, 'r', encoding='utf-8') as file:
         for line in file:
-            # If line doesn't match event pattern, discard
-            m = EVENT_PATTERN.match(line)
-                # Won't work if event defintion spread out over multiple lines.
+            # If line doesn't match error pattern, discard
+            m = ERROR_PATTERN.match(line)
+                # Won't work if error defintion spread out over multiple lines.
                 # TODO: Ask if need to account for this
             if m is None:
                 continue
-            enum_name, event_id, num_args, message = m.groups()
-            event_info[int(event_id, 0)] = Event(int(num_args), message)
+            enum_name, error_id, num_args, message = m.groups()
+            error_info[int(error_id, 0)] = Error(int(num_args), message)
 
 
     # TEMP: Check if dict is defined properly
-        #for event_id, event in list(event_info.items())[:5]:
-            #print(event_id, event)
+        #for error_id, error in list(error_info.items())[:5]:
+            #print(error_id, error)
 
 
-    return event_info
+    return error_info
 
 
 # Read file def file, create + return dictionary of all error log strings
 def get_file_dict(args):
-    # Create dictionary that will store event info
+    # Create dictionary that will store error info
     file_info = {}
    
     # Loop through file def file and store relevant lines
@@ -88,7 +88,7 @@ def get_file_dict(args):
 
 # Read task def file, create + return dictionary of all tasks
 def get_task_dict(args):
-    # Create dictionary that will store event info
+    # Create dictionary that will store error info
     task_info = {}
    
     # Loop through file def file and store relevant lines
@@ -111,7 +111,7 @@ def get_task_dict(args):
 
 
 
-def read_err_file(args, event_dict, file_dict, task_dict):
+def read_err_file(args, error_dict, file_dict, task_dict):
     lines = []
     with open(args.logs_err, "rb") as file:
         # lambda is mini function, repeats reading 32 bytes at a time until end of file
@@ -120,23 +120,23 @@ def read_err_file(args, event_dict, file_dict, task_dict):
             if len(record) < ERR_LOG_SIZE:
                 print(f"INFO: partial record ({len(record)} bytes) encountered.")
             # Call function that will take binary line and translate to string message
-            line = translate_log(record, event_dict, file_dict, task_dict)
+            line = translate_log(record, error_dict, file_dict, task_dict)
             if line is not None:
                 lines.append(line)
     # Return list of translated lines
     return lines
 
 
-def translate_log(chunk, event_dict, file_dict, task_dict):
+def translate_log(chunk, error_dict, file_dict, task_dict):
     timestamp = int.from_bytes(chunk[0:4], byteorder="little") # int
-    event_id = int.from_bytes(chunk[4:6], byteorder="little") # key
+    error_id = int.from_bytes(chunk[4:6], byteorder="little") # key
 
-    event_tuple = event_dict.get(event_id, "unknown") # named tuple
-    if (event_tuple == "unknown" and event_id != 0):
-            print(f"Unknown event ID: {event_id}", file=sys.stderr)
-            return "Unknown event id, no message found"
-    num_args = event_tuple.num_args # int
-    message = event_tuple.message # string
+    error_tuple = error_dict.get(error_id, "unknown") # named tuple
+    if (error_tuple == "unknown" and error_id != 0):
+            print(f"Unknown error ID: {error_id}", file=sys.stderr)
+            return "Unknown error id, no message found"
+    num_args = error_tuple.num_args # int
+    message = error_tuple.message # string
 
     task_id = int.from_bytes(chunk[6:7], byteorder="little") # key
     task_name = task_dict.get(task_id, "unknown")
@@ -153,7 +153,7 @@ def translate_log(chunk, event_dict, file_dict, task_dict):
         task_name = "LOG_TASK_ERROR" # TODO: Ask is this the right task name?
     if (file_id == 0):
             return None
-    if (event_id == 0):
+    if (error_id == 0):
             return None
     
     line_num = int.from_bytes(chunk[8:10], byteorder="little") # int
@@ -164,7 +164,7 @@ def translate_log(chunk, event_dict, file_dict, task_dict):
     # Insert args into message with arg placeholders
     msg_with_args = insert_args(message, binary_args)
 
-    # Timestamp: Event message occured X times, TASK: task, FILE: filepath, LINE: line
+    # Timestamp: Error message occured X times, TASK: task, FILE: filepath, LINE: line
     formatted_msg = f"{timestamp}: {msg_with_args} occured {counter} times, TASK: {task_name}, FILE: {filepath}, LINE: {line_num}."
     
 
@@ -209,10 +209,10 @@ def main():
         help='Path to the binary log file'
     )
     parser.add_argument(
-        '--events_def',
+        '--errors_def',
         type=Path,
-        default=DEF_DIR / "log_events.def",
-        help='Path to the event def file'
+        default=DEF_DIR / "log_errors.def",
+        help='Path to the error def file'
     )
     parser.add_argument(
         '--files_def',
@@ -233,7 +233,7 @@ def main():
 
     # Ensure all files exist
     for label, path in (("log .err file", args.logs_err),
-                        ("events def file", args.events_def),
+                        ("errors def file", args.errors_def),
                         ("files def file", args.files_def),
                         ("tasks def file", args.tasks_def)):
         if not path.is_file():
@@ -241,14 +241,14 @@ def main():
 
 
     # Make dicts from def files info
-    event_dict = get_event_dict(args)
+    error_dict = get_error_dict(args)
     file_dict = get_file_dict(args)
     task_dict = get_task_dict(args)
    
 
 
     # Read the .err file, put into array of error log lines
-    lines = read_err_file(args, event_dict, file_dict, task_dict)
+    lines = read_err_file(args, error_dict, file_dict, task_dict)
 
     # Write lines into .txt file
     with open('decoded_error_logs.txt', 'w', encoding='utf-8') as f:
