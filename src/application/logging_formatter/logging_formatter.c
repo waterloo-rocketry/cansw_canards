@@ -287,7 +287,8 @@ w_status_t logging_formatter_write(const uint8_t *buffer, uint32_t buffer_length
 	}
 
 	if (0U != logging_formatter_health.max_chunk) {
-		float32_t percent = (float32_t)formatter_buffer.chunk / (float32_t)logging_formatter_health.max_chunk;
+		float32_t percent =
+			(float32_t)formatter_buffer.chunk / (float32_t)logging_formatter_health.max_chunk;
 		logging_formatter_health.percent_filled =
 			(float32_t)((int32_t)(percent * 10000.0F)) / 100.0F;
 	}
