@@ -52,6 +52,7 @@ w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
 
 	if (NULL == file) {
 		logging_formatter_health.invalid_param = true;
+		log_text(0, LOG_LVL_WARN, "FORMAT", "File ctx parameter does not exist.");
 		return W_FAILURE;
 	}
 
@@ -89,11 +90,8 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 	if (logging_formatter_health.is_init) {
 		return W_SUCCESS;
 	}
-	if (NULL == p_sd_handle) {
-		return W_FAILURE;
-	}
 
-	if (W_SUCCESS != raw_logger_SD_init(p_sd_handle)) {
+	if (NULL == p_sd_handle) {
 		log_text(0, LOG_LVL_WARN, "FORMAT", "Given task handler does not exist.");
 		return W_FAILURE;
 	}
@@ -114,6 +112,7 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 
 	if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
 	    W_SUCCESS) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Read failed during initialization.");
 		return W_FAILURE;
 	}
 
@@ -132,7 +131,7 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 		uint64_t block_count = 0;
 
 		if (raw_logger_get_SD_specs(&block_count, &erase_size_blocks, TIMEOUT_MS) != W_SUCCESS) {
-			log_text(0, LOG_LVL_WARN, "FORMAT", "Unable to get SD specs.");
+			log_text(0, LOG_LVL_WARN, "FORMAT", "Failed to get SD specs during initialization.");
 			return W_FAILURE;
 		}
 
@@ -142,11 +141,13 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 		logging_formatter_health.max_chunk = hi;
 
 		if (raw_logger_SD_read(init_buffer, hi * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) != W_SUCCESS) {
+			log_text(0, LOG_LVL_WARN, "FORMAT", "Read failed during initialization.");
 			return W_FAILURE;
 		}
 
 		if (0 != memcmp(&init_buffer, &zero_buffer, 32)) {
 			logging_formatter_health.card_full = true;
+			log_text(0, LOG_LVL_WARN, "FORMAT", "SD card is full.");
 			return W_FAILURE;
 		}
 
@@ -154,6 +155,7 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 			chunk_num = lo + (hi - lo) / 2;
 			if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
 			    W_SUCCESS) {
+				log_text(0, LOG_LVL_WARN, "FORMAT", "Read failed during initialization.");				
 				return W_FAILURE;
 			}
 
@@ -168,17 +170,13 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 			}
 		}
 
-		if ((block_count / BLOCKS_PER_CHUNK) <= lo) {
-			logging_formatter_health.card_full = true;
-			return W_FAILURE;
-		}
-
 		chunk_num = lo;
 		found_address = true;
 		formatter_buffer.chunk = chunk_num;
 
 		if (raw_logger_SD_read(init_buffer, (chunk_num - 1) * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
 		    W_SUCCESS) {
+			log_text(0, LOG_LVL_WARN, "FORMAT", "Read failed during initialization.");
 			return W_FAILURE;
 		}
 	}
@@ -219,21 +217,23 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 w_status_t logging_formatter_write(const uint8_t *buffer, uint32_t buffer_length,
                                    formatter_file_ctx_t *ctx) {
 	if (!logging_formatter_health.is_init) {
-		// TODO: log_text for errors
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Formatter is not initialized.");
 		return W_FAILURE;
 	}
 
 	if (logging_formatter_health.card_full) {
+		log_text(0, LOG_LVL_WARN, "FORMAT", "SD card is full.");
 		return W_FAILURE;
 	}
 
 	if ((buffer_length + FORMATTER_HEADER_SIZE + FORMATTER_CRC_SIZE) != CHUNK_SIZE) {
-		// TODO: log_text for errors
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Buffer is not properly sized.");
 		return W_FAILURE;
 	}
 
 	if ((NULL == buffer) || (0 == buffer_length)) {
 		logging_formatter_health.invalid_param = true;
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Invalid parameters during write.");
 		return W_FAILURE;
 	}
 
@@ -264,6 +264,7 @@ w_status_t logging_formatter_write(const uint8_t *buffer, uint32_t buffer_length
 	                                     formatter_buffer.chunk * CHUNK_SIZE, CHUNK_SIZE,
 	                                     TIMEOUT_MS)) {
 		logging_formatter_health.write_error++;
+		log_text(0, LOG_LVL_WARN, "FORMAT", "Failed to write.");
 		return W_FAILURE;
 	}
 

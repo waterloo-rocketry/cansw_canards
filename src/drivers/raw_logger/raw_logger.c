@@ -6,8 +6,8 @@
 #include "semphr.h"
 #include <inttypes.h>
 
-#define RAW_LOGGER_NOTIFICATION_INDEX 2
-#define MAX_CONSECUTIVE_RECOVERIES 5U
+#define RAW_LOGGER_NOTIFICATION_INDEX 0
+#define MAX_CONSECUTIVE_ERRORS 5U
 
 /**
  * @brief SD card module health stats
@@ -16,14 +16,14 @@ typedef struct {
 	bool is_init;
 	bool invalid_param;
 	bool timed_out;
+	bool err_occurred;
 	uint32_t read_count;
 	uint32_t write_count;
 	uint32_t read_error;
 	uint32_t write_error;
 	uint32_t not_writable;
 	uint32_t error_state;
-	uint32_t recovery_count;
-	uint32_t consecutive_recoveries;
+	uint32_t consecutive_errors;
 } raw_sd_card_health_t;
 
 raw_sd_card_health_t raw_sd_card_health = {0};
@@ -31,8 +31,8 @@ raw_sd_card_health_t raw_sd_card_health = {0};
 /**
  * @brief Action state enumerations
  *
- * RAW_RECOVERING is entered when an operation times out or the driver can no
- * longer safely continue normal operation. New read/writes are rejected
+ * RAW_ERROR_OCCURED is entered when an operation times out or the driver can no
+ * longer safely continue normal operation. After the max consecutive errors have been reached, new read/writes are rejected
  * until recovery restores the driver to RAW_READY.
  *
  * However, this does not guarantee that recovery is currently running
@@ -44,7 +44,6 @@ typedef enum {
 	RAW_READING,
 	RAW_ERROR_OCCURRED,
 	RAW_READY,
-	RAW_RECOVERING
 } raw_logger_action_status_t;
 
 static SD_HandleTypeDef *raw_logger_handle = NULL;
@@ -73,6 +72,10 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 	}
 
 	raw_logger_handle = p_sd_handle;
+
+	HAL_SD_ConfigSpeedBusOperation(p_sd_handle, SDMMC_SPEED_MODE_HIGH); 
+	raw_logger_handle->Init.ClockDiv = 1; 
+	HAL_SD_ConfigWideBusOperation(p_sd_handle, (uint32_t)raw_logger_handle->Init.BusWide); 
 
 	action_state = RAW_READY;
 
@@ -171,7 +174,7 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd) {
 
 // TODO: Implement this later once recovery is figured out
 w_status_t raw_logger_SD_recover(void) {
-	raw_sd_card_health.recovery_count = 0;
+	raw_sd_card_health.is_init = false;
 	return W_FAILURE;
 }
 
@@ -291,13 +294,11 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t n
 		return W_IO_TIMEOUT;
 	}
 
-	if (RAW_RECOVERING == action_state) {
-		raw_sd_card_health.consecutive_recoveries++;
-		if (raw_sd_card_health.consecutive_recoveries > MAX_CONSECUTIVE_RECOVERIES) {
+	if (RAW_ERROR_OCCURRED == action_state) {
+		raw_sd_card_health.consecutive_errors++;
+		if (raw_sd_card_health.consecutive_errors > MAX_CONSECUTIVE_ERRORS) {
 			// TODO: full bus recovery
 			raw_logger_SD_recover();
-		} else {
-			raw_sd_card_health.recovery_count++;
 		}
 		action_state = RAW_READY;
 	}
@@ -315,7 +316,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t n
 			return W_FAILURE;
 		}
 		if ((cur_time_ms - start_time_ms) >= timeout_ms) {
-			action_state = RAW_RECOVERING;
+			action_state = RAW_ERROR_OCCURRED;
 			raw_sd_card_health.timed_out = true;
 			xSemaphoreGive(sd_mutex);
 			return W_IO_TIMEOUT;
@@ -343,6 +344,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t n
 
 	if (HAL_OK != HAL_SD_ReadBlocks_DMA(raw_logger_handle, buffer, block_address, num_blocks)) {
 		raw_sd_card_health.error_state = raw_logger_handle->ErrorCode;
+		raw_sd_card_health.err_occurred = true;
 		log_text(0, LOG_LVL_WARN, "RAW", "HAL unable to read", "error code=0x%08lX",
 		         (unsigned long)(raw_sd_card_health.error_state));
 		task_handler = NULL;
@@ -357,7 +359,7 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t n
 	    ((cur_time_ms - start_time_ms) >= timeout_ms) ||
 	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE,
 	                                   pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
-		action_state = RAW_RECOVERING;
+		action_state = RAW_ERROR_OCCURRED;
 		(void)HAL_SD_Abort(raw_logger_handle);
 		task_handler = NULL;
 		raw_sd_card_health.read_error++;
@@ -368,18 +370,12 @@ w_status_t raw_logger_SD_read(uint8_t *buffer, uint64_t byte_address, uint32_t n
 	}
 
 	if (RAW_ERROR_OCCURRED == action_state) {
-		action_state = RAW_READY;
 		xSemaphoreGive(sd_mutex);
 		log_text(0, LOG_LVL_WARN, "RAW", "Read failed.");
 		return W_FAILURE;
 	}
 
-	if (RAW_READY != action_state) {
-		xSemaphoreGive(sd_mutex);
-		return W_INVALID_PARAM;
-	}
-
-	raw_sd_card_health.consecutive_recoveries = 0;
+	raw_sd_card_health.consecutive_errors = 0;
 	xSemaphoreGive(sd_mutex);
 
 	return W_SUCCESS;
@@ -421,13 +417,11 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uin
 		return W_IO_TIMEOUT;
 	}
 
-	if (RAW_RECOVERING == action_state) {
-		raw_sd_card_health.consecutive_recoveries++;
-		if (raw_sd_card_health.consecutive_recoveries > MAX_CONSECUTIVE_RECOVERIES) {
+	if (RAW_ERROR_OCCURRED == action_state) {
+		raw_sd_card_health.consecutive_errors++;
+		if (raw_sd_card_health.consecutive_errors > MAX_CONSECUTIVE_ERRORS) {
 			// TODO: full bus recovery
 			raw_logger_SD_recover();
-		} else {
-			raw_sd_card_health.recovery_count++;
 		}
 		action_state = RAW_READY;
 	}
@@ -445,7 +439,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uin
 			return W_FAILURE;
 		}
 		if ((cur_time_ms - start_time_ms) >= timeout_ms) {
-			action_state = RAW_RECOVERING;
+			action_state = RAW_ERROR_OCCURRED;
 			raw_sd_card_health.timed_out = true;
 			HAL_SD_Abort(raw_logger_handle);
 			xSemaphoreGive(sd_mutex);
@@ -486,7 +480,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uin
 	    ((cur_time_ms - start_time_ms) >= timeout_ms) ||
 	    (0U == ulTaskNotifyTakeIndexed(RAW_LOGGER_NOTIFICATION_INDEX, pdTRUE,
 	                                   pdMS_TO_TICKS(timeout_ms + start_time_ms - cur_time_ms)))) {
-		action_state = RAW_RECOVERING;
+		action_state = RAW_ERROR_OCCURRED;
 		(void)HAL_SD_Abort(raw_logger_handle);
 		task_handler = NULL;
 		raw_sd_card_health.write_error++;
@@ -497,18 +491,13 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uin
 	}
 
 	if (RAW_ERROR_OCCURRED == action_state) {
-		action_state = RAW_READY;
+		raw_sd_card_health.write_error++;
 		xSemaphoreGive(sd_mutex);
 		log_text(0, LOG_LVL_WARN, "RAW", "Write failed.");
 		return W_FAILURE;
 	}
 
-	if (RAW_READY != action_state) {
-		xSemaphoreGive(sd_mutex);
-		return W_FAILURE;
-	}
-
-	raw_sd_card_health.consecutive_recoveries = 0;
+	raw_sd_card_health.consecutive_errors = 0;
 	xSemaphoreGive(sd_mutex);
 
 	return W_SUCCESS;
