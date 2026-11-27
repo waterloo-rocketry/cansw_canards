@@ -479,8 +479,8 @@ w_status_t log_data(uint32_t timeout, log_data_type_t type, const log_data_conta
 	return res;
 }
 
-static sd_card_file_ctx_t text_file_ctx;
-static sd_card_file_ctx_t data_file_ctx;
+static sd_card_file_ctx_t text_file_ctx __attribute__((section(".ramd1_bss")));
+static sd_card_file_ctx_t data_file_ctx __attribute__((section(".ramd1_bss")));
 
 void log_task(void *argument) {
 	(void)argument;

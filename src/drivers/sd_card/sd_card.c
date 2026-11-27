@@ -357,11 +357,16 @@ w_status_t sd_card_file_open(sd_card_file_ctx_t *ctx) {
 
 w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, uint32_t num_bytes,
                                    uint32_t *bytes_written) {
-	if ((!sd_card_health.is_init) || (NULL == ctx) || (!ctx->is_open) || (NULL == buffer) ||
-	    (NULL == bytes_written)) {
+	if ((!sd_card_health.is_init) || (NULL == ctx) || (NULL == buffer) || (NULL == bytes_written)) {
 		sd_card_health.file_write_error++;
 		sd_card_health.invalid_param = true;
 		return W_INVALID_PARAM;
+	}
+
+	if (!ctx->is_open) {
+		sd_card_health.file_write_error++;
+		sd_card_file_open(ctx);
+		return W_FAILURE;
 	}
 
 	if (xSemaphoreTake(sd_mutex, 0) != pdTRUE) {
