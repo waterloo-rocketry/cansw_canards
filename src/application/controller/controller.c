@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_CONTROLLER_C
+
 #include <math.h>
 
 #include "FreeRTOS.h"

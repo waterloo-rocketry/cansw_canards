@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_MS5611_C
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include <inttypes.h>

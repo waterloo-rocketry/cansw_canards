@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_INIT_C
+
 // Add these includes for hardware handles
 #include "FreeRTOS.h"
 #include "adc.h" // For hadc1
@@ -97,6 +99,8 @@ static w_status_t ak45_motor_calibration(const can_msg_t *msg) {
 }
 
 static void system_init_task(void *arg) {
+	vTaskSetTaskNumber(xTaskGetCurrentTaskHandle(), LOG_TASK_INIT);
+
 	// hotfix: allow time for .... stuff ?? ... before init.
 	// without this, the uart DMA change made proc freeze upon power cycle.
 	// probably because movella triggers before its ready
@@ -170,31 +174,39 @@ static void system_init_task(void *arg) {
 	task_status &= xTaskCreate(fsm_task, "fsm",
 	                           6144, // TODO: set the correct size
 	                           NULL, fsm_task_priority, &fsm_task_handle);
+	vTaskSetTaskNumber(fsm_task_handle, LOG_TASK_FSM);
 
 	task_status &= xTaskCreate(health_check_task, "health", 384, NULL, health_checks_task_priority,
 	                           &health_checks_task_handle);
+	vTaskSetTaskNumber(health_checks_task_handle, LOG_TASK_HEALTH_CHECKS);
 
 	task_status &= xTaskCreate(can_handler_task_rx, "can handler rx", 256, NULL,
 	                           can_handler_rx_priority, &can_handler_handle_rx);
+	vTaskSetTaskNumber(can_handler_handle_rx, LOG_TASK_CAN_HANDLER_RX);
 
 	task_status &= xTaskCreate(can_handler_task_tx, "can handler tx", 256, NULL,
 	                           can_handler_tx_priority, &can_handler_handle_tx);
+	vTaskSetTaskNumber(can_handler_handle_tx, LOG_TASK_CAN_HANDLER_TX);
 
 	task_status &= xTaskCreate(movella_task, "movella", 512, NULL, movella_task_priority,
 	                           &movella_task_handle);
+	vTaskSetTaskNumber(movella_task_handle, LOG_TASK_MOVELLA);
 
-	task_status &=
-		xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority, &ms5611_task_handle);
-	// TODO: set the correct size
+	task_status &= xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority,
+	                           &ms5611_task_handle); // TODO: set the correct size
+	vTaskSetTaskNumber(ms5611_task_handle, LOG_TASK_MS5611);
 
 	task_status &= xTaskCreate(log_task, "logger", 512, NULL, log_task_priority, &log_task_handle);
+	vTaskSetTaskNumber(log_task_handle, LOG_TASK_LOGGER);
 
 	task_status &= xTaskCreate(ad_breakout_board_task, "ad board task",
 	                           256, // TODO: set when sure of size
 	                           NULL, ad_breakout_task_priority, &ad_breakout_task_handle);
+	vTaskSetTaskNumber(ad_breakout_task_handle, LOG_TASK_AD_BREAKOUT);
 
 	task_status &= xTaskCreate(telemetry_task, "telem module", 336, NULL, telem_task_priority,
 	                           &telem_task_handle);
+	vTaskSetTaskNumber(telem_task_handle, LOG_TASK_TELEMETRY);
 
 	if (task_status != pdTRUE) {
 		// Log critical task creation failure

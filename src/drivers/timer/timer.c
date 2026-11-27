@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_TIMER_C
+
 /**
  * Timer module
  * Driver for tracking system time

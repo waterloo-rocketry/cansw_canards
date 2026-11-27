@@ -3,15 +3,23 @@
 
 #include "rocketlib.h"
 #include <stdint.h>
+#include <string.h>
 // Include headers for structs used in log_data_container_t
 #include "application/health_checks/health_checks.h"
 #include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
 #include "drivers/altimu-10/altimu-10.h"
+#include "log_definitions.h"
 
 /* Size of a single buffer (bytes) */
 #define LOG_BUFFER_SIZE 32768
 // #define LOG_BUFFER_SIZE 16384
+/* Size of each message region in error buffers (bytes) */
+#define MAX_ERROR_MSG_LENGTH 32
+/* Max number of optional arguments to LOG_ERROR, each stored in a 4-byte slot */
+#define MAX_LOG_ERROR__ARGS 5
+/* Size of the argument region in each error message (bytes) */
+#define LOG_ERROR_VARIADIC_ARGUMENTS_LENGTH (MAX_LOG_ERROR__ARGS * sizeof(uint32_t))
 /* Size of each message region in text buffers (bytes) */
 #define MAX_TEXT_MSG_LENGTH 128
 /**
@@ -19,22 +27,33 @@
  * If changing this value, make sure to update it in scripts/logparse.py too!
  */
 #define MAX_DATA_MSG_LENGTH 32
+/* Number of message regions in a single error buffer */
+#define ERROR_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_ERROR_MSG_LENGTH)
+STATIC_ASSERT(ERROR_MSGS_PER_BUFFER == 1024,
+              "Number of error logs per buffer was not correctly calculated");
 /* Number of message regions in a single text buffer */
 #define TEXT_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_TEXT_MSG_LENGTH)
+STATIC_ASSERT(TEXT_MSGS_PER_BUFFER == 256,
+              "Number of text logs per buffer was not correctly calculated");
 /* Number of message regions in a single data buffer */
 #define DATA_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_DATA_MSG_LENGTH)
+STATIC_ASSERT(DATA_MSGS_PER_BUFFER == 1024,
+              "Number of data logs per buffer was not correctly calculated");
 
-#if LOG_BUFFER_SIZE % MAX_TEXT_MSG_LENGTH != 0
-#warning "Text log message region size does not pack evenly into buffer size"
-#endif
-#if LOG_BUFFER_SIZE % MAX_DATA_MSG_LENGTH != 0
-#warning "Data log message region size does not pack evenly into buffer size"
-#endif
+/* Each log each be able to pack evenly within the buffer size */
+STATIC_ASSERT(LOG_BUFFER_SIZE % MAX_ERROR_MSG_LENGTH == 0,
+              "Error log message region size does not pack evenly into buffer size");
+STATIC_ASSERT(LOG_BUFFER_SIZE % MAX_TEXT_MSG_LENGTH == 0,
+              "Text log message region size does not pack evenly into buffer size");
+STATIC_ASSERT(LOG_BUFFER_SIZE % MAX_DATA_MSG_LENGTH == 0,
+              "Data log message region size does not pack evenly into buffer size");
 
+/* Number of error log buffers <-- PLACEHOLDER VALUE, NEEDS REVIEWING */
+#define NUM_ERROR_LOG_BUFFERS 1
 /* Number of text log buffers */
 #define NUM_TEXT_LOG_BUFFERS 2
 /* Number of data log buffers */
-#define NUM_DATA_LOG_BUFFERS 4
+#define NUM_DATA_LOG_BUFFERS 2
 
 /* Size of filename string */
 #define FILENAME_STRING_SIZE (8 + 1 + 3 + 1)
@@ -211,6 +230,13 @@ typedef union __attribute__((packed)) {
 
 } log_data_container_t;
 
+// Log error site buffer contains information about previous buffer write
+typedef struct {
+	uint16_t last_logged_version;
+	uint8_t last_logged_buffer;
+	uint16_t last_logged_msg_num;
+} log_error_site_t;
+
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
               "log_data_container_t must fit within MAX_DATA_MSG_LENGTH");
@@ -221,6 +247,12 @@ STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
  */
 w_status_t log_init(void);
 
+/**
+ * Use LOG_ERROR macro instead.
+ */
+w_status_t log_error(log_error_site_t *log_error_site, uint32_t timeout, log_file_id_t file_ID,
+                     uint16_t line_number, log_error_id_t error_code,
+                     const uint32_t args[MAX_LOG_ERROR__ARGS]);
 /**
  * @brief Log a message in text form to the text log file.
  *
@@ -255,5 +287,50 @@ void log_task(void *argument);
  * @return CAN board status bitfield
  */
 health_status_t logger_get_status(void);
+
+/* Start of goofy log error variadic argument macro shenanigans*/
+
+// LOG_ERROR argument packing helpers (internal, used by LOG_ERROR)
+static inline uint32_t log_error_arg_u32(uint32_t v) {
+	return v;
+}
+
+static inline uint32_t log_error_arg_f32(float f) {
+	uint32_t u;
+	memcpy(&u, &f, sizeof(u));
+	return u;
+}
+
+// Convert one argument to its 4-byte slot value
+#define LOG_ERROR_ARG(x)                                                                           \
+	_Generic((x),                                                                                  \
+	    float: log_error_arg_f32,                                                                  \
+	    double: log_error_arg_f32,                                                                 \
+	    default: log_error_arg_u32)(x)
+
+// Pad the argument list with zeros so there are always MAX_LOG_ERROR__ARGS slots
+#define LOG_ERROR_PACK(zero_parameter_case_slot, a, b, c, d, e, ...)                               \
+	{LOG_ERROR_ARG(a), LOG_ERROR_ARG(b), LOG_ERROR_ARG(c), LOG_ERROR_ARG(d), LOG_ERROR_ARG(e)}
+/**
+ * @brief Log a message in an encoded form to the error log file.
+ * 		  Requires #DEFINE LOG_FILE_ID at the top of the file
+ * 		  Accepts up to MAX_LOG_ERROR__ARGS (5) arguments of up to 4 bytes each
+ * 		  (ints, uints, chars, bools, floats, doubles are casted to a float).
+ *
+ * @param timeout Maximum amount of time to block waiting to log, in ms
+ * @param error_id Error id which will be converted to a stirng
+ * @param ... Optional values to print according to format in the error string
+ * @return Status indicating success or failure
+ */
+#define LOG_ERROR(timeout, error_id, ...)                                                          \
+	({                                                                                             \
+		static log_error_site_t this_site = {0};                                                   \
+		STATIC_ASSERT(sizeof((double[]){0, ##__VA_ARGS__}) <=                                      \
+		                  (1 + MAX_LOG_ERROR__ARGS) * sizeof(double),                              \
+		              "LOG_ERROR takes at most 5 arguments");                                      \
+		const uint32_t log_error_args_[MAX_LOG_ERROR__ARGS] =                                      \
+			LOG_ERROR_PACK(0, ##__VA_ARGS__, 0, 0, 0, 0, 0, 0);                                    \
+		log_error(&this_site, timeout, LOG_FILE_ID, __LINE__, error_id, log_error_args_);          \
+	})
 
 #endif

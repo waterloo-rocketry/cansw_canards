@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_ADC_C
+
 #include "drivers/adc/adc.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"

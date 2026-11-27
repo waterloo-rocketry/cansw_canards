@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_HIL_C
+
 #include "application/hil/hil.h"
 
 #include <stdbool.h>

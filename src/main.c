@@ -284,11 +284,7 @@ void MPU_Config(void) {
 	 */
 	MPU_InitStruct.Number = MPU_REGION_NUMBER1;
 	MPU_InitStruct.BaseAddress = 0x08000000;
-#if defined(STM32H723xx)
-	MPU_InitStruct.Size = MPU_REGION_SIZE_512KB;
-#else
 	MPU_InitStruct.Size = MPU_REGION_SIZE_1MB;
-#endif
 	MPU_InitStruct.SubRegionDisable = 0x0;
 	MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
 	MPU_InitStruct.AccessPermission = MPU_REGION_PRIV_RO;

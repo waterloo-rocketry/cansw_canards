@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_ALTIMU_10_C
+
 #include "drivers/altimu-10/altimu-10.h"
 #include "application/logger/log.h"
 #include "drivers/altimu-10/LIS3MDL_regmap.h"

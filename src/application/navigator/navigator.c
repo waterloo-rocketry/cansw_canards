@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_NAVIGATOR_C
+
 #include "FreeRTOS.h"
 #include "math.h"
 #include "queue.h"

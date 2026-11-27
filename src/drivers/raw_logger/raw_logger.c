@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_RAW_LOGGER_C
+
 #include "drivers/raw_logger/raw_logger.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"

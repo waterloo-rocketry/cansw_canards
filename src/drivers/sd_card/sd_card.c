@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_SD_CARD_C
+
 #include "drivers/sd_card/sd_card.h"
 #include "FreeRTOS.h"
 #include "application/logger/log.h"

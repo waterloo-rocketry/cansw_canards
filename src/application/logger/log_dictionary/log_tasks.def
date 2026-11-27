@@ -1,0 +1,12 @@
+/* READ THE README FILE BEFORE EDITING */
+
+TASK_ID(LOG_TASK_INIT,           0x01, "SysInit")
+TASK_ID(LOG_TASK_FSM,            0x02, "fsm")
+TASK_ID(LOG_TASK_HEALTH_CHECKS,  0x03, "health")
+TASK_ID(LOG_TASK_CAN_HANDLER_RX, 0x04, "can handler rx")
+TASK_ID(LOG_TASK_CAN_HANDLER_TX, 0x05, "can handler tx")
+TASK_ID(LOG_TASK_MOVELLA,        0x06, "movella")
+TASK_ID(LOG_TASK_MS5611,         0x07, "ms5611")
+TASK_ID(LOG_TASK_LOGGER,         0x08, "logger")
+TASK_ID(LOG_TASK_AD_BREAKOUT,    0x09, "ad board task")
+TASK_ID(LOG_TASK_TELEMETRY,      0x0a, "telem module")

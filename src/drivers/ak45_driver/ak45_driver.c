@@ -1,3 +1,5 @@
+#define LOG_FILE_ID LOG_FILES_AK45_DRIVER_C
+
 #include <inttypes.h>
 #include <string.h>
 
