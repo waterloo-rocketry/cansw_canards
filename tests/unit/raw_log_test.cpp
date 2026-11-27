@@ -28,8 +28,6 @@ DEFINE_FFF_GLOBALS;
 // Size of the pretend card, in 512-byte blocks (BLOCKSIZE comes from the mock HAL)
 #define FAKE_CARD_BLOCKS 1000U
 
-// HAL_SD_GetCardInfo / HAL_SD_GetCardStatus fill in structs through pointers.
-// A plain return_val leaves them all zeros, so these custom fakes describe a valid card.
 static HAL_StatusTypeDef fake_get_card_info(SD_HandleTypeDef *, HAL_SD_CardInfoTypeDef *info) {
 	memset(info, 0, sizeof(*info));
 	info->BlockNbr = FAKE_CARD_BLOCKS;
@@ -47,13 +45,6 @@ static HAL_StatusTypeDef fake_get_card_status(SD_HandleTypeDef *,
 	return HAL_OK;
 }
 
-// On the real board, the DMA-complete interrupt calls HAL_SD_RxCpltCallback /
-// HAL_SD_TxCpltCallback while the driver is blocked in ulTaskNotifyTakeIndexed.
-// Nothing fires interrupts in a unit test, so this fake runs the callback itself.
-// The driver calls ulTaskNotifyTakeIndexed twice per transfer:
-//   1. with 0 ticks, to clear any stale notification before starting DMA
-//   2. with a real timeout, to wait for the DMA to finish
-// The return value is how many notifications were received (0 = timed out).
 static uint32_t fake_notify_dma_complete(UBaseType_t, BaseType_t, TickType_t ticks) {
 	if (0U == ticks) {
 		return 0U; // call 1: nothing pending

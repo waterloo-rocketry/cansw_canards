@@ -2,7 +2,6 @@
 #include <gtest/gtest.h>
 #include <inttypes.h> // included first so the .c's copy isn't pulled in inside extern "C"
 #include <string.h>
-#include <vector>
 
 extern "C" {
 #include "FreeRTOS.h"
@@ -55,7 +54,7 @@ static w_status_t fake_get_specs(uint64_t *block_count, uint32_t *erase_size, ui
 class FormatterTest : public ::testing::Test {
 protected:
 	SD_HandleTypeDef hsd;
-	std::vector<uint8_t> payload = std::vector<uint8_t>(PAYLOAD_SIZE, 0xab);
+	uint8_t payload[PAYLOAD_SIZE];
 	formatter_file_ctx_t ctx;
 
 	void SetUp() override {
@@ -79,6 +78,7 @@ protected:
 
 		memset(&hsd, 0, sizeof(hsd));
 		memset(&ctx, 0, sizeof(ctx));
+		memset(payload, 0xab, sizeof(payload));
 	}
 
 	void TearDown() override {
@@ -114,7 +114,7 @@ TEST_F(FormatterTest, WriteSuccess) {
 	ASSERT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
 	ASSERT_EQ(logging_formatter_create_file(&ctx, LOGGING_FORMATTING_DATA), W_SUCCESS);
 
-	EXPECT_EQ(logging_formatter_write(payload.data(), PAYLOAD_SIZE, &ctx), W_SUCCESS);
+	EXPECT_EQ(logging_formatter_write(payload, PAYLOAD_SIZE, &ctx), W_SUCCESS);
 
 	// One full chunk written to chunk 1
 	EXPECT_EQ(raw_logger_SD_write_fake.call_count, 1U);
@@ -124,7 +124,7 @@ TEST_F(FormatterTest, WriteSuccess) {
 	// Header first, then the payload
 	const uint8_t *chunk = raw_logger_SD_write_fake.arg0_val;
 	EXPECT_EQ(memcmp(chunk, HEADER, 4), 0);
-	EXPECT_EQ(memcmp(&chunk[FORMATTER_HEADER_SIZE], payload.data(), PAYLOAD_SIZE), 0);
+	EXPECT_EQ(memcmp(&chunk[FORMATTER_HEADER_SIZE], payload, PAYLOAD_SIZE), 0);
 
 	// Next write goes to the next chunk
 	EXPECT_EQ(ctx.chunk_count, 1U);
