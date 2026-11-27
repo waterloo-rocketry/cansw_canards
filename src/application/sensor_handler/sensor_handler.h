@@ -31,8 +31,6 @@ typedef struct {
 	uint32_t last_mti_pres_timestamp_ms;
 
 	uint32_t last_motor_encoder_timestamp_ms;
-
-	uint32_t last_accel_max_rate_timestamp_tenth_ms;
 } sensor_handler_ctx_t;
 
 /**

@@ -127,6 +127,13 @@ typedef union {
 
 #undef M
 
+// store these as int16_t. While we get them as uint16s, the value is actually signed
+typedef struct __attribute__((packed)){
+  uint16_t x;
+  uint16_t y;
+  uint16_t z;
+} log_accel_burst_xyz_t;
+
 /**
  * The container for data to be included in messages from log_data().
  * Make sure to update format descriptions in scripts/logparse.py too!
@@ -219,19 +226,12 @@ typedef union __attribute__((packed)) {
 	// Note: it is possible that this array is not filled.
 	// In this case the empty entries will all contain 0
 	struct __attribute__((packed)) {
-		uint16_t x1;
-		uint16_t y1;
-		uint16_t z1;
-		uint16_t x2;
-		uint16_t y2;
-		uint16_t z2;
-		uint16_t x3;
-		uint16_t y3;
-		uint16_t z3;
+    log_accel_burst_xyz_t vectors[MAX_RATE_IMU_ACCEL_DATA_PER_PACKET];
 		uint32_t timestamp;
-	} max_rate_accel;
+	} accel_burst;
 
 } log_data_container_t;
+
 
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,

@@ -56,7 +56,6 @@ typedef struct {
 	uint32_t get_gyro_acc_data_lastest_status_failure;
 	uint32_t wrong_fifo_tag;
 	uint32_t same_sensor_samples;
-	uint32_t could_not_get_tenth_ms;
 } lsm6dsv32x_health_t;
 
 // device addresses and configuration
@@ -497,9 +496,8 @@ health_status_t lsm6dsv32x_get_status(void) {
 	         lsm6dsv32x_ctx.latest_status, lsm6dsv32x_ctx.bus_status);
 
 	log_text(10, LOG_LVL_INFO, "LSM6DSV32X",
-	         "wrong_fifo_tag=%d, same_sensor_samples=%d, could_not_get_tenth_ms=%d",
-	         lsm6dsv32x_health.wrong_fifo_tag, lsm6dsv32x_health.same_sensor_samples,
-	         lsm6dsv32x_health.could_not_get_tenth_ms);
+	         "wrong_fifo_tag=%d, same_sensor_samples=%d",
+	         lsm6dsv32x_health.wrong_fifo_tag, lsm6dsv32x_health.same_sensor_samples);
 
 	return status;
 }
