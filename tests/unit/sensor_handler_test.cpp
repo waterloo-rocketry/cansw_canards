@@ -21,7 +21,6 @@ extern "C" {
 #include "common/math/math-algebra3d.h"
 #include "common/math/math.h"
 #include "drivers/altimu-10/altimu-10.h"
-#include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 #include "application/telemetry/telemetry.h"
 #include "queue.h"
@@ -34,7 +33,6 @@ extern "C" {
 
 
     // Define all fake functions for IMUs using FFF
-    FAKE_VALUE_FUNC(w_status_t, movella_get_data, movella_data_t*, uint32_t);
 
     FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t*);
 
@@ -135,18 +133,6 @@ static w_status_t set_iis2mdc_get_data(vector3d_t *data, iis2mdc_raw_data_t *raw
 }
 
 typedef struct {
-	movella_data_t data;
-	w_status_t return_val;
-} mti_get_values_t;
-
-static mti_get_values_t g_mti_get_return_val = {0};
-
-static w_status_t set_movella_get_data(movella_data_t *data, uint32_t timeout_ms) {
-	*data = g_mti_get_return_val.data;
-	return g_mti_get_return_val.return_val;
-}
-
-typedef struct {
 	ms5611_raw_result_t data;
 	uint32_t timestamp_ms;
 	w_status_t return_val;
@@ -211,7 +197,6 @@ protected:
 		RESET_FAKE(ad_breakout_board_get_accel_data);
 		RESET_FAKE(ad_breakout_board_get_gyro_data);
 		RESET_FAKE(can_handler_transmit);
-		RESET_FAKE(movella_get_data);
 
 		RESET_FAKE(timer_get_ms);
 
@@ -253,14 +238,6 @@ protected:
 	g_ms5611_get_return_val.timestamp_ms = 999;
 	g_ms5611_get_return_val.return_val = W_SUCCESS;
 
-	g_mti_get_return_val.data.acc_timestamp_ms = 999;
-	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
-	g_mti_get_return_val.data.mag_timestamp_ms = 999;
-	g_mti_get_return_val.data.pres_timestamp_ms = 999;
-	g_mti_get_return_val.data.temp_timestamp_ms = 999;
-	g_mti_get_return_val.data.is_dead = false;
-	g_mti_get_return_val.return_val = W_SUCCESS;
 
 	g_timer_get_return_val.timestamp_ms = 1000;
 	g_timer_get_return_val.return_val = W_SUCCESS;
@@ -278,7 +255,6 @@ protected:
 	iis2mdc_get_data_fake.custom_fake = set_iis2mdc_get_data;
 	ms5611_get_raw_pressure_fake.custom_fake = set_ms5611_get_raw_pressure;
 
-	movella_get_data_fake.custom_fake = set_movella_get_data;
 
 	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
 
@@ -307,10 +283,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasAllSensorNew) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -329,7 +301,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasAllSensorNew) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -342,10 +313,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasAllSensorNew) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -365,10 +332,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadLSM6) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -387,7 +350,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadLSM6) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -400,10 +362,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadLSM6) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -422,10 +380,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewLSM6) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -444,7 +398,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewLSM6) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -457,10 +410,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewLSM6) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -480,10 +429,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetLSM6) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -502,7 +447,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetLSM6) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -515,10 +459,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetLSM6) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -537,10 +477,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadMag) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -559,7 +495,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadMag) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -572,10 +507,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasComDeadMag) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -594,10 +525,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMag) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -616,7 +543,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMag) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -629,10 +555,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMag) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -651,10 +573,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetMag) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -673,7 +591,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetMag) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -686,450 +603,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailGetMag) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
-}
-
-// Test successful run with all IMUs working
-TEST_F(SensorHandlerTest, GetFreshMeasComDeadMTI) {
-
-	g_mti_get_return_val.data.acc_timestamp_ms = 999;
-	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
-	g_mti_get_return_val.data.mag_timestamp_ms = 999;
-	g_mti_get_return_val.data.pres_timestamp_ms = 999;
-	g_mti_get_return_val.data.temp_timestamp_ms = 999;
-	g_mti_get_return_val.return_val = W_IO_ERROR;
-
-    // set up output ptr
-	all_sensors_data_t output = {0};
-	sensor_handler_ctx_t ctx = {
-		.last_board_imu_timestamp_ms = 997,
-		.last_baro_timestamp_ms = 980,
-		.last_mag_timestamp_ms = 995,
-
-		.last_ad_accel_timestamp_ms = 997,
-		.last_ad_gyro_timestamp_ms = 997,
-
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
-
-		.last_motor_encoder_timestamp_ms = 996
-	};
-
-	// Run the function under test with loop_count = 1
-	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
-
-	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
-
-	// Verify IMU read calls were made
-	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
-	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
-	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_accel_data_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
-	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
-
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
-
-	// TODO: verify data
-
-	// Verify new flags
-	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.board_meas.board_baro.is_new);
-
-	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
-	EXPECT_TRUE(output.motor_encoder_meas.is_new);
-
-	EXPECT_FALSE(output.mti_meas.mti_accel.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
-}
-
-// Test successful run with all IMUs working
-TEST_F(SensorHandlerTest, GetFreshMeasNotNewAccelMTI) {
-
-	g_mti_get_return_val.data.acc_timestamp_ms = 997;
-	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
-	g_mti_get_return_val.data.mag_timestamp_ms = 999;
-	g_mti_get_return_val.data.pres_timestamp_ms = 999;
-	g_mti_get_return_val.data.temp_timestamp_ms = 999;
-	g_mti_get_return_val.data.is_dead = false;
-	g_mti_get_return_val.return_val = W_SUCCESS;
-
-    // set up output ptr
-	all_sensors_data_t output = {0};
-	sensor_handler_ctx_t ctx = {
-		.last_board_imu_timestamp_ms = 997,
-		.last_baro_timestamp_ms = 980,
-		.last_mag_timestamp_ms = 995,
-
-		.last_ad_accel_timestamp_ms = 997,
-		.last_ad_gyro_timestamp_ms = 997,
-
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
-
-		.last_motor_encoder_timestamp_ms = 996
-	};
-
-	// Run the function under test with loop_count = 1
-	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
-
-	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
-
-	// Verify IMU read calls were made
-	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
-	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
-	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_accel_data_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
-	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
-
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
-
-	// TODO: verify data
-
-	// Verify new flags
-	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.board_meas.board_baro.is_new);
-
-	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
-	EXPECT_TRUE(output.motor_encoder_meas.is_new);
-
-	EXPECT_FALSE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
-}
-
-// Test successful run with all IMUs working
-TEST_F(SensorHandlerTest, GetFreshMeasNotNewGyroMTI) {
-
-	g_mti_get_return_val.data.acc_timestamp_ms = 999;
-	g_mti_get_return_val.data.gyr_timestamp_ms = 997;
-	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
-	g_mti_get_return_val.data.mag_timestamp_ms = 999;
-	g_mti_get_return_val.data.pres_timestamp_ms = 999;
-	g_mti_get_return_val.data.temp_timestamp_ms = 999;
-	g_mti_get_return_val.data.is_dead = false;
-	g_mti_get_return_val.return_val = W_SUCCESS;
-
-    // set up output ptr
-	all_sensors_data_t output = {0};
-	sensor_handler_ctx_t ctx = {
-		.last_board_imu_timestamp_ms = 997,
-		.last_baro_timestamp_ms = 980,
-		.last_mag_timestamp_ms = 995,
-
-		.last_ad_accel_timestamp_ms = 997,
-		.last_ad_gyro_timestamp_ms = 997,
-
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
-
-		.last_motor_encoder_timestamp_ms = 996
-	};
-
-	// Run the function under test with loop_count = 1
-	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
-
-	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
-
-	// Verify IMU read calls were made
-	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
-	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
-	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_accel_data_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
-	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
-
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
-
-	// TODO: verify data
-
-	// Verify new flags
-	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.board_meas.board_baro.is_new);
-
-	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
-	EXPECT_TRUE(output.motor_encoder_meas.is_new);
-
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
-}
-
-// Test successful run with all IMUs working
-TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaroMTI) {
-
-	g_mti_get_return_val.data.acc_timestamp_ms = 999;
-	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
-	g_mti_get_return_val.data.mag_timestamp_ms = 999;
-	g_mti_get_return_val.data.pres_timestamp_ms = 997;
-	g_mti_get_return_val.data.temp_timestamp_ms = 999;
-	g_mti_get_return_val.data.is_dead = false;
-	g_mti_get_return_val.return_val = W_SUCCESS;
-
-    // set up output ptr
-	all_sensors_data_t output = {0};
-	sensor_handler_ctx_t ctx = {
-		.last_board_imu_timestamp_ms = 997,
-		.last_baro_timestamp_ms = 980,
-		.last_mag_timestamp_ms = 995,
-
-		.last_ad_accel_timestamp_ms = 997,
-		.last_ad_gyro_timestamp_ms = 997,
-
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
-
-		.last_motor_encoder_timestamp_ms = 996
-	};
-
-	// Run the function under test with loop_count = 1
-	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
-
-	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
-
-	// Verify IMU read calls were made
-	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
-	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
-	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_accel_data_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
-	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
-
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
-
-	// TODO: verify data
-
-	// Verify new flags
-	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.board_meas.board_baro.is_new);
-
-	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
-	EXPECT_TRUE(output.motor_encoder_meas.is_new);
-
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
-}
-
-// Test successful run with all IMUs working
-TEST_F(SensorHandlerTest, GetFreshMeasNotNewMagMTI) {
-
-	g_mti_get_return_val.data.acc_timestamp_ms = 999;
-	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
-	g_mti_get_return_val.data.mag_timestamp_ms = 997;
-	g_mti_get_return_val.data.pres_timestamp_ms = 999;
-	g_mti_get_return_val.data.temp_timestamp_ms = 999;
-	g_mti_get_return_val.data.is_dead = false;
-	g_mti_get_return_val.return_val = W_SUCCESS;
-
-    // set up output ptr
-	all_sensors_data_t output = {0};
-	sensor_handler_ctx_t ctx = {
-		.last_board_imu_timestamp_ms = 997,
-		.last_baro_timestamp_ms = 980,
-		.last_mag_timestamp_ms = 995,
-
-		.last_ad_accel_timestamp_ms = 997,
-		.last_ad_gyro_timestamp_ms = 997,
-
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
-
-		.last_motor_encoder_timestamp_ms = 996
-	};
-
-	// Run the function under test with loop_count = 1
-	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
-
-	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
-
-	// Verify IMU read calls were made
-	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
-	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
-	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_accel_data_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
-	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
-
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
-
-	// TODO: verify data
-
-	// Verify new flags
-	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.board_meas.board_baro.is_new);
-
-	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
-	EXPECT_TRUE(output.motor_encoder_meas.is_new);
-
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
-}
-
-// Test successful run with all IMUs working
-TEST_F(SensorHandlerTest, GetFreshMeasNotNewOtherMTI) {
-
-	g_mti_get_return_val.data.acc_timestamp_ms = 999;
-	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.quaternion_timestamp_ms = 0;
-	g_mti_get_return_val.data.mag_timestamp_ms = 999;
-	g_mti_get_return_val.data.pres_timestamp_ms = 999;
-	g_mti_get_return_val.data.temp_timestamp_ms = 0;
-	g_mti_get_return_val.data.is_dead = false;
-	g_mti_get_return_val.return_val = W_SUCCESS;
-
-    // set up output ptr
-	all_sensors_data_t output = {0};
-	sensor_handler_ctx_t ctx = {
-		.last_board_imu_timestamp_ms = 997,
-		.last_baro_timestamp_ms = 980,
-		.last_mag_timestamp_ms = 995,
-
-		.last_ad_accel_timestamp_ms = 997,
-		.last_ad_gyro_timestamp_ms = 997,
-
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
-
-		.last_motor_encoder_timestamp_ms = 996
-	};
-
-	// Run the function under test with loop_count = 1
-	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
-
-	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
-
-	// Verify IMU read calls were made
-	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
-	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
-	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_accel_data_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
-	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
-
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
-
-	// TODO: verify data
-
-	// Verify new flags
-	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.board_meas.board_baro.is_new);
-
-	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
-	EXPECT_TRUE(output.motor_encoder_meas.is_new);
-
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
-}
-
-// Test successful run with all IMUs working
-TEST_F(SensorHandlerTest, GetFreshMeasGetFailMTI) {
-
-	g_mti_get_return_val.data.acc_timestamp_ms = 999;
-	g_mti_get_return_val.data.gyr_timestamp_ms = 999;
-	g_mti_get_return_val.data.quaternion_timestamp_ms = 999;
-	g_mti_get_return_val.data.mag_timestamp_ms = 999;
-	g_mti_get_return_val.data.pres_timestamp_ms = 999;
-	g_mti_get_return_val.data.temp_timestamp_ms = 999;
-	g_mti_get_return_val.data.is_dead = false;
-	g_mti_get_return_val.return_val = W_FAILURE;
-
-    // set up output ptr
-	all_sensors_data_t output = {0};
-	sensor_handler_ctx_t ctx = {
-		.last_board_imu_timestamp_ms = 997,
-		.last_baro_timestamp_ms = 980,
-		.last_mag_timestamp_ms = 995,
-
-		.last_ad_accel_timestamp_ms = 997,
-		.last_ad_gyro_timestamp_ms = 997,
-
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
-
-		.last_motor_encoder_timestamp_ms = 996
-	};
-
-	// Run the function under test with loop_count = 1
-	w_status_t result = sensor_handler_get_fresh_meas(&ctx, &output);
-
-	// Verify function returned success
-	EXPECT_EQ(W_SUCCESS, result);
-
-	// Verify IMU read calls were made
-	EXPECT_EQ(1, lsm6dsv32x_get_gyro_acc_data_fake.call_count);
-	EXPECT_EQ(1, iis2mdc_get_data_fake.call_count);
-	EXPECT_EQ(1, ms5611_get_raw_pressure_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_accel_data_fake.call_count);
-	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
-	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
-
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
-
-	// TODO: verify data
-
-	// Verify new flags
-	EXPECT_TRUE(output.board_meas.board_imu.is_new);
-	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.board_meas.board_baro.is_new);
-
-	EXPECT_FALSE(output.ad_meas.ad_accel.is_new); // descoped: forced not-new
-	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
-	EXPECT_TRUE(output.motor_encoder_meas.is_new);
-
-	EXPECT_FALSE(output.mti_meas.mti_accel.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1148,10 +621,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaro) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -1170,7 +639,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaro) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -1179,10 +647,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewBaro) {
 	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_FALSE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1201,10 +665,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailBaro) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -1223,7 +683,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailBaro) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -1232,10 +691,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailBaro) {
 	EXPECT_FALSE(output.board_meas.board_mag.is_new); // descoped: forced not-new
 	EXPECT_FALSE(output.board_meas.board_baro.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1254,10 +709,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADAccel) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -1276,7 +727,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADAccel) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -1289,10 +739,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADAccel) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1311,10 +757,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADAccel) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -1333,7 +775,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADAccel) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -1346,10 +787,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADAccel) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1368,10 +805,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADGyro) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -1390,7 +823,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADGyro) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -1403,10 +835,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewADGyro) {
 	EXPECT_FALSE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1425,10 +853,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADGyro) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -1447,7 +871,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADGyro) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -1460,10 +883,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailADGyro) {
 	EXPECT_FALSE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1483,10 +902,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMotorEncoder) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -1505,7 +920,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMotorEncoder) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -1518,10 +932,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasNotNewMotorEncoder) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_FALSE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Test successful run with all IMUs working
@@ -1541,10 +951,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 		.last_ad_accel_timestamp_ms = 997,
 		.last_ad_gyro_timestamp_ms = 997,
 
-		.last_mti_acc_timestamp_ms = 997,
-		.last_mti_gyr_timestamp_ms = 997,
-		.last_mti_mag_timestamp_ms = 997,
-		.last_mti_pres_timestamp_ms = 997,
 
 		.last_motor_encoder_timestamp_ms = 996
 	};
@@ -1563,7 +969,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 	// TODO: verify data
 
@@ -1576,10 +981,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 	EXPECT_FALSE(output.motor_encoder_meas.is_new);
 
-	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // TODO: consider what to do
@@ -1600,10 +1001,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 // 		.last_ad_accel_timestamp_ms = 997,
 // 		.last_ad_gyro_timestamp_ms = 997,
 
-// 		.last_mti_acc_timestamp_ms = 997,
-// 		.last_mti_gyr_timestamp_ms = 997,
-// 		.last_mti_mag_timestamp_ms = 997,
-// 		.last_mti_pres_timestamp_ms = 997
 // 	};
 
 // 	// Run the function under test with loop_count = 1
@@ -1620,7 +1017,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 // 	EXPECT_EQ(1, ad_breakout_board_get_gyro_data_fake.call_count);
 // 	EXPECT_EQ(1, ak45_get_latest_feedback_fake.call_count);
 
-// 	EXPECT_EQ(1, movella_get_data_fake.call_count);
 
 // 	// TODO: verify data
 
@@ -1633,10 +1029,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailMotorEncoder) {
 // 	EXPECT_TRUE(output.ad_meas.ad_gyro.is_new);
 // 	EXPECT_TRUE(output.motor_encoder_meas.is_new);
 
-// 	EXPECT_TRUE(output.mti_meas.mti_accel.is_new);
-// 	EXPECT_TRUE(output.mti_meas.mti_gyro.is_new);
-// 	EXPECT_TRUE(output.mti_meas.mti_baro.is_new);
-// 	EXPECT_TRUE(output.mti_meas.mti_mag.is_new);
 // }
 
 TEST_F(SensorHandlerTest, GetFreshMeasWithInvalidPtrOutput) {
@@ -1645,7 +1037,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasWithInvalidPtrOutput) {
 	lsm6dsv32x_get_gyro_acc_data_fake.return_val = W_SUCCESS;
 	iis2mdc_get_data_fake.return_val = W_SUCCESS;
 
-	movella_get_data_fake.return_val = W_SUCCESS;
 
 	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
 
@@ -1667,7 +1058,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasWithInvalidPtrCtx) {
 	lsm6dsv32x_get_gyro_acc_data_fake.return_val = W_SUCCESS;
 	iis2mdc_get_data_fake.return_val = W_SUCCESS;
 
-	movella_get_data_fake.return_val = W_SUCCESS;
 
 	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
 
@@ -1691,7 +1081,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailWithTimerFail) {
 	lsm6dsv32x_get_gyro_acc_data_fake.return_val = W_SUCCESS;
 	iis2mdc_get_data_fake.return_val = W_SUCCESS;
 
-	movella_get_data_fake.return_val = W_SUCCESS;
 
 	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
 
@@ -1710,10 +1099,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailWithTimerFail) {
 	EXPECT_FALSE(output.board_meas.board_imu.is_new);
 	EXPECT_FALSE(output.board_meas.board_mag.is_new);
 
-	EXPECT_FALSE(output.mti_meas.mti_accel.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_gyro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_baro.is_new);
-	EXPECT_FALSE(output.mti_meas.mti_mag.is_new);
 }
 
 // Revive once this has been reimplmented
@@ -1730,7 +1115,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailWithTimerFail) {
 // 	altimu_get_gyro_acc_data_fake.custom_fake = altimu_get_gyro_acc_data_success;
 // 	altimu_get_mag_data_fake.custom_fake = altimu_get_mag_data_success;
 // 	altimu_get_baro_data_fake.custom_fake = altimu_get_baro_data_success;
-// 	movella_get_data_fake.custom_fake = movella_get_data_success;
 
 // 	timer_get_ms_fake.custom_fake = timer_get_ms_custom_fake;
 // 	estimator_update_imu_data_fake.custom_fake = estimator_update_capture;
@@ -1769,7 +1153,6 @@ TEST_F(SensorHandlerTest, GetFreshMeasFailWithTimerFail) {
 // 	altimu_get_gyro_acc_data_fake.custom_fake = altimu_get_gyro_acc_data_success;
 // 	altimu_get_mag_data_fake.custom_fake = altimu_get_mag_data_success;
 // 	altimu_get_baro_data_fake.custom_fake = altimu_get_baro_data_success;
-// 	movella_get_data_fake.custom_fake = movella_get_data_success;
 
 // 	build_imu_data_msg_fake.return_val = true; // Simulate successful CAN message build
 // 	build_baro_data_msg_fake.return_val = true; // Simulate successful CAN message build

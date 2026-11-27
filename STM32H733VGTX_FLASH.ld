@@ -155,7 +155,7 @@ SECTIONS
 
   /* Uninitialized data section */
   . = ALIGN(4);
-  .ramd1_bss :
+  .ramd1_bss (NOLOAD):
   {
     /* This is used by the startup in order to initialize the .bss section */
     _sramd1_bss = .;         /* define a global symbol at bss start */
