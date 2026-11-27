@@ -14,3 +14,7 @@ DEFINE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_SD_GetCardInfo, SD_HandleTypeDef *
                        HAL_SD_CardInfoTypeDef *);
 DEFINE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_SD_GetCardStatus, SD_HandleTypeDef *,
                        HAL_SD_CardStatusTypeDef *);
+DEFINE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_SD_ConfigSpeedBusOperation, SD_HandleTypeDef *,
+                       uint32_t);
+DEFINE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_SD_ConfigWideBusOperation, SD_HandleTypeDef *,
+                       uint32_t);

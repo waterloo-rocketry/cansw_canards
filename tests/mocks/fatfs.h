@@ -16,8 +16,28 @@ typedef enum {
 	// etc...
 } HAL_SD_CardStateTypeDef;
 
+// SDMMC bus speed modes (values from stm32h7xx_ll_sdmmc.h)
+#define SDMMC_SPEED_MODE_AUTO ((uint32_t)0x00000000U)
+#define SDMMC_SPEED_MODE_DEFAULT ((uint32_t)0x00000001U)
+#define SDMMC_SPEED_MODE_HIGH ((uint32_t)0x00000002U)
+
+// SDMMC bus widths (values from stm32h7xx_ll_sdmmc.h)
+#define SDMMC_BUS_WIDE_1B ((uint32_t)0x00000000U)
+#define SDMMC_BUS_WIDE_4B ((uint32_t)0x00004000U)
+#define SDMMC_BUS_WIDE_8B ((uint32_t)0x00008000U)
+
+// Same fields as the real SDMMC_InitTypeDef
+typedef struct {
+	uint32_t ClockEdge;
+	uint32_t ClockPowerSave;
+	uint32_t BusWide;
+	uint32_t HardwareFlowControl;
+	uint32_t ClockDiv;
+} SD_InitTypeDef;
+
 typedef struct {
 	uint32_t dummy; // Dummy member for mock struct
+	SD_InitTypeDef Init;
 	uint32_t ErrorCode;
 	HAL_SD_CardInfoTypeDef SdCard;
 } SD_HandleTypeDef;
@@ -73,5 +93,9 @@ DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_SD_GetCardInfo, SD_HandleTypeDef 
                         HAL_SD_CardInfoTypeDef *);
 DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_SD_GetCardStatus, SD_HandleTypeDef *,
                         HAL_SD_CardStatusTypeDef *);
+DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_SD_ConfigSpeedBusOperation, SD_HandleTypeDef *,
+                        uint32_t);
+DECLARE_FAKE_VALUE_FUNC(HAL_StatusTypeDef, HAL_SD_ConfigWideBusOperation, SD_HandleTypeDef *,
+                        uint32_t);
 
 #endif // FATFS_MOCK_H

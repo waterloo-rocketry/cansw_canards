@@ -490,8 +490,7 @@ w_status_t raw_logger_SD_write(const uint8_t *buffer, uint64_t byte_address, uin
 		return W_IO_TIMEOUT;
 	}
 
-	if (RAW_ERROR_OCCURRED == action_state) {
-		raw_sd_card_health.write_error++;
+	if (RAW_READY != action_state) {
 		xSemaphoreGive(sd_mutex);
 		log_text(0, LOG_LVL_WARN, "RAW", "Write failed.");
 		return W_FAILURE;

@@ -17,7 +17,9 @@ FAKE_VALUE_FUNC(w_status_t, timer_get_ms, uint32_t *);
 FAKE_VALUE_FUNC_VARARG(w_status_t, log_text, uint32_t, log_level_t, const char *, const char *,
                        ...);
 
-// For accessing and changing static variables sigh
+// Compile the driver directly into this test so the tests can read and reset its
+// static variables (sd_mutex, action_state, task_handler, raw_logger_handle).
+// raw_logger.c must NOT also be listed as a source of test_raw_logger in CMake.
 #include "drivers/raw_logger/raw_logger.c"
 }
 
@@ -45,6 +47,13 @@ static HAL_StatusTypeDef fake_get_card_status(SD_HandleTypeDef *,
 	return HAL_OK;
 }
 
+// On the real board, the DMA-complete interrupt calls HAL_SD_RxCpltCallback /
+// HAL_SD_TxCpltCallback while the driver is blocked in ulTaskNotifyTakeIndexed.
+// Nothing fires interrupts in a unit test, so this fake runs the callback itself.
+// The driver calls ulTaskNotifyTakeIndexed twice per transfer:
+//   1. with 0 ticks, to clear any stale notification before starting DMA
+//   2. with a real timeout, to wait for the DMA to finish
+// The return value is how many notifications were received (0 = timed out).
 static uint32_t fake_notify_dma_complete(UBaseType_t, BaseType_t, TickType_t ticks) {
 	if (0U == ticks) {
 		return 0U; // call 1: nothing pending
@@ -86,6 +95,8 @@ protected:
 		RESET_FAKE(HAL_SD_ReadBlocks_DMA);
 		RESET_FAKE(HAL_SD_WriteBlocks_DMA);
 		RESET_FAKE(HAL_SD_Abort);
+		RESET_FAKE(HAL_SD_ConfigSpeedBusOperation);
+		RESET_FAKE(HAL_SD_ConfigWideBusOperation);
 		RESET_FAKE(log_text);
 		FFF_RESET_HISTORY();
 
@@ -98,6 +109,8 @@ protected:
 		HAL_SD_GetCardStatus_fake.custom_fake = fake_get_card_status;
 		HAL_SD_ReadBlocks_DMA_fake.return_val = HAL_OK;
 		HAL_SD_WriteBlocks_DMA_fake.return_val = HAL_OK;
+		HAL_SD_ConfigSpeedBusOperation_fake.return_val = HAL_OK;
+		HAL_SD_ConfigWideBusOperation_fake.return_val = HAL_OK;
 		ulTaskNotifyTakeIndexed_fake.custom_fake = fake_notify_dma_complete;
 		timer_get_ms_fake.return_val = W_SUCCESS;
 
@@ -194,7 +207,7 @@ TEST_F(RawSDTest, IndexTakeFail) {
 	raw_logger_SD_init(&hsd);
 
 	EXPECT_EQ(raw_logger_SD_read(buffer, BLOCKSIZE, BLOCKSIZE, 200), W_IO_TIMEOUT);
-	EXPECT_EQ(action_state, RAW_RECOVERING);
+	EXPECT_EQ(action_state, RAW_ERROR_OCCURRED);
 	EXPECT_EQ(HAL_SD_Abort_fake.call_count, 1U);
 
 	EXPECT_EQ(raw_logger_SD_write(buffer, BLOCKSIZE, BLOCKSIZE, 200), W_IO_TIMEOUT);
@@ -226,7 +239,8 @@ TEST_F(RawSDTest, ReadDMAErrorCallback) {
 
 	EXPECT_EQ(raw_logger_SD_read(buffer, BLOCKSIZE, BLOCKSIZE, 200), W_FAILURE);
 	EXPECT_EQ(raw_sd_card_health.read_error, 1U);
-	EXPECT_EQ(action_state, RAW_READY); // driver recovers for the next call
+	// Driver stays in the error state; the next read/write clears it
+	EXPECT_EQ(action_state, RAW_ERROR_OCCURRED);
 }
 
 TEST_F(RawSDTest, WriteDMAErrorCallback) {
@@ -236,5 +250,5 @@ TEST_F(RawSDTest, WriteDMAErrorCallback) {
 
 	EXPECT_EQ(raw_logger_SD_write(buffer, BLOCKSIZE, BLOCKSIZE, 200), W_FAILURE);
 	EXPECT_EQ(raw_sd_card_health.write_error, 1U);
-	EXPECT_EQ(action_state, RAW_READY);
+	EXPECT_EQ(action_state, RAW_ERROR_OCCURRED);
 }

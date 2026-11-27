@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <inttypes.h> // included first so the .c's copy isn't pulled in inside extern "C"
 #include <string.h>
+#include <vector>
 
 extern "C" {
 #include "FreeRTOS.h"
@@ -30,8 +31,8 @@ DEFINE_FFF_GLOBALS;
 #define TOTAL_CHUNKS 100U // pretend card size, in chunks
 #define PAYLOAD_SIZE (CHUNK_SIZE - FORMATTER_HEADER_SIZE - FORMATTER_CRC_SIZE)
 
-// Chunks 1 to last_chunk-1 are written to
-static uint64_t last_chunk;
+// Chunks 1 .. g_first_empty_chunk-1 already hold data; everything after is blank.
+static uint64_t g_first_empty_chunk;
 
 // raw_logger_SD_read fills a buffer through a pointer, so it needs a custom fake.
 static w_status_t fake_card_read(uint8_t *buffer, uint64_t byte_address, uint32_t num_bytes,
@@ -39,7 +40,7 @@ static w_status_t fake_card_read(uint8_t *buffer, uint64_t byte_address, uint32_
 	memset(buffer, 0, num_bytes);
 
 	uint64_t chunk = byte_address / CHUNK_SIZE;
-	if ((chunk >= 1U) && (chunk < last_chunk)) {
+	if ((chunk >= 1U) && (chunk < g_first_empty_chunk)) {
 		memcpy(buffer, HEADER, 4); // written chunk: non-zero header, file identifier 0
 	}
 	return W_SUCCESS;
@@ -54,7 +55,7 @@ static w_status_t fake_get_specs(uint64_t *block_count, uint32_t *erase_size, ui
 class FormatterTest : public ::testing::Test {
 protected:
 	SD_HandleTypeDef hsd;
-	uint8_t payload[PAYLOAD_SIZE];
+	std::vector<uint8_t> payload = std::vector<uint8_t>(PAYLOAD_SIZE, 0xab);
 	formatter_file_ctx_t ctx;
 
 	void SetUp() override {
@@ -68,8 +69,7 @@ protected:
 		FFF_RESET_HISTORY();
 
 		// Default: blank card, everything succeeds
-		memset(payload, 0xab, sizeof(payload));
-		last_chunk = 1;
+		g_first_empty_chunk = 1;
 		raw_logger_SD_init_fake.return_val = W_SUCCESS;
 		raw_logger_SD_read_fake.custom_fake = fake_card_read;
 		raw_logger_SD_write_fake.return_val = W_SUCCESS;
@@ -96,7 +96,7 @@ TEST_F(FormatterTest, InitBlankCardSuccess) {
 }
 
 TEST_F(FormatterTest, InitUsedCardSuccess) {
-	last_chunk = 37;
+	g_first_empty_chunk = 37;
 
 	EXPECT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
 	EXPECT_EQ(formatter_buffer.chunk, 37U); // binary search found the first blank chunk
@@ -114,7 +114,7 @@ TEST_F(FormatterTest, WriteSuccess) {
 	ASSERT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
 	ASSERT_EQ(logging_formatter_create_file(&ctx, LOGGING_FORMATTING_DATA), W_SUCCESS);
 
-	EXPECT_EQ(logging_formatter_write(payload, PAYLOAD_SIZE, &ctx), W_SUCCESS);
+	EXPECT_EQ(logging_formatter_write(payload.data(), PAYLOAD_SIZE, &ctx), W_SUCCESS);
 
 	// One full chunk written to chunk 1
 	EXPECT_EQ(raw_logger_SD_write_fake.call_count, 1U);
@@ -124,7 +124,7 @@ TEST_F(FormatterTest, WriteSuccess) {
 	// Header first, then the payload
 	const uint8_t *chunk = raw_logger_SD_write_fake.arg0_val;
 	EXPECT_EQ(memcmp(chunk, HEADER, 4), 0);
-	EXPECT_EQ(memcmp(&chunk[FORMATTER_HEADER_SIZE], payload, PAYLOAD_SIZE), 0);
+	EXPECT_EQ(memcmp(&chunk[FORMATTER_HEADER_SIZE], payload.data(), PAYLOAD_SIZE), 0);
 
 	// Next write goes to the next chunk
 	EXPECT_EQ(ctx.chunk_count, 1U);
