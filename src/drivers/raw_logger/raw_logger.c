@@ -32,8 +32,8 @@ raw_sd_card_health_t raw_sd_card_health = {0};
  * @brief Action state enumerations
  *
  * RAW_ERROR_OCCURED is entered when an operation times out or the driver can no
- * longer safely continue normal operation. After the max consecutive errors have been reached, new read/writes are rejected
- * until recovery restores the driver to RAW_READY.
+ * longer safely continue normal operation. After the max consecutive errors have been reached, new
+ * read/writes are rejected until recovery restores the driver to RAW_READY.
  *
  * However, this does not guarantee that recovery is currently running
  * or that an outstanding DMA transfer has stopped.
@@ -43,7 +43,7 @@ typedef enum {
 	RAW_WRITING,
 	RAW_READING,
 	RAW_ERROR_OCCURRED,
-	RAW_READY,
+	RAW_READY
 } raw_logger_action_status_t;
 
 static SD_HandleTypeDef *raw_logger_handle = NULL;
@@ -73,9 +73,9 @@ w_status_t raw_logger_SD_init(SD_HandleTypeDef *p_sd_handle) {
 
 	raw_logger_handle = p_sd_handle;
 
-	HAL_SD_ConfigSpeedBusOperation(p_sd_handle, SDMMC_SPEED_MODE_HIGH); 
-	raw_logger_handle->Init.ClockDiv = 1; 
-	HAL_SD_ConfigWideBusOperation(p_sd_handle, (uint32_t)raw_logger_handle->Init.BusWide); 
+	HAL_SD_ConfigSpeedBusOperation(p_sd_handle, SDMMC_SPEED_MODE_HIGH);
+	raw_logger_handle->Init.ClockDiv = 1;
+	HAL_SD_ConfigWideBusOperation(p_sd_handle, (uint32_t)raw_logger_handle->Init.BusWide);
 
 	action_state = RAW_READY;
 

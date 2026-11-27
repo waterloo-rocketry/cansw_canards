@@ -22,6 +22,10 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
+#include "application/hil/hil.h"
+
+#include "main.h"
+#include "stm32h7xx_hal.h"
 
 /* USER CODE END INCLUDE */
 
@@ -245,6 +249,8 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   return (USBD_OK);
   /* USER CODE END 10 */
 }
+
+extern bool done_sys_init;
 
 /**
   * @brief Data received over USB OUT endpoint are sent over CDC interface

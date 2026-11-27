@@ -155,7 +155,7 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 			chunk_num = lo + (hi - lo) / 2;
 			if (raw_logger_SD_read(init_buffer, chunk_num * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) !=
 			    W_SUCCESS) {
-				log_text(0, LOG_LVL_WARN, "FORMAT", "Read failed during initialization.");				
+				log_text(0, LOG_LVL_WARN, "FORMAT", "Read failed during initialization.");
 				return W_FAILURE;
 			}
 
