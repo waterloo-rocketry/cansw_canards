@@ -7,7 +7,11 @@ Two Python scripts for working with SD cards written raw by the logging firmware
 | `sd_extract.py` | Reads the card, checks each 32 KiB chunk's header and CRC, and rebuilds the logged files. Read-only. |
 | `sd_erase.py` | Overwrites every chunk that contains data with zeros, so the card is ready for a new flight. **Destroys data.** |
 
-Both need only Python 3 (no extra packages) and must be run with `sudo`, because they open the raw device.
+Both need only Python 3 (no extra packages) and work on macOS, Windows and Linux. They open the card as a raw device, so they must run with admin rights: `sudo` on macOS and Linux, an Administrator terminal on Windows.
+
+Jump to: [macOS](#before-you-start-macos) · [Windows](#windows) · [Linux](#linux)
+
+The examples below use macOS device names. On Windows, use `\\.\PhysicalDriveN` instead of `/dev/rdiskN` and drop `sudo` (see [Windows](#windows)).
 
 ---
 
@@ -163,6 +167,69 @@ The last line says `erased`, or `would erase` for a dry run. To confirm the card
 | Erase reports `scanned 0.00 GiB` | The device couldn't be read: wrong path, or the card isn't inserted |
 | Card won't erase | Check the lock switch on the side of the SD card or microSD adapter |
 | Want to use the card as normal storage again | In Disk Utility, erase it as MS-DOS (FAT) for 32 GB and under, or ExFAT for larger cards |
+
+## Windows
+
+### 1. Insert the card
+
+Windows may say **"You need to format the disk in drive X: before you can use it."** Click **Cancel**. Formatting would write a new filesystem over the logs.
+
+### 2. Open an Administrator terminal
+
+Right-click **PowerShell** (or **Terminal**) in the Start menu and choose **Run as administrator**. There is no `sudo` on Windows; the scripts need this instead. Run them with `python` (or `py` if `python` isn't found).
+
+### 3. Find the card's disk number
+
+```
+Get-Disk
+```
+
+Look for the disk whose size matches the card. The **Bus Type** is `SD` for a built-in card slot or `USB` for a USB card reader. The PC's own drive is usually disk 0 with Bus Type `NVMe`, `SATA` or `RAID`, and is marked as the boot disk. **Never use the boot disk.**
+
+If disk 2 is the card, its raw device path is `\\.\PhysicalDrive2`. Disk numbers can change when the card is re-inserted, so check each time.
+
+### 4. Extract logs
+
+Reading works without any extra steps:
+
+```
+python $HOME\Downloads\sd_extract.py \\.\PhysicalDrive2 -o sd_files
+```
+
+### 5. Erase the card
+
+Windows does not let programs write to the part of a disk that holds a mounted volume (a drive letter). A card that has never been formatted, or that has only logger data on it, has no volume, so you can run the erase directly:
+
+```
+python $HOME\Downloads\sd_erase.py \\.\PhysicalDrive2 --dry-run
+python $HOME\Downloads\sd_erase.py \\.\PhysicalDrive2
+```
+
+If the card has a drive letter, or the erase fails with `Permission denied` or `Access is denied`, remove its volume first with `diskpart`:
+
+```
+diskpart
+list disk
+select disk 2
+clean
+exit
+```
+
+Check `select disk` uses the card's number from `list disk`: `clean` wipes the partition table of whichever disk is selected. Then run `sd_erase.py` again.
+
+`clean all` in diskpart zeroes the entire card and is an alternative to `sd_erase.py`, but it writes every byte, so it is much slower on a large card.
+
+### Windows troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `Permission denied` when opening the card | The terminal isn't running as Administrator |
+| `Access is denied` or `Permission denied` during the erase | The card has a mounted volume; run `diskpart` → `select disk N` → `clean` (above) |
+| `python` is not recognized | Use `py`, or install Python from python.org and tick **Add Python to PATH** |
+| `can't open file ...sd_extract.py` | Give the full path, e.g. `$HOME\Downloads\sd_extract.py` |
+| Formatting prompt every time the card is inserted | Expected while the card has no filesystem; click **Cancel** |
+
+---
 
 ## Linux
 
