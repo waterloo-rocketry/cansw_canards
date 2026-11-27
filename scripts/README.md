@@ -83,10 +83,14 @@ file_<identifier>_<TYPE>.bin     (DATA and ERROR)
 file_<identifier>_<TYPE>.txt     (TEXT, with trailing zero padding removed)
 ```
 
+**DATA files keep records aligned.** Each DATA payload holds 1023 whole 32-byte records (32736 bytes) followed by 20 bytes of padding. The script drops that padding from every chunk, so a DATA file is one continuous run of 32-byte records that a parser can read at a fixed 32-byte stride. If the record size changes in the firmware, pass the new size with `--data-record-size`. ERROR payloads are written as they are.
+
 At the end the script prints a summary:
 
 ```
-Read 40 chunks (from chunk 1): 8 good, 0 bad CRC, 0 wrong header, 32 blank
+Card size: 15931539456 bytes (14.84 GiB)
+
+Read 40 chunks (from chunk 1, stopped after 32 blank chunks in a row): 8 good, 0 bad CRC, 0 wrong header, 32 blank
 
 Writing 1 file(s) to sd_files/
   file_0000_TEXT.txt               8 chunk(s)      12345 bytes
@@ -94,11 +98,24 @@ Writing 1 file(s) to sd_files/
 
 A file is flagged with `<-- missing index [...]` if some of its chunks were not found or failed the CRC.
 
+**Memory use stays small on large cards.** The first pass only records where each chunk is on the card. The second pass re-reads the chunks one at a time to write the files, and checks each CRC again; if a chunk that passed the first time fails the second, the card is returning inconsistent data and the script stops with an error.
+
+### Exit status
+
+| Code | Meaning |
+|---|---|
+| `0` | Everything was read and extracted cleanly |
+| `1` | Error: the card couldn't be opened or read, the read stopped before the end of the card, or an output file couldn't be written. Any files written may be incomplete |
+| `2` | Extraction finished, but some chunks failed the CRC or had an unknown header, a chunk index appeared twice, or a file has missing chunks |
+
+The script finds the card's exact size first, so a read error partway through the card is always reported as an error and never mistaken for the end of the card. Stopping after `--stop-after-blank` blank chunks is intended and doesn't count as an error.
+
 ### Options
 
 | Option | Default | Meaning |
 |---|---|---|
 | `-o DIR`, `--out DIR` | `sd_files` | Output folder |
+| `--data-record-size N` | `32` | Size of one DATA record. Each DATA payload is trimmed to whole records. `0` keeps the full payload, padding included |
 | `--keep-bad` | off | Also include chunks that fail the CRC |
 | `--stop-after-blank N` | `32` | Stop after N blank chunks in a row (1 MiB). `0` reads the whole card |
 | `--crc-start N` | `0` | First byte the CRC covers. Use `10` for cards written by older firmware that CRC'd the payload only |
@@ -141,7 +158,9 @@ Then erase:
 sudo python3 sd_erase.py /dev/rdisk4
 ```
 
-It asks you to type the device path again to confirm. It scans the card in 1 MiB pieces and overwrites with zeros only the pieces that contain data; pieces that are already all `0x00` or all `0xFF` are skipped. It works on the raw device, so it also removes any partition table or filesystem.
+It asks you to type the device path again to confirm. It scans the card in 1 MiB pieces and overwrites with zeros every piece that isn't already all zeros. It works on the raw device, so it also removes any partition table or filesystem.
+
+**After an erase, the card reads as all `0x00`.** That's what the firmware treats as blank: when it boots, it looks for the first all-zero chunk to start logging. Some cards read as all `0xFF` after a hardware erase, and the firmware would treat those areas as already written, so the erase tool zeroes them too. On a card like that the first erase writes the whole card and takes longer.
 
 ### Options
 
@@ -149,11 +168,20 @@ It asks you to type the device path again to confirm. It scans the card in 1 MiB
 |---|---|
 | `--dry-run` | Report how much would be erased, without writing |
 | `--yes` | Skip the confirmation prompt |
-| `--stop-after-blank MB` | Stop after MB blank MiB in a row instead of scanning the whole card. Faster, but only safe if all data is at the start of the card |
+| `--stop-after-blank MB` | Stop after MB all-zero MiB in a row instead of scanning the whole card. Faster, but only safe if all data is at the start of the card |
 
 Erase the whole card (no `--stop-after-blank`) the first time a card is used for logging. Leftover data anywhere on the card can confuse the firmware's search for the first free chunk.
 
-The last line says `erased`, or `would erase` for a dry run. To confirm the card is blank, run `sd_extract.py` on it: it should report 0 good chunks and no files.
+### Exit status
+
+| Code | Meaning |
+|---|---|
+| `0` | The erase (or dry run) covered the whole card, or stopped as requested by `--stop-after-blank` |
+| `1` | Error: the card couldn't be opened, read, written or flushed, or you didn't confirm the erase. **The card may be only partly erased**; fix the problem and run it again |
+
+Like the extractor, it finds the card's size first, so a read error partway through is reported as an error and not as the end of the card.
+
+The last line says `erased` or `would erase`, and whether the whole card was scanned. To confirm the card is blank, run `sd_extract.py` on it: it should report 0 good chunks and no files.
 
 ---
 
