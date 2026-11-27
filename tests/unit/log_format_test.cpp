@@ -94,6 +94,8 @@ TEST_F(FormatterTest, WriteSuccess) {
 	ASSERT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
 	ASSERT_EQ(logging_formatter_create_file(&ctx, LOGGING_FORMATTING_DATA), W_SUCCESS);
 
+	logging_formatter_health.max_chunk = TOTAL_CHUNKS;
+
 	EXPECT_EQ(logging_formatter_write(payload, PAYLOAD_SIZE, &ctx), W_SUCCESS);
 
 	// One full chunk written to chunk 1

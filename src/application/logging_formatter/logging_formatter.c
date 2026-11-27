@@ -293,6 +293,8 @@ w_status_t logging_formatter_write(const uint8_t *buffer, uint32_t buffer_length
 			(float32_t)((int32_t)(percent * 10000.0F)) / 100.0F;
 	}
 
+	formatter_buffer.chunk += 1;
+
 	return W_SUCCESS;
 }
 
