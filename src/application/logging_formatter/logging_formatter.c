@@ -21,6 +21,7 @@ typedef struct {
 	uint32_t data_writes;
 	uint32_t error_writes;
 	uint32_t text_writes;
+	uint32_t max_chunk;
 } logging_formatter_health_t;
 
 typedef struct {
@@ -39,8 +40,6 @@ static const uint8_t HEADER[4] = {67, 107, 207, 255};
 static uint64_t chunk_num = 0;
 
 static uint16_t crc16_table[256];
-
-static uint32_t chunk_hi = 0;
 
 w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
                                          logging_formatter_data_type_t type) {
@@ -136,7 +135,7 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 		chunk_num = (block_count / BLOCKS_PER_CHUNK);
 		uint64_t lo = 2;
 		uint64_t hi = chunk_num;
-		chunk_hi = hi;
+		logging_formatter_health.max_chunk = hi;
 
 		if (raw_logger_SD_read(init_buffer, hi * CHUNK_SIZE, BLOCKSIZE, TIMEOUT_MS) != W_SUCCESS) {
 			return W_FAILURE;
@@ -278,7 +277,7 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 			break;
 	}
 
-	if (formatter_buffer.chunk == chunk_hi) {
+	if (formatter_buffer.chunk == logging_formatter_health.max_chunk) {
 		logging_formatter_health.card_full = true;
 	}
 
@@ -309,12 +308,12 @@ health_status_t logging_formatter_get_status(void) {
 	}
 
 	// Log operation statistics
-	log_text(0, LOG_LVL_INFO, "formatter", "%s, types_created=" PRIu16, ", writes=%" PRIu32,
-	         ", data writes=%" PRIu32, ", error writes=%" PRIu32, ", text writes=%" PRIu32,
-	         logging_formatter_health.is_init ? "init" : "not init",
-	         logging_formatter_health.types_created, logging_formatter_health.write_count,
-	         logging_formatter_health.data_writes, logging_formatter_health.error_writes,
-	         logging_formatter_health.text_writes);
+	log_text(0, LOG_LVL_INFO, "formatter", "%s, max chunk=" PRIu32, "types_created=" PRIu16,
+	         ", writes=%" PRIu32, ", data writes=%" PRIu32, ", error writes=%" PRIu32,
+	         ", text writes=%" PRIu32, logging_formatter_health.is_init ? "init" : "not init",
+	         logging_formatter_health.max_chunk, logging_formatter_health.types_created,
+	         logging_formatter_health.write_count, logging_formatter_health.data_writes,
+	         logging_formatter_health.error_writes, logging_formatter_health.text_writes);
 
 	log_text(0, LOG_LVL_INFO, "formatter", ", write_err=%" PRIu32,
 	         logging_formatter_health.write_error);
