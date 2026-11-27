@@ -3,111 +3,121 @@
 
 #include <stdint.h>
 #include "rocketlib.h"
+
 #include "application/can_handler/can_handler.h"
 #include "drivers/timer/timer.h"
 #include "common/math/math.h"
 
-/**
- * @brief Structure to hold GPS position data
- * @note lat_dir is in 'N' or 'S', lon_dir is in 'E' or 'W'
- */
-typedef struct {
-	uint8_t degrees;
-	uint8_t minutes;
-	uint16_t dminutes_h;
-    uint8_t dir;
-} gps_position_data_t;
 
 /**
- * @brief Structure to hold GPS timestamp data
- * @note hours, minutes and seconds are in UTC time
+ * @brief enum for gps direction type sent over CAN in uint8_t
+ * @note for longitude direction it should only be E or W, for latitude direction it should be N or S
+ */
+enum gps_direction_t {
+    N = 78,
+    S = 83,
+    E = 69,
+    W = 87
+};
+
+/**
+ * @brief Structure to hold GPS longitude data
+ * @note lon_dir is 'E' or 'W'
+ */
+typedef struct {
+	uint8_t lon_degrees;
+	uint8_t lon_minutes;
+	uint16_t lon_dminutes_h;
+    gps_direction_t lon_dir;
+} gps_longitude_data_t;
+
+/**
+ * @brief Structure to hold GPS latitude data
+ * @note lat_dir is in 'N' or 'S'
+ */
+typedef struct {
+	uint8_t lat_degrees;
+	uint8_t lat_minutes;
+	uint16_t lat_dminutes_h;
+    gps_direction_t lat_dir;
+} gps_latitude_data_t;
+
+/**
+ * @brief GPS time of day carried by a GPS CAN message.
+ * @note this is the gps' own time not of the canard board
  */
 typedef struct {
     uint8_t utc_hours;
     uint8_t utc_minutes;
     uint8_t utc_seconds;
     uint8_t utc_dseconds;
-} gps_timestamp_data_t;
+} gps_utc_time_t;
 
 
 /** 
- * @brief Initializes the CAN sensor driver and sets up the necessary callbacks for handling incoming CAN messages related to sensors.
+ * @brief Initializes the CAN sensor driver and registers up the necessary callbacks for handling incoming CAN messages related to sensors.
  * @return status of the operation
  */
+w_status_t sgps_can_init(void);
+
 /**
- * @brief Structure to hold GPS timestamp data
- * @note hours, minutes and seconds are in UTC time
- */
-typedef struct {
-    uint8_t utc_hours;
-    uint8_t utc_minutes;
-    uint8_t utc_seconds;
-    uint8_t utc_dseconds;
-} gps_timestamp_data_t;
-
-
-/** 
- * @brief Initializes the CAN sensor driver and sets up the necessary callbacks for handling incoming CAN messages related to sensors.
+ * @brief read the freshest magnetometer vector provided over CAN
+ * @param[out] mag_data outputs the three-axis magnetic-field reading
+ * @param[out] timestamp_ms outputs the timestamp of when we first recived the message over CAN
  * @return status of the operation
  */
-w_status_t can_sensor_init(void);
+w_status_t can_get_IIS2MDC(vector3d_t *mag_data, uint32_t *timestamp_ms);
 
-//------getter functions -------
 /**
- * @brief getter function for the CANARD_IIS2MDC_MAG message, returns the magnetometer readings and timestamp
- * @param mag_data [out] pointer to store the magnetometer readings and timestamp
- * @param timestamp_ms [out] pointer to store the timestamp of the message recieved
+ * @brief reads the latest gps UTC time received over CAN
+ * @param[out] utc_time_data  outputs the GPS UTC time data
+ * @param[out] timestamp_ms  outputs the timestamp of when we first recived the message over CAN
+ * @note the utc_time_data gives out the time from the gps board while the timestamp is the time of the board that this function is running off
  * @return status of the operation
  */
-w_status_t can_get_canard_IIS2MDC_MAG(vector3d_t *mag_data, uint32_t *timestamp_ms);
+w_status_t can_get_gps_utc_time(gps_utc_time_t *utc_time_data, uint32_t *timestamp_ms);
 
 /**
- * @brief getter function for the gps timestamp message
- * @param timestamp_data [out] pointer to store the GPS timestamp data
- * @param timestamp_ms [out] pointer to store the timestamp of the message recieved
+ * @brief read freshest GPS latitude in the degrees/minutes representation of the CAN message
+ * @param[out] latitude outputs latitude in degrees, minutes, deciminutes, and direction
+ * @param[out] timestamp_ms outputs the timestamp of when we first recived the message over CAN
  * @return status of the operation
  */
-w_status_t can_get_gps_timestamp(gps_timestamp_data_t *timestamp_data, uint32_t *timestamp_ms);
+w_status_t can_get_gps_latitude(gps_latitude_data_t *latitude, uint32_t *timestamp_ms);
 
 /**
- * @brief getter function for the gps latitude data
- * @param latitude [out] pointer to store the gps latitude
- * @param timestamp_ms [out] pointer to store the timestamp of the message recieved
+ * @brief read freshest GPS longitude in the degrees/minutes representation of the CAN message
+ * @param[out] longitude outputs longitude in degrees, minutes, deciminutes, and direction
+ * @param[out] timestamp_ms outputs the timestamp of when we first recived the message over CAN
  * @return status of the operation
  */
-w_status_t can_get_gps_latitude(gps_position_data_t *latitude, uint32_t *timestamp_ms);
+w_status_t can_get_gps_longitude(gps_longitude_data_t *longitude, uint32_t *timestamp_ms);
 
 /**
- * @brief getter function for the gps longitude data
- * @param longitude [out] pointer to store the gps longitude  
- * @param timestamp_ms [out] pointer to store the timestamp of the message recieved
- * @return status of the operation
- */
-w_status_t can_get_gps_longitude(gps_position_data_t *longitude, uint32_t *timestamp_ms);
-
-/**
- * @brief getter function for the gps altitude data
- * @param altitude [out] pointer to store the gps altitude
- * @param daltitude [out] pointer to store the gps daltitude
- * @param timestamp_ms [out] pointer to store the timestamp of the message recieved
+ * @brief read freshest GPS altitude in the degrees/minutes representation of the CAN message
+ * @param[out] altitude outputs gps altitude
+ * @param[out] daltitude  outputs the gps deci-altitude
+ * @param[out] timestamp_ms  outputs the timestamp of when we first recived the message over CAN
+ * @note there is lacking documentation on the daltitude data 
  * @return status of the operation
  */
 w_status_t can_get_gps_altitude(uint32_t *altitude, uint8_t *daltitude, uint32_t *timestamp_ms);
 
 /**
- * @brief getter function for the gps info message, returns the number of satellites and quality of the GPS fix
- * @param num_sat [out] pointer to store the number of satellites
- * @param quality [out] pointer to store the quality of the GPS fix
- * @param timestamp_ms [out] pointer to store the timestamp of the message recieved
+ * @brief read freshest gps info received over CAN
+ * @param[out] num_sat  outputs the number of satellites
+ * @param[out] quality outputs the quality of the GPS fix
+ * @param[out] timestamp_ms outputs the timestamp of when we first recived the message over CAN
  * @return status of the operation
  */ 
 w_status_t can_get_gps_info(uint8_t *num_sat, uint8_t *quality, uint32_t *timestamp_ms);
 
 /**
- * @brief getter function for the CANARD_MTI630_BARO message, returns the barometer readings and timestamp
- * @param baro_data [out] pointer to store the barometer readings and timestamp
- * @param timestamp_ms [out] pointer to store the timestamp of the message recieved
+ * @brief read freshest barometric pressure and temperature received over CAN
+ * @param[out] baro_pressure_pa outputs barometer pressure in Pa
+ * @param[out] baro_temp_deg outputs barometer temperature in degrees Celsius
+ * @param[out] timestamp_ms outputs the timestamp of when we first recived the message over CAN
  * @return status of the operation
  */
-w_status_t can_get_ms5611_baro(float32_t *baro_pres_pa, float32_t *baro_temp_deg, uint32_t *timestamp_ms);
+w_status_t can_get_ms5611(float32_t *baro_pressure_pa, float32_t *baro_temp_deg, uint32_t *timestamp_ms);
 #endif
