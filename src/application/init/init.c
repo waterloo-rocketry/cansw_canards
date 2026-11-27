@@ -185,7 +185,7 @@ static void system_init_task(void *arg) {
 	                           256, // TODO: set when sure of size
 	                           NULL, ad_breakout_task_priority, &ad_breakout_task_handle);
 
-	task_status &= xTaskCreate(telemetry_task, "telem module", 336, NULL, telem_task_priority,
+	task_status &= xTaskCreate(telemetry_task, "telem module", 700, NULL, telem_task_priority,
 	                           &telem_task_handle);
 
 	if (task_status != pdTRUE) {

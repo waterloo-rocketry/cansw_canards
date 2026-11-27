@@ -566,11 +566,11 @@ static w_status_t max_rate_accel_log(void) {
 
     log_data_container_t container = EMPTY_ACCEL_BURST_PACKET;
 
-    container.accel_burst.timestamp = raw_accs[i].timestamp_ms;
+    container.accel_burst.timestamp = last_max_rate_accel_timestamp_ms;
     for (uint8_t j = 0; j < to_edit; j++){
-      container.accel_burst.vectors[i + j].x = (int16_t) raw_accs[i+j].x;
-      container.accel_burst.vectors[i + j].y = (int16_t) raw_accs[i+j].y;
-      container.accel_burst.vectors[i + j].z = (int16_t) raw_accs[i+j].z;
+      container.accel_burst.vectors[j].x = (int16_t) raw_accs[i+j].x;
+      container.accel_burst.vectors[j].y = (int16_t) raw_accs[i+j].y;
+      container.accel_burst.vectors[j].z = (int16_t) raw_accs[i+j].z;
     }
 
 		if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MAX_RATE_ACCEL, &container) != W_SUCCESS) {

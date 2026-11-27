@@ -391,7 +391,7 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *acc_sample_count,
 	uint8_t *gyro_sample_count) {
 	w_status_t status = W_SUCCESS;
-	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD][7]; // copy the bytes so they are safe while
+	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD][7] = {0}; // copy the bytes so they are safe while
 	                                                      // doing calculations
 
 	if (lsm6dsv32x_ctx.switched_callback) {
@@ -431,7 +431,10 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 
 				accel_index++;
 			} else {
-				status = W_FAILURE;
+        // 0x00 (the empty tag) is fine. any other tag is not expected
+        if (0x00 != tag) {
+          status |= W_FAILURE;  
+        }
 				lsm6dsv32x_health.wrong_fifo_tag++;
 			}
 			if (NULL != gyro_sample_count) {
