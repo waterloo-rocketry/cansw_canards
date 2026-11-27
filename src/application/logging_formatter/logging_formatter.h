@@ -23,7 +23,7 @@ typedef struct {
  * @implements FIRM-LLR-LFO-009, FIRM-LLR-LFO-010, FIRM-LLR-LFO-011, FIRM-LLR-LFO-012,
  * FIRM-LLR-LFO-014
  */
-w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle);
+w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle);
 
 /**
  * @brief Creates a header and a CRC footer for each 'file', and writes in an append only format.
@@ -36,8 +36,8 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle);
  * @implements FIRM-LLR-LFO-001, FIRM-LLR-LFO-003, FIRM-LLR-LFO-004, FIRM-LLR-LFO-006,
  * FIRM-LLR-LFO-007
  */
-w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
-                                    formatter_file_ctx_t *ctx);
+w_status_t logging_formatter_write(const uint8_t *buffer, uint32_t buffer_length,
+                                   formatter_file_ctx_t *ctx);
 
 /**
  * @brief Creates a ctx 'object' that tracks the data type, chunk count, and startup count.
@@ -48,4 +48,9 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
                                          logging_formatter_data_type_t type);
 
+/**
+ * @brief Reports the current status of the logging_formatter module
+ * @return formatter status bitfield
+ */
+health_status_t logging_formatter_get_status(void);
 #endif // logging_formatter_H

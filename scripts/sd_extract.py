@@ -3,7 +3,7 @@
 Read-only: never writes to the card.
 
 Chunk layout (CHUNK_SIZE = 32768 bytes, multi-byte fields big-endian),
-matching logging_formatting_write():
+matching logging_formatter_write():
 
     bytes 0-3        constant header 0x43 0x6B 0xCF 0xFF
     bytes 4-5        bits 15..3 = 13-bit file identifier (one per boot)

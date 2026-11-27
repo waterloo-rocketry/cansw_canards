@@ -30,10 +30,8 @@
 #define DATA_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_DATA_MSG_LENGTH)
 
 #if LOG_BUFFER_SIZE % MAX_TEXT_MSG_LENGTH != 0
-// #warning "Text log message region size does not pack evenly into buffer size"
 #endif
 #if LOG_BUFFER_SIZE % MAX_DATA_MSG_LENGTH != 0
-// #warning "Data log message region size does not pack evenly into buffer size"
 #endif
 
 /* Number of text log buffers */
@@ -224,7 +222,7 @@ STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
  * @brief Create log buffers and mutexes necessary for logger operation.
  * @pre must be run after scheduler start, and after sd_card module is init
  */
-w_status_t log_init(SD_HandleTypeDef *p_sd_handle);
+w_status_t log_init();
 
 /**
  * @brief Log a message in text form to the text log file.

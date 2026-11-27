@@ -8,7 +8,6 @@
 #include "application/logger/log.h"
 #include "application/logging_formatter/logging_formatter.h"
 #include "drivers/gpio/gpio.h"
-#include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "queue.h"
 #include "rocketlib.h"
@@ -193,7 +192,7 @@ static void log_reset_buffer(log_buffer_t *buffer) {
 	buffer->is_full = false;
 }
 
-w_status_t log_init(SD_HandleTypeDef *hsd2) {
+w_status_t log_init() {
 	// alr init so its good to go
 	if (logger_health.is_init) {
 		return W_SUCCESS;
@@ -257,10 +256,9 @@ w_status_t log_init(SD_HandleTypeDef *hsd2) {
 	}
 
 	// Read the logger run count file
-	w_status_t status = logging_formatting_init(hsd2);
 
 	// Create log files
-	status |= logging_formatter_create_file(&text_ctx, LOGGING_FORMATTING_TEXT);
+	w_status_t status = logging_formatter_create_file(&text_ctx, LOGGING_FORMATTING_TEXT);
 	status |= logging_formatter_create_file(&data_ctx, LOGGING_FORMATTING_DATA);
 	status |= logging_formatter_create_file(&error_ctx, LOGGING_FORMATTING_ERROR);
 
@@ -522,7 +520,7 @@ void log_task(void *argument) {
 					write_start_ms = UINT32_MAX;
 					log_text(10, LOG_LVL_WARN, "timer", "timer failed to get time");
 				}
-				if (logging_formatting_write(buffer_to_print->data, LOG_BUFFER_SIZE, file_ctx) ==
+				if (logging_formatter_write(buffer_to_print->data, LOG_BUFFER_SIZE, file_ctx) ==
 				    W_SUCCESS) {
 					uint32_t write_end_ms = 0;
 					if (timer_get_ms(&write_end_ms) != W_SUCCESS) {

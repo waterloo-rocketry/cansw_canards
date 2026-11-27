@@ -22,6 +22,7 @@ typedef struct {
 	uint32_t error_writes;
 	uint32_t text_writes;
 	uint32_t max_chunk;
+	float32_t percent_filled;
 } logging_formatter_health_t;
 
 typedef struct {
@@ -69,6 +70,9 @@ w_status_t logging_formatter_create_file(formatter_file_ctx_t *file,
 	return W_SUCCESS;
 }
 
+/**
+ * @brief Creates the reference table for CRC calculations used when writing
+ */
 static w_status_t crc_table_init(void) {
 	for (uint16_t i = 0; i < 256; i++) {
 		uint16_t crc = i;
@@ -81,7 +85,7 @@ static w_status_t crc_table_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
+w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 	if (logging_formatter_health.is_init) {
 		return W_SUCCESS;
 	}
@@ -212,8 +216,8 @@ w_status_t logging_formatting_init(SD_HandleTypeDef *p_sd_handle) {
 	return W_SUCCESS;
 }
 
-w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_length,
-                                    formatter_file_ctx_t *ctx) {
+w_status_t logging_formatter_write(const uint8_t *buffer, uint32_t buffer_length,
+                                   formatter_file_ctx_t *ctx) {
 	if (!logging_formatter_health.is_init) {
 		// TODO: log_text for errors
 		return W_FAILURE;
@@ -283,6 +287,10 @@ w_status_t logging_formatting_write(const uint8_t *buffer, uint32_t buffer_lengt
 
 	formatter_buffer.chunk += 1;
 	logging_formatter_health.write_count++;
+	logging_formatter_health.percent_filled =
+		(float32_t)((int32_t)((formatter_buffer.chunk / logging_formatter_health.max_chunk) *
+		                      10000.0F)) /
+		100.0F;
 
 	return W_SUCCESS;
 }
@@ -308,12 +316,15 @@ health_status_t logging_formatter_get_status(void) {
 	}
 
 	// Log operation statistics
-	log_text(0, LOG_LVL_INFO, "formatter", "%s, max chunk=" PRIu32, "types_created=" PRIu16,
-	         ", writes=%" PRIu32, ", data writes=%" PRIu32, ", error writes=%" PRIu32,
-	         ", text writes=%" PRIu32, logging_formatter_health.is_init ? "init" : "not init",
-	         logging_formatter_health.max_chunk, logging_formatter_health.types_created,
-	         logging_formatter_health.write_count, logging_formatter_health.data_writes,
-	         logging_formatter_health.error_writes, logging_formatter_health.text_writes);
+	log_text(0, LOG_LVL_INFO, "formatter",
+	         "%s, curr chunk=%" PRIu32 "max chunk=%" PRIu32
+	         ", card filled=%f%% types_created=%" PRIu16 ", writes=%" PRIu32
+	         ", data writes=%" PRIu32 ", error writes=%" PRIu32 ", text writes=%" PRIu32,
+	         logging_formatter_health.is_init ? "init" : "not init", formatter_buffer.chunk,
+	         logging_formatter_health.percent_filled, logging_formatter_health.max_chunk,
+	         logging_formatter_health.types_created, logging_formatter_health.write_count,
+	         logging_formatter_health.data_writes, logging_formatter_health.error_writes,
+	         logging_formatter_health.text_writes);
 
 	log_text(0, LOG_LVL_INFO, "formatter", ", write_err=%" PRIu32,
 	         logging_formatter_health.write_error);

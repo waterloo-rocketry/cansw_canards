@@ -16,6 +16,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/logging_formatter/logging_formatter.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
@@ -33,7 +34,7 @@
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
-#include "drivers/sd_card/sd_card.h"
+#include "drivers/raw_logger/raw_logger.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
@@ -112,8 +113,9 @@ static void system_init_task(void *arg) {
 	w_status_t crit_status = W_SUCCESS;
 
 	// init logging and telem
-	non_crit_status |= sd_card_init();
-	non_crit_status |= log_init(&hsd2);
+	non_crit_status |= raw_logger_SD_init(&hsd2);
+	non_crit_status |= logging_formatter_init(&hsd2);
+	non_crit_status |= log_init();
 	crit_status |= telemetry_init();
 
 	// motor init

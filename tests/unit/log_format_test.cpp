@@ -91,19 +91,19 @@ protected:
 };
 
 TEST_F(FormatterTest, InitBlankCardSuccess) {
-	EXPECT_EQ(logging_formatting_init(&hsd), W_SUCCESS);
+	EXPECT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
 	EXPECT_EQ(formatter_buffer.chunk, 1U); // blank card starts at chunk 1
 }
 
 TEST_F(FormatterTest, InitUsedCardSuccess) {
 	last_chunk = 37;
 
-	EXPECT_EQ(logging_formatting_init(&hsd), W_SUCCESS);
+	EXPECT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
 	EXPECT_EQ(formatter_buffer.chunk, 37U); // binary search found the first blank chunk
 }
 
 TEST_F(FormatterTest, CreateFileSuccess) {
-	ASSERT_EQ(logging_formatting_init(&hsd), W_SUCCESS);
+	ASSERT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
 
 	EXPECT_EQ(logging_formatter_create_file(&ctx, LOGGING_FORMATTING_DATA), W_SUCCESS);
 	EXPECT_EQ(ctx.chunk_count, 0U);
@@ -111,10 +111,10 @@ TEST_F(FormatterTest, CreateFileSuccess) {
 }
 
 TEST_F(FormatterTest, WriteSuccess) {
-	ASSERT_EQ(logging_formatting_init(&hsd), W_SUCCESS);
+	ASSERT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
 	ASSERT_EQ(logging_formatter_create_file(&ctx, LOGGING_FORMATTING_DATA), W_SUCCESS);
 
-	EXPECT_EQ(logging_formatting_write(payload, PAYLOAD_SIZE, &ctx), W_SUCCESS);
+	EXPECT_EQ(logging_formatter_write(payload, PAYLOAD_SIZE, &ctx), W_SUCCESS);
 
 	// One full chunk written to chunk 1
 	EXPECT_EQ(raw_logger_SD_write_fake.call_count, 1U);
