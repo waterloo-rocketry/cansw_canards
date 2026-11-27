@@ -60,6 +60,10 @@
  */
 #define M(v) ((((v) & 0xffff) << 16) | LOG_DATA_MAGIC)
 
+// the number of lsm6dsv32x_raw_imu_data_t structs we can fit inside a packet.
+// we have 24 bytes of max packet size, and each lsm6dsv32x_raw_imu_data_t struct is 10 bytes
+#define MAX_RATE_IMU_ACCEL_DATA_PER_PACKET 3
+
 /**
  * All possible types of log messages emitted by log_data().
  * Make sure to update scripts/logparse.py too!
@@ -95,7 +99,9 @@ typedef enum {
 
 	LOG_TYPE_AD_BREAKOUT = M(0x0b),
 
-	LOG_TYPE_SERVO_MOTOR = M(0x0c)
+	LOG_TYPE_SERVO_MOTOR = M(0x0c),
+
+	LOG_TYPE_MAX_RATE_ACCEL = M(0x0d)
 
 	// Insert new types above this line in the format:
 	// LOG_TYPE_XXX = M(unique_small_integer),
@@ -120,6 +126,13 @@ typedef union {
 } vector3d_f32_packed_t;
 
 #undef M
+
+// store these as int16_t. While we get them as uint16s, the value is actually signed
+typedef struct __attribute__((packed)){
+  uint16_t x;
+  uint16_t y;
+  uint16_t z;
+} log_accel_burst_xyz_t;
 
 /**
  * The container for data to be included in messages from log_data().
@@ -209,7 +222,16 @@ typedef union __attribute__((packed)) {
 		float motor_temperature; // C
 	} servo_motor;
 
+	// LOG_TYPE_MAX_RATE_ACCEL
+	// Note: it is possible that this array is not filled.
+	// In this case the empty entries will all contain 0
+	struct __attribute__((packed)) {
+    log_accel_burst_xyz_t vectors[MAX_RATE_IMU_ACCEL_DATA_PER_PACKET];
+		uint32_t timestamp;
+	} accel_burst;
+
 } log_data_container_t;
+
 
 // MAX_DATA_MSG_LENGTH includes type and timestamp (8 bytes)
 STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,

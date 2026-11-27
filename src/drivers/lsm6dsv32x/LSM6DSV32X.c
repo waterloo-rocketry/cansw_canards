@@ -33,10 +33,10 @@ typedef struct {
 	uint8_t dev_addr;
 	uint8_t dual_buffer[2][LSM6DSV32X_FIFO_READ_THRESHOLD][7];
 	uint32_t timestamp_ms[2];
+	// this can overflow, so just use it for fingerprinting readings
 	volatile lsm6dsv32x_bus_state bus_status;
 	bool switched_callback;
 	w_status_t latest_status;
-
 } lsm6dsv32x_ctx_t;
 
 /**
@@ -346,9 +346,7 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
 		raw_gyro->y = (uint16_t)(((uint16_t)latest_gyro_bytes[3] << 8) | latest_gyro_bytes[2]);
 		raw_gyro->z = (uint16_t)(((uint16_t)latest_gyro_bytes[5] << 8) | latest_gyro_bytes[4]);
 
-		raw_gyro->timestamp_ms =
-			raw_acc->timestamp_ms; // grab time from accel since they're both the latest
-			                       // measurements from the same time
+		// measurements from the same time
 
 		// Parse accelerometer raw data (next 6 bytes)
 		raw_acc->x = (uint16_t)(((uint16_t)latest_acc_bytes[1] << 8) | latest_acc_bytes[0]);
@@ -390,10 +388,10 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  */
 w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
-	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *gyro_sample_count,
-	uint8_t *acc_sample_count) {
+	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *acc_sample_count,
+	uint8_t *gyro_sample_count) {
 	w_status_t status = W_SUCCESS;
-	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD][7]; // copy the bytes so they are safe while
+	uint8_t raw_bytes[LSM6DSV32X_FIFO_READ_THRESHOLD][7] = {0}; // copy the bytes so they are safe while
 	                                                      // doing calculations
 
 	if (lsm6dsv32x_ctx.switched_callback) {
@@ -416,6 +414,7 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 
 			if (GYRO_TAG == tag) {
 				// gyro sample
+
 				raw_gyros[gyro_index].x = x;
 				raw_gyros[gyro_index].y = y;
 				raw_gyros[gyro_index].z = z;
@@ -424,6 +423,7 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 				gyro_index++;
 			} else if (ACC_TAG == tag) {
 				// accel sample
+
 				raw_accs[accel_index].x = x;
 				raw_accs[accel_index].y = y;
 				raw_accs[accel_index].z = z;
@@ -431,11 +431,18 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 
 				accel_index++;
 			} else {
-				status = W_FAILURE;
+        // 0x00 (the empty tag) is fine. any other tag is not expected
+        if (0x00 != tag) {
+          status |= W_FAILURE;  
+        }
 				lsm6dsv32x_health.wrong_fifo_tag++;
 			}
-			*gyro_sample_count = gyro_index;
-			*acc_sample_count = accel_index;
+			if (NULL != gyro_sample_count) {
+				*gyro_sample_count = gyro_index;
+			}
+			if (NULL != acc_sample_count) {
+				*acc_sample_count = accel_index;
+			}
 		}
 
 		if (W_FAILURE == status) {
@@ -491,7 +498,8 @@ health_status_t lsm6dsv32x_get_status(void) {
 	         lsm6dsv32x_health.get_gyro_acc_data_lastest_status_failure,
 	         lsm6dsv32x_ctx.latest_status, lsm6dsv32x_ctx.bus_status);
 
-	log_text(10, LOG_LVL_INFO, "LSM6DSV32X", "wrong_fifo_tag=%d, same_sensor_samples=%d",
+	log_text(10, LOG_LVL_INFO, "LSM6DSV32X",
+	         "wrong_fifo_tag=%d, same_sensor_samples=%d",
 	         lsm6dsv32x_health.wrong_fifo_tag, lsm6dsv32x_health.same_sensor_samples);
 
 	return status;

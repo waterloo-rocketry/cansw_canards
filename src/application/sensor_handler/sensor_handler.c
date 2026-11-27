@@ -94,6 +94,7 @@ typedef struct {
 	sensor_health_state_t mti_mag_stats;
 	sensor_health_state_t mti_baro_stats;
 	sensor_health_state_t motor_encoder_stats;
+  sensor_health_state_t accel_burst_stats;
 
 	ak45_fault_code_t motor_fault_code;
 } sensor_handler_state_t;
@@ -130,6 +131,22 @@ typedef struct {
 // *_telemetry() log functions, telemetry task) peek it on their own cadence. Using a mailbox
 // keeps the cross-task hand-off atomic without a separate lock.
 static QueueHandle_t g_sensor_data_queue = NULL;
+
+static uint32_t last_max_rate_accel_timestamp_ms = 0;
+
+// use this when logging max rate accel packets since we want to easily tell when a value is empty
+// it's basically impossible to get max acceleration, so it's a better value than 0
+// use int16_max even though the value is a uint16_t, since it's parsed to signed in logparse.py
+static const log_data_container_t EMPTY_ACCEL_BURST_PACKET = {
+	.accel_burst = {
+    .vectors = {
+      { .x = INT16_MAX, .y = INT16_MAX, .z = INT16_MAX },
+      { .x = INT16_MAX, .y = INT16_MAX, .z = INT16_MAX },
+      { .x = INT16_MAX, .y = INT16_MAX, .z = INT16_MAX },
+    },
+		.timestamp = 0,
+	},
+};
 
 /**
  * @brief Peek the latest telemetry snapshot from the mailbox.
@@ -512,6 +529,57 @@ static w_status_t movella_state_sd_log(void) {
 	}
 
 	return status;
+}
+
+static w_status_t max_rate_accel_log(void) {
+	// set it all to zero
+	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD] = {0};
+	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD] = {0};
+	uint8_t acc_sample_count = 0;
+	uint8_t gyro_sample_count = 0;
+
+  if (W_SUCCESS != lsm6dsv32x_get_full_gyro_acc_data(raw_accs, raw_gyros, &acc_sample_count, &gyro_sample_count)) {
+    sensor_handler_state.accel_burst_stats.failure_count++;
+    return W_FAILURE;
+  }
+
+	// compare the first timestamp because it's guaranteed to be
+	if (raw_accs[0].timestamp_ms == last_max_rate_accel_timestamp_ms) {
+		// re-reading the same burst, so just ignore it
+		// TODO: REMOVE
+		log_text(10, LOG_LVL_INFO, "testing", "SAME TIMESTAMP");
+    sensor_handler_state.accel_burst_stats.success_count++;
+		return W_SUCCESS;
+	}
+
+	last_max_rate_accel_timestamp_ms = raw_accs[0].timestamp_ms;
+
+	for (uint8_t i = 0; i < acc_sample_count; i += MAX_RATE_IMU_ACCEL_DATA_PER_PACKET) {
+
+    uint8_t remaining = acc_sample_count - i;
+    uint8_t to_edit = 0;
+    if (remaining >= MAX_RATE_IMU_ACCEL_DATA_PER_PACKET){
+      to_edit = MAX_RATE_IMU_ACCEL_DATA_PER_PACKET;
+    } else {
+      to_edit = remaining;
+    }
+
+    log_data_container_t container = EMPTY_ACCEL_BURST_PACKET;
+
+    container.accel_burst.timestamp = last_max_rate_accel_timestamp_ms;
+    for (uint8_t j = 0; j < to_edit; j++){
+      container.accel_burst.vectors[j].x = (int16_t) raw_accs[i+j].x;
+      container.accel_burst.vectors[j].y = (int16_t) raw_accs[i+j].y;
+      container.accel_burst.vectors[j].z = (int16_t) raw_accs[i+j].z;
+    }
+
+		if (log_data(SENSOR_LOG_TIMEOUT_MS, LOG_TYPE_MAX_RATE_ACCEL, &container) != W_SUCCESS) {
+			sensor_handler_state.log_data_fail_count++;
+      return W_FAILURE;
+		}
+	}
+  sensor_handler_state.accel_burst_stats.success_count++;
+  return W_SUCCESS;
 }
 
 /**
@@ -936,6 +1004,14 @@ w_status_t sensor_handler_init(void) {
 		{"Movella State", movella_state_sd_log, STATE_PAD_NAV, 1000 / 20},
 		{"Movella State", movella_state_sd_log, STATE_BOOST, 1000 / 20},
 		{"Movella State", movella_state_sd_log, STATE_ACT_ALLOWED, 1000 / 20},
+
+		// --- IMU max rate accel ---
+		// TODO: consider adding STATE_RECOVERY
+		{"Sensor Max Rate", max_rate_accel_log, STATE_IDLE, 1000 / 1000},
+		{"Sensor Max Rate", max_rate_accel_log, STATE_PAD_NAV, 1000 / 1000},
+		{"Sensor Max Rate", max_rate_accel_log, STATE_BOOST, 1000 / 1000},
+		{"Sensor Max Rate", max_rate_accel_log, STATE_ACT_ALLOWED, 1000 / 1000},
+
 	};
 
 	static const size_t telemetry_source_count =
@@ -1057,9 +1133,11 @@ health_status_t sensor_handler_get_status(void) {
 
 	log_text(0, LOG_LVL_INFO, "SensorHandler",
 	         "Board IMU fail: %lu, "
+           "Board IMU accel burst fail: %lu, ",
 	         "Board Mag fail: %lu, "
 	         "Board Baro fail: %lu",
 	         sensor_handler_state.board_imu_stats.failure_count,
+           sensor_handler_state.accel_burst_stats.failure_count,
 	         sensor_handler_state.board_mag_stats.failure_count,
 	         sensor_handler_state.board_baro_stats.failure_count);
 

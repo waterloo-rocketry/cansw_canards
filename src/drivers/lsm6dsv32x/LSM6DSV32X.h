@@ -59,8 +59,8 @@ w_status_t lsm6dsv32x_get_gyro_acc_data(vector3d_t *acc_data, vector3d_t *gyro_d
  */
 w_status_t lsm6dsv32x_get_full_gyro_acc_data(
 	lsm6dsv32x_raw_imu_data_t raw_accs[LSM6DSV32X_FIFO_READ_THRESHOLD],
-	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *gyro_sample_count,
-	uint8_t *acc_sample_count);
+	lsm6dsv32x_raw_imu_data_t raw_gyros[LSM6DSV32X_FIFO_READ_THRESHOLD], uint8_t *acc_sample_count,
+	uint8_t *gyro_sample_count);
 
 /**
  * @brief Get and report the lsm6dsv32x status for the health check system
@@ -71,7 +71,5 @@ w_status_t lsm6dsv32x_get_full_gyro_acc_data(
  * @return CAN board status bitfield
  */
 health_status_t lsm6dsv32x_get_status(void);
-
-void lsm6_test_task(void *args);
 
 #endif
