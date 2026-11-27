@@ -584,6 +584,8 @@ void log_task(void *argument) {
 
 	uint32_t cur_timestamps = 0;
 
+	bool sleep_synced = false;
+
 	for (;;) {
 		// Must not do anything in the task if init failed.
 		// This allows non-critical init to fail and board to not kill itself
@@ -594,12 +596,18 @@ void log_task(void *argument) {
 
 		// stop logging during sleepy state to avoid filling sd card uselessly
 		if (fsm_get_state() == STATE_SLEEPY) {
-			// Flush anything written just before sleep, since periodic syncs don't run here
-			(void)log_sync(&data_file, true);
-			(void)log_sync(&text_file, true);
+			// Flush anything written just before sleep once, since periodic syncs don't run
+			// here and nothing new is written while sleepy
+			if (!sleep_synced) {
+				(void)log_sync(&data_file, true);
+				(void)log_sync(&text_file, true);
+				sleep_synced = true;
+			}
 			vTaskDelay(pdMS_TO_TICKS(1000));
 			continue;
 		}
+
+		sleep_synced = false;
 
 		bool must_log_txt = false;
 		bool have_msg = false;
