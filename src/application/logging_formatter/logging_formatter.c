@@ -330,9 +330,9 @@ health_status_t logging_formatter_get_status(void) {
 	         logging_formatter_health.data_writes);
 
 	log_text(0, LOG_LVL_INFO, "formatter",
-	         "error writes=%" PRIu32 "text writes=%" PRIu32 ", write_err=%" PRIu32, 
-			 logging_formatter_health.error_writes,
-	         logging_formatter_health.text_writes, logging_formatter_health.write_error);
+	         "error writes=%" PRIu32 ", text writes=%" PRIu32 ", write_err=%" PRIu32,
+	         logging_formatter_health.error_writes, logging_formatter_health.text_writes,
+	         logging_formatter_health.write_error);
 
 	return status;
 }
