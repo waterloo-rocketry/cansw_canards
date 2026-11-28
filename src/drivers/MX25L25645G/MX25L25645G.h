@@ -3,6 +3,9 @@
 #include "littlefs/lfs.h"
 #include "third_party/rocketlib/common/common.h"
 
+// Cache size must always be less than 2^16 times of Page size. Both in bytes.
+#define FLASH_CACHE_SIZE (2048)
+
 /**
  * @brief Initialize flash chip.
  *

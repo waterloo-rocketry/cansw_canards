@@ -12,8 +12,6 @@
 #define SPI_4_ENABLED
 #define FLASH_NOTIFICATION_INDEX 1
 
-// Cache size must always be less than 2^16 times of Page size. Both in bytes.
-#define FLASH_CACHE_SIZE 2048
 #define FLASH_PAGE_SIZE 256
 // Each byte of lookahead can track 8 blocks on filesystem (rounding up)
 #define FLASH_LOOKAHEAD_SIZE (((LOG_BUFFER_SIZE - 1) / 8) + 1) // Bytes
