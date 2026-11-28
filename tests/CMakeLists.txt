@@ -259,6 +259,22 @@ add_test_group(test_flight_phase
     ${PROC_SRC_DIR}/application/flight_phase/flight_phase.c
 )
 
+add_test_group(test_log_format
+    # test files
+    ${UNIT_TESTS_DIR}/log_format_test.cpp
+    # src files
+    #${PROC_SRC_DIR}/application/logging_formatter/logging_formatter.c
+    #I already do it in thetest
+)
+
+add_test_group(test_raw_logger
+    # test files
+    ${UNIT_TESTS_DIR}/raw_log_test.cpp
+    # src files
+    #${PROC_SRC_DIR}/drivers/raw_logger/raw_logger.c
+    #I already do it in thetest
+)
+
 # TODO: revive test once implemented
 # add_test_group(test_health_check
 #     # test file(s)

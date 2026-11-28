@@ -142,12 +142,7 @@ SECTIONS
     *(.ramd1_data)
 
     /* CubeMX Source Special Cases */
-    *sd_diskio.o(.data .data* .RamFunc .RamFunc*)
-    *bsp_driver_sd.o(.data .data* .RamFunc .RamFunc*)
     *sdmmc.o(.data .data* .RamFunc .RamFunc*)
-
-    /* FatFS */
-    */src/third_party/cubemx_autogen/Middlewares/Third_Party/FatFs/*(.data .data* .RamFunc .RamFunc*)
 
     . = ALIGN(4);
     _eramd1_data = .;        /* define a global symbol at data end */
@@ -165,12 +160,7 @@ SECTIONS
     *(.ramd1_bss)
 
     /* CubeMX Source Special Cases */
-    *sd_diskio.o(.bss .bss* COMMON)
-    *bsp_driver_sd.o(.bss .bss* COMMON)
     *sdmmc.o(.bss .bss* COMMON)
-
-    /* FatFS */
-    */src/third_party/cubemx_autogen/Middlewares/Third_Party/FatFs/*(.bss .bss* COMMON)
 
     . = ALIGN(4);
     _eramd1_bss = .;         /* define a global symbol at bss end */

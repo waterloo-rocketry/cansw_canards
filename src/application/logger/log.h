@@ -8,9 +8,14 @@
 #include "application/sensor_handler/sensor_handler.h"
 #include "common/gnc/gnc_types.h"
 #include "drivers/altimu-10/altimu-10.h"
+#include "stm32h7xx_hal.h"
 
-/* Size of a single buffer (bytes) */
-#define LOG_BUFFER_SIZE 32768
+/**
+ * Size of a single buffer (bytes).
+ * This is the size of one chunk (32768 bytes) subtracted by the size of the header and footer for
+ * the formatter (12 bytes).
+ */
+#define LOG_BUFFER_SIZE 32756
 // #define LOG_BUFFER_SIZE 16384
 /* Size of each message region in text buffers (bytes) */
 #define MAX_TEXT_MSG_LENGTH 128
@@ -25,16 +30,14 @@
 #define DATA_MSGS_PER_BUFFER (LOG_BUFFER_SIZE / MAX_DATA_MSG_LENGTH)
 
 #if LOG_BUFFER_SIZE % MAX_TEXT_MSG_LENGTH != 0
-#warning "Text log message region size does not pack evenly into buffer size"
 #endif
 #if LOG_BUFFER_SIZE % MAX_DATA_MSG_LENGTH != 0
-#warning "Data log message region size does not pack evenly into buffer size"
 #endif
 
 /* Number of text log buffers */
 #define NUM_TEXT_LOG_BUFFERS 2
 /* Number of data log buffers */
-#define NUM_DATA_LOG_BUFFERS 4
+#define NUM_DATA_LOG_BUFFERS 3
 
 /* Size of filename string */
 #define FILENAME_STRING_SIZE (8 + 1 + 3 + 1)
@@ -219,7 +222,7 @@ STATIC_ASSERT(sizeof(log_data_container_t) <= MAX_DATA_MSG_LENGTH - 8,
  * @brief Create log buffers and mutexes necessary for logger operation.
  * @pre must be run after scheduler start, and after sd_card module is init
  */
-w_status_t log_init(void);
+w_status_t log_init();
 
 /**
  * @brief Log a message in text form to the text log file.
