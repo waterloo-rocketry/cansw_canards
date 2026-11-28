@@ -320,17 +320,19 @@ health_status_t logging_formatter_get_status(void) {
 
 	// Log operation statistics
 	log_text(0, LOG_LVL_INFO, "formatter",
-	         "%s, curr chunk=%" PRIu32 "max chunk=%" PRIu32
-	         ", card filled=%f%% types_created=%" PRIu16 ", writes=%" PRIu32
-	         ", data writes=%" PRIu32 ", error writes=%" PRIu32 ", text writes=%" PRIu32,
+	         "%s, curr_chunk=%" PRIu64 ", max_chunk=%" PRIu32 ", percent_filled=%.2f%% ",
 	         logging_formatter_health.is_init ? "init" : "not init", formatter_buffer.chunk,
-	         logging_formatter_health.percent_filled, logging_formatter_health.max_chunk,
-	         logging_formatter_health.types_created, logging_formatter_health.write_count,
-	         logging_formatter_health.data_writes, logging_formatter_health.error_writes,
-	         logging_formatter_health.text_writes);
+	         logging_formatter_health.max_chunk, logging_formatter_health.percent_filled);
 
-	log_text(0, LOG_LVL_INFO, "formatter", ", write_err=%" PRIu32,
-	         logging_formatter_health.write_error);
+	log_text(0, LOG_LVL_INFO, "formatter",
+	         "types_created=%" PRIu16 ", writes=%" PRIu32 ", data_writes=%" PRIu32,
+	         logging_formatter_health.types_created, logging_formatter_health.write_count,
+	         logging_formatter_health.data_writes);
+
+	log_text(0, LOG_LVL_INFO, "formatter",
+	         "error writes=%" PRIu32 "text writes=%" PRIu32 ", write_err=%" PRIu32, 
+			 logging_formatter_health.error_writes,
+	         logging_formatter_health.text_writes, logging_formatter_health.write_error);
 
 	return status;
 }
