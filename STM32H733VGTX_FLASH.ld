@@ -94,7 +94,7 @@ SECTIONS
     KEEP (*navigator.o(.fini))
 
 
-    /* */closedrocket/*
+    /* closedrocket */
     */closedrocket/*(.text)           /* .text sections (FLASH only code) */
     */closedrocket/*(.text*)          /* .text* sections (FLASH only code) */
     */closedrocket/*(.glue_7)         /* glue arm to thumb FLASH only code */
