@@ -37,6 +37,7 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *******************************************************************************/
 
+#include "common/benchmark/benchmark.h"
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -47,6 +48,8 @@
 
 #include "common/math/math.h"
 #include "drivers/ad_breakout_board/adxl38x.h"
+
+BENCHMARK_FILE_INIT(1, 2500);
 
 #define ADXL38X_MAX_XFER_LEN 64
 #define ADXL38X_NEG_ACC_MSK 0xffff0000
@@ -115,7 +118,18 @@ w_status_t adxl38x_read_device_data(adxl38x_dev_t *p_dev, uint8_t base_address, 
 		return W_INVALID_PARAM;
 	}
 
-	return i2c_read_reg(p_dev->i2c_bus, p_dev->i2c_addr, base_address, p_read_data, (uint8_t)size);
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_START(0);
+	taskEXIT_CRITICAL();
+#endif
+	w_status_t benchmark_status = i2c_read_reg(p_dev->i2c_bus, p_dev->i2c_addr, base_address, p_read_data, (uint8_t)size);
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_END(0);
+	taskEXIT_CRITICAL();
+#endif
+	return benchmark_status;
 }
 
 /**
@@ -818,3 +832,11 @@ w_status_t adxl38x_data_raw_to_gees(adxl38x_dev_t *p_dev, uint8_t *p_raw_accel_d
 
 	return W_SUCCESS;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_adxl_i2c_benchmark_data(benchmark_data_t p_datas[1]) {
+	for (uint8_t i = 0; i < 1; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

@@ -2,18 +2,22 @@
  * GPIO module
  * Driver for GPIO pins
  */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "common/benchmark/benchmark.h"
 #include <stdbool.h>
 
 #include "main.h"
 #include "stm32h7xx_hal.h"
 
-#include "FreeRTOS.h"
 #include "application/logger/log.h"
 #include "semphr.h"
 
 #include "drivers/gpio/gpio.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
+
+BENCHMARK_FILE_INIT(4, 2500);
 
 // Private --------------------------------------------------------------------
 
@@ -108,7 +112,18 @@ w_status_t gpio_read(gpio_pin_t pin, gpio_level_t *level, uint32_t timeout) {
 	}
 
 	if (xSemaphoreTake(gpio_map[pin].access_mutex, pdMS_TO_TICKS(timeout)) == pdTRUE) {
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_START(0);
+		taskEXIT_CRITICAL();
+#endif
 		GPIO_PinState state = HAL_GPIO_ReadPin(gpio_map[pin].port, gpio_map[pin].pin);
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_END(0);
+		taskEXIT_CRITICAL();
+#endif
+
 		*level = (state == GPIO_PIN_SET) ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW;
 
 		gpio_status.accesses++;
@@ -131,8 +146,19 @@ w_status_t gpio_write(gpio_pin_t pin, gpio_level_t level, uint32_t timeout) {
 	}
 
 	if (xSemaphoreTake(gpio_map[pin].access_mutex, pdMS_TO_TICKS(timeout)) == pdTRUE) {
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_START(1);
+		taskEXIT_CRITICAL();
+#endif
 		HAL_GPIO_WritePin(gpio_map[pin].port, gpio_map[pin].pin,
 		                  (level == GPIO_LEVEL_HIGH) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_END(1);
+		taskEXIT_CRITICAL();
+#endif
+
 		gpio_status.accesses++;
 
 		xSemaphoreGive(gpio_map[pin].access_mutex);
@@ -155,7 +181,18 @@ w_status_t gpio_toggle(gpio_pin_t pin, uint32_t timeout) {
 	}
 
 	if (xSemaphoreTake(gpio_map[pin].access_mutex, pdMS_TO_TICKS(timeout)) == pdTRUE) {
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_START(2);
+		taskEXIT_CRITICAL();
+#endif
 		HAL_GPIO_TogglePin(gpio_map[pin].port, gpio_map[pin].pin);
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_END(2);
+		taskEXIT_CRITICAL();
+#endif
+
 		gpio_status.accesses++;
 
 		xSemaphoreGive(gpio_map[pin].access_mutex);
@@ -192,9 +229,31 @@ health_status_t gpio_get_status(void) {
  * @brief HAL interrupt callback for GPIO pins.
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_START(3);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	if (IMU_INT1_Pin == GPIO_Pin) {
 		lsm6dsv32x_int1_isr_handler();
 	} else if (INT_MAG_Pin == GPIO_Pin) {
 		iis2mdc_handle_drdy_irq();
 	}
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_END(3);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_gpio_benchmark_data(benchmark_data_t p_datas[4]) {
+	for (uint8_t i = 0; i < 4; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

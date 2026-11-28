@@ -1,3 +1,4 @@
+#include "common/benchmark/benchmark.h"
 #include "FreeRTOS.h"
 #include "i2c.h"
 #include "main.h"
@@ -12,6 +13,8 @@
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X_regmap.h"
 #include "drivers/timer/timer.h"
+
+BENCHMARK_FILE_INIT(4, 2500);
 
 typedef enum {
 	LSM6DSV32X_READ_BUFFER = 0,
@@ -125,17 +128,45 @@ static w_status_t lsm6dsv32x_check_sanity() {
  * @brief handler for after the DMA is completed
  */
 void lsm6dsv32x_dma_complete_handle(I2C_HandleTypeDef *hi2c) {
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_START(1);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	if (hi2c != lsm6dsv32x_ctx.hi2c) {
 		lsm6dsv32x_health.dma_handle_wrong_i2c++;
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(1);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return;
 	}
 
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_END(3);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	lsm6dsv32x_ctx.bus_status = LSM6DSV32X_BUS_FREE;
 
 	memcpy(lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_READ_BUFFER],
 	       lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER], CTX_BUFFER_SIZE);
 	lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_READ_BUFFER] =
 		lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER];
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_END(1);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 }
 
 /**
@@ -250,18 +281,46 @@ w_status_t lsm6dsv32x_init() {
  * @return Status of the operation
  */
 w_status_t lsm6dsv32x_int1_isr_handler() {
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_START(0);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	if (!lsm6dsv32x_health.is_init) {
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(0);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return W_SUCCESS;
 	}
 
 	if (!lsm6dsv32x_ctx.switched_callback) {
 		lsm6dsv32x_health.dma_data_transfer_unswitched_callback++;
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(0);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return W_FAILURE;
 	}
 
 	// store the timestamp when the data is received
 	if (timer_get_ms(&lsm6dsv32x_ctx.timestamp_ms[LSM6DSV32X_WRITE_BUFFER]) != W_SUCCESS) {
 		lsm6dsv32x_health.dma_data_transfer_failed_timer++;
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(0);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return W_FAILURE;
 	}
 
@@ -273,6 +332,16 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 
 	const uint8_t shifted_address = (LSM6DSV32X_ADDR << 1);
 
+#ifdef ENABLE_BENCHMARK
+	// A rejected launch must not overwrite the timestamp of an active transfer.
+	if (HAL_I2C_GetState(lsm6dsv32x_ctx.hi2c) == HAL_I2C_STATE_READY) {
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_START(3);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+	}
+#endif
 	HAL_StatusTypeDef hal_status = HAL_I2C_Mem_Read_DMA(
 		lsm6dsv32x_ctx.hi2c, shifted_address, FIFO_DATA_OUT_TAG, I2C_MEMADD_SIZE_8BIT,
 		lsm6dsv32x_ctx.dual_buffer[LSM6DSV32X_WRITE_BUFFER][0], CTX_BUFFER_SIZE);
@@ -282,6 +351,13 @@ w_status_t lsm6dsv32x_int1_isr_handler() {
 		lsm6dsv32x_ctx.latest_status = W_IO_ERROR;
 		lsm6dsv32x_health.dma_data_transfer_failed_mem_read++;
 	}
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_END(0);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	return lsm6dsv32x_ctx.latest_status;
 }
 
@@ -497,3 +573,11 @@ health_status_t lsm6dsv32x_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_imu_benchmark_data(benchmark_data_t p_datas[4]) {
+	for (uint8_t i = 0; i < 4; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

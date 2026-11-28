@@ -1,7 +1,9 @@
+#include "FreeRTOS.h"
+#include "task.h"
+#include "common/benchmark/benchmark.h"
 #include <inttypes.h>
 #include <string.h>
 
-#include "FreeRTOS.h"
 #include "fdcan.h"
 #include "queue.h"
 
@@ -10,6 +12,8 @@
 #include "application/telemetry/telemetry.h"
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/timer/timer.h"
+
+BENCHMARK_FILE_INIT(3, 2500);
 
 // Motor CAN driver ID
 static const uint16_t AK45_DRIVER_ID = 0x45;
@@ -99,6 +103,11 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
 		return W_FAILURE;
 	}
 
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_START(0);
+	taskEXIT_CRITICAL();
+#endif
 	// Reinit the CAN module if a bus off state was detected
 	FDCAN_ProtocolStatusTypeDef protocolStatus = {};
 	HAL_FDCAN_GetProtocolStatus(g_ak45_hfdcan, &protocolStatus);
@@ -120,8 +129,18 @@ static w_status_t ak45_can_transmit_ext(uint32_t ext_id, const uint8_t *data, ui
 	if (HAL_FDCAN_AddMessageToTxFifoQ(g_ak45_hfdcan, &tx_header, data) != HAL_OK) {
 		ak45_health.tx_errors++;
 		ak45_health.cmd_tx_failed = true;
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_END(0);
+		taskEXIT_CRITICAL();
+#endif
 		return W_FAILURE;
 	}
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_END(0);
+	taskEXIT_CRITICAL();
+#endif
 	return W_SUCCESS;
 }
 
@@ -286,6 +305,11 @@ static w_status_t ak45_sd_telemetry(void) {
 /************************************** TELEM **************************************/
 
 w_status_t ak45_send_position_cmd(float32_t angle_deg) {
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_START(1);
+	taskEXIT_CRITICAL();
+#endif
 	uint32_t ext_id = ((uint32_t)CAN_PACKET_SET_POS << 8) | AK45_DRIVER_ID;
 
 	int32_t pos_raw = (int32_t)(angle_deg * AK45_POS_CMD_DEG_TO_POS);
@@ -295,7 +319,14 @@ w_status_t ak45_send_position_cmd(float32_t angle_deg) {
 	data[2] = (uint8_t)(((uint32_t)pos_raw >> 8) & 0xff);
 	data[3] = (uint8_t)((uint32_t)pos_raw & 0xff);
 
-	return ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
+	w_status_t benchmark_status = ak45_can_transmit_ext(ext_id, data, FDCAN_DLC_BYTES_4);
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_END(1);
+	taskEXIT_CRITICAL();
+#endif
+
+	return benchmark_status;
 }
 
 w_status_t ak45_send_current_cmd(int32_t current_mA) {
@@ -511,12 +542,26 @@ uint32_t ak45_get_tx_errors(void) {
  * is received. Parses the feedback and puts it in the queue.
  */
 static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_START(2);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	// the motor should be sending periodic state messages at 300hz so even if the motor's CAN
 	// starts the STM we willl still recieve a msg
 	received_can_msg = true;
 
 	// checks if the new message bit is not 0 (FDCAN_IT_RX_FIFO1_NEW_MESSAGE is the bit mask)
 	if (0 == (RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE)) {
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(2);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return;
 	}
 
@@ -526,6 +571,13 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 	if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO1, &rx_header, rx_data) != HAL_OK) {
 		ak45_health.rx_errors++;
 		ak45_health.feedback_rx_failed = true;
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(2);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return;
 	}
 
@@ -534,6 +586,13 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 	if ((rx_header.IdType != FDCAN_EXTENDED_ID) || (rx_header.Identifier != expected_id)) {
 		ak45_health.rx_errors++;
 		ak45_health.feedback_rx_failed = true;
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(2);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return;
 	}
 
@@ -547,6 +606,13 @@ static void ak45_fdcan_rx_callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1
 	BaseType_t higher_priority_task_woken = pdFALSE;
 	xQueueOverwriteFromISR(g_feedback_queue, &fb, &higher_priority_task_woken);
 	portYIELD_FROM_ISR(higher_priority_task_woken);
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_END(2);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 }
 
 void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs) {
@@ -831,3 +897,11 @@ w_status_t ak45_hard_stop_calibrate(const ak45_calibration_config_t *config) {
 	ak45_health.hard_stop_cal_failed = false;
 	return W_SUCCESS;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_motor_benchmark_data(benchmark_data_t p_datas[3]) {
+	for (uint8_t i = 0; i < 3; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

@@ -1,10 +1,12 @@
+#include "FreeRTOS.h"
+#include "task.h"
+#include "common/benchmark/benchmark.h"
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
-#include "FreeRTOS.h"
 #include "fdcan.h"
 #include "queue.h"
 #include "rocketlib.h"
@@ -17,6 +19,8 @@
 #include "common/math/math.h"
 #include "drivers/gpio/gpio.h"
 #include "drivers/timer/timer.h"
+
+BENCHMARK_FILE_INIT(3, 2000);
 
 #define UINT24_MAX (1U << 24) - 1U // maximum value for a 24-bit unsigned integer
 #define INT24_MIN -(1 << 23) // minimum value for a 24-bit signed integer
@@ -314,11 +318,21 @@ void can_handler_task_tx(void *argument) {
 		can_msg_t tx_msg;
 
 		if (xQueueReceive(bus_queue_tx, &tx_msg, pdMS_TO_TICKS(5)) == pdPASS) {
+#ifdef ENABLE_BENCHMARK
+			taskENTER_CRITICAL();
+			SINGLE_BENCHMARK_START(2);
+			taskEXIT_CRITICAL();
+#endif
 			// send to CAN bus; log errors
 			if (!stm32h7_can_send(&tx_msg)) {
 				can_error_stats.tx_failures++;
 				log_text(3, LOG_LVL_WARN, "CAN tx", "CAN send failed!");
 			}
+#ifdef ENABLE_BENCHMARK
+			taskENTER_CRITICAL();
+			SINGLE_BENCHMARK_END(2);
+			taskEXIT_CRITICAL();
+#endif
 			// hardware limitation stm32 backtoback tx fifo queue has 2 msgs..
 			// but trying to do 2 in a row didnt work so just delay between every tx
 			// also 1ms delay didnt work so 2ms???
@@ -436,3 +450,11 @@ health_status_t can_handler_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_can_benchmark_data(benchmark_data_t p_datas[3]) {
+	for (uint8_t i = 0; i < 3; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

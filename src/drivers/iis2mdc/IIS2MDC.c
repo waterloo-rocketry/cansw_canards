@@ -1,3 +1,4 @@
+#include "common/benchmark/benchmark.h"
 #include <inttypes.h>
 #include <math.h>
 #include <string.h>
@@ -11,6 +12,8 @@
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/timer/timer.h"
+
+BENCHMARK_FILE_INIT(4, 2500);
 
 // I2C bus and slave address
 static const i2c_bus_t IIS2MDC_BUS = I2C_BUS_4;
@@ -347,17 +350,45 @@ static w_status_t iis2mdc_sanity_check(void) {
 }
 
 w_status_t iis2mdc_handle_drdy_irq(void) {
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_START(0);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	// stand down unless ASYNC_DMA_ACTIVE
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		iis2mdc_health.dma_before_callback_switch++;
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(0);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return W_FAILURE;
 	}
 	// stand down if last DMA is still in progress
 	if (iis2mdc_dma_busy) {
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(0);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return W_FAILURE;
 	}
 	iis2mdc_dma_busy = true;
 
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_START(3);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	if (HAL_OK != HAL_I2C_Mem_Read_DMA(
 					  &hi2c4, IIS2MDC_HAL_ADDR, IIS2MDC_REG_OUTX_L | IIS2MDC_SUB_AUTO_INC,
 					  I2C_MEMADD_SIZE_8BIT, iis2mdc_cache.raw_buf, sizeof(iis2mdc_cache.raw_buf))) {
@@ -365,6 +396,13 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
 		iis2mdc_health.communication_failure = true;
 		iis2mdc_dma_busy = false; // failed to start, next DRDY will retry
 	}
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_END(0);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	return W_SUCCESS;
 }
 
@@ -374,18 +412,46 @@ w_status_t iis2mdc_handle_drdy_irq(void) {
  *       sign interpretation, and scaling to gauss are deferred to iis2mdc_get_data.
  */
 static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_START(1);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	if (hi2c != &hi2c4) {
 		iis2mdc_health.invalid_param = true;
 		iis2mdc_health.i2c_handle_mismatch++;
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(1);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return;
 	}
 	// this function needs DMA to be active
 	if (IIS2MDC_STATE_ASYNC_DMA_ACTIVE != iis2mdc_state) {
 		iis2mdc_health.dma_before_callback_switch++;
 		iis2mdc_health.internal_error = true;
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(1);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return;
 	}
 
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_END(3);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	// make sure to not block dma if timer fails
 	iis2mdc_dma_busy = false;
 	iis2mdc_cache.valid = false; // invalidate data if fail get time
@@ -393,11 +459,25 @@ static void iis2mdc_dma_complete(I2C_HandleTypeDef *hi2c) {
 	uint32_t timestamp_ms = 0;
 	if (W_SUCCESS != timer_get_ms(&timestamp_ms)) {
 		iis2mdc_health.internal_error = true;
+#ifdef ENABLE_BENCHMARK
+		{
+			UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+			SINGLE_BENCHMARK_END(1);
+			taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+		}
+#endif
 		return;
 	}
 
 	iis2mdc_cache.timestamp_ms = timestamp_ms;
 	iis2mdc_cache.valid = true;
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_END(1);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 }
 
 /**
@@ -578,3 +658,11 @@ health_status_t iis2mdc_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_mag_benchmark_data(benchmark_data_t p_datas[4]) {
+	for (uint8_t i = 0; i < 4; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

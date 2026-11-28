@@ -40,6 +40,22 @@
 #include "common/benchmark/benchmark.h"
 extern void get_nav_codegen_benchmark_data(benchmark_data_t p_datas[10]);
 extern void get_fsm_benchmark_data(benchmark_data_t p_datas[5]);
+#ifdef ENABLE_BENCHMARK
+extern void get_log_benchmark_data(benchmark_data_t p_datas[1]);
+extern void get_sd_card_benchmark_data(benchmark_data_t p_datas[2]);
+extern void get_baro_benchmark_data(benchmark_data_t p_datas[5]);
+extern void get_ad_board_benchmark_data(benchmark_data_t p_datas[1]);
+extern void get_imu_benchmark_data(benchmark_data_t p_datas[4]);
+extern void get_adxl_benchmark_data(benchmark_data_t p_datas[3]);
+extern void get_adxl_i2c_benchmark_data(benchmark_data_t p_datas[1]);
+extern void get_mag_benchmark_data(benchmark_data_t p_datas[4]);
+extern void get_adxrs_benchmark_data(benchmark_data_t p_datas[2]);
+extern void get_ads1219_benchmark_data(benchmark_data_t p_datas[3]);
+extern void get_uart_benchmark_data(benchmark_data_t p_datas[2]);
+extern void get_motor_benchmark_data(benchmark_data_t p_datas[3]);
+extern void get_can_benchmark_data(benchmark_data_t p_datas[3]);
+extern void get_gpio_benchmark_data(benchmark_data_t p_datas[4]);
+#endif
 extern osThreadId_t defaultTaskHandle;
 
 // Maximum number of initialization retries before giving up
@@ -219,6 +235,32 @@ static void system_init_task(void *arg) {
 		ak45_send_disable_cmd();
 	}
 
+#ifdef ENABLE_BENCHMARK
+	// Reuse one snapshot buffer; log after leaving each critical section.
+	benchmark_data_t io_benchmark_datas[5] = {0};
+	static const struct {
+		const char *name;
+		void (*get_data)(benchmark_data_t *);
+		uint8_t count;
+		uint8_t active_mask;
+	} io_benchmark_groups[] = {
+		{"log", get_log_benchmark_data, 1, 0x01},
+		{"sd_card", get_sd_card_benchmark_data, 2, 0x03},
+		{"baro", get_baro_benchmark_data, 5, 0x1f},
+		{"ad_board", get_ad_board_benchmark_data, 1, 0x01},
+		{"imu", get_imu_benchmark_data, 4, 0x0b},
+		{"adxl", get_adxl_benchmark_data, 3, 0x07},
+		{"adxl_i2c", get_adxl_i2c_benchmark_data, 1, 0x01},
+		{"mag", get_mag_benchmark_data, 4, 0x0b},
+		{"adxrs", get_adxrs_benchmark_data, 2, 0x03},
+		{"ads1219", get_ads1219_benchmark_data, 3, 0x04},
+		{"uart", get_uart_benchmark_data, 2, 0x02},
+		{"motor", get_motor_benchmark_data, 3, 0x07},
+		{"can", get_can_benchmark_data, 3, 0x04},
+		{"gpio", get_gpio_benchmark_data, 4, 0x0f},
+	};
+#endif
+
 	// benchmark stuff
 	benchmark_data_t nav_benchmark_datas[10] = {0};
 	benchmark_data_t fsm_benchmark_datas[5] = {0};
@@ -261,6 +303,29 @@ static void system_init_task(void *arg) {
 				         k, fsm_benchmark_datas[k].hist[0], fsm_benchmark_datas[k].hist[1],
 				         fsm_benchmark_datas[k].hist[2], fsm_benchmark_datas[k].hist[3], fsm_benchmark_datas[k].hist[4], fsm_benchmark_datas[k].hist[5]);
 			}
+
+#ifdef ENABLE_BENCHMARK
+			for (uint8_t group = 0;
+			     group < sizeof(io_benchmark_groups) / sizeof(io_benchmark_groups[0]); group++) {
+				taskENTER_CRITICAL();
+				io_benchmark_groups[group].get_data(io_benchmark_datas);
+				taskEXIT_CRITICAL();
+				for (uint8_t point = 0; point < io_benchmark_groups[group].count; point++) {
+					if ((io_benchmark_groups[group].active_mask & (1U << point)) == 0) {
+						continue;
+					}
+					const benchmark_data_t *data = &io_benchmark_datas[point];
+					log_text(0, LOG_LVL_INFO, "SystemInit",
+					         "%s %u L: %lu, Ma: %lu, Mi: %lu, C %lu, S %llu OB %lu",
+					         io_benchmark_groups[group].name, point, data->last, data->max,
+					         data->min, data->count, data->sum, data->over_budget_count);
+					log_text(0, LOG_LVL_INFO, "SystemInit",
+					         "%s %u HIST 0: %lu, 1: %lu, 2: %lu, 3 %lu, 4: %lu 5: %lu",
+					         io_benchmark_groups[group].name, point, data->hist[0], data->hist[1],
+					         data->hist[2], data->hist[3], data->hist[4], data->hist[5]);
+				}
+			}
+#endif
 
 			// FreeRTOS runtime and stack statistics.
 			log_text(0, LOG_LVL_INFO, "SystemInit", "SysInit: TOTAL T: %lu, PERC %lu, MIN S: %lu",

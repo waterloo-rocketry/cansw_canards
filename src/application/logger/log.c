@@ -1,9 +1,11 @@
+#include "FreeRTOS.h"
+#include "task.h"
+#include "common/benchmark/benchmark.h"
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <string.h>
 
-#include "FreeRTOS.h"
 #include "application/fsm/fsm.h"
 #include "application/logger/log.h"
 #include "drivers/gpio/gpio.h"
@@ -13,6 +15,8 @@
 #include "rocketlib.h"
 #include "semphr.h"
 #include "third_party/printf/printf.h"
+
+BENCHMARK_FILE_INIT(1, 2500);
 
 // number of times to try writing a log message in case fails once
 #define DATA_WRITE_TRY_COUNT 50
@@ -560,6 +564,11 @@ void log_task(void *argument) {
 				}
 			}
 
+#ifdef ENABLE_BENCHMARK
+			taskENTER_CRITICAL();
+			SINGLE_BENCHMARK_START(0);
+			taskEXIT_CRITICAL();
+#endif
 			// try several times to buffer to SD card
 			uint32_t size = 0;
 			for (uint32_t i = 0; i < log_write_try_count; i++) {
@@ -604,6 +613,11 @@ void log_task(void *argument) {
 				}
 			}
 
+#ifdef ENABLE_BENCHMARK
+			taskENTER_CRITICAL();
+			SINGLE_BENCHMARK_END(0);
+			taskEXIT_CRITICAL();
+#endif
 			// Reinitialize buffer for reuse
 			log_reset_buffer(buffer_to_print);
 		} else {
@@ -685,3 +699,11 @@ health_status_t logger_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_log_benchmark_data(benchmark_data_t p_datas[1]) {
+	for (uint8_t i = 0; i < 1; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

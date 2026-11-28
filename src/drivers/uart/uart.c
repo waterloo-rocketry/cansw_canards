@@ -3,14 +3,18 @@
  * @brief Implementation of UART driver with IDLE line detection
  */
 
-#include "drivers/uart/uart.h"
 #include "FreeRTOS.h"
+#include "task.h"
+#include "common/benchmark/benchmark.h"
+#include "drivers/uart/uart.h"
 #include "application/logger/log.h"
 #include "queue.h"
 #include "semphr.h"
 #include "stm32h7xx_hal.h"
 #include <stdint.h>
 #include <string.h>
+
+BENCHMARK_FILE_INIT(2, 2500);
 /* Static buffer pool for all channels */
 static uint8_t s_buffer_pool[UART_CHANNEL_COUNT][UART_MAX_LEN * UART_NUM_RX_BUFFERS]
 	__attribute__((section(".ramd1_bss")));
@@ -240,6 +244,13 @@ w_status_t uart_read(uart_channel_t channel, uint8_t *buffer, uint16_t *length,
  * @param size Number of bytes received
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_START(1);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 	uart_channel_t ch;
 	BaseType_t higher_priority_task_woken = pdFALSE;
 
@@ -271,6 +282,13 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size) {
 			break;
 		}
 	}
+#ifdef ENABLE_BENCHMARK
+	{
+		UBaseType_t benchmark_irq_mask = taskENTER_CRITICAL_FROM_ISR();
+		SINGLE_BENCHMARK_END(1);
+		taskEXIT_CRITICAL_FROM_ISR(benchmark_irq_mask);
+	}
+#endif
 }
 
 /**
@@ -363,3 +381,11 @@ health_status_t uart_get_status(void) {
 
 	return status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_uart_benchmark_data(benchmark_data_t p_datas[2]) {
+	for (uint8_t i = 0; i < 2; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

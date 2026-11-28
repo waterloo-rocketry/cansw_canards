@@ -1,10 +1,14 @@
-#include "drivers/sd_card/sd_card.h"
 #include "FreeRTOS.h"
+#include "task.h"
+#include "common/benchmark/benchmark.h"
+#include "drivers/sd_card/sd_card.h"
 #include "application/logger/log.h"
 #include "fatfs.h"
 #include "rocketlib.h"
 #include "semphr.h"
 #include <inttypes.h>
+
+BENCHMARK_FILE_INIT(2, 2500);
 
 FATFS g_fs_obj __attribute__((section(".ramd1_bss")));
 
@@ -375,7 +379,18 @@ w_status_t sd_card_file_write_open(sd_card_file_ctx_t *ctx, const char *buffer, 
 		return W_FAILURE;
 	}
 
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_START(0);
+	taskEXIT_CRITICAL();
+#endif
 	FRESULT res = f_write(&ctx->file, buffer, num_bytes, (UINT *)bytes_written);
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_END(0);
+	taskEXIT_CRITICAL();
+#endif
+
 
 	xSemaphoreGive(sd_mutex);
 
@@ -406,7 +421,18 @@ w_status_t sd_card_file_sync(sd_card_file_ctx_t *ctx) {
 		return W_FAILURE;
 	}
 
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_START(1);
+	taskEXIT_CRITICAL();
+#endif
 	FRESULT res = f_sync(&ctx->file);
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_END(1);
+	taskEXIT_CRITICAL();
+#endif
+
 
 	xSemaphoreGive(sd_mutex);
 
@@ -450,3 +476,11 @@ w_status_t sd_card_file_close(sd_card_file_ctx_t *ctx) {
 
 	return W_SUCCESS;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_sd_card_benchmark_data(benchmark_data_t p_datas[2]) {
+	for (uint8_t i = 0; i < 2; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

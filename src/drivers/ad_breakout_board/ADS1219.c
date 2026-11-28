@@ -10,6 +10,7 @@ Based on above repository
  * C port of ADS1219.cpp (Arduino / Wire) adapted for the project's I2C layer.
  */
 
+#include "common/benchmark/benchmark.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -20,6 +21,8 @@ Based on above repository
 #include "drivers/ad_breakout_board/ADS1219.h"
 #include "drivers/ad_breakout_board/ADS1219_reg.h"
 #include "drivers/i2c/i2c.h"
+
+BENCHMARK_FILE_INIT(3, 2500);
 
 static const uint8_t INIT_DELAY_MS = 10;
 
@@ -296,6 +299,11 @@ w_status_t ads1219_set_channel(ads1219_handle_t *p_handle, uint8_t mux) {
  * @return status of function
  */
 w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_START(2);
+	taskEXIT_CRITICAL();
+#endif
 	uint8_t buf[3] = {0};
 
 	/*
@@ -306,6 +314,11 @@ w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
 	w_status_t status = i2c_read_reg(p_handle->bus, p_handle->i2c_addr, ADS1219_CMD_RDATA, buf, 3);
 
 	if (W_SUCCESS != status) {
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_END(2);
+		taskEXIT_CRITICAL();
+#endif
 		return status;
 	}
 
@@ -316,10 +329,20 @@ w_status_t ads1219_read_value(ads1219_handle_t *p_handle, uint32_t *value) {
 	raw = (raw ^ 0x00800000) - 0x00800000;
 
 	if ((0x7fffff < raw) && (0xff800001 > raw)) {
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_END(2);
+		taskEXIT_CRITICAL();
+#endif
 		return W_OVERFLOW;
 	}
 
 	*value = raw;
+#ifdef ENABLE_BENCHMARK
+	taskENTER_CRITICAL();
+	SINGLE_BENCHMARK_END(2);
+	taskEXIT_CRITICAL();
+#endif
 
 	return W_SUCCESS;
 }
@@ -379,3 +402,11 @@ w_status_t ads1219_sanity_check(ads1219_handle_t *p_handle, uint8_t config_setti
 	}
 	return W_SUCCESS;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_ads1219_benchmark_data(benchmark_data_t p_datas[3]) {
+	for (uint8_t i = 0; i < 3; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif

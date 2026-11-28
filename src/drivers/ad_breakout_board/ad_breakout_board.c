@@ -1,4 +1,5 @@
 
+#include "common/benchmark/benchmark.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -12,6 +13,8 @@
 #include "drivers/ad_breakout_board/ad_breakout_board.h"
 #include "drivers/timer/timer.h"
 #include "rocketlib.h"
+
+BENCHMARK_FILE_INIT(1, 2500);
 
 // Units are as follows: m/s^2, rad/s, Pa, gauss.
 typedef struct {
@@ -83,6 +86,11 @@ void ad_breakout_board_task(void *argument) {
 	uint32_t current_time_ms = 0;
 
 	while (1) {
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_START(0);
+		taskEXIT_CRITICAL();
+#endif
 		// get current timestamp
 		if (W_SUCCESS != timer_get_ms(&current_time_ms)) {
 			current_time_ms = 0;
@@ -156,6 +164,11 @@ void ad_breakout_board_task(void *argument) {
 		}
 		taskEXIT_CRITICAL();
 
+#ifdef ENABLE_BENCHMARK
+		taskENTER_CRITICAL();
+		SINGLE_BENCHMARK_END(0);
+		taskEXIT_CRITICAL();
+#endif
 		// LOG/TELEMETRY
 		if (W_SUCCESS != ad_breakout_board_data_logging(loop_count, raw_gyro, &raw_accel)) {
 			adxl380_health.comm_failure = true;
@@ -213,3 +226,11 @@ w_status_t ad_breakout_board_get_gyro_data(float64_t *p_gyro_data, uint32_t *tim
 
 	return return_status;
 }
+
+#ifdef ENABLE_BENCHMARK
+void get_ad_board_benchmark_data(benchmark_data_t p_datas[1]) {
+	for (uint8_t i = 0; i < 1; i++) {
+		GET_BENCHMARK_STAT(i, &p_datas[i]);
+	}
+}
+#endif
