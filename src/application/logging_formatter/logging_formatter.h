@@ -23,7 +23,7 @@ typedef struct {
  * @implements FIRM-LLR-LFO-009, FIRM-LLR-LFO-010, FIRM-LLR-LFO-011, FIRM-LLR-LFO-012,
  * FIRM-LLR-LFO-014
  */
-w_status_t logging_formatter_init();
+w_status_t logging_formatter_init(void);
 
 /**
  * @brief Creates a header and a CRC footer for each 'file', and writes in an append only format.

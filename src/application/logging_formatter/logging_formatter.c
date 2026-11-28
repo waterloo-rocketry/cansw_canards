@@ -84,7 +84,7 @@ static w_status_t crc_table_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t logging_formatter_init() {
+w_status_t logging_formatter_init(void) {
 	if (logging_formatter_health.is_init) {
 		return W_SUCCESS;
 	}
