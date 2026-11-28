@@ -3,6 +3,7 @@
 #include "adc.h" // For hadc1
 #include "fdcan.h" // For hfdcan1 and hfdcan3
 #include "i2c.h" // For hi2c2, hi2c4
+#include "sdmmc.h" // For log.c
 #include "stm32h7xx_hal.h"
 #include "task.h"
 #include "usart.h"
@@ -15,6 +16,7 @@
 #include "application/health_checks/health_checks.h"
 #include "application/init/init.h"
 #include "application/logger/log.h"
+#include "application/logging_formatter/logging_formatter.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
@@ -32,7 +34,7 @@
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
 #include "drivers/movella/movella.h"
-#include "drivers/sd_card/sd_card.h"
+#include "drivers/raw_logger/raw_logger.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
@@ -111,7 +113,8 @@ static void system_init_task(void *arg) {
 	w_status_t crit_status = W_SUCCESS;
 
 	// init logging and telem
-	non_crit_status |= sd_card_init();
+	non_crit_status |= raw_logger_SD_init(&hsd2);
+	non_crit_status |= logging_formatter_init();
 	non_crit_status |= log_init();
 	crit_status |= telemetry_init();
 
@@ -220,7 +223,6 @@ static void system_init_task(void *arg) {
 	while (1) {
 		gpio_toggle(GPIO_PIN_GREEN_LED, 1);
 		vTaskDelay(500);
-
 		if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(0)) != 0) {
 			// TODO: TEST ONLY
 			if (ak45_hard_stop_calibrate(&ak45_calibration_config) != W_SUCCESS) {

@@ -12,6 +12,7 @@
 #include "application/fsm/fsm.h"
 #include "application/health_checks/health_checks.h"
 #include "application/logger/log.h"
+#include "application/logging_formatter/logging_formatter.h"
 #include "application/navigator/navigator.h"
 #include "application/power_handler/power_handler.h"
 #include "application/sensor_handler/sensor_handler.h"
@@ -25,7 +26,6 @@
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/movella/movella.h"
-#include "drivers/sd_card/sd_card.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
@@ -65,7 +65,7 @@ static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MA
 	[CANARDS_MODULE_ID_MS5611] = ms5611_get_status,
 	[CANARDS_MODULE_ID_NAVIGATOR] = navigator_get_status,
 	[CANARDS_MODULE_ID_POWER_HANDLER] = power_handler_get_status,
-	[CANARDS_MODULE_ID_SD_CARD] = sd_card_get_status,
+	[CANARDS_MODULE_ID_SD_CARD] = logging_formatter_get_status,
 	[CANARDS_MODULE_ID_SENSOR_HANDLER] = sensor_handler_get_status,
 	[CANARDS_MODULE_ID_TELEMETRY] = telemetry_get_status,
 	[CANARDS_MODULE_ID_TIMER] = timer_get_status,
