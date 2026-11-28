@@ -74,9 +74,7 @@ protected:
 		raw_logger_SD_write_fake.return_val = W_SUCCESS;
 		raw_logger_get_SD_specs_fake.custom_fake = fake_get_specs;
 		// The formatter loops until the card reports TRANSFER, so without this the tests hang
-		HAL_SD_GetCardState_fake.return_val = HAL_SD_CARD_TRANSFER;
 
-		memset(&hsd, 0, sizeof(hsd));
 		memset(&ctx, 0, sizeof(ctx));
 		memset(payload, 0xab, sizeof(payload));
 	}
@@ -85,13 +83,12 @@ protected:
 		// Put the formatter's static state back to power-on
 		memset(&logging_formatter_health, 0, sizeof(logging_formatter_health));
 		memset(&formatter_buffer, 0, sizeof(formatter_buffer));
-		logging_formatter_handle = NULL;
 		chunk_num = 0;
 	}
 };
 
 TEST_F(FormatterTest, WriteSuccess) {
-	ASSERT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
+	ASSERT_EQ(logging_formatter_init(), W_SUCCESS);
 	ASSERT_EQ(logging_formatter_create_file(&ctx, LOGGING_FORMATTING_DATA), W_SUCCESS);
 
 	logging_formatter_health.max_chunk = TOTAL_CHUNKS;
@@ -114,19 +111,19 @@ TEST_F(FormatterTest, WriteSuccess) {
 }
 
 TEST_F(FormatterTest, InitBlankCardSuccess) {
-	EXPECT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
+	EXPECT_EQ(logging_formatter_init(), W_SUCCESS);
 	EXPECT_EQ(formatter_buffer.chunk, 1U); // blank card starts at chunk 1
 }
 
 TEST_F(FormatterTest, InitUsedCardSuccess) {
 	g_first_empty_chunk = 37;
 
-	EXPECT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
+	EXPECT_EQ(logging_formatter_init(), W_SUCCESS);
 	EXPECT_EQ(formatter_buffer.chunk, 37U); // binary search found the first blank chunk
 }
 
 TEST_F(FormatterTest, CreateFileSuccess) {
-	ASSERT_EQ(logging_formatter_init(&hsd), W_SUCCESS);
+	ASSERT_EQ(logging_formatter_init(), W_SUCCESS);
 
 	EXPECT_EQ(logging_formatter_create_file(&ctx, LOGGING_FORMATTING_DATA), W_SUCCESS);
 	EXPECT_EQ(ctx.chunk_count, 0U);
