@@ -114,7 +114,7 @@ static void system_init_task(void *arg) {
 
 	// init logging and telem
 	non_crit_status |= raw_logger_SD_init(&hsd2);
-	non_crit_status |= logging_formatter_init(&hsd2);
+	non_crit_status |= logging_formatter_init();
 	non_crit_status |= log_init();
 	crit_status |= telemetry_init();
 

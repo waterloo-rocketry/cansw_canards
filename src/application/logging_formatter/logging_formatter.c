@@ -34,8 +34,6 @@ typedef struct {
 static logging_formatter_health_t logging_formatter_health = {0};
 static logging_formatter_buffer_t formatter_buffer;
 
-static SD_HandleTypeDef *logging_formatter_handle = NULL;
-
 static const uint8_t HEADER[4] = {67, 107, 207, 255};
 
 static uint64_t chunk_num = 0;
@@ -86,17 +84,10 @@ static w_status_t crc_table_init(void) {
 	return W_SUCCESS;
 }
 
-w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
+w_status_t logging_formatter_init() {
 	if (logging_formatter_health.is_init) {
 		return W_SUCCESS;
 	}
-
-	if (NULL == p_sd_handle) {
-		log_text(0, LOG_LVL_WARN, "FORMAT", "Given task handler does not exist.");
-		return W_FAILURE;
-	}
-
-	logging_formatter_handle = p_sd_handle;
 
 	formatter_buffer.chunk = 0;
 	formatter_buffer.file_instance_count = 0;
@@ -159,10 +150,6 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 				return W_FAILURE;
 			}
 
-			while (HAL_SD_GetCardState(logging_formatter_handle) != HAL_SD_CARD_TRANSFER) {
-				vTaskDelay(pdMS_TO_TICKS(1));
-			}
-
 			if (0 == memcmp(&init_buffer, &zero_buffer, 32)) {
 				hi = chunk_num;
 			} else {
@@ -179,10 +166,6 @@ w_status_t logging_formatter_init(SD_HandleTypeDef *p_sd_handle) {
 			log_text(0, LOG_LVL_WARN, "FORMAT", "Read failed during initialization.");
 			return W_FAILURE;
 		}
-	}
-
-	while (HAL_SD_CARD_TRANSFER != HAL_SD_GetCardState(logging_formatter_handle)) {
-		vTaskDelay(pdMS_TO_TICKS(1));
 	}
 
 	if (!found_address) {
