@@ -275,13 +275,6 @@ add_test_group(test_raw_logger
     #I already do it in thetest
 )
 
-add_test_group(test_altimu
-    # test file(s)
-    ${UNIT_TESTS_DIR}/altimu_test.cpp
-    # src file(s)
-    ${PROC_SRC_DIR}/drivers/altimu-10/altimu-10.c
-)
-
 # TODO: revive test once implemented
 # add_test_group(test_health_check
 #     # test file(s)

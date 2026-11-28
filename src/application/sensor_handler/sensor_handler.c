@@ -16,7 +16,6 @@
 #include "drivers/ak45_driver/ak45_driver.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
-#include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 #include "rocketlib.h"
 
@@ -717,103 +716,6 @@ static w_status_t read_ad_meas(sensor_handler_ctx_t *ctx, navigator_ad_meas_t *a
 }
 
 /**
- * @brief Read data from the Movella MTi-630 sensor
- * @param ctx pointer to the ctx storing the previously updated times for the sensors
- * @param imu_data Pointer to store the IMU data
- * @param quaternion_output pointer to store quaternion output for logging
- * @param curr_timestamp_ms the current time stamp for freshness calculations TODO
- * @return Status of the read operation
- */
-static w_status_t read_movella_imu(sensor_handler_ctx_t *ctx, navigator_mti_meas_t *imu_data,
-                                   quaternion_f32_t *quaternion_output,
-                                   const uint32_t curr_timestamp_ms) {
-	(void)curr_timestamp_ms;
-	// Read all data from Movella in one call
-	movella_data_t movella_data = {0}; // Initialize to zero
-
-	w_status_t status = movella_get_data(&movella_data, 1);
-
-	if (W_SUCCESS == status) {
-		// Copy data from Movella
-		memcpy(quaternion_output, &movella_data.quaternion, sizeof(*quaternion_output));
-		// Apply orientation correction
-
-		imu_data->mti_baro.meas = movella_data.pres;
-
-		// check freshness
-		if ((movella_data.acc_timestamp_ms) > (ctx->last_mti_acc_timestamp_ms)) {
-			imu_data->mti_accel.meas =
-				math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.acc);
-			imu_data->mti_accel.is_new = true;
-			sensor_handler_state.mti_accel_stats.success_count++;
-
-		} else {
-			imu_data->mti_accel.is_new = false;
-			sensor_handler_state.mti_accel_stats.failure_count++;
-		}
-
-		if ((movella_data.gyr_timestamp_ms) > (ctx->last_mti_gyr_timestamp_ms)) {
-			imu_data->mti_gyro.is_new = true;
-			imu_data->mti_gyro.meas =
-				math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.gyr);
-
-			sensor_handler_state.mti_gyro_stats.success_count++;
-
-		} else {
-			imu_data->mti_gyro.is_new = false;
-			sensor_handler_state.mti_gyro_stats.failure_count++;
-		}
-
-		if ((movella_data.mag_timestamp_ms) > (ctx->last_mti_mag_timestamp_ms)) {
-			imu_data->mti_mag.is_new = true;
-			imu_data->mti_mag.meas =
-				math_vector3d_rotate(&g_mti_correction_matrix, &movella_data.mag);
-
-			imu_data->mti_mag.meas =
-				math_vector3d_subt(&(imu_data->mti_mag.meas), &hard_iron_bias_mti);
-			sensor_handler_state.mti_mag_stats.success_count++;
-
-		} else {
-			imu_data->mti_mag.is_new = false;
-			sensor_handler_state.mti_mag_stats.failure_count++;
-		}
-
-		if ((movella_data.pres_timestamp_ms) > (ctx->last_mti_pres_timestamp_ms)) {
-			imu_data->mti_baro.is_new = true;
-			sensor_handler_state.mti_baro_stats.success_count++;
-
-		} else {
-			imu_data->mti_baro.is_new = false;
-			sensor_handler_state.mti_baro_stats.failure_count++;
-		}
-
-		// update timestamps
-		ctx->last_mti_acc_timestamp_ms = movella_data.acc_timestamp_ms;
-		ctx->last_mti_gyr_timestamp_ms = movella_data.gyr_timestamp_ms;
-		ctx->last_mti_mag_timestamp_ms = movella_data.mag_timestamp_ms;
-		ctx->last_mti_pres_timestamp_ms = movella_data.pres_timestamp_ms;
-	} else {
-		// Set is_new flag to indicate IMU failure
-		imu_data->mti_accel.is_new = false;
-		imu_data->mti_gyro.is_new = false;
-		imu_data->mti_mag.is_new = false;
-		imu_data->mti_baro.is_new = false;
-
-		sensor_handler_state.mti_accel_stats.failure_count++;
-		sensor_handler_state.mti_gyro_stats.failure_count++;
-		sensor_handler_state.mti_mag_stats.failure_count++;
-		sensor_handler_state.mti_baro_stats.failure_count++;
-	}
-
-	// if at least one sensor updated then it's successful
-	if ((imu_data->mti_accel.is_new) || (imu_data->mti_gyro.is_new) || (imu_data->mti_mag.is_new) ||
-	    (imu_data->mti_baro.is_new)) {
-		return W_SUCCESS;
-	}
-	return W_FAILURE;
-}
-
-/**
  * @brief Read data from the motor
  * @param ctx pointer to the ctx storing the previously updated times for the sensors
  * @param encoder_data Pointer to store the converted data
@@ -995,14 +897,11 @@ w_status_t sensor_handler_get_fresh_meas(sensor_handler_ctx_t *ctx,
 	// Read from all IMUs and sensors
 	w_status_t board_status =
 		read_board_meas(ctx, &(imu_output->board_meas), &raw_board_meas, current_time_ms);
-	w_status_t movella_status =
-		read_movella_imu(ctx, &(imu_output->mti_meas), &mti_quaternion, current_time_ms);
 	w_status_t ad_status = read_ad_meas(ctx, &(imu_output->ad_meas), current_time_ms);
 	w_status_t motor_status =
 		read_motor_meas(ctx, &(imu_output->motor_encoder_meas), current_time_ms);
 
-	if ((movella_status != W_SUCCESS) && (board_status != W_SUCCESS) && (ad_status != W_SUCCESS) &&
-	    (motor_status != W_SUCCESS)) {
+	if ((board_status != W_SUCCESS) && (ad_status != W_SUCCESS) && (motor_status != W_SUCCESS)) {
 		status = W_FAILURE;
 	} else {
 		status = W_SUCCESS;

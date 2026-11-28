@@ -62,9 +62,115 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
+  /* Define the special memory locations */
+  /* FLASH porgram code */
+
+  _siitcm_text = LOADADDR(.itcm_text);
+  .itcm_text :
+  {
+    _sitcm_text = .;        /* define a global symbols at start of FLASH only code */
+    . = ALIGN(4);
+
+    /* fsm */
+    *fsm.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*fsm.o(.init))
+    KEEP (*fsm.o(.fini))
+
+    *sensor_handler.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*sensor_handler.o(.init))
+    KEEP (*sensor_handler.o(.fini))
+
+
+    *flight_phase.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*flight_phase.o(.init))
+    KEEP (*flight_phase.o(.fini))
+
+    *controller.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*controller.o(.init))
+    KEEP (*controller.o(.fini))
+
+    *navigator.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*navigator.o(.init))
+    KEEP (*navigator.o(.fini))
+
+    /* closedrocket */
+    */closedrocket/*(.text)           /* .text sections (FLASH only code) */
+    */closedrocket/*(.text*)          /* .text* sections (FLASH only code) */
+    */closedrocket/*(.glue_7)         /* glue arm to thumb FLASH only code */
+    */closedrocket/*(.glue_7t)        /* glue thumb to arm FLASH only code */
+    */closedrocket/*(.eh_frame)
+
+    KEEP (*/closedrocket/*(.init))
+    KEEP (*/closedrocket/*(.fini))
+
+    /* HAL Drivers */
+    *stm32h7xx_hal_i2c.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*stm32h7xx_hal_i2c.o(.init))
+    KEEP (*stm32h7xx_hal_i2c.o(.fini))
+
+    *stm32h7xx_hal_dma.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*stm32h7xx_hal_dma.o(.init))
+    KEEP (*stm32h7xx_hal_dma.o(.fini))
+
+    *stm32h7xx_hal_cortex.o(.text .text* .glue_7 .glue_7t .eh_frame)
+    KEEP (*stm32h7xx_hal_cortex.o(.init))
+    KEEP (*stm32h7xx_hal_cortex.o(.fini))
+
+    /* FreeRTOS */ 
+    */src/third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS*(.text .text* .glue_7 .glue_7t .eh_frame)
+
+    KEEP (*/src/third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS*(.init))
+    KEEP (*/src/third_party/cubemx_autogen/Middlewares/Third_Party/FreeRTOS*(.fini))
+
+    . = ALIGN(4);
+    _eitcm_text = .;        /* define a global symbols at end of code */
+  } >ITCMRAM AT>FLASH
+
+
+  /* used by the startup to initialize data */
+  _siramd1_data = LOADADDR(.ramd1_data);
+
+  /* Initialized data sections goes into RAM, load LMA copy after code */
+  .ramd1_data :
+  {
+    . = ALIGN(4);
+    _sramd1_data = .;        /* create a global symbol at data start */
+    
+
+    /* collect anything put into this region */
+    *(.ramd1_data)
+
+    /* CubeMX Source Special Cases */
+    *sdmmc.o(.data .data* .RamFunc .RamFunc*)
+
+    . = ALIGN(4);
+    _eramd1_data = .;        /* define a global symbol at data end */
+  } >RAM_D1 AT> FLASH
+
+  /* Uninitialized data section */
+  . = ALIGN(4);
+  .ramd1_bss (NOLOAD):
+  {
+    /* This is used by the startup in order to initialize the .bss section */
+    _sramd1_bss = .;         /* define a global symbol at bss start */
+    __ramd1_bss_start__ = _sramd1_bss;
+
+    /* collect anything put into this region */
+    *(.ramd1_bss)
+
+    /* CubeMX Source Special Cases */
+    *sdmmc.o(.bss .bss* COMMON)
+
+    . = ALIGN(4);
+    _eramd1_bss = .;         /* define a global symbol at bss end */
+    __ramd1_bss_end__ = _eramd1_bss;
+  } >RAM_D1
+
+
   /* The program code and other data goes into FLASH */
   .text :
   {
+    _stext = .;        /* define a global symbols at start of code */
     . = ALIGN(4);
     *(.text)           /* .text sections (code) */
     *(.text*)          /* .text* sections (code) */
@@ -80,13 +186,17 @@ SECTIONS
   } >FLASH
 
   /* Constant data goes into FLASH */
+  _sirodata = LOADADDR(.rodata);
+
   .rodata :
   {
+    _srodata = .;        /* define a global symbols at start of rodata */
     . = ALIGN(4);
     *(.rodata)         /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
+    _erodata = .;        /* define a global symbols at end of rodata */
     . = ALIGN(4);
-  } >FLASH
+  } >DTCMRAM AT>FLASH
 
   .ARM.extab (READONLY) : /* The READONLY keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */
   {
@@ -137,7 +247,7 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >RAM_D1 AT> FLASH
+  } >DTCMRAM AT> FLASH
 
   /* Uninitialized data section */
   . = ALIGN(4);
@@ -153,7 +263,7 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
-  } >RAM_D1
+  } >DTCMRAM
 
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack :
@@ -166,11 +276,16 @@ SECTIONS
     . = ALIGN(8);
   } >RAM_D1
 
+  /* used by the startup to initialize data */
+  _sisram4 = LOADADDR(.sram4);
+
   .sram4 :
   {
     . = ALIGN(4);
+    _ssram4 = .;        /* create a global symbol at sram4 start */
     *(.sram4)
     . = ALIGN(4);
+    _esram4 = .;        /* define a global symbol at sram4 end */
   } >RAM_D3 AT>FLASH
 
   /* Remove information from the standard libraries */

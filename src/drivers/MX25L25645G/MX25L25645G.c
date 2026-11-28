@@ -38,9 +38,10 @@ static const uint32_t FLASH_PROG_DELAY_MS = 100;
 
 static const uint32_t FLASH_READ_DUMMY_CYCLE = 8;
 
-static uint8_t lfs_flash_read_buffer[FLASH_CACHE_SIZE] = {0};
-static uint8_t lfs_flash_prog_buffer[FLASH_CACHE_SIZE] = {0};
-static uint8_t lfs_flash_lookahead_buffer[FLASH_LOOKAHEAD_SIZE] = {0};
+static uint8_t lfs_flash_read_buffer[FLASH_CACHE_SIZE] __attribute__((section(".ramd1_bss"))) = {0};
+static uint8_t lfs_flash_prog_buffer[FLASH_CACHE_SIZE] __attribute__((section(".ramd1_bss"))) = {0};
+static uint8_t lfs_flash_lookahead_buffer[FLASH_LOOKAHEAD_SIZE]
+	__attribute__((section(".ramd1_bss"))) = {0};
 
 /**
  * @brief State of the flash chip

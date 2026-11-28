@@ -25,7 +25,6 @@
 #include "drivers/gpio/gpio.h"
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
-#include "drivers/movella/movella.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
 
@@ -61,7 +60,6 @@ static const get_module_status_t module_get_status_fns[CANARDS_MODULE_ID_ENUM_MA
 	[CANARDS_MODULE_ID_IIS2MDC] = iis2mdc_get_status,
 	[CANARDS_MODULE_ID_LOGGER] = logger_get_status,
 	[CANARDS_MODULE_ID_LSM6DSV32X] = lsm6dsv32x_get_status,
-	[CANARDS_MODULE_ID_MOVELLA] = movella_get_status,
 	[CANARDS_MODULE_ID_MS5611] = ms5611_get_status,
 	[CANARDS_MODULE_ID_NAVIGATOR] = navigator_get_status,
 	[CANARDS_MODULE_ID_POWER_HANDLER] = power_handler_get_status,

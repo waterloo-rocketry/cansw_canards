@@ -32,7 +32,7 @@ typedef struct {
 } logging_formatter_buffer_t;
 
 static logging_formatter_health_t logging_formatter_health = {0};
-static logging_formatter_buffer_t formatter_buffer;
+static logging_formatter_buffer_t formatter_buffer __attribute__((section(".ramd1_data")));
 
 static const uint8_t HEADER[4] = {67, 107, 207, 255};
 

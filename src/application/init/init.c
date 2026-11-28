@@ -33,7 +33,6 @@
 #include "drivers/i2c/i2c.h"
 #include "drivers/iis2mdc/IIS2MDC.h"
 #include "drivers/lsm6dsv32x/LSM6DSV32X.h"
-#include "drivers/movella/movella.h"
 #include "drivers/raw_logger/raw_logger.h"
 #include "drivers/timer/timer.h"
 #include "drivers/uart/uart.h"
@@ -133,7 +132,6 @@ static void system_init_task(void *arg) {
 	// init application modules
 	crit_status |= navigator_init();
 	crit_status |= health_check_init();
-	non_crit_status |= movella_init();
 	crit_status |= flight_phase_init();
 	crit_status |= sensor_handler_init();
 	crit_status |= can_handler_init(&hfdcan3);
@@ -182,9 +180,6 @@ static void system_init_task(void *arg) {
 
 	task_status &= xTaskCreate(can_handler_task_tx, "can handler tx", 256, NULL,
 	                           can_handler_tx_priority, &can_handler_handle_tx);
-
-	task_status &= xTaskCreate(movella_task, "movella", 512, NULL, movella_task_priority,
-	                           &movella_task_handle);
 
 	task_status &=
 		xTaskCreate(ms5611_task, "ms5611", 256, NULL, ms5611_task_priority, &ms5611_task_handle);
